@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.local*)",
+      "Read(**/.env.test*)",
+      "Read(**/secrets/**)",
+      "Read(**/credentials/**)"
+    ],
+    "allow": [
+      "Read(**/.env.example)"
+    ]
+  },
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  }
+}
