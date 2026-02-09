@@ -1,0 +1,413 @@
+//! Embedded templates for Markplane document types.
+//!
+//! Templates use placeholder tokens that are replaced at creation time:
+//! - `{ID}` — item ID (e.g. BACK-042)
+//! - `{TITLE}` — item title
+//! - `{DATE}` — current date (YYYY-MM-DD)
+//! - `{STATUS}` — initial status
+//! - `{PRIORITY}` — priority level
+//! - `{TYPE}` — item type or note type
+//! - `{EFFORT}` — effort estimate
+//! - `{EPIC}` — linked epic ID or "null"
+//! - `{TAGS}` — YAML-formatted tags list
+//! - `{IMPLEMENTS}` — YAML-formatted implements list (for plans)
+//! - `{RELATED}` — YAML-formatted related list (for notes)
+//! - `{PROJECT_NAME}` — project name (for init)
+
+pub const BACKLOG_TEMPLATE: &str = r#"---
+id: {ID}
+title: "{TITLE}"
+status: {STATUS}
+priority: {PRIORITY}
+type: {TYPE}
+effort: {EFFORT}
+tags: {TAGS}
+epic: {EPIC}
+plan: null
+depends_on: []
+blocks: []
+assignee: null
+created: {DATE}
+updated: {DATE}
+---
+
+# {TITLE}
+
+## Description
+
+[What needs to be done and why. 2-5 sentences.]
+
+## Acceptance Criteria
+
+- [ ] Criterion 1
+- [ ] Criterion 2
+- [ ] Criterion 3
+
+## Notes
+
+[Additional context, research links, implementation hints, related discussions.]
+
+## References
+"#;
+
+pub const EPIC_TEMPLATE: &str = r#"---
+id: {ID}
+title: "{TITLE}"
+status: planned
+priority: {PRIORITY}
+started: null
+target: null
+tags: []
+depends_on: []
+---
+
+# {TITLE}
+
+## Objective
+
+[2-3 sentences: What does this epic achieve? Why does it matter?]
+
+## Key Results
+
+- [ ] KR1: [Measurable outcome]
+- [ ] KR2: [Measurable outcome]
+- [ ] KR3: [Measurable outcome]
+
+## Backlog Items
+
+| ID | Title | Status | Priority | Effort |
+|----|-------|--------|----------|--------|
+
+## Progress
+
+- Total items: 0
+- Done: 0 (0%)
+- In progress: 0
+- Remaining: 0
+
+## Notes
+
+[Strategic context, dependencies on external work, risks.]
+"#;
+
+pub const PLAN_IMPLEMENTATION_TEMPLATE: &str = r#"---
+id: {ID}
+title: "{TITLE}"
+status: draft
+implements: {IMPLEMENTS}
+epic: {EPIC}
+created: {DATE}
+updated: {DATE}
+---
+
+# {TITLE} Implementation Plan
+
+## Overview
+
+This plan implements the listed backlog items.
+
+## Approach
+
+[High-level description of the implementation approach.]
+
+## Phases
+
+### Phase 1: [Name]
+
+- [ ] Step 1
+- [ ] Step 2
+
+### Phase 2: [Name]
+
+- [ ] Step 1
+- [ ] Step 2
+
+## Testing Strategy
+
+[How will this be tested?]
+
+## Rollback Plan
+
+[What happens if this needs to be reverted?]
+
+## References
+"#;
+
+pub const PLAN_REFACTOR_TEMPLATE: &str = r#"---
+id: {ID}
+title: "{TITLE}"
+status: draft
+implements: {IMPLEMENTS}
+epic: {EPIC}
+created: {DATE}
+updated: {DATE}
+---
+
+# {TITLE} Refactor Plan
+
+## Motivation
+
+[Why is this refactor needed?]
+
+## Current State
+
+[Description of the current architecture/code.]
+
+## Target State
+
+[Description of the desired architecture/code.]
+
+## Migration Steps
+
+### Step 1: [Name]
+
+- [ ] Task 1
+- [ ] Task 2
+
+### Step 2: [Name]
+
+- [ ] Task 1
+- [ ] Task 2
+
+## Testing Strategy
+
+[How will correctness be verified during the refactor?]
+
+## Risks
+
+[What could go wrong?]
+
+## References
+"#;
+
+pub const NOTE_RESEARCH_TEMPLATE: &str = r#"---
+id: {ID}
+title: "{TITLE}"
+type: research
+status: draft
+tags: {TAGS}
+related: {RELATED}
+created: {DATE}
+updated: {DATE}
+---
+
+# {TITLE}
+
+## Summary
+
+[Brief summary of the research topic.]
+
+## Findings
+
+[Detailed research findings.]
+
+## Recommendations
+
+[Actionable recommendations based on findings.]
+
+## References
+
+[Sources, links, related items.]
+"#;
+
+pub const NOTE_ANALYSIS_TEMPLATE: &str = r#"---
+id: {ID}
+title: "{TITLE}"
+type: analysis
+status: draft
+tags: {TAGS}
+related: {RELATED}
+created: {DATE}
+updated: {DATE}
+---
+
+# {TITLE}
+
+## Context
+
+[What is being analyzed and why?]
+
+## Analysis
+
+[Detailed analysis.]
+
+## Conclusions
+
+[Key takeaways.]
+
+## Next Steps
+
+[Recommended actions.]
+"#;
+
+pub const NOTE_GENERIC_TEMPLATE: &str = r#"---
+id: {ID}
+title: "{TITLE}"
+type: {TYPE}
+status: draft
+tags: {TAGS}
+related: {RELATED}
+created: {DATE}
+updated: {DATE}
+---
+
+# {TITLE}
+
+[Content goes here.]
+"#;
+
+pub const ROOT_INDEX_TEMPLATE: &str = r#"# Markplane Project Index
+<!-- This file is the entry point for AI agents and human navigation -->
+
+## Quick Navigation
+
+| Module | Path | Purpose | Active Items |
+|--------|------|---------|-------------|
+| Roadmap | [roadmap/](roadmap/INDEX.md) | Strategic phases & epics | 0 active epics |
+| Backlog | [backlog/](backlog/INDEX.md) | All work items | 0 open items |
+| Plans | [plans/](plans/INDEX.md) | Implementation details | 0 active plans |
+| Notes | [notes/](notes/INDEX.md) | Research & ideas | 0 active notes |
+| Knowledge Base | [kb/](kb/INDEX.md) | Architecture & guides | 0 documents |
+| AI Context | [.context/](.context/summary.md) | Generated summaries | Auto-updated |
+
+## System Info
+- Project: {PROJECT_NAME}
+- ID counter: EPIC-000, BACK-000, PLAN-000, NOTE-000
+- Last sync: {DATE}
+- Config: [config.yaml](config.yaml)
+"#;
+
+pub const ROADMAP_INDEX_TEMPLATE: &str = r#"# Roadmap Index
+<!-- Generated by markplane sync -->
+
+## Active Epics
+
+_No epics yet. Create one with `markplane epic "Epic title"`._
+
+## Completed Epics
+
+_None._
+"#;
+
+pub const BACKLOG_INDEX_TEMPLATE: &str = r#"# Backlog Index
+<!-- Generated by markplane sync -->
+
+## By Status
+
+_No backlog items yet. Create one with `markplane add "Item title"`._
+
+## By Priority
+
+_No items._
+
+## By Epic
+
+_No items._
+"#;
+
+pub const PLANS_INDEX_TEMPLATE: &str = r#"# Plans Index
+<!-- Generated by markplane sync -->
+
+## Active Plans
+
+_No plans yet. Create one with `markplane plan BACK-xxx`._
+
+## Completed Plans
+
+_None._
+"#;
+
+pub const NOTES_INDEX_TEMPLATE: &str = r#"# Notes Index
+<!-- Generated by markplane sync -->
+
+## Active Notes
+
+_No notes yet. Create one with `markplane note "Note title"`._
+
+## Quick Capture
+
+- [ideas.md](ideas.md) — Quick idea capture
+- [decisions.md](decisions.md) — Decision log
+"#;
+
+pub const KB_INDEX_TEMPLATE: &str = r#"# Knowledge Base Index
+<!-- Navigation for architectural docs and guides -->
+
+## Documents
+
+_No knowledge base documents yet._
+"#;
+
+pub const IDEAS_TEMPLATE: &str = r#"# Ideas
+
+Quick capture for ideas that aren't backlog items yet. Promote to backlog with `markplane promote NOTE-xxx`.
+
+## Unsorted
+
+-
+"#;
+
+pub const DECISIONS_TEMPLATE: &str = r#"# Decision Log
+
+Lightweight decision log. Format: `## YYYY-MM-DD: Decision Title`
+
+---
+"#;
+
+/// Replace template placeholders with actual values.
+pub fn render_template(template: &str, vars: &[(&str, &str)]) -> String {
+    let mut result = template.to_string();
+    for (key, value) in vars {
+        result = result.replace(key, value);
+    }
+    result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_render_template_basic() {
+        let result = render_template(
+            "Hello {NAME}, today is {DATE}.",
+            &[("{NAME}", "World"), ("{DATE}", "2026-02-09")],
+        );
+        assert_eq!(result, "Hello World, today is 2026-02-09.");
+    }
+
+    #[test]
+    fn test_render_template_backlog() {
+        let result = render_template(
+            BACKLOG_TEMPLATE,
+            &[
+                ("{ID}", "BACK-001"),
+                ("{TITLE}", "Test item"),
+                ("{STATUS}", "draft"),
+                ("{PRIORITY}", "medium"),
+                ("{TYPE}", "feature"),
+                ("{EFFORT}", "medium"),
+                ("{TAGS}", "[]"),
+                ("{EPIC}", "null"),
+                ("{DATE}", "2026-02-09"),
+            ],
+        );
+        assert!(result.contains("id: BACK-001"));
+        assert!(result.contains("title: \"Test item\""));
+        assert!(result.contains("# Test item"));
+    }
+
+    #[test]
+    fn test_render_template_epic() {
+        let result = render_template(
+            EPIC_TEMPLATE,
+            &[
+                ("{ID}", "EPIC-001"),
+                ("{TITLE}", "Phase 1"),
+                ("{PRIORITY}", "high"),
+            ],
+        );
+        assert!(result.contains("id: EPIC-001"));
+        assert!(result.contains("priority: high"));
+    }
+}

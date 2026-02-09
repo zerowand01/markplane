@@ -1,0 +1,180 @@
+use colored::Colorize;
+use markplane_core::{
+    parse_id, BacklogItem, Epic, IdPrefix, MarkplaneDocument, Note, Plan, Project,
+};
+
+pub fn run(id: String) -> anyhow::Result<()> {
+    let project = Project::from_current_dir()?;
+    let (prefix, _) = parse_id(&id)?;
+
+    match prefix {
+        IdPrefix::Back => show_backlog(&project, &id)?,
+        IdPrefix::Epic => show_epic(&project, &id)?,
+        IdPrefix::Plan => show_plan(&project, &id)?,
+        IdPrefix::Note => show_note(&project, &id)?,
+    }
+
+    Ok(())
+}
+
+fn colorize_status(status: &str) -> String {
+    match status {
+        "done" => status.green().to_string(),
+        "in-progress" => status.yellow().to_string(),
+        "active" => status.yellow().to_string(),
+        "cancelled" => status.red().dimmed().to_string(),
+        "draft" => status.dimmed().to_string(),
+        "backlog" => status.blue().to_string(),
+        "planned" => status.cyan().to_string(),
+        "approved" => status.cyan().to_string(),
+        "paused" => status.magenta().to_string(),
+        "archived" => status.dimmed().to_string(),
+        _ => status.to_string(),
+    }
+}
+
+fn colorize_priority(priority: &str) -> String {
+    match priority {
+        "critical" => priority.red().bold().to_string(),
+        "high" => priority.red().to_string(),
+        "medium" => priority.yellow().to_string(),
+        "low" => priority.dimmed().to_string(),
+        "someday" => priority.dimmed().to_string(),
+        _ => priority.to_string(),
+    }
+}
+
+fn show_backlog(project: &Project, id: &str) -> anyhow::Result<()> {
+    let doc: MarkplaneDocument<BacklogItem> = project.read_item(id)?;
+    let fm = &doc.frontmatter;
+
+    println!("{}", fm.id.bold());
+    println!("{}", fm.title.bold().white());
+    println!();
+    println!("  Status:   {}", colorize_status(&fm.status.to_string()));
+    println!(
+        "  Priority: {}",
+        colorize_priority(&fm.priority.to_string())
+    );
+    println!("  Type:     {}", fm.item_type);
+    println!("  Effort:   {}", fm.effort);
+
+    if !fm.tags.is_empty() {
+        println!("  Tags:     {}", fm.tags.join(", "));
+    }
+    if let Some(ref epic) = fm.epic {
+        println!("  Epic:     {}", epic);
+    }
+    if let Some(ref plan) = fm.plan {
+        println!("  Plan:     {}", plan);
+    }
+    if let Some(ref assignee) = fm.assignee {
+        println!("  Assignee: {}", assignee);
+    }
+    if !fm.depends_on.is_empty() {
+        println!("  Depends:  {}", fm.depends_on.join(", "));
+    }
+    if !fm.blocks.is_empty() {
+        println!("  Blocks:   {}", fm.blocks.join(", "));
+    }
+    println!("  Created:  {}", fm.created);
+    println!("  Updated:  {}", fm.updated);
+
+    if !doc.body.trim().is_empty() {
+        println!();
+        println!("{}", "─".repeat(60).dimmed());
+        println!("{}", doc.body.trim());
+    }
+
+    Ok(())
+}
+
+fn show_epic(project: &Project, id: &str) -> anyhow::Result<()> {
+    let doc: MarkplaneDocument<Epic> = project.read_item(id)?;
+    let fm = &doc.frontmatter;
+
+    println!("{}", fm.id.bold());
+    println!("{}", fm.title.bold().white());
+    println!();
+    println!("  Status:   {}", colorize_status(&fm.status.to_string()));
+    println!(
+        "  Priority: {}",
+        colorize_priority(&fm.priority.to_string())
+    );
+
+    if let Some(ref started) = fm.started {
+        println!("  Started:  {}", started);
+    }
+    if let Some(ref target) = fm.target {
+        println!("  Target:   {}", target);
+    }
+    if !fm.tags.is_empty() {
+        println!("  Tags:     {}", fm.tags.join(", "));
+    }
+    if !fm.depends_on.is_empty() {
+        println!("  Depends:  {}", fm.depends_on.join(", "));
+    }
+
+    if !doc.body.trim().is_empty() {
+        println!();
+        println!("{}", "─".repeat(60).dimmed());
+        println!("{}", doc.body.trim());
+    }
+
+    Ok(())
+}
+
+fn show_plan(project: &Project, id: &str) -> anyhow::Result<()> {
+    let doc: MarkplaneDocument<Plan> = project.read_item(id)?;
+    let fm = &doc.frontmatter;
+
+    println!("{}", fm.id.bold());
+    println!("{}", fm.title.bold().white());
+    println!();
+    println!("  Status:     {}", colorize_status(&fm.status.to_string()));
+
+    if !fm.implements.is_empty() {
+        println!("  Implements: {}", fm.implements.join(", "));
+    }
+    if let Some(ref epic) = fm.epic {
+        println!("  Epic:       {}", epic);
+    }
+    println!("  Created:    {}", fm.created);
+    println!("  Updated:    {}", fm.updated);
+
+    if !doc.body.trim().is_empty() {
+        println!();
+        println!("{}", "─".repeat(60).dimmed());
+        println!("{}", doc.body.trim());
+    }
+
+    Ok(())
+}
+
+fn show_note(project: &Project, id: &str) -> anyhow::Result<()> {
+    let doc: MarkplaneDocument<Note> = project.read_item(id)?;
+    let fm = &doc.frontmatter;
+
+    println!("{}", fm.id.bold());
+    println!("{}", fm.title.bold().white());
+    println!();
+    println!("  Status:  {}", colorize_status(&fm.status.to_string()));
+    println!("  Type:    {}", fm.note_type);
+
+    if !fm.tags.is_empty() {
+        println!("  Tags:    {}", fm.tags.join(", "));
+    }
+    if !fm.related.is_empty() {
+        println!("  Related: {}", fm.related.join(", "));
+    }
+    println!("  Created: {}", fm.created);
+    println!("  Updated: {}", fm.updated);
+
+    if !doc.body.trim().is_empty() {
+        println!();
+        println!("{}", "─".repeat(60).dimmed());
+        println!("{}", doc.body.trim());
+    }
+
+    Ok(())
+}

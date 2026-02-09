@@ -1,0 +1,19 @@
+[package]
+name = "markplane-mcp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "MCP server for Markplane - AI-native project management"
+
+[[bin]]
+name = "markplane-mcp"
+path = "src/main.rs"
+
+[dependencies]
+markplane-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+chrono.workspace = true

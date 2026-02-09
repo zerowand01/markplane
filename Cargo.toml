@@ -1,0 +1,40 @@
+[workspace]
+members = ["crates/markplane-core", "crates/markplane-cli", "crates/markplane-mcp"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+authors = ["Daniel Kingsley"]
+rust-version = "1.93.0"
+
+[workspace.dependencies]
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"  # Deprecated but stable; serde_yml (0.0.x) is too immature
+serde_json = "1.0"
+
+# Markdown
+comrak = { version = "0.50", default-features = false }
+
+# CLI
+clap = { version = "4.5", features = ["derive"] }
+clap_complete = "4.5"
+
+# Date/Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# File matching
+glob = "0.3"
+
+# Error handling
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Terminal output
+colored = "3.1"
+tabled = "0.20"
+
+# Internal crates
+markplane-core = { path = "crates/markplane-core" }

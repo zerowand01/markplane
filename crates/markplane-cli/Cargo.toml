@@ -1,0 +1,28 @@
+[package]
+name = "markplane-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "CLI for Markplane - AI-native project management"
+
+[[bin]]
+name = "markplane"
+path = "src/main.rs"
+
+[dependencies]
+markplane-core.workspace = true
+clap.workspace = true
+clap_complete.workspace = true
+chrono.workspace = true
+anyhow.workspace = true
+colored.workspace = true
+tabled.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+tempfile = "3"
+assert_cmd = "2"
+predicates = "3"

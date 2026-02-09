@@ -1,0 +1,69 @@
+use chrono::Local;
+use colored::Colorize;
+use markplane_core::{Project, QueryFilter};
+use tabled::{Table, Tabled};
+
+#[derive(Tabled)]
+struct StaleRow {
+    #[tabled(rename = "ID")]
+    id: String,
+    #[tabled(rename = "Title")]
+    title: String,
+    #[tabled(rename = "Status")]
+    status: String,
+    #[tabled(rename = "Last Updated")]
+    updated: String,
+    #[tabled(rename = "Days Stale")]
+    days: String,
+}
+
+pub fn run(days: u32) -> anyhow::Result<()> {
+    let project = Project::from_current_dir()?;
+    let today = Local::now().date_naive();
+    let cutoff = today - chrono::Duration::days(days as i64);
+
+    let items = project.list_backlog_items(&QueryFilter::default())?;
+
+    let stale: Vec<StaleRow> = items
+        .iter()
+        .filter(|doc| {
+            let fm = &doc.frontmatter;
+            fm.status != markplane_core::BacklogStatus::Done
+                && fm.status != markplane_core::BacklogStatus::Cancelled
+                && fm.updated < cutoff
+        })
+        .map(|doc| {
+            let fm = &doc.frontmatter;
+            let stale_days = (today - fm.updated).num_days();
+            StaleRow {
+                id: fm.id.clone(),
+                title: if fm.title.len() > 40 {
+                    format!("{}…", &fm.title[..39])
+                } else {
+                    fm.title.clone()
+                },
+                status: fm.status.to_string(),
+                updated: fm.updated.to_string(),
+                days: stale_days.to_string(),
+            }
+        })
+        .collect();
+
+    if stale.is_empty() {
+        println!(
+            "{} No items stale for more than {} days.",
+            "✓".green(),
+            days
+        );
+    } else {
+        println!(
+            "{} {} item(s) not updated in {} days:\n",
+            "!".yellow(),
+            stale.len(),
+            days
+        );
+        println!("{}", Table::new(stale));
+    }
+
+    Ok(())
+}
