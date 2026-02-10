@@ -1,3 +1,5 @@
+> **Note**: This is the original design rationale document, written before implementation began. It captures the vision, design thinking, and decisions that shaped the project. For current implementation details, see [Architecture](architecture.md). For file format specifications, see [File Format Reference](file-format.md).
+
 # Markplane: AI-Native Project Management System Design
 
 **Date**: 2026-02-09
