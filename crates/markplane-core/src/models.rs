@@ -119,10 +119,7 @@ impl FromStr for BacklogStatus {
             "in-progress" => Ok(BacklogStatus::InProgress),
             "done" => Ok(BacklogStatus::Done),
             "cancelled" => Ok(BacklogStatus::Cancelled),
-            _ => Err(MarkplaneError::InvalidTransition {
-                from: "unknown".into(),
-                to: s.into(),
-            }),
+            _ => Err(MarkplaneError::InvalidStatus(s.into())),
         }
     }
 }
@@ -156,10 +153,7 @@ impl FromStr for EpicStatus {
             "active" => Ok(EpicStatus::Active),
             "done" => Ok(EpicStatus::Done),
             "paused" => Ok(EpicStatus::Paused),
-            _ => Err(MarkplaneError::InvalidTransition {
-                from: "unknown".into(),
-                to: s.into(),
-            }),
+            _ => Err(MarkplaneError::InvalidStatus(s.into())),
         }
     }
 }
@@ -193,10 +187,7 @@ impl FromStr for PlanStatus {
             "approved" => Ok(PlanStatus::Approved),
             "in-progress" => Ok(PlanStatus::InProgress),
             "done" => Ok(PlanStatus::Done),
-            _ => Err(MarkplaneError::InvalidTransition {
-                from: "unknown".into(),
-                to: s.into(),
-            }),
+            _ => Err(MarkplaneError::InvalidStatus(s.into())),
         }
     }
 }
@@ -227,10 +218,7 @@ impl FromStr for NoteStatus {
             "draft" => Ok(NoteStatus::Draft),
             "active" => Ok(NoteStatus::Active),
             "archived" => Ok(NoteStatus::Archived),
-            _ => Err(MarkplaneError::InvalidTransition {
-                from: "unknown".into(),
-                to: s.into(),
-            }),
+            _ => Err(MarkplaneError::InvalidStatus(s.into())),
         }
     }
 }
@@ -681,5 +669,110 @@ updated: 2026-02-09
         let reparsed: Config = serde_yaml::from_str(&yaml).unwrap();
         assert_eq!(reparsed.version, config.version);
         assert_eq!(reparsed.project.name, config.project.name);
+    }
+
+    // ── parse_id edge cases ──────────────────────────────────────────────
+
+    #[test]
+    fn test_parse_id_empty_string() {
+        assert!(parse_id("").is_err());
+    }
+
+    #[test]
+    fn test_parse_id_no_number() {
+        assert!(parse_id("BACK-").is_err());
+    }
+
+    #[test]
+    fn test_parse_id_no_prefix() {
+        assert!(parse_id("-042").is_err());
+    }
+
+    #[test]
+    fn test_parse_id_lowercase() {
+        // IdPrefix::parse does to_uppercase, so lowercase should work
+        let (prefix, num) = parse_id("back-042").unwrap();
+        assert_eq!(prefix, IdPrefix::Back);
+        assert_eq!(num, 42);
+    }
+
+    #[test]
+    fn test_parse_id_no_separator() {
+        assert!(parse_id("BACK042").is_err());
+    }
+
+    #[test]
+    fn test_parse_id_invalid_prefix() {
+        assert!(parse_id("INVALID-042").is_err());
+    }
+
+    #[test]
+    fn test_parse_id_all_prefixes() {
+        let cases = [
+            ("EPIC-001", IdPrefix::Epic, 1),
+            ("BACK-042", IdPrefix::Back, 42),
+            ("PLAN-003", IdPrefix::Plan, 3),
+            ("NOTE-007", IdPrefix::Note, 7),
+        ];
+        for (input, expected_prefix, expected_num) in cases {
+            let (prefix, num) = parse_id(input).unwrap();
+            assert_eq!(prefix, expected_prefix);
+            assert_eq!(num, expected_num);
+        }
+    }
+
+    // ── Status updates for all types ─────────────────────────────────────
+
+    #[test]
+    fn test_epic_status_from_str() {
+        assert_eq!("planned".parse::<EpicStatus>().unwrap(), EpicStatus::Planned);
+        assert_eq!("active".parse::<EpicStatus>().unwrap(), EpicStatus::Active);
+        assert_eq!("done".parse::<EpicStatus>().unwrap(), EpicStatus::Done);
+        assert_eq!("paused".parse::<EpicStatus>().unwrap(), EpicStatus::Paused);
+        assert!("invalid".parse::<EpicStatus>().is_err());
+    }
+
+    #[test]
+    fn test_plan_status_from_str() {
+        assert_eq!("draft".parse::<PlanStatus>().unwrap(), PlanStatus::Draft);
+        assert_eq!("approved".parse::<PlanStatus>().unwrap(), PlanStatus::Approved);
+        assert_eq!("in-progress".parse::<PlanStatus>().unwrap(), PlanStatus::InProgress);
+        assert_eq!("done".parse::<PlanStatus>().unwrap(), PlanStatus::Done);
+        assert!("invalid".parse::<PlanStatus>().is_err());
+    }
+
+    #[test]
+    fn test_note_status_from_str() {
+        assert_eq!("draft".parse::<NoteStatus>().unwrap(), NoteStatus::Draft);
+        assert_eq!("active".parse::<NoteStatus>().unwrap(), NoteStatus::Active);
+        assert_eq!("archived".parse::<NoteStatus>().unwrap(), NoteStatus::Archived);
+        assert!("invalid".parse::<NoteStatus>().is_err());
+    }
+
+    #[test]
+    fn test_epic_status_display_roundtrip() {
+        for status in [EpicStatus::Planned, EpicStatus::Active, EpicStatus::Done, EpicStatus::Paused] {
+            let s = status.to_string();
+            let parsed: EpicStatus = s.parse().unwrap();
+            assert_eq!(parsed, status);
+        }
+    }
+
+    #[test]
+    fn test_plan_status_display_roundtrip() {
+        for status in [PlanStatus::Draft, PlanStatus::Approved, PlanStatus::InProgress, PlanStatus::Done] {
+            let s = status.to_string();
+            let parsed: PlanStatus = s.parse().unwrap();
+            assert_eq!(parsed, status);
+        }
+    }
+
+    #[test]
+    fn test_note_status_display_roundtrip() {
+        for status in [NoteStatus::Draft, NoteStatus::Active, NoteStatus::Archived] {
+            let s = status.to_string();
+            let parsed: NoteStatus = s.parse().unwrap();
+            assert_eq!(parsed, status);
+        }
     }
 }

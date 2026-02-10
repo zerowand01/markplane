@@ -3,6 +3,8 @@ use markplane_core::{
     parse_id, BacklogItem, Epic, IdPrefix, MarkplaneDocument, Note, Plan, Project,
 };
 
+use super::formatting::{colorize_status, colorize_priority};
+
 pub fn run(id: String) -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
     let (prefix, _) = parse_id(&id)?;
@@ -15,33 +17,6 @@ pub fn run(id: String) -> anyhow::Result<()> {
     }
 
     Ok(())
-}
-
-fn colorize_status(status: &str) -> String {
-    match status {
-        "done" => status.green().to_string(),
-        "in-progress" => status.yellow().to_string(),
-        "active" => status.yellow().to_string(),
-        "cancelled" => status.red().dimmed().to_string(),
-        "draft" => status.dimmed().to_string(),
-        "backlog" => status.blue().to_string(),
-        "planned" => status.cyan().to_string(),
-        "approved" => status.cyan().to_string(),
-        "paused" => status.magenta().to_string(),
-        "archived" => status.dimmed().to_string(),
-        _ => status.to_string(),
-    }
-}
-
-fn colorize_priority(priority: &str) -> String {
-    match priority {
-        "critical" => priority.red().bold().to_string(),
-        "high" => priority.red().to_string(),
-        "medium" => priority.yellow().to_string(),
-        "low" => priority.dimmed().to_string(),
-        "someday" => priority.dimmed().to_string(),
-        _ => priority.to_string(),
-    }
 }
 
 fn show_backlog(project: &Project, id: &str) -> anyhow::Result<()> {

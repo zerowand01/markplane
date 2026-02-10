@@ -22,18 +22,38 @@ fn main() {
         }
     };
 
+    const MAX_LINE_LENGTH: usize = 1_048_576; // 1 MB
+
     let stdin = io::stdin();
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
+    let mut reader = stdin.lock();
+    let mut line = String::new();
 
-    for line in stdin.lock().lines() {
-        let line = match line {
-            Ok(l) => l,
+    loop {
+        line.clear();
+        match reader.read_line(&mut line) {
+            Ok(0) => break, // EOF
+            Ok(_) => {}
             Err(e) => {
                 eprintln!("markplane-mcp: read error: {}", e);
                 break;
             }
-        };
+        }
+
+        if line.len() > MAX_LINE_LENGTH {
+            eprintln!(
+                "markplane-mcp: input line exceeds {} bytes, skipping",
+                MAX_LINE_LENGTH
+            );
+            let response = JsonRpcResponse::error(
+                Value::Null,
+                PARSE_ERROR,
+                format!("Input line exceeds maximum length of {} bytes", MAX_LINE_LENGTH),
+            );
+            write_response(&mut stdout, &response);
+            continue;
+        }
 
         let trimmed = line.trim();
         if trimmed.is_empty() {

@@ -1,7 +1,9 @@
-use std::fs;
+use std::collections::HashSet;
+use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 
 use chrono::Local;
+use fs2::FileExt;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -9,6 +11,9 @@ use crate::error::{MarkplaneError, Result};
 use crate::frontmatter::{parse_frontmatter, write_frontmatter};
 use crate::models::*;
 use crate::templates::{self, render_template};
+
+/// Maximum allowed title length in characters.
+const MAX_TITLE_LENGTH: usize = 500;
 
 /// Represents a `.markplane/` project directory.
 pub struct Project {
@@ -66,14 +71,26 @@ impl Project {
     // ── ID Management ─────────────────────────────────────────────────────
 
     /// Get the next ID for a given prefix and increment the counter in config.
+    /// Uses advisory file locking to prevent concurrent ID conflicts.
     pub fn next_id(&self, prefix: &IdPrefix) -> Result<String> {
-        let mut config = self.load_config()?;
-        let key = prefix.as_str().to_string();
-        let counter = config.counters.entry(key).or_insert(0);
-        *counter += 1;
-        let id = format_id(prefix, *counter);
-        self.save_config(&config)?;
-        Ok(id)
+        let config_path = self.root.join("config.yaml");
+        let lock_file = File::open(&config_path).map_err(|e| {
+            MarkplaneError::NotInitialized(format!("Cannot open config.yaml for locking: {}", e))
+        })?;
+        lock_file.lock_exclusive().map_err(MarkplaneError::Io)?;
+
+        let result = (|| {
+            let mut config = self.load_config()?;
+            let key = prefix.as_str().to_string();
+            let counter = config.counters.entry(key).or_insert(0);
+            *counter += 1;
+            let id = format_id(prefix, *counter);
+            self.save_config(&config)?;
+            Ok(id)
+        })();
+
+        lock_file.unlock().map_err(MarkplaneError::Io)?;
+        result
     }
 
     /// Resolve an item ID to its file path.
@@ -118,10 +135,12 @@ impl Project {
         epic: Option<String>,
         tags: Vec<String>,
     ) -> Result<BacklogItem> {
+        validate_title_length(title)?;
         let id = self.next_id(&IdPrefix::Back)?;
         let today = Local::now().date_naive();
         let date_str = today.format("%Y-%m-%d").to_string();
 
+        let safe_title = sanitize_yaml_string(title);
         let tags_yaml = format_yaml_list(&tags);
         let epic_yaml = epic.as_deref().unwrap_or("null");
 
@@ -129,7 +148,7 @@ impl Project {
             templates::BACKLOG_TEMPLATE,
             &[
                 ("{ID}", &id),
-                ("{TITLE}", title),
+                ("{TITLE}", &safe_title),
                 ("{STATUS}", "draft"),
                 ("{PRIORITY}", &priority.to_string()),
                 ("{TYPE}", &item_type.to_string()),
@@ -167,13 +186,15 @@ impl Project {
 
     /// Create a new epic.
     pub fn create_epic(&self, title: &str, priority: Priority) -> Result<Epic> {
+        validate_title_length(title)?;
         let id = self.next_id(&IdPrefix::Epic)?;
 
+        let safe_title = sanitize_yaml_string(title);
         let content = render_template(
             templates::EPIC_TEMPLATE,
             &[
                 ("{ID}", &id),
-                ("{TITLE}", title),
+                ("{TITLE}", &safe_title),
                 ("{PRIORITY}", &priority.to_string()),
             ],
         );
@@ -204,10 +225,12 @@ impl Project {
         implements: Vec<String>,
         epic: Option<String>,
     ) -> Result<Plan> {
+        validate_title_length(title)?;
         let id = self.next_id(&IdPrefix::Plan)?;
         let today = Local::now().date_naive();
         let date_str = today.format("%Y-%m-%d").to_string();
 
+        let safe_title = sanitize_yaml_string(title);
         let implements_yaml = format_yaml_list(&implements);
         let epic_yaml = epic.as_deref().unwrap_or("null");
 
@@ -215,7 +238,7 @@ impl Project {
             templates::PLAN_IMPLEMENTATION_TEMPLATE,
             &[
                 ("{ID}", &id),
-                ("{TITLE}", title),
+                ("{TITLE}", &safe_title),
                 ("{IMPLEMENTS}", &implements_yaml),
                 ("{EPIC}", epic_yaml),
                 ("{DATE}", &date_str),
@@ -247,10 +270,12 @@ impl Project {
         note_type: NoteType,
         tags: Vec<String>,
     ) -> Result<Note> {
+        validate_title_length(title)?;
         let id = self.next_id(&IdPrefix::Note)?;
         let today = Local::now().date_naive();
         let date_str = today.format("%Y-%m-%d").to_string();
 
+        let safe_title = sanitize_yaml_string(title);
         let tags_yaml = format_yaml_list(&tags);
         let type_str = note_type.to_string();
 
@@ -264,7 +289,7 @@ impl Project {
             template,
             &[
                 ("{ID}", &id),
-                ("{TITLE}", title),
+                ("{TITLE}", &safe_title),
                 ("{TYPE}", &type_str),
                 ("{TAGS}", &tags_yaml),
                 ("{RELATED}", "[]"),
@@ -443,13 +468,68 @@ impl Project {
     }
 }
 
-/// Format a list of strings as a YAML inline list: `[a, b, c]` or `[]`.
+/// Escape a string for safe inclusion in YAML double-quoted values.
+/// Escapes `\`, `"`, and newlines.
+fn sanitize_yaml_string(s: &str) -> String {
+    s.replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('\n', "\\n")
+        .replace('\r', "\\r")
+}
+
+/// Validate that a title does not exceed the maximum length.
+fn validate_title_length(title: &str) -> Result<()> {
+    if title.len() > MAX_TITLE_LENGTH {
+        return Err(MarkplaneError::Config(format!(
+            "Title exceeds maximum length of {} characters (got {})",
+            MAX_TITLE_LENGTH,
+            title.len()
+        )));
+    }
+    Ok(())
+}
+
+/// Format a list of strings as a YAML inline list: `["a", "b", "c"]` or `[]`.
+/// Each value is quoted to prevent YAML injection.
 fn format_yaml_list(items: &[String]) -> String {
     if items.is_empty() {
         "[]".to_string()
     } else {
-        format!("[{}]", items.join(", "))
+        format!(
+            "[{}]",
+            items
+                .iter()
+                .map(|s| format!("\"{}\"", s.replace('"', "\\\"")))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
     }
+}
+
+/// Find backlog items that are blocked (have unresolved dependencies).
+/// An item is blocked if it's not done/cancelled and has at least one
+/// dependency that isn't done.
+pub fn find_blocked_items(
+    items: &[MarkplaneDocument<BacklogItem>],
+) -> Vec<&MarkplaneDocument<BacklogItem>> {
+    let done_ids: HashSet<&str> = items
+        .iter()
+        .filter(|i| i.frontmatter.status == BacklogStatus::Done)
+        .map(|i| i.frontmatter.id.as_str())
+        .collect();
+
+    items
+        .iter()
+        .filter(|i| {
+            i.frontmatter.status != BacklogStatus::Done
+                && i.frontmatter.status != BacklogStatus::Cancelled
+                && !i.frontmatter.depends_on.is_empty()
+                && i.frontmatter
+                    .depends_on
+                    .iter()
+                    .any(|dep| !done_ids.contains(dep.as_str()))
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -715,7 +795,7 @@ mod tests {
         assert_eq!(format_yaml_list(&[]), "[]");
         assert_eq!(
             format_yaml_list(&["a".to_string(), "b".to_string()]),
-            "[a, b]"
+            "[\"a\", \"b\"]"
         );
     }
 
@@ -728,5 +808,196 @@ mod tests {
 
         let reloaded = project.load_config().unwrap();
         assert_eq!(reloaded.project.name, "Updated Name");
+    }
+
+    // ── Status updates for Epic, Plan, Note types ────────────────────────
+
+    #[test]
+    fn test_update_status_epic() {
+        let (_tmp, project) = setup_project();
+        project.create_epic("Phase 1", Priority::High).unwrap();
+
+        project.update_status("EPIC-001", "active").unwrap();
+        let doc: MarkplaneDocument<Epic> = project.read_item("EPIC-001").unwrap();
+        assert_eq!(doc.frontmatter.status, EpicStatus::Active);
+
+        project.update_status("EPIC-001", "done").unwrap();
+        let doc: MarkplaneDocument<Epic> = project.read_item("EPIC-001").unwrap();
+        assert_eq!(doc.frontmatter.status, EpicStatus::Done);
+
+        project.update_status("EPIC-001", "paused").unwrap();
+        let doc: MarkplaneDocument<Epic> = project.read_item("EPIC-001").unwrap();
+        assert_eq!(doc.frontmatter.status, EpicStatus::Paused);
+    }
+
+    #[test]
+    fn test_update_status_plan() {
+        let (_tmp, project) = setup_project();
+        project.create_plan("Plan A", vec![], None).unwrap();
+
+        project.update_status("PLAN-001", "approved").unwrap();
+        let doc: MarkplaneDocument<Plan> = project.read_item("PLAN-001").unwrap();
+        assert_eq!(doc.frontmatter.status, PlanStatus::Approved);
+
+        project.update_status("PLAN-001", "in-progress").unwrap();
+        let doc: MarkplaneDocument<Plan> = project.read_item("PLAN-001").unwrap();
+        assert_eq!(doc.frontmatter.status, PlanStatus::InProgress);
+
+        project.update_status("PLAN-001", "done").unwrap();
+        let doc: MarkplaneDocument<Plan> = project.read_item("PLAN-001").unwrap();
+        assert_eq!(doc.frontmatter.status, PlanStatus::Done);
+    }
+
+    #[test]
+    fn test_update_status_note() {
+        let (_tmp, project) = setup_project();
+        project
+            .create_note("Research A", NoteType::Research, vec![])
+            .unwrap();
+
+        project.update_status("NOTE-001", "active").unwrap();
+        let doc: MarkplaneDocument<Note> = project.read_item("NOTE-001").unwrap();
+        assert_eq!(doc.frontmatter.status, NoteStatus::Active);
+
+        project.update_status("NOTE-001", "archived").unwrap();
+        let doc: MarkplaneDocument<Note> = project.read_item("NOTE-001").unwrap();
+        assert_eq!(doc.frontmatter.status, NoteStatus::Archived);
+    }
+
+    #[test]
+    fn test_update_status_epic_invalid() {
+        let (_tmp, project) = setup_project();
+        project.create_epic("Phase 1", Priority::High).unwrap();
+        assert!(project.update_status("EPIC-001", "in-progress").is_err());
+    }
+
+    #[test]
+    fn test_update_status_plan_invalid() {
+        let (_tmp, project) = setup_project();
+        project.create_plan("Plan A", vec![], None).unwrap();
+        assert!(project.update_status("PLAN-001", "cancelled").is_err());
+    }
+
+    // ── find_blocked_items ───────────────────────────────────────────────
+
+    #[test]
+    fn test_find_blocked_items_none_blocked() {
+        let (_tmp, project) = setup_project();
+        project
+            .create_backlog_item("A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+        project
+            .create_backlog_item("B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+
+        let items = project.list_backlog_items(&crate::query::QueryFilter::default()).unwrap();
+        let blocked = find_blocked_items(&items);
+        assert!(blocked.is_empty());
+    }
+
+    #[test]
+    fn test_find_blocked_items_with_blocked() {
+        let (_tmp, project) = setup_project();
+        project
+            .create_backlog_item("Blocker", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+        project
+            .create_backlog_item("Blocked", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+
+        // Set BACK-002 to depend on BACK-001
+        let mut doc: MarkplaneDocument<BacklogItem> = project.read_item("BACK-002").unwrap();
+        doc.frontmatter.depends_on = vec!["BACK-001".to_string()];
+        project.write_item("BACK-002", &doc).unwrap();
+
+        let items = project.list_backlog_items(&crate::query::QueryFilter::default()).unwrap();
+        let blocked = find_blocked_items(&items);
+        assert_eq!(blocked.len(), 1);
+        assert_eq!(blocked[0].frontmatter.id, "BACK-002");
+    }
+
+    #[test]
+    fn test_find_blocked_items_resolved_dependency() {
+        let (_tmp, project) = setup_project();
+        project
+            .create_backlog_item("Blocker", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+        project
+            .create_backlog_item("Blocked", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+
+        // Set dependency
+        let mut doc: MarkplaneDocument<BacklogItem> = project.read_item("BACK-002").unwrap();
+        doc.frontmatter.depends_on = vec!["BACK-001".to_string()];
+        project.write_item("BACK-002", &doc).unwrap();
+
+        // Mark blocker as done
+        project.update_status("BACK-001", "done").unwrap();
+
+        let items = project.list_backlog_items(&crate::query::QueryFilter::default()).unwrap();
+        let blocked = find_blocked_items(&items);
+        assert!(blocked.is_empty()); // No longer blocked
+    }
+
+    // ── UTF-8 truncate safety (bug fix verification) ─────────────────────
+
+    #[test]
+    fn test_format_yaml_list_with_special_chars() {
+        // Tags with quotes should be escaped properly
+        let tags = vec!["c++".to_string(), "it's".to_string(), "key\"value".to_string()];
+        let result = format_yaml_list(&tags);
+        assert!(result.contains("c++"));
+        assert!(result.contains("it's"));
+        // Double-quote inside should be escaped
+        assert!(result.contains("key\\\"value"));
+    }
+
+    #[test]
+    fn test_create_backlog_item_with_emoji_title() {
+        let (_tmp, project) = setup_project();
+        let item = project
+            .create_backlog_item(
+                "Fix login bug 🔥🚀",
+                ItemType::Bug,
+                Priority::High,
+                Effort::Small,
+                None,
+                vec![],
+            )
+            .unwrap();
+
+        assert_eq!(item.title, "Fix login bug 🔥🚀");
+        // Read it back and verify
+        let doc: MarkplaneDocument<BacklogItem> = project.read_item("BACK-001").unwrap();
+        assert_eq!(doc.frontmatter.title, "Fix login bug 🔥🚀");
+    }
+
+    // ── Title length validation ──────────────────────────────────────────
+
+    #[test]
+    fn test_validate_title_length_ok() {
+        assert!(validate_title_length("Normal title").is_ok());
+    }
+
+    #[test]
+    fn test_validate_title_length_too_long() {
+        let long_title = "x".repeat(501);
+        assert!(validate_title_length(&long_title).is_err());
+    }
+
+    #[test]
+    fn test_validate_title_length_at_limit() {
+        let title = "x".repeat(500);
+        assert!(validate_title_length(&title).is_ok());
+    }
+
+    // ── sanitize_yaml_string ─────────────────────────────────────────────
+
+    #[test]
+    fn test_sanitize_yaml_string() {
+        assert_eq!(sanitize_yaml_string("hello"), "hello");
+        assert_eq!(sanitize_yaml_string("it's \"fine\""), "it's \\\"fine\\\"");
+        assert_eq!(sanitize_yaml_string("line\nbreak"), "line\\nbreak");
+        assert_eq!(sanitize_yaml_string("back\\slash"), "back\\\\slash");
     }
 }

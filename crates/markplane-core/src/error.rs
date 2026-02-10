@@ -17,6 +17,9 @@ pub enum MarkplaneError {
     #[error("Invalid status transition: {from} -> {to}")]
     InvalidTransition { from: String, to: String },
 
+    #[error("Invalid status: {0}")]
+    InvalidStatus(String),
+
     #[error("Duplicate ID: {0}")]
     DuplicateId(String),
 

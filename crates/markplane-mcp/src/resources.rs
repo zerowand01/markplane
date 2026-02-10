@@ -1,6 +1,7 @@
+use std::collections::HashSet;
 use std::fs;
 
-use markplane_core::{BacklogStatus, Project, QueryFilter};
+use markplane_core::{BacklogStatus, Project, QueryFilter, parse_id, IdPrefix};
 use serde_json::{json, Value};
 
 use crate::protocol::{JsonRpcResponse, INTERNAL_ERROR, INVALID_PARAMS};
@@ -27,6 +28,20 @@ pub fn list_resources() -> Value {
                 "description": "Items that have unresolved dependencies or need attention",
                 "mimeType": "text/markdown"
             }
+        ],
+        "resourceTemplates": [
+            {
+                "uriTemplate": "markplane://backlog/{id}",
+                "name": "Backlog Item",
+                "description": "Full content of a backlog item by ID",
+                "mimeType": "text/markdown"
+            },
+            {
+                "uriTemplate": "markplane://epic/{id}",
+                "name": "Epic",
+                "description": "Full content of an epic by ID",
+                "mimeType": "text/markdown"
+            }
         ]
     })
 }
@@ -37,6 +52,14 @@ pub fn read_resource(id: Value, project: &Project, uri: &str) -> JsonRpcResponse
         "markplane://summary" => read_summary(project),
         "markplane://active-work" => read_active_work(project),
         "markplane://blocked" => read_blocked(project),
+        _ if uri.starts_with("markplane://backlog/") => {
+            let item_id = &uri["markplane://backlog/".len()..];
+            read_backlog_item(project, item_id)
+        }
+        _ if uri.starts_with("markplane://epic/") => {
+            let item_id = &uri["markplane://epic/".len()..];
+            read_epic_item(project, item_id)
+        }
         _ => {
             return JsonRpcResponse::error(
                 id,
@@ -125,9 +148,26 @@ fn read_blocked(project: &Project) -> Result<String, String> {
         .list_backlog_items(&QueryFilter::default())
         .map_err(|e| e.to_string())?;
 
+    // Build a set of done item IDs
+    let done_ids: HashSet<&str> = items
+        .iter()
+        .filter(|doc| doc.frontmatter.status == BacklogStatus::Done)
+        .map(|doc| doc.frontmatter.id.as_str())
+        .collect();
+
+    // Only include items that have unresolved (non-done) dependencies
     let blocked: Vec<_> = items
         .iter()
-        .filter(|doc| !doc.frontmatter.depends_on.is_empty())
+        .filter(|doc| {
+            doc.frontmatter.status != BacklogStatus::Done
+                && doc.frontmatter.status != BacklogStatus::Cancelled
+                && !doc.frontmatter.depends_on.is_empty()
+                && doc
+                    .frontmatter
+                    .depends_on
+                    .iter()
+                    .any(|dep| !done_ids.contains(dep.as_str()))
+        })
         .collect();
 
     if blocked.is_empty() {
@@ -137,13 +177,39 @@ fn read_blocked(project: &Project) -> Result<String, String> {
     let mut output = "# Blocked Items\n\n".to_string();
     for item in &blocked {
         let fm = &item.frontmatter;
+        let unresolved: Vec<_> = fm
+            .depends_on
+            .iter()
+            .filter(|dep| !done_ids.contains(dep.as_str()))
+            .map(|s| s.as_str())
+            .collect();
         output.push_str(&format!(
             "- **{}** {} — blocked by: {}\n",
             fm.id,
             fm.title,
-            fm.depends_on.join(", "),
+            unresolved.join(", "),
         ));
     }
 
     Ok(output)
+}
+
+fn read_backlog_item(project: &Project, item_id: &str) -> Result<String, String> {
+    // Validate the ID is a BACK- item
+    let (prefix, _) = parse_id(item_id).map_err(|e| e.to_string())?;
+    if prefix != IdPrefix::Back {
+        return Err(format!("Expected BACK- ID, got: {}", item_id));
+    }
+    let path = project.item_path(item_id).map_err(|e| e.to_string())?;
+    fs::read_to_string(&path).map_err(|e| e.to_string())
+}
+
+fn read_epic_item(project: &Project, item_id: &str) -> Result<String, String> {
+    // Validate the ID is an EPIC- item
+    let (prefix, _) = parse_id(item_id).map_err(|e| e.to_string())?;
+    if prefix != IdPrefix::Epic {
+        return Err(format!("Expected EPIC- ID, got: {}", item_id));
+    }
+    let path = project.item_path(item_id).map_err(|e| e.to_string())?;
+    fs::read_to_string(&path).map_err(|e| e.to_string())
 }

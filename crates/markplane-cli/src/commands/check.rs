@@ -41,7 +41,7 @@ pub fn run(orphans: bool) -> anyhow::Result<()> {
     }
 
     if !broken.is_empty() {
-        std::process::exit(1);
+        return Err(anyhow::anyhow!("Found {} broken references", broken.len()));
     }
 
     Ok(())

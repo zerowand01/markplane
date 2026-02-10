@@ -3,6 +3,8 @@ use colored::Colorize;
 use markplane_core::{Project, QueryFilter};
 use tabled::{Table, Tabled};
 
+use super::formatting::truncate;
+
 #[derive(Tabled)]
 struct StaleRow {
     #[tabled(rename = "ID")]
@@ -37,11 +39,7 @@ pub fn run(days: u32) -> anyhow::Result<()> {
             let stale_days = (today - fm.updated).num_days();
             StaleRow {
                 id: fm.id.clone(),
-                title: if fm.title.len() > 40 {
-                    format!("{}…", &fm.title[..39])
-                } else {
-                    fm.title.clone()
-                },
+                title: truncate(&fm.title, 40),
                 status: fm.status.to_string(),
                 updated: fm.updated.to_string(),
                 days: stale_days.to_string(),

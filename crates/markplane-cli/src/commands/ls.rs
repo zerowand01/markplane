@@ -1,8 +1,8 @@
-use colored::Colorize;
 use markplane_core::{Project, QueryFilter};
 use tabled::{Table, Tabled};
 
 use super::{parse_comma_list, LsKind};
+use super::formatting::{truncate, colorize_status, colorize_priority};
 
 #[derive(Tabled)]
 struct BacklogRow {
@@ -54,37 +54,6 @@ struct NoteRow {
     note_type: String,
     #[tabled(rename = "Status")]
     status: String,
-}
-
-fn truncate(s: &str, max: usize) -> String {
-    if s.len() <= max {
-        s.to_string()
-    } else {
-        format!("{}…", &s[..max - 1])
-    }
-}
-
-fn colorize_status(status: &str) -> String {
-    match status {
-        "done" => status.green().to_string(),
-        "in-progress" | "active" => status.yellow().to_string(),
-        "cancelled" => status.red().dimmed().to_string(),
-        "draft" => status.dimmed().to_string(),
-        "backlog" => status.blue().to_string(),
-        "planned" | "approved" => status.cyan().to_string(),
-        "paused" => status.magenta().to_string(),
-        _ => status.to_string(),
-    }
-}
-
-fn colorize_priority(priority: &str) -> String {
-    match priority {
-        "critical" => priority.red().bold().to_string(),
-        "high" => priority.red().to_string(),
-        "medium" => priority.yellow().to_string(),
-        "low" | "someday" => priority.dimmed().to_string(),
-        _ => priority.to_string(),
-    }
 }
 
 pub fn run(

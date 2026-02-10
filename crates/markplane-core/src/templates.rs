@@ -410,4 +410,60 @@ mod tests {
         assert!(result.contains("id: EPIC-001"));
         assert!(result.contains("priority: high"));
     }
+
+    #[test]
+    fn test_render_template_unreplaced_placeholders() {
+        // If a placeholder isn't in the vars, it stays as-is
+        let result = render_template("Hello {NAME}, {MISSING}.", &[("{NAME}", "World")]);
+        assert_eq!(result, "Hello World, {MISSING}.");
+    }
+
+    #[test]
+    fn test_render_template_no_vars() {
+        let result = render_template("Just text.", &[]);
+        assert_eq!(result, "Just text.");
+    }
+
+    #[test]
+    fn test_render_template_special_chars_in_values() {
+        let result = render_template(
+            "Title: {TITLE}",
+            &[("{TITLE}", "C++ & Rust <3 \"code\"")],
+        );
+        assert_eq!(result, "Title: C++ & Rust <3 \"code\"");
+    }
+
+    #[test]
+    fn test_render_template_plan() {
+        let result = render_template(
+            PLAN_IMPLEMENTATION_TEMPLATE,
+            &[
+                ("{ID}", "PLAN-001"),
+                ("{TITLE}", "Dark mode"),
+                ("{IMPLEMENTS}", "[\"BACK-001\"]"),
+                ("{EPIC}", "null"),
+                ("{DATE}", "2026-02-09"),
+            ],
+        );
+        assert!(result.contains("id: PLAN-001"));
+        assert!(result.contains("implements: [\"BACK-001\"]"));
+        assert!(result.contains("Implementation Plan"));
+    }
+
+    #[test]
+    fn test_render_template_note() {
+        let result = render_template(
+            NOTE_GENERIC_TEMPLATE,
+            &[
+                ("{ID}", "NOTE-001"),
+                ("{TITLE}", "My idea"),
+                ("{TYPE}", "idea"),
+                ("{TAGS}", "[]"),
+                ("{RELATED}", "[]"),
+                ("{DATE}", "2026-02-09"),
+            ],
+        );
+        assert!(result.contains("id: NOTE-001"));
+        assert!(result.contains("type: idea"));
+    }
 }

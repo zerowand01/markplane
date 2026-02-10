@@ -17,6 +17,7 @@ mod check;
 mod stale;
 mod archive;
 mod context;
+mod formatting;
 mod metrics;
 mod graph;
 mod claude_md;

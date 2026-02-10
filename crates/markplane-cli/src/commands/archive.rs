@@ -15,7 +15,7 @@ pub fn run(dry_run: bool) -> anyhow::Result<()> {
         .filter(|doc| {
             let fm = &doc.frontmatter;
             let is_done = fm.status == BacklogStatus::Done;
-            let is_cancelled = fm.status == BacklogStatus::Cancelled && config.archive.keep_cancelled;
+            let is_cancelled = fm.status == BacklogStatus::Cancelled && !config.archive.keep_cancelled;
             (is_done || is_cancelled) && fm.updated <= cutoff
         })
         .collect();

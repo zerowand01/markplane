@@ -303,4 +303,213 @@ mod tests {
         extract_ids_from_line("implements: [BACK-042, BACK-043]", &mut refs);
         assert_eq!(refs, vec!["BACK-042", "BACK-043"]);
     }
+
+    // ── extract_references edge cases ────────────────────────────────────
+
+    #[test]
+    fn test_extract_references_empty_brackets() {
+        let content = "Empty ref: [[]] should not match.";
+        let refs = extract_references(content);
+        assert!(refs.is_empty());
+    }
+
+    #[test]
+    fn test_extract_references_unclosed() {
+        let content = "Unclosed [[BACK-001 never closed.";
+        let refs = extract_references(content);
+        assert!(refs.is_empty());
+    }
+
+    #[test]
+    fn test_extract_references_at_start() {
+        let content = "[[BACK-001]] is at the start.";
+        let refs = extract_references(content);
+        assert_eq!(refs, vec!["BACK-001"]);
+    }
+
+    #[test]
+    fn test_extract_references_at_end() {
+        let content = "Ref at the end: [[BACK-001]]";
+        let refs = extract_references(content);
+        assert_eq!(refs, vec!["BACK-001"]);
+    }
+
+    #[test]
+    fn test_extract_references_adjacent() {
+        let content = "[[BACK-001]][[PLAN-002]]";
+        let refs = extract_references(content);
+        assert_eq!(refs, vec!["BACK-001", "PLAN-002"]);
+    }
+
+    #[test]
+    fn test_extract_references_single_char_content() {
+        let content = "[[x]]";
+        let refs = extract_references(content);
+        assert!(refs.is_empty()); // "x" is not a valid ID
+    }
+
+    // ── validate_references ──────────────────────────────────────────────
+
+    #[test]
+    fn test_validate_references_all_valid() {
+        use tempfile::TempDir;
+        use crate::project::Project;
+        use crate::models::{ItemType, Priority, Effort};
+
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().join(".markplane");
+        let project = Project::init(root, "Test", "Test").unwrap();
+
+        project
+            .create_backlog_item("Item A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+        project
+            .create_backlog_item("Item B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+
+        // Add a valid reference from BACK-001 to BACK-002 in the body
+        let mut doc: crate::models::MarkplaneDocument<crate::models::BacklogItem> =
+            project.read_item("BACK-001").unwrap();
+        doc.body = "# Item A\n\nSee [[BACK-002]] for details.\n".to_string();
+        project.write_item("BACK-001", &doc).unwrap();
+
+        let broken = validate_references(&project).unwrap();
+        assert!(broken.is_empty());
+    }
+
+    #[test]
+    fn test_validate_references_broken_ref() {
+        use tempfile::TempDir;
+        use crate::project::Project;
+        use crate::models::{ItemType, Priority, Effort};
+
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().join(".markplane");
+        let project = Project::init(root, "Test", "Test").unwrap();
+
+        project
+            .create_backlog_item("Item A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+
+        // Add a broken reference to a non-existent item
+        let mut doc: crate::models::MarkplaneDocument<crate::models::BacklogItem> =
+            project.read_item("BACK-001").unwrap();
+        doc.body = "# Item A\n\nSee [[BACK-999]] for details.\n".to_string();
+        project.write_item("BACK-001", &doc).unwrap();
+
+        let broken = validate_references(&project).unwrap();
+        assert_eq!(broken.len(), 1);
+        assert_eq!(broken[0].target_id, "BACK-999");
+    }
+
+    // ── find_orphans ─────────────────────────────────────────────────────
+
+    #[test]
+    fn test_find_orphans_all_referenced() {
+        use tempfile::TempDir;
+        use crate::project::Project;
+        use crate::models::{ItemType, Priority, Effort};
+
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().join(".markplane");
+        let project = Project::init(root, "Test", "Test").unwrap();
+
+        project
+            .create_backlog_item("Item A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+        project
+            .create_backlog_item("Item B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+
+        // A references B, B references A
+        let mut doc_a: crate::models::MarkplaneDocument<crate::models::BacklogItem> =
+            project.read_item("BACK-001").unwrap();
+        doc_a.body = "# A\nSee [[BACK-002]]\n".to_string();
+        project.write_item("BACK-001", &doc_a).unwrap();
+
+        let mut doc_b: crate::models::MarkplaneDocument<crate::models::BacklogItem> =
+            project.read_item("BACK-002").unwrap();
+        doc_b.body = "# B\nSee [[BACK-001]]\n".to_string();
+        project.write_item("BACK-002", &doc_b).unwrap();
+
+        let orphans = find_orphans(&project).unwrap();
+        assert!(orphans.is_empty());
+    }
+
+    #[test]
+    fn test_find_orphans_with_orphan() {
+        use tempfile::TempDir;
+        use crate::project::Project;
+        use crate::models::{ItemType, Priority, Effort};
+
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().join(".markplane");
+        let project = Project::init(root, "Test", "Test").unwrap();
+
+        project
+            .create_backlog_item("Referenced", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+        project
+            .create_backlog_item("Orphan", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+
+        // Only BACK-001 references BACK-002 via frontmatter (depends_on or body), but neither references the other
+        // BACK-002 body references BACK-001, leaving BACK-002 as orphan since nothing refs it
+        let mut doc: crate::models::MarkplaneDocument<crate::models::BacklogItem> =
+            project.read_item("BACK-001").unwrap();
+        doc.body = "# Referenced\nStandalone.\n".to_string();
+        project.write_item("BACK-001", &doc).unwrap();
+
+        let orphans = find_orphans(&project).unwrap();
+        // Both items are orphans since neither references the other
+        assert!(!orphans.is_empty());
+    }
+
+    // ── build_reference_graph ────────────────────────────────────────────
+
+    #[test]
+    fn test_build_reference_graph() {
+        use tempfile::TempDir;
+        use crate::project::Project;
+        use crate::models::{ItemType, Priority, Effort};
+
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().join(".markplane");
+        let project = Project::init(root, "Test", "Test").unwrap();
+
+        project
+            .create_backlog_item("A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+        project
+            .create_backlog_item("B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+
+        // A's body references B
+        let mut doc: crate::models::MarkplaneDocument<crate::models::BacklogItem> =
+            project.read_item("BACK-001").unwrap();
+        doc.body = "# A\n\nSee [[BACK-002]].\n".to_string();
+        project.write_item("BACK-001", &doc).unwrap();
+
+        let graph = build_reference_graph(&project).unwrap();
+        assert!(graph.contains_key("BACK-001"));
+        assert!(graph["BACK-001"].contains(&"BACK-002".to_string()));
+
+        // B doesn't reference A
+        if let Some(b_refs) = graph.get("BACK-002") {
+            assert!(!b_refs.contains(&"BACK-001".to_string()));
+        }
+    }
+
+    #[test]
+    fn test_build_reference_graph_empty() {
+        use tempfile::TempDir;
+        use crate::project::Project;
+
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().join(".markplane");
+        let project = Project::init(root, "Test", "Test").unwrap();
+
+        let graph = build_reference_graph(&project).unwrap();
+        assert!(graph.is_empty());
+    }
 }

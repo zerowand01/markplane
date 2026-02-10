@@ -1,5 +1,5 @@
 use colored::Colorize;
-use markplane_core::{BacklogStatus, Priority, Project, QueryFilter};
+use markplane_core::{BacklogStatus, Priority, Project, QueryFilter, find_blocked_items};
 
 pub fn run() -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
@@ -34,24 +34,13 @@ pub fn run() -> anyhow::Result<()> {
     }
 
     // Blocked items
-    let done_ids: std::collections::HashSet<&str> = items
-        .iter()
-        .filter(|i| i.frontmatter.status == BacklogStatus::Done)
-        .map(|i| i.frontmatter.id.as_str())
-        .collect();
-    let blocked: Vec<_> = items
-        .iter()
-        .filter(|i| {
-            i.frontmatter.status != BacklogStatus::Done
-                && i.frontmatter.status != BacklogStatus::Cancelled
-                && !i.frontmatter.depends_on.is_empty()
-                && i.frontmatter
-                    .depends_on
-                    .iter()
-                    .any(|dep| !done_ids.contains(dep.as_str()))
-        })
-        .collect();
+    let blocked = find_blocked_items(&items);
     if !blocked.is_empty() {
+        let done_ids: std::collections::HashSet<&str> = items
+            .iter()
+            .filter(|i| i.frontmatter.status == BacklogStatus::Done)
+            .map(|i| i.frontmatter.id.as_str())
+            .collect();
         println!("{}", "Blocked".bold().red());
         for item in &blocked {
             let fm = &item.frontmatter;

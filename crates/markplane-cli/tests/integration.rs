@@ -746,6 +746,340 @@ fn test_help() {
         .stdout(predicate::str::contains("dashboard"));
 }
 
+// ── Stale ─────────────────────────────────────────────────────────────────
+
+#[test]
+fn test_stale_no_stale_items() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Fresh item"])
+        .assert()
+        .success();
+
+    cmd()
+        .current_dir(tmp.path())
+        .args(["stale", "--days", "1"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("No items stale"));
+}
+
+#[test]
+fn test_stale_with_old_items() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Old item"])
+        .assert()
+        .success();
+
+    // Manually backdate the item's updated field to make it stale
+    let item_path = tmp.path().join(".markplane/backlog/BACK-001.md");
+    let content = std::fs::read_to_string(&item_path).unwrap();
+    let old_date = "2020-01-01";
+    let today = chrono::Local::now()
+        .date_naive()
+        .format("%Y-%m-%d")
+        .to_string();
+    let content = content.replace(
+        &format!("updated: {}", today),
+        &format!("updated: {}", old_date),
+    );
+    std::fs::write(&item_path, content).unwrap();
+
+    cmd()
+        .current_dir(tmp.path())
+        .args(["stale", "--days", "30"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("BACK-001"))
+        .stdout(predicate::str::contains("Old item"));
+}
+
+// ── Archive ───────────────────────────────────────────────────────────────
+
+#[test]
+fn test_archive_nothing_to_archive() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Draft item"])
+        .assert()
+        .success();
+
+    cmd()
+        .current_dir(tmp.path())
+        .arg("archive")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("No items eligible"));
+}
+
+#[test]
+fn test_archive_dry_run() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["add", "To archive"])
+        .assert()
+        .success();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["status", "BACK-001", "done"])
+        .assert()
+        .success();
+
+    // Backdate to make archivable
+    let item_path = tmp.path().join(".markplane/backlog/BACK-001.md");
+    let content = std::fs::read_to_string(&item_path).unwrap();
+    let today = chrono::Local::now()
+        .date_naive()
+        .format("%Y-%m-%d")
+        .to_string();
+    let content = content.replace(
+        &format!("updated: {}", today),
+        "updated: 2020-01-01",
+    );
+    std::fs::write(&item_path, content).unwrap();
+
+    cmd()
+        .current_dir(tmp.path())
+        .args(["archive", "--dry-run"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Would archive"))
+        .stdout(predicate::str::contains("BACK-001"));
+
+    // File should still be in active dir (not moved)
+    assert!(tmp.path().join(".markplane/backlog/BACK-001.md").is_file());
+}
+
+#[test]
+fn test_archive_actual() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["add", "To archive"])
+        .assert()
+        .success();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["status", "BACK-001", "done"])
+        .assert()
+        .success();
+
+    // Backdate
+    let item_path = tmp.path().join(".markplane/backlog/BACK-001.md");
+    let content = std::fs::read_to_string(&item_path).unwrap();
+    let today = chrono::Local::now()
+        .date_naive()
+        .format("%Y-%m-%d")
+        .to_string();
+    let content = content.replace(
+        &format!("updated: {}", today),
+        "updated: 2020-01-01",
+    );
+    std::fs::write(&item_path, content).unwrap();
+
+    cmd()
+        .current_dir(tmp.path())
+        .arg("archive")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Archived BACK-001"));
+
+    // File should be in archive dir
+    assert!(tmp
+        .path()
+        .join(".markplane/backlog/archive/BACK-001.md")
+        .is_file());
+    assert!(!tmp.path().join(".markplane/backlog/BACK-001.md").is_file());
+}
+
+#[test]
+fn test_archive_keep_cancelled() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["add", "To cancel"])
+        .assert()
+        .success();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["status", "BACK-001", "cancelled"])
+        .assert()
+        .success();
+
+    // Backdate
+    let item_path = tmp.path().join(".markplane/backlog/BACK-001.md");
+    let content = std::fs::read_to_string(&item_path).unwrap();
+    let today = chrono::Local::now()
+        .date_naive()
+        .format("%Y-%m-%d")
+        .to_string();
+    let content = content.replace(
+        &format!("updated: {}", today),
+        "updated: 2020-01-01",
+    );
+    std::fs::write(&item_path, content).unwrap();
+
+    // Default config has keep_cancelled: true, so cancelled items should NOT be archived
+    cmd()
+        .current_dir(tmp.path())
+        .arg("archive")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("No items eligible"));
+
+    // File should still be in active dir
+    assert!(tmp.path().join(".markplane/backlog/BACK-001.md").is_file());
+}
+
+// ── Graph ─────────────────────────────────────────────────────────────────
+
+#[test]
+fn test_graph() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Blocker"])
+        .assert()
+        .success();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Blocked"])
+        .assert()
+        .success();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["link", "BACK-001", "--blocks", "BACK-002"])
+        .assert()
+        .success();
+
+    cmd()
+        .current_dir(tmp.path())
+        .args(["graph", "BACK-001"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("BACK-001"))
+        .stdout(predicate::str::contains("BACK-002"));
+}
+
+// ── Context ───────────────────────────────────────────────────────────────
+
+#[test]
+fn test_context_regenerate() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .arg("context")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Context files regenerated"));
+
+    assert!(tmp
+        .path()
+        .join(".markplane/.context/summary.md")
+        .is_file());
+}
+
+#[test]
+fn test_context_for_item() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Context item", "--priority", "high"])
+        .assert()
+        .success();
+
+    cmd()
+        .current_dir(tmp.path())
+        .args(["context", "--item", "BACK-001"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("BACK-001"))
+        .stdout(predicate::str::contains("Context item"));
+}
+
+// ── Error Cases ──────────────────────────────────────────────────────────
+
+#[test]
+fn test_add_invalid_type() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Bad type", "--type", "invalid-type"])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn test_status_update_nonexistent_item() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["status", "BACK-999", "in-progress"])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn test_plan_for_nonexistent_backlog() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["plan", "BACK-999"])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn test_plan_for_non_backlog_item() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["epic", "Phase 1"])
+        .assert()
+        .success();
+
+    cmd()
+        .current_dir(tmp.path())
+        .args(["plan", "EPIC-001"])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn test_show_invalid_id_format() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["show", "not-a-valid-id"])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn test_add_invalid_priority() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Bad priority", "--priority", "ultra-high"])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn test_add_invalid_effort() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Bad effort", "--effort", "enormous"])
+        .assert()
+        .failure();
+}
+
 // ── Full workflow ────────────────────────────────────────────────────────
 
 #[test]

@@ -15,7 +15,7 @@ pub use models::{
     format_id, parse_id,
 };
 pub use frontmatter::{parse_frontmatter, parse_frontmatter_raw, write_frontmatter};
-pub use project::Project;
+pub use project::{Project, find_blocked_items};
 pub use query::QueryFilter;
 pub use references::{extract_references, validate_references, find_orphans, BrokenReference, build_reference_graph};
 pub use templates::render_template;
