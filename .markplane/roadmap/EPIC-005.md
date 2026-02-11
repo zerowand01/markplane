@@ -13,14 +13,15 @@ depends_on: []
 
 ## Objective
 
-[2-3 sentences: What does this epic achieve? Why does it matter?]
+Expand Markplane beyond CLI and MCP into a broader platform — migration tooling for adoption, real-time file watching, SSE transport for web clients, a visual web UI, and a plugin system for external integrations. These features transform Markplane from a developer tool into a platform that serves teams with diverse needs and workflows.
 
 ## Key Results
 
-- [ ] KR1: [Measurable outcome]
-- [ ] KR2: [Measurable outcome]
-- [ ] KR3: [Measurable outcome]
+- [ ] Teams can import existing work items from GitHub Issues, CSV, or markdown directories
+- [ ] MCP server supports SSE transport for browser-based and remote clients
+- [ ] A web dashboard provides visual project overview and item management
+- [ ] Plugin system enables community-built integrations without modifying core
 
 ## Notes
 
-[Strategic context, dependencies on external work, risks.]
+This is the most ambitious and lowest-priority epic — all items here are future work that should only be tackled once the core system (EPIC-001 through EPIC-004) is mature and stable. The web UI (BACK-017) and plugin system (BACK-018) are particularly large efforts. SSE transport (BACK-016) is a prerequisite for the web UI. File watching (BACK-015) improves the MCP experience but isn't blocking anything.

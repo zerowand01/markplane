@@ -13,14 +13,15 @@ depends_on: []
 
 ## Objective
 
-[2-3 sentences: What does this epic achieve? Why does it matter?]
+Make the MCP server a complete, spec-compliant interface for AI tools to manage Markplane projects. Currently the server is functional but missing key protocol features — the `instructions` field that teaches LLMs how to use the tools, resource templates for plans and notes, the correct protocol version, and a tool for writing markdown body content. Without these, LLMs can create items but can't fully manage them.
 
 ## Key Results
 
-- [ ] KR1: [Measurable outcome]
-- [ ] KR2: [Measurable outcome]
-- [ ] KR3: [Measurable outcome]
+- [ ] LLMs receive project-specific guidance via the `instructions` field in the initialize response
+- [ ] All four entity types (BACK, EPIC, PLAN, NOTE) are accessible as MCP resources
+- [ ] LLMs can create items AND fill in their markdown content entirely through MCP tools
+- [ ] Protocol version reports the current spec (2025-11-25)
 
 ## Notes
 
-[Strategic context, dependencies on external work, risks.]
+This is the highest-priority epic because it directly impacts how well AI tools can work with Markplane. The `instructions` field (BACK-001) is the single most impactful improvement — it's the difference between an LLM guessing how to use tools and being explicitly taught. BACK-006 (documenting the create-then-edit workflow) is blocked by BACK-001 and BACK-005.

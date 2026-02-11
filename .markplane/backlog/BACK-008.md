@@ -29,7 +29,7 @@ This is a low-urgency maintenance task — do it when convenient, not as a prior
 - [ ] Replace `serde_yaml = "0.9"` with `serde_yaml_ng` in workspace `Cargo.toml`
 - [ ] Update all `use serde_yaml::` to `use serde_yaml_ng::`
 - [ ] Update `MarkplaneError::Yaml` from variant to use `serde_yaml_ng::Error`
-- [ ] All 207 tests pass
+- [ ] All tests pass
 - [ ] Clippy clean
 
 ## Notes

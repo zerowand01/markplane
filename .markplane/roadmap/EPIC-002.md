@@ -13,14 +13,14 @@ depends_on: []
 
 ## Objective
 
-[2-3 sentences: What does this epic achieve? Why does it matter?]
+Improve the day-to-day experience of using Markplane from the command line. The CLI works but has friction points — there's no `edit` command to open items in `$EDITOR`, and the deprecated `serde_yaml` dependency should be swapped before it becomes a security liability. These are quality-of-life improvements that make Markplane feel polished.
 
 ## Key Results
 
-- [ ] KR1: [Measurable outcome]
-- [ ] KR2: [Measurable outcome]
-- [ ] KR3: [Measurable outcome]
+- [ ] Users can open any item in their editor with `markplane edit BACK-001`
+- [ ] `serde_yaml` replaced with `serde_yaml_ng` (maintained fork, identical API)
+- [ ] All existing tests continue to pass after dependency swap
 
 ## Notes
 
-[Strategic context, dependencies on external work, risks.]
+Both items in this epic are small, independent tasks. The `edit` command is the more user-facing improvement; the serde_yaml swap is invisible maintenance. Neither has external dependencies or blocks other work.
