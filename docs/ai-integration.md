@@ -129,7 +129,7 @@ Items reference each other using `[[ID]]` wiki-style syntax. The ID prefix deter
 | `PLAN` | Plan | `plans/` |
 | `NOTE` | Note | `notes/` |
 
-For example, `[[BACK-042]]` resolves to `.markplane/backlog/BACK-042.md`.
+For example, `[[BACK-042]]` resolves to `.markplane/backlog/items/BACK-042.md`.
 
 ## The Sync Command
 

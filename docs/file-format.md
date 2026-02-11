@@ -8,22 +8,26 @@
 ├── INDEX.md                 # Root navigation index (auto-generated)
 ├── roadmap/
 │   ├── INDEX.md             # Epic listing (auto-generated)
-│   ├── EPIC-001.md
-│   ├── EPIC-002.md
+│   ├── items/               # Epic files
+│   │   ├── EPIC-001.md
+│   │   └── EPIC-002.md
 │   └── archive/             # Completed epics
 ├── backlog/
 │   ├── INDEX.md             # Backlog listing by status/priority/epic (auto-generated)
-│   ├── BACK-001.md
-│   ├── BACK-002.md
+│   ├── items/               # Backlog item files
+│   │   ├── BACK-001.md
+│   │   └── BACK-002.md
 │   └── archive/             # Done/cancelled items
 ├── plans/
 │   ├── INDEX.md             # Plan listing (auto-generated)
-│   ├── PLAN-001.md
+│   ├── items/               # Plan files
+│   │   └── PLAN-001.md
 │   ├── templates/           # Plan-specific templates
 │   └── archive/             # Completed plans
 ├── notes/
 │   ├── INDEX.md             # Note listing (auto-generated)
-│   ├── NOTE-001.md
+│   ├── items/               # Note files
+│   │   └── NOTE-001.md
 │   ├── ideas.md             # Quick idea capture (special file)
 │   ├── decisions.md         # Decision log (special file)
 │   └── archive/             # Archived notes

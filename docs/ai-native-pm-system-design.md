@@ -40,33 +40,37 @@
 │
 ├── roadmap/                         # Epics & phases
 │   ├── INDEX.md                     # Roadmap overview + phase status summary
-│   ├── EPIC-001-foundation.md       # Individual epic files
-│   ├── EPIC-002-auth-services.md
+│   ├── items/                       # Individual epic files
+│   │   ├── EPIC-001.md
+│   │   └── EPIC-002.md
 │   └── archive/                     # Completed epics
 │
 ├── backlog/                         # Work items
 │   ├── INDEX.md                     # Backlog kanban: in-progress, blocked, backlog, drafts
-│   ├── BACK-001.md                  # Individual backlog items
-│   ├── BACK-002.md
-│   ├── BACK-003.md
+│   ├── items/                       # Individual backlog items
+│   │   ├── BACK-001.md
+│   │   ├── BACK-002.md
+│   │   └── BACK-003.md
 │   └── archive/                     # Completed/cancelled items
 │       └── BACK-000.md
 │
 ├── plans/                           # Implementation plans
 │   ├── INDEX.md                     # Active plans summary
-│   ├── PLAN-001-feature-name.md     # Individual plan files
-│   ├── PLAN-002-refactor-name.md
+│   ├── items/                       # Individual plan files
+│   │   ├── PLAN-001.md
+│   │   └── PLAN-002.md
 │   ├── archive/                     # Completed plans
 │   │   ├── INDEX.md                 # Archive catalog
-│   │   └── PLAN-000-old-plan.md
+│   │   └── PLAN-000.md
 │   └── templates/                   # Plan templates
 │       ├── implementation.md
 │       └── refactor.md
 │
 ├── notes/                           # Research, ideas, analysis, drafts
 │   ├── INDEX.md                     # Notes overview
-│   ├── NOTE-001-research-topic.md   # Individual notes
-│   ├── NOTE-002-analysis.md
+│   ├── items/                       # Individual notes
+│   │   ├── NOTE-001.md
+│   │   └── NOTE-002.md
 │   ├── ideas.md                     # Quick capture (no ID needed)
 │   ├── decisions.md                 # Lightweight decision log
 │   └── archive/                     # Archived notes
@@ -134,7 +138,7 @@ Markplane can coexist with or replace an existing `docs/` directory:
 
 1. **IDs are permanent**: Once assigned, an ID never changes or gets reused.
 2. **IDs are sequential**: New items get the next available number. Gaps are OK (deleted items leave gaps).
-3. **IDs map to filenames**: `BACK-042` lives at `.markplane/backlog/BACK-042.md` (or `.markplane/backlog/archive/BACK-042.md` if archived).
+3. **IDs map to filenames**: `BACK-042` lives at `.markplane/backlog/items/BACK-042.md` (or `.markplane/backlog/archive/BACK-042.md` if archived).
 4. **Cross-reference syntax**: Use `[[BACK-042]]` to reference any item from any document. This works because:
    - The prefix tells you the type (and therefore the directory)
    - The number tells you the file
@@ -446,7 +450,7 @@ When an AI agent needs context about the project:
 
 1. **Read `.markplane/INDEX.md`** - Understand the system structure
 2. **Read `.markplane/.context/summary.md`** - Get project state overview
-3. **Based on task, read specific files** - e.g., if working on auth, read `EPIC-003.md`, `BACK-042.md`, `PLAN-012.md`
+3. **Based on task, read specific files** - e.g., if working on auth, read `roadmap/items/EPIC-003.md`, `backlog/items/BACK-042.md`, `plans/items/PLAN-012.md`
 
 This three-step pattern keeps total context under ~4,000 tokens for most tasks, well within the effective window identified by Stanford research.
 
@@ -501,36 +505,36 @@ A prioritized kanban view organized by workflow state. Done and cancelled items 
 
 | ID | Title | Epic | Priority | Effort |
 |----|-------|------|----------|--------|
-| [[BACK-042]] | Add dark mode support | [[EPIC-003]] | high | medium |
-| [[BACK-055]] | API response caching | [[EPIC-005]] | medium | large |
+| [BACK-042](items/BACK-042.md) | Add dark mode support | EPIC-003 | high | medium |
+| [BACK-055](items/BACK-055.md) | API response caching | EPIC-005 | medium | large |
 
 ## Blocked (1)
 
 | ID | Title | Blocked By | Epic | Priority |
 |----|-------|------------|------|----------|
-| [[BACK-045]] | Themed email templates | BACK-042 | [[EPIC-003]] | medium |
+| [BACK-045](items/BACK-045.md) | Themed email templates | BACK-042 | EPIC-003 | medium |
 
 ## Planned (3)
 
 | ID | Title | Epic | Priority | Effort |
 |----|-------|------|----------|--------|
-| [[BACK-043]] | Add search to dashboard | [[EPIC-003]] | high | medium |
-| [[BACK-044]] | Export reports to CSV | [[EPIC-005]] | high | large |
-| [[BACK-048]] | Form validation enhancements | [[EPIC-003]] | medium | medium |
+| [BACK-043](items/BACK-043.md) | Add search to dashboard | EPIC-003 | high | medium |
+| [BACK-044](items/BACK-044.md) | Export reports to CSV | EPIC-005 | high | large |
+| [BACK-048](items/BACK-048.md) | Form validation enhancements | EPIC-003 | medium | medium |
 
 ## Backlog (15)
 
 | ID | Title | Epic | Priority | Effort |
 |----|-------|------|----------|--------|
-| [[BACK-046]] | Optimize database queries | [[EPIC-005]] | medium | large |
-| [[BACK-047]] | User profile customization | — | low | medium |
+| [BACK-046](items/BACK-046.md) | Optimize database queries | EPIC-005 | medium | large |
+| [BACK-047](items/BACK-047.md) | User profile customization | — | low | medium |
 [... truncated for brevity ...]
 
 ## Drafts (8)
 
 | ID | Title | Epic | Priority | Effort |
 |----|-------|------|----------|--------|
-| [[BACK-060]] | Custom avatar file upload | [[EPIC-003]] | medium | small |
+| [BACK-060](items/BACK-060.md) | Custom avatar file upload | EPIC-003 | medium | small |
 [... truncated for brevity ...]
 ```
 
@@ -824,7 +828,7 @@ markplane migrate --source docs/            # Execute migration
 ### After (Markplane)
 
 **Finding a backlog item:**
-1. `markplane show BACK-042` or open `.markplane/backlog/BACK-042.md`
+1. `markplane show BACK-042` or open `.markplane/backlog/items/BACK-042.md`
 2. Full metadata in frontmatter: status, priority, epic, plan, dependencies
 3. Cross-references via `[[BACK-042]]` syntax
 

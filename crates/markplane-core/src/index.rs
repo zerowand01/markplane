@@ -112,8 +112,8 @@ impl Project {
                 let fm = &item.frontmatter;
                 let epic_str = epic_cell(&fm.epic);
                 content.push_str(&format!(
-                    "| [[{}]] | {} | {} | {} | {} |\n",
-                    fm.id, fm.title, epic_str, fm.priority, fm.effort
+                    "| {} | {} | {} | {} | {} |\n",
+                    item_link(&fm.id), fm.title, epic_str, fm.priority, fm.effort
                 ));
             }
             content.push('\n');
@@ -134,8 +134,8 @@ impl Project {
                     .collect();
                 let epic_str = epic_cell(&fm.epic);
                 content.push_str(&format!(
-                    "| [[{}]] | {} | {} | {} | {} |\n",
-                    fm.id, fm.title, unresolved.join(", "), epic_str, fm.priority
+                    "| {} | {} | {} | {} | {} |\n",
+                    item_link(&fm.id), fm.title, unresolved.join(", "), epic_str, fm.priority
                 ));
             }
             content.push('\n');
@@ -157,8 +157,8 @@ impl Project {
                 let fm = &item.frontmatter;
                 let epic_str = epic_cell(&fm.epic);
                 content.push_str(&format!(
-                    "| [[{}]] | {} | {} | {} | {} |\n",
-                    fm.id, fm.title, epic_str, fm.priority, fm.effort
+                    "| {} | {} | {} | {} | {} |\n",
+                    item_link(&fm.id), fm.title, epic_str, fm.priority, fm.effort
                 ));
             }
             content.push('\n');
@@ -180,8 +180,8 @@ impl Project {
                 let fm = &item.frontmatter;
                 let epic_str = epic_cell(&fm.epic);
                 content.push_str(&format!(
-                    "| [[{}]] | {} | {} | {} | {} |\n",
-                    fm.id, fm.title, epic_str, fm.priority, fm.effort
+                    "| {} | {} | {} | {} | {} |\n",
+                    item_link(&fm.id), fm.title, epic_str, fm.priority, fm.effort
                 ));
             }
             content.push('\n');
@@ -203,8 +203,8 @@ impl Project {
                 let fm = &item.frontmatter;
                 let epic_str = epic_cell(&fm.epic);
                 content.push_str(&format!(
-                    "| [[{}]] | {} | {} | {} | {} |\n",
-                    fm.id, fm.title, epic_str, fm.priority, fm.effort
+                    "| {} | {} | {} | {} | {} |\n",
+                    item_link(&fm.id), fm.title, epic_str, fm.priority, fm.effort
                 ));
             }
             content.push('\n');
@@ -245,8 +245,8 @@ impl Project {
                     0
                 };
                 content.push_str(&format!(
-                    "### [[{}]] {} ({}/{}, {}%)\n\n",
-                    epic_id, epic.frontmatter.title, done, total, pct
+                    "### {} {} ({}/{}, {}%)\n\n",
+                    item_link(epic_id), epic.frontmatter.title, done, total, pct
                 ));
 
                 let epic_items: Vec<_> = backlog_items
@@ -262,7 +262,7 @@ impl Project {
                     for item in &epic_items {
                         let fm = &item.frontmatter;
                         content.push_str(&format!(
-                            "| [[{}]] | {} | {} | {} | {} |\n",
+                            "| {} | {} | {} | {} | {} |\n",
                             fm.id, fm.title, fm.status, fm.priority, fm.effort
                         ));
                     }
@@ -297,13 +297,13 @@ impl Project {
                     plan.frontmatter
                         .implements
                         .iter()
-                        .map(|id| format!("[[{}]]", id))
+                        .map(|id| id.to_string())
                         .collect::<Vec<_>>()
                         .join(", ")
                 };
                 content.push_str(&format!(
-                    "| [[{}]] {} | {} | {} |\n",
-                    plan.frontmatter.id,
+                    "| {} {} | {} | {} |\n",
+                    item_link(&plan.frontmatter.id),
                     plan.frontmatter.title,
                     plan.frontmatter.status,
                     implements_str
@@ -321,8 +321,8 @@ impl Project {
             content.push_str("## Completed Plans\n\n");
             for plan in &done_plans {
                 content.push_str(&format!(
-                    "- [[{}]] {}\n",
-                    plan.frontmatter.id, plan.frontmatter.title
+                    "- {} {}\n",
+                    item_link(&plan.frontmatter.id), plan.frontmatter.title
                 ));
             }
             content.push('\n');
@@ -354,8 +354,8 @@ impl Project {
                     note.frontmatter.tags.join(", ")
                 };
                 content.push_str(&format!(
-                    "| [[{}]] {} | {} | {} | {} |\n",
-                    note.frontmatter.id,
+                    "| {} {} | {} | {} | {} |\n",
+                    item_link(&note.frontmatter.id),
                     note.frontmatter.title,
                     note.frontmatter.note_type,
                     note.frontmatter.status,
@@ -374,8 +374,8 @@ impl Project {
             content.push_str("## Archived Notes\n\n");
             for note in &archived_notes {
                 content.push_str(&format!(
-                    "- [[{}]] {} ({})\n",
-                    note.frontmatter.id, note.frontmatter.title, note.frontmatter.note_type
+                    "- {} {} ({})\n",
+                    item_link(&note.frontmatter.id), note.frontmatter.title, note.frontmatter.note_type
                 ));
             }
             content.push('\n');
@@ -402,10 +402,16 @@ impl Project {
 }
 
 /// Format an optional epic reference as a table cell value.
+/// Uses plain text ID (cross-directory reference, not a link).
 fn epic_cell(epic: &Option<String>) -> String {
     epic.as_ref()
-        .map(|e| format!("[[{}]]", e))
+        .map(|e| e.to_string())
         .unwrap_or_else(|| "\u{2014}".to_string())
+}
+
+/// Format an item ID as a markdown link to its file in the items/ subdirectory.
+fn item_link(id: &str) -> String {
+    format!("[{}](items/{}.md)", id, id)
 }
 
 /// Count (done, total) backlog items for a given epic.
@@ -512,8 +518,8 @@ mod tests {
         let content = fs::read_to_string(project.root().join("backlog/INDEX.md")).unwrap();
         assert!(content.contains("## In Progress (1)"));
         assert!(content.contains("## Drafts (1)"));
-        assert!(content.contains("[[BACK-002]]"));
-        assert!(content.contains("[[BACK-001]]"));
+        assert!(content.contains("[BACK-002](items/BACK-002.md)"));
+        assert!(content.contains("[BACK-001](items/BACK-001.md)"));
     }
 
     #[test]
@@ -554,8 +560,8 @@ mod tests {
         let content = fs::read_to_string(project.root().join("backlog/INDEX.md")).unwrap();
         assert!(content.contains("## Drafts (3)"));
         // High items should appear before medium (sorted by list_backlog_items)
-        let high1_pos = content.find("[[BACK-002]]").unwrap();
-        let med_pos = content.find("[[BACK-001]]").unwrap();
+        let high1_pos = content.find("[BACK-002](items/BACK-002.md)").unwrap();
+        let med_pos = content.find("[BACK-001](items/BACK-001.md)").unwrap();
         assert!(
             high1_pos < med_pos,
             "High priority items should come before medium"
@@ -589,7 +595,7 @@ mod tests {
 
         project.generate_backlog_index().unwrap();
         let content = fs::read_to_string(project.root().join("backlog/INDEX.md")).unwrap();
-        assert!(content.contains("[[EPIC-001]]"));
+        assert!(content.contains("EPIC-001"));
         assert!(content.contains("\u{2014}"));
     }
 
@@ -655,10 +661,10 @@ mod tests {
         let content = fs::read_to_string(project.root().join("roadmap/INDEX.md")).unwrap();
         assert!(content.contains(GENERATED_HEADER));
         assert!(content.contains("## Active Epics"));
-        assert!(content.contains("### [[EPIC-001]] Active Epic (0/1, 0%)"));
-        assert!(content.contains("[[BACK-001]]"));
+        assert!(content.contains("### [EPIC-001](items/EPIC-001.md) Active Epic (0/1, 0%)"));
+        assert!(content.contains("BACK-001"));
         assert!(content.contains("## Planned Epics"));
-        assert!(content.contains("### [[EPIC-002]] Planned Epic (0/0, 0%)"));
+        assert!(content.contains("### [EPIC-002](items/EPIC-002.md) Planned Epic (0/0, 0%)"));
     }
 
     #[test]
@@ -691,10 +697,10 @@ mod tests {
 
         project.generate_roadmap_index().unwrap();
         let content = fs::read_to_string(project.root().join("roadmap/INDEX.md")).unwrap();
-        assert!(content.contains("### [[EPIC-001]] Test Epic (1/2, 50%)"));
+        assert!(content.contains("### [EPIC-001](items/EPIC-001.md) Test Epic (1/2, 50%)"));
         assert!(content.contains("| ID | Title | Status | Priority | Effort |"));
-        assert!(content.contains("[[BACK-001]]"));
-        assert!(content.contains("[[BACK-002]]"));
+        assert!(content.contains("BACK-001"));
+        assert!(content.contains("BACK-002"));
     }
 
     #[test]
@@ -709,10 +715,10 @@ mod tests {
         project.generate_plans_index().unwrap();
         let content = fs::read_to_string(project.root().join("plans/INDEX.md")).unwrap();
         assert!(content.contains("Active Plans"));
-        assert!(content.contains("[[PLAN-001]]"));
-        assert!(content.contains("[[BACK-001]]"));
+        assert!(content.contains("[PLAN-001](items/PLAN-001.md)"));
+        assert!(content.contains("BACK-001"));
         assert!(content.contains("Completed Plans"));
-        assert!(content.contains("[[PLAN-002]]"));
+        assert!(content.contains("[PLAN-002](items/PLAN-002.md)"));
     }
 
     #[test]
@@ -729,7 +735,7 @@ mod tests {
         let content = fs::read_to_string(project.root().join("notes/INDEX.md")).unwrap();
         assert!(content.contains(GENERATED_HEADER));
         assert!(content.contains("Active Notes"));
-        assert!(content.contains("[[NOTE-001]]"));
+        assert!(content.contains("[NOTE-001](items/NOTE-001.md)"));
         assert!(content.contains("cache"));
         assert!(content.contains("Special Files"));
         assert!(content.contains("ideas.md"));

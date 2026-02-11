@@ -7,7 +7,7 @@
 
 | ID | Title | Blocked By | Epic | Priority |
 |----|-------|------------|------|----------|
-| [[BACK-006]] | Document create-then-edit workflow in MCP instructions | BACK-001, BACK-005 | [[EPIC-001]] | medium |
+| [BACK-006](items/BACK-006.md) | Document create-then-edit workflow in MCP instructions | BACK-001, BACK-005 | EPIC-001 | medium |
 
 ## Planned (0)
 
@@ -15,23 +15,23 @@
 
 | ID | Title | Epic | Priority | Effort |
 |----|-------|------|----------|--------|
-| [[BACK-001]] | Add instructions field to MCP initialize response | [[EPIC-001]] | high | small |
-| [[BACK-002]] | Add missing PLAN and NOTE resource templates to MCP | [[EPIC-001]] | high | xs |
-| [[BACK-003]] | Update MCP protocol version to 2025-11-25 | [[EPIC-001]] | high | xs |
-| [[BACK-004]] | Add serverInfo.description to MCP initialize response | [[EPIC-001]] | high | xs |
-| [[BACK-005]] | Add markplane_write MCP tool for updating markdown body content | [[EPIC-001]] | high | medium |
-| [[BACK-007]] | Add markplane edit command to open items in editor | [[EPIC-002]] | medium | small |
-| [[BACK-009]] | Implement configurable workflows for statuses, priorities, and effort sizes | [[EPIC-003]] | medium | large |
-| [[BACK-011]] | Implement rich context bundles for individual items | [[EPIC-004]] | medium | medium |
-| [[BACK-012]] | Add domain-focused context generation | [[EPIC-004]] | medium | medium |
-| [[BACK-008]] | Swap serde_yaml to serde_yaml_ng | [[EPIC-002]] | low | small |
-| [[BACK-010]] | Add Sprint/Iteration entity type | [[EPIC-003]] | low | large |
-| [[BACK-013]] | Add clipboard context output | [[EPIC-004]] | low | xs |
-| [[BACK-014]] | Build migration tooling for importing from existing docs | [[EPIC-005]] | low | large |
-| [[BACK-015]] | Add file watching for real-time MCP updates | [[EPIC-005]] | low | medium |
-| [[BACK-016]] | Add SSE transport for MCP server | [[EPIC-005]] | low | medium |
-| [[BACK-017]] | Build web UI with React and Tailwind | [[EPIC-005]] | someday | xl |
-| [[BACK-018]] | Implement plugin system for external integrations | [[EPIC-005]] | someday | xl |
+| [BACK-001](items/BACK-001.md) | Add instructions field to MCP initialize response | EPIC-001 | high | small |
+| [BACK-002](items/BACK-002.md) | Add missing PLAN and NOTE resource templates to MCP | EPIC-001 | high | xs |
+| [BACK-003](items/BACK-003.md) | Update MCP protocol version to 2025-11-25 | EPIC-001 | high | xs |
+| [BACK-004](items/BACK-004.md) | Add serverInfo.description to MCP initialize response | EPIC-001 | high | xs |
+| [BACK-005](items/BACK-005.md) | Add markplane_write MCP tool for updating markdown body content | EPIC-001 | high | medium |
+| [BACK-007](items/BACK-007.md) | Add markplane edit command to open items in editor | EPIC-002 | medium | small |
+| [BACK-009](items/BACK-009.md) | Implement configurable workflows for statuses, priorities, and effort sizes | EPIC-003 | medium | large |
+| [BACK-011](items/BACK-011.md) | Implement rich context bundles for individual items | EPIC-004 | medium | medium |
+| [BACK-012](items/BACK-012.md) | Add domain-focused context generation | EPIC-004 | medium | medium |
+| [BACK-008](items/BACK-008.md) | Swap serde_yaml to serde_yaml_ng | EPIC-002 | low | small |
+| [BACK-010](items/BACK-010.md) | Add Sprint/Iteration entity type | EPIC-003 | low | large |
+| [BACK-013](items/BACK-013.md) | Add clipboard context output | EPIC-004 | low | xs |
+| [BACK-014](items/BACK-014.md) | Build migration tooling for importing from existing docs | EPIC-005 | low | large |
+| [BACK-015](items/BACK-015.md) | Add file watching for real-time MCP updates | EPIC-005 | low | medium |
+| [BACK-016](items/BACK-016.md) | Add SSE transport for MCP server | EPIC-005 | low | medium |
+| [BACK-017](items/BACK-017.md) | Build web UI with React and Tailwind | EPIC-005 | someday | xl |
+| [BACK-018](items/BACK-018.md) | Implement plugin system for external integrations | EPIC-005 | someday | xl |
 
 ## Drafts (0)
 

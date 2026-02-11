@@ -75,7 +75,7 @@ fn test_add_basic() {
         .stdout(predicate::str::contains("Created BACK-001"))
         .stdout(predicate::str::contains("Fix login bug"));
 
-    assert!(tmp.path().join(".markplane/backlog/BACK-001.md").is_file());
+    assert!(tmp.path().join(".markplane/backlog/items/BACK-001.md").is_file());
 }
 
 #[test]
@@ -101,7 +101,7 @@ fn test_add_with_flags() {
 
     // Verify the file contains the right metadata
     let content =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/BACK-001.md")).unwrap();
+        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/BACK-001.md")).unwrap();
     assert!(content.contains("priority: high"));
     assert!(content.contains("type: feature"));
     assert!(content.contains("effort: large"));
@@ -127,7 +127,7 @@ fn test_add_with_epic() {
         .stdout(predicate::str::contains("Created BACK-001"));
 
     let content =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/BACK-001.md")).unwrap();
+        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/BACK-001.md")).unwrap();
     assert!(content.contains("epic: EPIC-001"));
 }
 
@@ -421,7 +421,7 @@ fn test_start_and_done() {
 
     // Verify status and assignee
     let content =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/BACK-001.md")).unwrap();
+        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/BACK-001.md")).unwrap();
     assert!(content.contains("status: in-progress"));
     assert!(content.contains("assignee: alice"));
 
@@ -448,7 +448,7 @@ fn test_epic_creation() {
 
     assert!(tmp
         .path()
-        .join(".markplane/roadmap/EPIC-001.md")
+        .join(".markplane/roadmap/items/EPIC-001.md")
         .is_file());
 }
 
@@ -465,7 +465,7 @@ fn test_note_creation() {
 
     assert!(tmp
         .path()
-        .join(".markplane/notes/NOTE-001.md")
+        .join(".markplane/notes/items/NOTE-001.md")
         .is_file());
 }
 
@@ -489,7 +489,7 @@ fn test_plan_creation() {
 
     // Verify backlog item has plan linked
     let content =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/BACK-001.md")).unwrap();
+        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/BACK-001.md")).unwrap();
     assert!(content.contains("PLAN-001"));
 }
 
@@ -514,7 +514,7 @@ fn test_promote_note_to_backlog() {
 
     assert!(tmp
         .path()
-        .join(".markplane/backlog/BACK-001.md")
+        .join(".markplane/backlog/items/BACK-001.md")
         .is_file());
 }
 
@@ -553,7 +553,7 @@ fn test_assign() {
         .stdout(predicate::str::contains("assigned to daniel"));
 
     let content =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/BACK-001.md")).unwrap();
+        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/BACK-001.md")).unwrap();
     assert!(content.contains("assignee: daniel"));
 }
 
@@ -582,11 +582,11 @@ fn test_link_blocks() {
 
     // Verify bidirectional
     let blocker =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/BACK-001.md")).unwrap();
+        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/BACK-001.md")).unwrap();
     assert!(blocker.contains("BACK-002"));
 
     let blocked =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/BACK-002.md")).unwrap();
+        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/BACK-002.md")).unwrap();
     assert!(blocked.contains("BACK-001"));
 }
 
@@ -625,7 +625,7 @@ fn test_tag() {
         .stdout(predicate::str::contains("tagged with: ui, frontend"));
 
     let content =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/BACK-001.md")).unwrap();
+        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/BACK-001.md")).unwrap();
     assert!(content.contains("ui"));
     assert!(content.contains("frontend"));
 }
@@ -775,7 +775,7 @@ fn test_stale_with_old_items() {
         .success();
 
     // Manually backdate the item's updated field to make it stale
-    let item_path = tmp.path().join(".markplane/backlog/BACK-001.md");
+    let item_path = tmp.path().join(".markplane/backlog/items/BACK-001.md");
     let content = std::fs::read_to_string(&item_path).unwrap();
     let old_date = "2020-01-01";
     let today = chrono::Local::now()
@@ -831,7 +831,7 @@ fn test_archive_dry_run() {
         .success();
 
     // Backdate to make archivable
-    let item_path = tmp.path().join(".markplane/backlog/BACK-001.md");
+    let item_path = tmp.path().join(".markplane/backlog/items/BACK-001.md");
     let content = std::fs::read_to_string(&item_path).unwrap();
     let today = chrono::Local::now()
         .date_naive()
@@ -852,7 +852,7 @@ fn test_archive_dry_run() {
         .stdout(predicate::str::contains("BACK-001"));
 
     // File should still be in active dir (not moved)
-    assert!(tmp.path().join(".markplane/backlog/BACK-001.md").is_file());
+    assert!(tmp.path().join(".markplane/backlog/items/BACK-001.md").is_file());
 }
 
 #[test]
@@ -870,7 +870,7 @@ fn test_archive_actual() {
         .success();
 
     // Backdate
-    let item_path = tmp.path().join(".markplane/backlog/BACK-001.md");
+    let item_path = tmp.path().join(".markplane/backlog/items/BACK-001.md");
     let content = std::fs::read_to_string(&item_path).unwrap();
     let today = chrono::Local::now()
         .date_naive()
@@ -894,7 +894,7 @@ fn test_archive_actual() {
         .path()
         .join(".markplane/backlog/archive/BACK-001.md")
         .is_file());
-    assert!(!tmp.path().join(".markplane/backlog/BACK-001.md").is_file());
+    assert!(!tmp.path().join(".markplane/backlog/items/BACK-001.md").is_file());
 }
 
 #[test]
@@ -912,7 +912,7 @@ fn test_archive_keep_cancelled() {
         .success();
 
     // Backdate
-    let item_path = tmp.path().join(".markplane/backlog/BACK-001.md");
+    let item_path = tmp.path().join(".markplane/backlog/items/BACK-001.md");
     let content = std::fs::read_to_string(&item_path).unwrap();
     let today = chrono::Local::now()
         .date_naive()
@@ -933,7 +933,7 @@ fn test_archive_keep_cancelled() {
         .stdout(predicate::str::contains("No items eligible"));
 
     // File should still be in active dir
-    assert!(tmp.path().join(".markplane/backlog/BACK-001.md").is_file());
+    assert!(tmp.path().join(".markplane/backlog/items/BACK-001.md").is_file());
 }
 
 // ── Graph ─────────────────────────────────────────────────────────────────

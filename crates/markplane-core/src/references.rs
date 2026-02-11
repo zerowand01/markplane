@@ -1,8 +1,17 @@
 use std::collections::{HashMap, HashSet};
+use std::path::Path;
 
 use crate::error::Result;
 use crate::models::{parse_id, IdPrefix};
 use crate::project::Project;
+
+/// Return a glob pattern for scanning .md files in a directory.
+/// Prefers items/ subdirectory if it exists, falls back to flat layout.
+fn scan_pattern(dir: &Path) -> String {
+    let items_dir = dir.join("items");
+    let scan_dir = if items_dir.is_dir() { items_dir } else { dir.to_path_buf() };
+    scan_dir.join("*.md").to_string_lossy().to_string()
+}
 
 /// A broken reference found during validation.
 #[derive(Debug)]
@@ -75,7 +84,7 @@ pub fn validate_references(project: &Project) -> Result<Vec<BrokenReference>> {
         if !dir.exists() {
             continue;
         }
-        let pattern = dir.join("*.md").to_string_lossy().to_string();
+        let pattern = scan_pattern(&dir);
         for path in glob::glob(&pattern).unwrap_or_else(|_| glob::glob("").unwrap()).flatten() {
             let filename = path.file_name().unwrap_or_default().to_string_lossy();
             if filename == "INDEX.md" {
@@ -115,7 +124,7 @@ pub fn find_orphans(project: &Project) -> Result<Vec<String>> {
         if !dir.exists() {
             continue;
         }
-        let pattern = dir.join("*.md").to_string_lossy().to_string();
+        let pattern = scan_pattern(&dir);
         for path in glob::glob(&pattern).unwrap_or_else(|_| glob::glob("").unwrap()).flatten() {
             let filename = path.file_name().unwrap_or_default().to_string_lossy();
             if filename == "INDEX.md" || filename == "ideas.md" || filename == "decisions.md" {
@@ -221,7 +230,7 @@ pub fn build_reference_graph(project: &Project) -> Result<HashMap<String, Vec<St
         if !dir.exists() {
             continue;
         }
-        let pattern = dir.join("*.md").to_string_lossy().to_string();
+        let pattern = scan_pattern(&dir);
         for path in glob::glob(&pattern).unwrap_or_else(|_| glob::glob("").unwrap()).flatten() {
             let filename = path.file_name().unwrap_or_default().to_string_lossy();
             if filename == "INDEX.md" || filename == "ideas.md" || filename == "decisions.md" {

@@ -94,21 +94,27 @@ impl Project {
     }
 
     /// Resolve an item ID to its file path.
-    /// Checks active directory first, then archive/.
+    /// Checks items/ subdirectory first, then archive/, then legacy flat layout.
     pub fn item_path(&self, id: &str) -> Result<PathBuf> {
         let (prefix, _) = parse_id(id)?;
         let dir = self.item_dir(&prefix);
 
-        // Check active directory
-        let active_path = dir.join(format!("{}.md", id));
-        if active_path.is_file() {
-            return Ok(active_path);
+        // New layout: items/ subdirectory
+        let items_path = dir.join("items").join(format!("{}.md", id));
+        if items_path.is_file() {
+            return Ok(items_path);
         }
 
-        // Check archive directory
+        // Archive directory
         let archive_path = dir.join("archive").join(format!("{}.md", id));
         if archive_path.is_file() {
             return Ok(archive_path);
+        }
+
+        // Legacy fallback: flat directory
+        let legacy_path = dir.join(format!("{}.md", id));
+        if legacy_path.is_file() {
+            return Ok(legacy_path);
         }
 
         Err(MarkplaneError::NotFound(format!(
@@ -159,9 +165,9 @@ impl Project {
             ],
         );
 
-        let dir = self.item_dir(&IdPrefix::Back);
-        fs::create_dir_all(&dir)?;
-        let path = dir.join(format!("{}.md", id));
+        let items_dir = self.item_dir(&IdPrefix::Back).join("items");
+        fs::create_dir_all(&items_dir)?;
+        let path = items_dir.join(format!("{}.md", id));
         fs::write(&path, &content)?;
 
         let item = BacklogItem {
@@ -199,9 +205,9 @@ impl Project {
             ],
         );
 
-        let dir = self.item_dir(&IdPrefix::Epic);
-        fs::create_dir_all(&dir)?;
-        let path = dir.join(format!("{}.md", id));
+        let items_dir = self.item_dir(&IdPrefix::Epic).join("items");
+        fs::create_dir_all(&items_dir)?;
+        let path = items_dir.join(format!("{}.md", id));
         fs::write(&path, &content)?;
 
         let epic = Epic {
@@ -245,9 +251,9 @@ impl Project {
             ],
         );
 
-        let dir = self.item_dir(&IdPrefix::Plan);
-        fs::create_dir_all(&dir)?;
-        let path = dir.join(format!("{}.md", id));
+        let items_dir = self.item_dir(&IdPrefix::Plan).join("items");
+        fs::create_dir_all(&items_dir)?;
+        let path = items_dir.join(format!("{}.md", id));
         fs::write(&path, &content)?;
 
         let plan = Plan {
@@ -297,9 +303,9 @@ impl Project {
             ],
         );
 
-        let dir = self.item_dir(&IdPrefix::Note);
-        fs::create_dir_all(&dir)?;
-        let path = dir.join(format!("{}.md", id));
+        let items_dir = self.item_dir(&IdPrefix::Note).join("items");
+        fs::create_dir_all(&items_dir)?;
+        let path = items_dir.join(format!("{}.md", id));
         fs::write(&path, &content)?;
 
         let note = Note {
@@ -368,20 +374,20 @@ impl Project {
     /// Move an item to the archive/ subdirectory.
     pub fn archive_item(&self, id: &str) -> Result<()> {
         let (prefix, _) = parse_id(id)?;
-        let dir = self.item_dir(&prefix);
-        let active_path = dir.join(format!("{}.md", id));
+        let source = self.item_path(id)?;
 
-        if !active_path.is_file() {
+        // Don't archive if already in archive
+        if source.to_string_lossy().contains("/archive/") {
             return Err(MarkplaneError::NotFound(format!(
-                "Item {} not found in active directory",
+                "Item {} is already archived",
                 id
             )));
         }
 
-        let archive_dir = dir.join("archive");
+        let archive_dir = self.item_dir(&prefix).join("archive");
         fs::create_dir_all(&archive_dir)?;
         let archive_path = archive_dir.join(format!("{}.md", id));
-        fs::rename(&active_path, &archive_path)?;
+        fs::rename(&source, &archive_path)?;
         Ok(())
     }
 
@@ -402,13 +408,17 @@ impl Project {
         let dirs = [
             "",
             "roadmap",
+            "roadmap/items",
             "roadmap/archive",
             "backlog",
+            "backlog/items",
             "backlog/archive",
             "plans",
+            "plans/items",
             "plans/archive",
             "plans/templates",
             "notes",
+            "notes/items",
             "notes/archive",
             "kb",
             "templates",
@@ -552,13 +562,17 @@ mod tests {
         assert!(root.join("config.yaml").is_file());
         assert!(root.join("INDEX.md").is_file());
         assert!(root.join("roadmap/INDEX.md").is_file());
+        assert!(root.join("roadmap/items").is_dir());
         assert!(root.join("roadmap/archive").is_dir());
         assert!(root.join("backlog/INDEX.md").is_file());
+        assert!(root.join("backlog/items").is_dir());
         assert!(root.join("backlog/archive").is_dir());
         assert!(root.join("plans/INDEX.md").is_file());
+        assert!(root.join("plans/items").is_dir());
         assert!(root.join("plans/archive").is_dir());
         assert!(root.join("plans/templates").is_dir());
         assert!(root.join("notes/INDEX.md").is_file());
+        assert!(root.join("notes/items").is_dir());
         assert!(root.join("notes/archive").is_dir());
         assert!(root.join("notes/ideas.md").is_file());
         assert!(root.join("notes/decisions.md").is_file());

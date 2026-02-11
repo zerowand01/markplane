@@ -344,8 +344,8 @@ Output (with issues):
 ```
 ✗ 2 broken reference(s):
 
-  .markplane/backlog/BACK-003.md references BACK-999 (not found)
-  .markplane/plans/PLAN-001.md references BACK-050 (not found)
+  .markplane/backlog/items/BACK-003.md references BACK-999 (not found)
+  .markplane/plans/items/PLAN-001.md references BACK-050 (not found)
 ```
 
 Include orphan detection to find items with no incoming references:

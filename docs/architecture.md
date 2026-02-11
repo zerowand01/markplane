@@ -129,7 +129,7 @@ CLI: markplane add "Fix login bug" --type bug --priority high
   │    └─ Unlock
   ├─ sanitize_yaml_string(title)
   ├─ render_template(BACKLOG_TEMPLATE, vars)
-  ├─ Write .markplane/backlog/BACK-001.md
+  ├─ Write .markplane/backlog/items/BACK-001.md
   └─ Return BacklogItem struct
 ```
 
