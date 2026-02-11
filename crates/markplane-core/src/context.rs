@@ -194,6 +194,15 @@ impl Project {
         ));
         content.push_str(&format!("- Last sync: {}\n", now));
 
+        // Key Documentation section (from configured documentation_paths)
+        let doc_files = self.list_documentation_files()?;
+        if !doc_files.is_empty() {
+            content.push_str("\n## Key Documentation\n");
+            for (name, _) in &doc_files {
+                content.push_str(&format!("- {}\n", name));
+            }
+        }
+
         let context_dir = self.root().join(".context");
         fs::create_dir_all(&context_dir)?;
         fs::write(context_dir.join("summary.md"), content)?;
@@ -723,5 +732,32 @@ mod tests {
         let metrics =
             fs::read_to_string(project.root().join(".context/metrics.md")).unwrap();
         assert!(metrics.contains("Total: 1"));
+    }
+
+    #[test]
+    fn test_generate_context_summary_with_documentation() {
+        let (tmp, project) = setup_project();
+        let docs_dir = tmp.path().join("docs");
+        fs::create_dir_all(&docs_dir).unwrap();
+        fs::write(docs_dir.join("architecture.md"), "# Architecture").unwrap();
+
+        let mut config = project.load_config().unwrap();
+        config.documentation_paths = vec!["docs".to_string()];
+        project.save_config(&config).unwrap();
+
+        project.generate_context_summary().unwrap();
+        let content =
+            fs::read_to_string(project.root().join(".context/summary.md")).unwrap();
+        assert!(content.contains("## Key Documentation"));
+        assert!(content.contains("- architecture"));
+    }
+
+    #[test]
+    fn test_generate_context_summary_no_documentation_when_empty() {
+        let (_tmp, project) = setup_project();
+        project.generate_context_summary().unwrap();
+        let content =
+            fs::read_to_string(project.root().join(".context/summary.md")).unwrap();
+        assert!(!content.contains("Key Documentation"));
     }
 }

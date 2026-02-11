@@ -465,6 +465,8 @@ pub struct Config {
     pub counters: HashMap<String, u32>,
     pub context: ContextConfig,
     pub archive: ArchiveConfig,
+    #[serde(default)]
+    pub documentation_paths: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -510,6 +512,7 @@ impl Default for Config {
                 auto_archive_after_days: 30,
                 keep_cancelled: true,
             },
+            documentation_paths: Vec::new(),
         }
     }
 }

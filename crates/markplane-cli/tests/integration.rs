@@ -37,7 +37,6 @@ fn test_init_creates_structure() {
     assert!(tmp.path().join(".markplane/roadmap").is_dir());
     assert!(tmp.path().join(".markplane/plans").is_dir());
     assert!(tmp.path().join(".markplane/notes").is_dir());
-    assert!(tmp.path().join(".markplane/kb").is_dir());
     assert!(tmp.path().join(".markplane/.context").is_dir());
 }
 

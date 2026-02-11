@@ -75,17 +75,6 @@
 │   ├── decisions.md                 # Lightweight decision log
 │   └── archive/                     # Archived notes
 │
-├── kb/                              # Knowledge base (architectural docs)
-│   ├── INDEX.md                     # KB overview & navigation
-│   ├── architecture.md              # System architecture
-│   ├── api-contracts.md             # API specifications
-│   ├── features/                    # Feature documentation
-│   │   ├── feature-a.md
-│   │   └── feature-b.md
-│   └── guides/                      # How-to guides
-│       ├── development-setup.md
-│       └── deployment.md
-│
 ├── templates/                       # Document templates
 │   ├── backlog-item.md
 │   ├── epic.md
@@ -115,7 +104,7 @@ Markplane can coexist with or replace an existing `docs/` directory:
 
 - **Coexist**: `.markplane/` handles PM concerns, `docs/` keeps external documentation (READMEs, API docs, user guides)
 - **Replace**: For projects where `docs/` already contains PM content, migrate the PM-relevant files into `.markplane/` and keep `docs/` for pure documentation
-- **Hybrid**: `.markplane/kb/` can symlink to or reference existing architectural docs
+- **Hybrid**: Configure `documentation_paths` in `config.yaml` to bridge `.markplane/` INDEX and context files to existing project documentation
 
 ---
 
@@ -484,7 +473,6 @@ Every directory has an INDEX.md that serves as a table of contents and routing g
 | Backlog | [backlog/](backlog/INDEX.md) | All work items | 47 open items |
 | Plans | [plans/](plans/INDEX.md) | Implementation details | 4 active plans |
 | Notes | [notes/](notes/INDEX.md) | Research & ideas | 12 active notes |
-| Knowledge Base | [kb/](kb/INDEX.md) | Architecture & guides | 15 documents |
 | AI Context | [.context/](.context/summary.md) | Generated summaries | Auto-updated |
 
 ## System Info
@@ -594,6 +582,10 @@ context:
 archive:
   auto_archive_after_days: 30  # Auto-archive done items after N days
   keep_cancelled: true         # Archive cancelled items (vs delete)
+
+# External documentation paths (relative to repo root)
+documentation_paths:             # Scanned for *.md; linked in root INDEX + .context/summary.md
+  - docs
 ```
 
 ---
@@ -783,7 +775,7 @@ Most projects already have some form of documentation — a monolithic TASK.md, 
 | Flat backlog file (BACKLOG.md, TODO.md) | `backlog/BACK-xxx.md` files | Extract each item, assign IDs, add structured frontmatter |
 | Plans directory (`docs/plans/`) | `plans/PLAN-xxx.md` files | Add frontmatter with `implements` links to backlog items |
 | Notes / drafts / research | `notes/NOTE-xxx.md` files | Add IDs and frontmatter with type field |
-| Architecture docs (`docs/blueprint/`, `docs/architecture/`) | `kb/` knowledge base | Move or symlink, add INDEX.md for navigation |
+| Architecture docs (`docs/blueprint/`, `docs/architecture/`) | Keep in `docs/`, configure `documentation_paths` | Add `documentation_paths: ["docs"]` to config.yaml for INDEX/context integration |
 | Ideas / brainstorming files | `notes/ideas.md` | Keep as quick-capture, promote items to backlog with `markplane promote` |
 | Plan templates | `templates/` | Expand with backlog, epic, and note templates |
 

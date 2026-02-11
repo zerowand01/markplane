@@ -68,7 +68,6 @@ After `markplane init`, your repo gets a `.markplane/` directory:
 ├── backlog/              # Work items (BACK-NNN)
 ├── plans/                # Implementation plans (PLAN-NNN)
 ├── notes/                # Research, ideas, decisions (NOTE-NNN)
-├── kb/                   # Knowledge base
 ├── templates/            # Document templates
 └── .context/             # AI-generated summaries
 ```

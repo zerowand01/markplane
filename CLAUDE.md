@@ -36,7 +36,6 @@ CLI binary ──→ Core Library (Rust) ←── MCP Server (stdio/SSE)
 | `backlog/` | Work items (primary) | `BACK` |
 | `plans/` | Implementation details | `PLAN` |
 | `notes/` | Research, ideas, decisions | `NOTE` |
-| `kb/` | Knowledge base / architecture docs | — |
 | `templates/` | Document templates | — |
 | `.context/` | Generated AI summaries | — |
 

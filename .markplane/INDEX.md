@@ -9,10 +9,21 @@
 | Backlog | [backlog/](backlog/INDEX.md) | All work items | 18 open items |
 | Plans | [plans/](plans/INDEX.md) | Implementation details | 0 active plans |
 | Notes | [notes/](notes/INDEX.md) | Research & ideas | 0 active notes |
-| Knowledge Base | [kb/](kb/INDEX.md) | Architecture & guides | — |
 | AI Context | [.context/](.context/summary.md) | Generated summaries | Auto-updated |
 
 ## System Info
 - ID counter: EPIC-005, BACK-018, PLAN-000, NOTE-000
 - Last sync: 2026-02-11
 - Config: [config.yaml](config.yaml)
+
+## Project Documentation
+
+| Document | Path |
+|----------|------|
+| ai-integration | [../docs/ai-integration.md](../docs/ai-integration.md) |
+| ai-native-pm-system-design | [../docs/ai-native-pm-system-design.md](../docs/ai-native-pm-system-design.md) |
+| architecture | [../docs/architecture.md](../docs/architecture.md) |
+| cli-reference | [../docs/cli-reference.md](../docs/cli-reference.md) |
+| file-format | [../docs/file-format.md](../docs/file-format.md) |
+| getting-started | [../docs/getting-started.md](../docs/getting-started.md) |
+| mcp-setup | [../docs/mcp-setup.md](../docs/mcp-setup.md) |

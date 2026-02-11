@@ -14,3 +14,5 @@ context:
 archive:
   auto_archive_after_days: 30
   keep_cancelled: true
+documentation_paths:
+- docs

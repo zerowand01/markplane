@@ -391,6 +391,37 @@ impl Project {
         Ok(())
     }
 
+    // ── Documentation ────────────────────────────────────────────────────
+
+    /// List documentation files from configured `documentation_paths`.
+    /// Returns `(display_name, relative_path_from_markplane_root)` pairs.
+    pub fn list_documentation_files(&self) -> Result<Vec<(String, String)>> {
+        let config = self.load_config()?;
+        let repo_root = self.root().parent().ok_or_else(|| {
+            MarkplaneError::Config("Cannot determine repo root".into())
+        })?;
+        let mut docs = Vec::new();
+        for doc_path in &config.documentation_paths {
+            let abs_dir = repo_root.join(doc_path);
+            if !abs_dir.is_dir() {
+                continue;
+            }
+            let pattern = abs_dir.join("*.md").to_string_lossy().to_string();
+            let mut entries: Vec<_> = glob::glob(&pattern)
+                .map_err(|e| MarkplaneError::Config(e.to_string()))?
+                .filter_map(|e| e.ok())
+                .collect();
+            entries.sort();
+            for entry in entries {
+                let file_name = entry.file_name().unwrap().to_string_lossy().to_string();
+                let rel_path = format!("../{}/{}", doc_path, file_name);
+                let display = file_name.trim_end_matches(".md").to_string();
+                docs.push((display, rel_path));
+            }
+        }
+        Ok(docs)
+    }
+
     // ── Init ──────────────────────────────────────────────────────────────
 
     /// Initialize a new `.markplane/` directory structure.
@@ -420,7 +451,6 @@ impl Project {
             "notes",
             "notes/items",
             "notes/archive",
-            "kb",
             "templates",
             ".context",
         ];
@@ -445,8 +475,6 @@ impl Project {
         fs::write(root.join("backlog/INDEX.md"), templates::BACKLOG_INDEX_TEMPLATE)?;
         fs::write(root.join("plans/INDEX.md"), templates::PLANS_INDEX_TEMPLATE)?;
         fs::write(root.join("notes/INDEX.md"), templates::NOTES_INDEX_TEMPLATE)?;
-        fs::write(root.join("kb/INDEX.md"), templates::KB_INDEX_TEMPLATE)?;
-
         // Write special note files
         fs::write(root.join("notes/ideas.md"), templates::IDEAS_TEMPLATE)?;
         fs::write(root.join("notes/decisions.md"), templates::DECISIONS_TEMPLATE)?;
@@ -576,7 +604,6 @@ mod tests {
         assert!(root.join("notes/archive").is_dir());
         assert!(root.join("notes/ideas.md").is_file());
         assert!(root.join("notes/decisions.md").is_file());
-        assert!(root.join("kb/INDEX.md").is_file());
         assert!(root.join("templates/backlog-item.md").is_file());
         assert!(root.join("templates/epic.md").is_file());
         assert!(root.join(".context").is_dir());
@@ -1010,5 +1037,46 @@ mod tests {
         assert_eq!(sanitize_yaml_string("it's \"fine\""), "it's \\\"fine\\\"");
         assert_eq!(sanitize_yaml_string("line\nbreak"), "line\\nbreak");
         assert_eq!(sanitize_yaml_string("back\\slash"), "back\\\\slash");
+    }
+
+    #[test]
+    fn test_list_documentation_files_empty() {
+        let (_tmp, project) = setup_project();
+        let docs = project.list_documentation_files().unwrap();
+        assert!(docs.is_empty());
+    }
+
+    #[test]
+    fn test_list_documentation_files_with_docs() {
+        let (tmp, project) = setup_project();
+        // Create a docs directory at the repo root (parent of .markplane/)
+        let docs_dir = tmp.path().join("docs");
+        fs::create_dir_all(&docs_dir).unwrap();
+        fs::write(docs_dir.join("architecture.md"), "# Architecture").unwrap();
+        fs::write(docs_dir.join("getting-started.md"), "# Getting Started").unwrap();
+        fs::write(docs_dir.join("not-markdown.txt"), "ignored").unwrap();
+
+        // Update config to include documentation_paths
+        let mut config = project.load_config().unwrap();
+        config.documentation_paths = vec!["docs".to_string()];
+        project.save_config(&config).unwrap();
+
+        let docs = project.list_documentation_files().unwrap();
+        assert_eq!(docs.len(), 2);
+        assert_eq!(docs[0].0, "architecture");
+        assert_eq!(docs[0].1, "../docs/architecture.md");
+        assert_eq!(docs[1].0, "getting-started");
+        assert_eq!(docs[1].1, "../docs/getting-started.md");
+    }
+
+    #[test]
+    fn test_list_documentation_files_missing_dir() {
+        let (_tmp, project) = setup_project();
+        let mut config = project.load_config().unwrap();
+        config.documentation_paths = vec!["nonexistent".to_string()];
+        project.save_config(&config).unwrap();
+
+        let docs = project.list_documentation_files().unwrap();
+        assert!(docs.is_empty());
     }
 }

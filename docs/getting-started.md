@@ -30,7 +30,6 @@ Initialized Markplane project: My App
   ├── backlog/          (BACK-NNN)
   ├── plans/            (PLAN-NNN)
   ├── notes/            (NOTE-NNN)
-  ├── kb/
   ├── templates/
   └── .context/
 

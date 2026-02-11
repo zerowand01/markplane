@@ -51,7 +51,7 @@ impl Project {
             .collect();
         let counters_str = counter_parts.join(", ");
 
-        let content = format!(
+        let mut content = format!(
             "{}\n# Markplane Project Index\n\n\
              ## Quick Navigation\n\n\
              | Module | Path | Purpose | Active Items |\n\
@@ -60,7 +60,6 @@ impl Project {
              | Backlog | [backlog/](backlog/INDEX.md) | All work items | {} open items |\n\
              | Plans | [plans/](plans/INDEX.md) | Implementation details | {} active plans |\n\
              | Notes | [notes/](notes/INDEX.md) | Research & ideas | {} active notes |\n\
-             | Knowledge Base | [kb/](kb/INDEX.md) | Architecture & guides | — |\n\
              | AI Context | [.context/](.context/summary.md) | Generated summaries | Auto-updated |\n\n\
              ## System Info\n\
              - ID counter: {}\n\
@@ -74,6 +73,17 @@ impl Project {
             counters_str,
             now,
         );
+
+        // Project Documentation section (from configured documentation_paths)
+        let doc_files = self.list_documentation_files()?;
+        if !doc_files.is_empty() {
+            content.push_str("\n## Project Documentation\n\n");
+            content.push_str("| Document | Path |\n");
+            content.push_str("|----------|------|\n");
+            for (name, rel_path) in &doc_files {
+                content.push_str(&format!("| {} | [{}]({}) |\n", name, rel_path, rel_path));
+            }
+        }
 
         fs::write(self.root().join("INDEX.md"), content)?;
         Ok(())
@@ -774,5 +784,40 @@ mod tests {
         assert!(fs::read_to_string(project.root().join("notes/INDEX.md"))
             .unwrap()
             .contains(GENERATED_HEADER));
+    }
+
+    #[test]
+    fn test_generate_root_index_no_kb_row() {
+        let (_tmp, project) = setup_project();
+        project.generate_root_index().unwrap();
+        let content = fs::read_to_string(project.root().join("INDEX.md")).unwrap();
+        assert!(!content.contains("Knowledge Base"));
+        assert!(!content.contains("kb/"));
+    }
+
+    #[test]
+    fn test_generate_root_index_with_documentation() {
+        let (tmp, project) = setup_project();
+        let docs_dir = tmp.path().join("docs");
+        fs::create_dir_all(&docs_dir).unwrap();
+        fs::write(docs_dir.join("architecture.md"), "# Architecture").unwrap();
+
+        let mut config = project.load_config().unwrap();
+        config.documentation_paths = vec!["docs".to_string()];
+        project.save_config(&config).unwrap();
+
+        project.generate_root_index().unwrap();
+        let content = fs::read_to_string(project.root().join("INDEX.md")).unwrap();
+        assert!(content.contains("## Project Documentation"));
+        assert!(content.contains("architecture"));
+        assert!(content.contains("../docs/architecture.md"));
+    }
+
+    #[test]
+    fn test_generate_root_index_no_documentation_section_when_empty() {
+        let (_tmp, project) = setup_project();
+        project.generate_root_index().unwrap();
+        let content = fs::read_to_string(project.root().join("INDEX.md")).unwrap();
+        assert!(!content.contains("Project Documentation"));
     }
 }

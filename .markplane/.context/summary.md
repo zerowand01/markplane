@@ -14,3 +14,12 @@
 ## Key Metrics
 - Backlog: 18 items (0 critical, 5 high, 5 medium, 6 low)
 - Last sync: 2026-02-11
+
+## Key Documentation
+- ai-integration
+- ai-native-pm-system-design
+- architecture
+- cli-reference
+- file-format
+- getting-started
+- mcp-setup

@@ -23,7 +23,6 @@ pub fn run(name: Option<String>, description: String) -> anyhow::Result<()> {
     println!("  ├── backlog/          (BACK-NNN)");
     println!("  ├── plans/            (PLAN-NNN)");
     println!("  ├── notes/            (NOTE-NNN)");
-    println!("  ├── kb/");
     println!("  ├── templates/");
     println!("  └── .context/");
     println!();

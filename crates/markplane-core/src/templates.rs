@@ -255,7 +255,6 @@ pub const ROOT_INDEX_TEMPLATE: &str = r#"# Markplane Project Index
 | Backlog | [backlog/](backlog/INDEX.md) | All work items | 0 open items |
 | Plans | [plans/](plans/INDEX.md) | Implementation details | 0 active plans |
 | Notes | [notes/](notes/INDEX.md) | Research & ideas | 0 active notes |
-| Knowledge Base | [kb/](kb/INDEX.md) | Architecture & guides | 0 documents |
 | AI Context | [.context/](.context/summary.md) | Generated summaries | Auto-updated |
 
 ## System Info
@@ -314,14 +313,6 @@ _No notes yet. Create one with `markplane note "Note title"`._
 
 - [ideas.md](ideas.md) — Quick idea capture
 - [decisions.md](decisions.md) — Decision log
-"#;
-
-pub const KB_INDEX_TEMPLATE: &str = r#"# Knowledge Base Index
-<!-- Navigation for architectural docs and guides -->
-
-## Documents
-
-_No knowledge base documents yet._
 "#;
 
 pub const IDEAS_TEMPLATE: &str = r#"# Ideas
