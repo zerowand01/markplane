@@ -12,7 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - 4 entity types with YAML frontmatter: BacklogItem, Epic, Plan, Note
 - CRUD operations: create, read, update, write for all entity types
-- Status workflows: Backlog (draft/backlog/planned/in-progress/done/cancelled), Epic (planned/active/done/paused), Plan (draft/approved/in-progress/done), Note (draft/active/archived)
+- Status workflows: Backlog (draft/backlog/planned/in-progress/done/cancelled), Epic (planned/active/done), Plan (draft/approved/in-progress/done), Note (draft/active/archived)
 - Classification enums: Priority (critical/high/medium/low/someday), ItemType (feature/bug/enhancement/chore/research/spike), Effort (xs/small/medium/large/xl), NoteType (research/analysis/idea/decision/meeting)
 - ID system with `{PREFIX}-{NNN}` format (EPIC, BACK, PLAN, NOTE) and sequential counter management
 - YAML frontmatter parsing via custom `---` delimiter splitter and serde_yaml

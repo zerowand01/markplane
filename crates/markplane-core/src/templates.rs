@@ -282,6 +282,8 @@ pub const BACKLOG_INDEX_TEMPLATE: &str = r#"# Backlog Index
 
 ## Blocked (0)
 
+## Planned (0)
+
 ## Backlog (0)
 
 _No backlog items yet. Create one with `markplane add "Item title"`._

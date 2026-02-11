@@ -43,7 +43,7 @@ CLI binary ──→ Core Library (Rust) ←── MCP Server (stdio/SSE)
 ### Status workflows
 
 - **Backlog**: `draft → backlog → planned → in-progress → done → archive` (also `cancelled`)
-- **Epics**: `planned → active → done` (also `paused`)
+- **Epics**: `planned → active → done`
 - **Plans**: `draft → approved → in-progress → done → archive`
 
 ### Lifecycle flow
@@ -90,3 +90,11 @@ The MCP server exposes typed tools (`markplane_summary`, `markplane_query`, `mar
 ## Agent Teams
 
 Experimental agent teams are enabled via `.claude/settings.json` (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`).
+
+## Project Management
+This project uses Markplane for project management. Key files:
+- `.markplane/INDEX.md` - Navigation entry point
+- `.markplane/.context/summary.md` - Current project state
+- `.markplane/backlog/INDEX.md` - All work items
+- `.markplane/plans/INDEX.md` - Implementation plans
+When working on a task, read the relevant backlog item and its linked plan first.

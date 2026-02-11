@@ -141,12 +141,34 @@ impl Project {
             content.push('\n');
         }
 
-        // --- Backlog (backlog + planned, excluding blocked) ---
+        // --- Planned (ready to start, excluding blocked) ---
+        let planned: Vec<_> = items
+            .iter()
+            .filter(|i| {
+                i.frontmatter.status == BacklogStatus::Planned
+                    && !blocked_ids.contains(i.frontmatter.id.as_str())
+            })
+            .collect();
+        content.push_str(&format!("## Planned ({})\n\n", planned.len()));
+        if !planned.is_empty() {
+            content.push_str("| ID | Title | Epic | Priority | Effort |\n");
+            content.push_str("|----|-------|------|----------|--------|\n");
+            for item in &planned {
+                let fm = &item.frontmatter;
+                let epic_str = epic_cell(&fm.epic);
+                content.push_str(&format!(
+                    "| [[{}]] | {} | {} | {} | {} |\n",
+                    fm.id, fm.title, epic_str, fm.priority, fm.effort
+                ));
+            }
+            content.push('\n');
+        }
+
+        // --- Backlog (accepted but not yet scoped, excluding blocked) ---
         let backlog: Vec<_> = items
             .iter()
             .filter(|i| {
-                (i.frontmatter.status == BacklogStatus::Backlog
-                    || i.frontmatter.status == BacklogStatus::Planned)
+                i.frontmatter.status == BacklogStatus::Backlog
                     && !blocked_ids.contains(i.frontmatter.id.as_str())
             })
             .collect();
@@ -456,6 +478,7 @@ mod tests {
         assert!(content.contains("Backlog Index"));
         assert!(content.contains("## In Progress (0)"));
         assert!(content.contains("## Blocked (0)"));
+        assert!(content.contains("## Planned (0)"));
         assert!(content.contains("## Backlog (0)"));
         assert!(content.contains("## Drafts (0)"));
     }
