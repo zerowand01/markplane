@@ -825,9 +825,6 @@ mod tests {
         let doc: MarkplaneDocument<Epic> = project.read_item("EPIC-001").unwrap();
         assert_eq!(doc.frontmatter.status, EpicStatus::Done);
 
-        project.update_status("EPIC-001", "paused").unwrap();
-        let doc: MarkplaneDocument<Epic> = project.read_item("EPIC-001").unwrap();
-        assert_eq!(doc.frontmatter.status, EpicStatus::Paused);
     }
 
     #[test]

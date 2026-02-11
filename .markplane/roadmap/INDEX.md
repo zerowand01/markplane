@@ -3,9 +3,46 @@
 
 ## Planned Epics
 
-- [[EPIC-001]] MCP Protocol Improvements (high)
-- [[EPIC-002]] Developer Experience (medium)
-- [[EPIC-003]] Core Architecture (medium)
-- [[EPIC-004]] Context and AI Integration (medium)
-- [[EPIC-005]] Platform and Ecosystem (low)
+### [[EPIC-001]] MCP Protocol Improvements (0/6, 0%)
+
+| ID | Title | Status | Priority | Effort |
+|----|-------|--------|----------|--------|
+| [[BACK-001]] | Add instructions field to MCP initialize response | backlog | high | small |
+| [[BACK-002]] | Add missing PLAN and NOTE resource templates to MCP | backlog | high | xs |
+| [[BACK-003]] | Update MCP protocol version to 2025-11-25 | backlog | high | xs |
+| [[BACK-004]] | Add serverInfo.description to MCP initialize response | backlog | high | xs |
+| [[BACK-005]] | Add markplane_write MCP tool for updating markdown body content | backlog | high | medium |
+| [[BACK-006]] | Document create-then-edit workflow in MCP instructions | backlog | medium | small |
+
+### [[EPIC-002]] Developer Experience (0/2, 0%)
+
+| ID | Title | Status | Priority | Effort |
+|----|-------|--------|----------|--------|
+| [[BACK-007]] | Add markplane edit command to open items in editor | backlog | medium | small |
+| [[BACK-008]] | Swap serde_yaml to serde_yaml_ng | backlog | low | small |
+
+### [[EPIC-003]] Core Architecture (0/2, 0%)
+
+| ID | Title | Status | Priority | Effort |
+|----|-------|--------|----------|--------|
+| [[BACK-009]] | Implement configurable workflows for statuses, priorities, and effort sizes | backlog | medium | large |
+| [[BACK-010]] | Add Sprint/Iteration entity type | backlog | low | large |
+
+### [[EPIC-004]] Context and AI Integration (0/3, 0%)
+
+| ID | Title | Status | Priority | Effort |
+|----|-------|--------|----------|--------|
+| [[BACK-011]] | Implement rich context bundles for individual items | backlog | medium | medium |
+| [[BACK-012]] | Add domain-focused context generation | backlog | medium | medium |
+| [[BACK-013]] | Add clipboard context output | backlog | low | xs |
+
+### [[EPIC-005]] Platform and Ecosystem (0/5, 0%)
+
+| ID | Title | Status | Priority | Effort |
+|----|-------|--------|----------|--------|
+| [[BACK-014]] | Build migration tooling for importing from existing docs | backlog | low | large |
+| [[BACK-015]] | Add file watching for real-time MCP updates | backlog | low | medium |
+| [[BACK-016]] | Add SSE transport for MCP server | backlog | low | medium |
+| [[BACK-017]] | Build web UI with React and Tailwind | backlog | someday | xl |
+| [[BACK-018]] | Implement plugin system for external integrations | backlog | someday | xl |
 

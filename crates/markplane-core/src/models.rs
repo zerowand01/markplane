@@ -130,7 +130,6 @@ pub enum EpicStatus {
     Planned,
     Active,
     Done,
-    Paused,
 }
 
 impl fmt::Display for EpicStatus {
@@ -139,7 +138,6 @@ impl fmt::Display for EpicStatus {
             EpicStatus::Planned => write!(f, "planned"),
             EpicStatus::Active => write!(f, "active"),
             EpicStatus::Done => write!(f, "done"),
-            EpicStatus::Paused => write!(f, "paused"),
         }
     }
 }
@@ -152,7 +150,6 @@ impl FromStr for EpicStatus {
             "planned" => Ok(EpicStatus::Planned),
             "active" => Ok(EpicStatus::Active),
             "done" => Ok(EpicStatus::Done),
-            "paused" => Ok(EpicStatus::Paused),
             _ => Err(MarkplaneError::InvalidStatus(s.into())),
         }
     }
@@ -728,7 +725,7 @@ updated: 2026-02-09
         assert_eq!("planned".parse::<EpicStatus>().unwrap(), EpicStatus::Planned);
         assert_eq!("active".parse::<EpicStatus>().unwrap(), EpicStatus::Active);
         assert_eq!("done".parse::<EpicStatus>().unwrap(), EpicStatus::Done);
-        assert_eq!("paused".parse::<EpicStatus>().unwrap(), EpicStatus::Paused);
+        assert!("paused".parse::<EpicStatus>().is_err());
         assert!("invalid".parse::<EpicStatus>().is_err());
     }
 
@@ -751,7 +748,7 @@ updated: 2026-02-09
 
     #[test]
     fn test_epic_status_display_roundtrip() {
-        for status in [EpicStatus::Planned, EpicStatus::Active, EpicStatus::Done, EpicStatus::Paused] {
+        for status in [EpicStatus::Planned, EpicStatus::Active, EpicStatus::Done] {
             let s = status.to_string();
             let parsed: EpicStatus = s.parse().unwrap();
             assert_eq!(parsed, status);

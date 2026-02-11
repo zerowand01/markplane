@@ -21,18 +21,6 @@ depends_on: []
 - [ ] KR2: [Measurable outcome]
 - [ ] KR3: [Measurable outcome]
 
-## Backlog Items
-
-| ID | Title | Status | Priority | Effort |
-|----|-------|--------|----------|--------|
-
-## Progress
-
-- Total items: 0
-- Done: 0 (0%)
-- In progress: 0
-- Remaining: 0
-
 ## Notes
 
 [Strategic context, dependencies on external work, risks.]

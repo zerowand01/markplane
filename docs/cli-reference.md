@@ -620,7 +620,7 @@ markplane status <ID> <NEW_STATUS>
 | Prefix | Valid statuses |
 |--------|---------------|
 | `BACK` | `draft`, `backlog`, `planned`, `in-progress`, `done`, `cancelled` |
-| `EPIC` | `planned`, `active`, `done`, `paused` |
+| `EPIC` | `planned`, `active`, `done` |
 | `PLAN` | `draft`, `approved`, `in-progress`, `done` |
 | `NOTE` | `draft`, `active`, `archived` |
 

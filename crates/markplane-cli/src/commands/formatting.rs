@@ -20,7 +20,6 @@ pub(crate) fn colorize_status(status: &str) -> String {
         "draft" => status.dimmed().to_string(),
         "backlog" => status.blue().to_string(),
         "planned" | "approved" => status.cyan().to_string(),
-        "paused" => status.magenta().to_string(),
         "archived" => status.dimmed().to_string(),
         _ => status.to_string(),
     }

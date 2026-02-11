@@ -289,7 +289,7 @@ Epics represent high-level phases or themes of work. They group backlog items an
 ---
 id: EPIC-{NUMBER}
 title: "{Phase/Epic Name}"
-status: active                   # planned | active | done | paused
+status: active                   # planned | active | done
 priority: high                   # critical | high | medium | low
 started: null                    # date work began
 target: null                     # target completion date
@@ -574,7 +574,7 @@ workflows:
     default: draft
     archive_on: [done, cancelled]
   epic:
-    statuses: [planned, active, done, paused]
+    statuses: [planned, active, done]
     default: planned
     archive_on: [done]
   plan:
