@@ -102,7 +102,7 @@ Markplane includes an MCP server for AI tool integration. Configure it in your A
 }
 ```
 
-The MCP server exposes 15 tools and 5 resources for reading and managing project data programmatically.
+See the [MCP Setup Guide](docs/mcp-setup.md) for the full tool and resource catalog.
 
 ## License
 
