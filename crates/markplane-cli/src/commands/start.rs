@@ -1,7 +1,7 @@
 use std::env;
 
 use chrono::Local;
-use markplane_core::{parse_id, BacklogItem, IdPrefix, MarkplaneDocument, Project};
+use markplane_core::{parse_id, Task, IdPrefix, MarkplaneDocument, Project};
 
 pub fn run(id: String, user: Option<String>) -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
@@ -14,15 +14,15 @@ pub fn run(id: String, user: Option<String>) -> anyhow::Result<()> {
     });
 
     match prefix {
-        IdPrefix::Back => {
-            let mut doc: MarkplaneDocument<BacklogItem> = project.read_item(&id)?;
+        IdPrefix::Task => {
+            let mut doc: MarkplaneDocument<Task> = project.read_item(&id)?;
             doc.frontmatter.status = "in-progress".parse()?;
             doc.frontmatter.assignee = Some(assignee.clone());
             doc.frontmatter.updated = Local::now().date_naive();
             project.write_item(&id, &doc)?;
         }
         _ => {
-            // For non-backlog items, just update status
+            // For non-task items, just update status
             project.update_status(&id, "in-progress")?;
         }
     }

@@ -3,7 +3,7 @@ use std::fs;
 
 use chrono::Local;
 use markplane_core::{
-    BacklogItem, BacklogStatus, Effort, Epic, IdPrefix, ItemType,
+    Task, TaskStatus, Effort, Epic, IdPrefix, ItemType,
     MarkplaneDocument, Note, Priority, Project, QueryFilter,
     build_reference_graph, parse_id, validate_references,
 };
@@ -26,7 +26,7 @@ pub fn list_tools() -> Value {
             },
             {
                 "name": "markplane_query",
-                "description": "Query backlog items with optional filters. Returns matching items.",
+                "description": "Query tasks with optional filters. Returns matching items.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -65,7 +65,7 @@ pub fn list_tools() -> Value {
                     "properties": {
                         "id": {
                             "type": "string",
-                            "description": "Item ID (e.g. BACK-042, EPIC-001, PLAN-003, NOTE-007)"
+                            "description": "Item ID (e.g. TASK-042, EPIC-001, PLAN-003, NOTE-007)"
                         }
                     },
                     "required": ["id"]
@@ -73,13 +73,13 @@ pub fn list_tools() -> Value {
             },
             {
                 "name": "markplane_add",
-                "description": "Create a new backlog item.",
+                "description": "Create a new task.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "title": {
                             "type": "string",
-                            "description": "Title of the backlog item"
+                            "description": "Title of the task"
                         },
                         "type": {
                             "type": "string",
@@ -114,7 +114,7 @@ pub fn list_tools() -> Value {
                     "properties": {
                         "id": {
                             "type": "string",
-                            "description": "Item ID (e.g. BACK-001, EPIC-001, PLAN-001, NOTE-001)"
+                            "description": "Item ID (e.g. TASK-001, EPIC-001, PLAN-001, NOTE-001)"
                         },
                         "body": {
                             "type": "string",
@@ -152,13 +152,13 @@ pub fn list_tools() -> Value {
             },
             {
                 "name": "markplane_start",
-                "description": "Set a backlog item to in-progress status.",
+                "description": "Set a task to in-progress status.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "id": {
                             "type": "string",
-                            "description": "Backlog item ID to start"
+                            "description": "Task ID to start"
                         }
                     },
                     "required": ["id"]
@@ -166,13 +166,13 @@ pub fn list_tools() -> Value {
             },
             {
                 "name": "markplane_done",
-                "description": "Mark a backlog item as done.",
+                "description": "Mark a task as done.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "id": {
                             "type": "string",
-                            "description": "Backlog item ID to complete"
+                            "description": "Task ID to complete"
                         }
                     },
                     "required": ["id"]
@@ -225,7 +225,7 @@ pub fn list_tools() -> Value {
             },
             {
                 "name": "markplane_promote",
-                "description": "Promote a note to a backlog item.",
+                "description": "Promote a note to a task.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -235,11 +235,11 @@ pub fn list_tools() -> Value {
                         },
                         "priority": {
                             "type": "string",
-                            "description": "Priority for the new backlog item (default: medium)"
+                            "description": "Priority for the new task (default: medium)"
                         },
                         "effort": {
                             "type": "string",
-                            "description": "Effort size for the new backlog item (default: medium)"
+                            "description": "Effort size for the new task (default: medium)"
                         }
                     },
                     "required": ["note_id"]
@@ -247,20 +247,20 @@ pub fn list_tools() -> Value {
             },
             {
                 "name": "markplane_plan",
-                "description": "Create an implementation plan linked to a backlog item.",
+                "description": "Create an implementation plan linked to a task.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "backlog_id": {
+                        "task_id": {
                             "type": "string",
-                            "description": "Backlog item ID to create plan for"
+                            "description": "Task ID to create plan for"
                         },
                         "title": {
                             "type": "string",
-                            "description": "Optional plan title (defaults to 'Implementation plan for {backlog_id}')"
+                            "description": "Optional plan title (defaults to 'Implementation plan for {task_id}')"
                         }
                     },
-                    "required": ["backlog_id"]
+                    "required": ["task_id"]
                 }
             },
             {
@@ -364,8 +364,8 @@ fn handle_summary(project: &Project) -> Result<String, String> {
 
     // Generate a basic summary from current state
     let config = project.load_config().map_err(|e| e.to_string())?;
-    let backlog_items = project
-        .list_backlog_items(&QueryFilter::default())
+    let tasks = project
+        .list_tasks(&QueryFilter::default())
         .map_err(|e| e.to_string())?;
 
     let mut in_progress = 0;
@@ -373,22 +373,22 @@ fn handle_summary(project: &Project) -> Result<String, String> {
     let mut draft = 0;
     let mut done = 0;
     let mut backlog = 0;
-    for item in &backlog_items {
+    for item in &tasks {
         match item.frontmatter.status {
-            BacklogStatus::InProgress => in_progress += 1,
-            BacklogStatus::Planned => planned += 1,
-            BacklogStatus::Draft => draft += 1,
-            BacklogStatus::Done => done += 1,
-            BacklogStatus::Backlog => backlog += 1,
-            BacklogStatus::Cancelled => {}
+            TaskStatus::InProgress => in_progress += 1,
+            TaskStatus::Planned => planned += 1,
+            TaskStatus::Draft => draft += 1,
+            TaskStatus::Done => done += 1,
+            TaskStatus::Backlog => backlog += 1,
+            TaskStatus::Cancelled => {}
         }
     }
 
     let summary = format!(
-        "# {} - Project Summary\n\n{}\n\n## Backlog Overview\n- Total items: {}\n- In progress: {}\n- Planned: {}\n- Backlog: {}\n- Draft: {}\n- Done: {}\n",
+        "# {} - Project Summary\n\n{}\n\n## Task Overview\n- Total items: {}\n- In progress: {}\n- Planned: {}\n- Backlog: {}\n- Draft: {}\n- Done: {}\n",
         config.project.name,
         config.project.description,
-        backlog_items.len(),
+        tasks.len(),
         in_progress,
         planned,
         backlog,
@@ -422,7 +422,7 @@ fn handle_query(project: &Project, args: &Value) -> Result<String, String> {
     };
 
     let items = project
-        .list_backlog_items(&filter)
+        .list_tasks(&filter)
         .map_err(|e| e.to_string())?;
 
     let results: Vec<Value> = items
@@ -508,7 +508,7 @@ fn handle_add(project: &Project, args: &Value) -> Result<String, String> {
         .unwrap_or_default();
 
     let item = project
-        .create_backlog_item(title, item_type, priority, effort, epic, tags)
+        .create_task(title, item_type, priority, effort, epic, tags)
         .map_err(|e| e.to_string())?;
 
     let result = json!({ "id": item.id, "title": item.title });
@@ -535,8 +535,8 @@ fn handle_update(project: &Project, args: &Value) -> Result<String, String> {
     if has_priority || has_assignee {
         let (prefix, _) = parse_id(id).map_err(|e| e.to_string())?;
         match prefix {
-            IdPrefix::Back => {
-                let mut doc: MarkplaneDocument<BacklogItem> =
+            IdPrefix::Task => {
+                let mut doc: MarkplaneDocument<Task> =
                     project.read_item(id).map_err(|e| e.to_string())?;
                 if let Some(priority_str) = args.get("priority").and_then(|v| v.as_str()) {
                     doc.frontmatter.priority = priority_str
@@ -765,9 +765,9 @@ fn handle_promote(project: &Project, args: &Value) -> Result<String, String> {
     let note_doc: MarkplaneDocument<Note> =
         project.read_item(note_id).map_err(|e| e.to_string())?;
 
-    // Create a backlog item from the note's title and tags
+    // Create a task from the note's title and tags
     let item = project
-        .create_backlog_item(
+        .create_task(
             &note_doc.frontmatter.title,
             ItemType::Feature,
             priority,
@@ -786,18 +786,18 @@ fn handle_promote(project: &Project, args: &Value) -> Result<String, String> {
 }
 
 fn handle_plan(project: &Project, args: &Value) -> Result<String, String> {
-    let backlog_id = args
-        .get("backlog_id")
+    let task_id = args
+        .get("task_id")
         .and_then(|v| v.as_str())
-        .ok_or_else(|| "Missing required parameter: backlog_id".to_string())?;
+        .ok_or_else(|| "Missing required parameter: task_id".to_string())?;
 
-    // Read the backlog item to get its title and epic
-    let backlog_doc: MarkplaneDocument<BacklogItem> =
-        project.read_item(backlog_id).map_err(|e| e.to_string())?;
+    // Read the task to get its title and epic
+    let task_doc: MarkplaneDocument<Task> =
+        project.read_item(task_id).map_err(|e| e.to_string())?;
 
     let default_title = format!(
         "Implementation plan for {}",
-        backlog_doc.frontmatter.title
+        task_doc.frontmatter.title
     );
     let title = args
         .get("title")
@@ -807,24 +807,24 @@ fn handle_plan(project: &Project, args: &Value) -> Result<String, String> {
     let plan = project
         .create_plan(
             title,
-            vec![backlog_id.to_string()],
-            backlog_doc.frontmatter.epic.clone(),
+            vec![task_id.to_string()],
+            task_doc.frontmatter.epic.clone(),
         )
         .map_err(|e| e.to_string())?;
 
-    // Link the plan back to the backlog item
-    let mut doc: MarkplaneDocument<BacklogItem> =
-        project.read_item(backlog_id).map_err(|e| e.to_string())?;
+    // Link the plan back to the task
+    let mut doc: MarkplaneDocument<Task> =
+        project.read_item(task_id).map_err(|e| e.to_string())?;
     doc.frontmatter.plan = Some(plan.id.clone());
     doc.frontmatter.updated = Local::now().date_naive();
     project
-        .write_item(backlog_id, &doc)
+        .write_item(task_id, &doc)
         .map_err(|e| e.to_string())?;
 
     let result = json!({
         "id": plan.id,
         "title": plan.title,
-        "implements": backlog_id
+        "implements": task_id
     });
     serde_json::to_string(&result).map_err(|e| e.to_string())
 }
@@ -847,20 +847,20 @@ fn handle_link(project: &Project, args: &Value) -> Result<String, String> {
     project.item_path(from).map_err(|e| e.to_string())?;
     project.item_path(to).map_err(|e| e.to_string())?;
 
-    // Both `from` and `to` must be BACK- items for blocks/depends_on
+    // Both `from` and `to` must be TASK- items for blocks/depends_on
     let (from_prefix, _) = parse_id(from).map_err(|e| e.to_string())?;
     let (to_prefix, _) = parse_id(to).map_err(|e| e.to_string())?;
 
-    if from_prefix != IdPrefix::Back || to_prefix != IdPrefix::Back {
+    if from_prefix != IdPrefix::Task || to_prefix != IdPrefix::Task {
         return Err(
-            "blocks/depends_on linking is only supported between BACK- items".to_string(),
+            "blocks/depends_on linking is only supported between TASK- items".to_string(),
         );
     }
 
     match relation {
         "blocks" => {
             // `from` blocks `to`: add `to` to from.blocks, add `from` to to.depends_on
-            let mut from_doc: MarkplaneDocument<BacklogItem> =
+            let mut from_doc: MarkplaneDocument<Task> =
                 project.read_item(from).map_err(|e| e.to_string())?;
             if !from_doc.frontmatter.blocks.contains(&to.to_string()) {
                 from_doc.frontmatter.blocks.push(to.to_string());
@@ -870,7 +870,7 @@ fn handle_link(project: &Project, args: &Value) -> Result<String, String> {
                 .write_item(from, &from_doc)
                 .map_err(|e| e.to_string())?;
 
-            let mut to_doc: MarkplaneDocument<BacklogItem> =
+            let mut to_doc: MarkplaneDocument<Task> =
                 project.read_item(to).map_err(|e| e.to_string())?;
             if !to_doc.frontmatter.depends_on.contains(&from.to_string()) {
                 to_doc.frontmatter.depends_on.push(from.to_string());
@@ -882,7 +882,7 @@ fn handle_link(project: &Project, args: &Value) -> Result<String, String> {
         }
         "depends_on" => {
             // `from` depends on `to`: add `to` to from.depends_on, add `from` to to.blocks
-            let mut from_doc: MarkplaneDocument<BacklogItem> =
+            let mut from_doc: MarkplaneDocument<Task> =
                 project.read_item(from).map_err(|e| e.to_string())?;
             if !from_doc.frontmatter.depends_on.contains(&to.to_string()) {
                 from_doc.frontmatter.depends_on.push(to.to_string());
@@ -892,7 +892,7 @@ fn handle_link(project: &Project, args: &Value) -> Result<String, String> {
                 .write_item(from, &from_doc)
                 .map_err(|e| e.to_string())?;
 
-            let mut to_doc: MarkplaneDocument<BacklogItem> =
+            let mut to_doc: MarkplaneDocument<Task> =
                 project.read_item(to).map_err(|e| e.to_string())?;
             if !to_doc.frontmatter.blocks.contains(&from.to_string()) {
                 to_doc.frontmatter.blocks.push(from.to_string());
@@ -940,14 +940,14 @@ fn handle_stale(project: &Project, args: &Value) -> Result<String, String> {
     let cutoff = today - chrono::Duration::days(days);
 
     let items = project
-        .list_backlog_items(&QueryFilter::default())
+        .list_tasks(&QueryFilter::default())
         .map_err(|e| e.to_string())?;
 
     let stale: Vec<_> = items
         .iter()
         .filter(|doc| {
-            doc.frontmatter.status != BacklogStatus::Done
-                && doc.frontmatter.status != BacklogStatus::Cancelled
+            doc.frontmatter.status != TaskStatus::Done
+                && doc.frontmatter.status != TaskStatus::Cancelled
                 && doc.frontmatter.updated < cutoff
         })
         .collect();

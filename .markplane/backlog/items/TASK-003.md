@@ -1,5 +1,5 @@
 ---
-id: BACK-003
+id: TASK-003
 title: Update MCP protocol version to 2025-11-25
 status: done
 priority: high
@@ -30,4 +30,4 @@ The `handle_initialize()` response currently reports `protocolVersion: "2024-11-
 
 ## Notes
 
-This is a one-line change in `handle_initialize()` in `crates/markplane-mcp/src/main.rs`. Should be done alongside BACK-001 and BACK-004 since they all modify the same function.
+This is a one-line change in `handle_initialize()` in `crates/markplane-mcp/src/main.rs`. Should be done alongside TASK-001 and TASK-004 since they all modify the same function.

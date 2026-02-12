@@ -180,15 +180,15 @@ fn build_instructions(project: &Project) -> String {
 Files are the source of truth, git is the changelog.\n\
 \n\
 ## Entity Types\n\
-- BACK-NNN: Backlog items (tasks, bugs, features). Statuses: draft → backlog → planned → in-progress → done (also cancelled)\n\
-- EPIC-NNN: Strategic epics grouping related backlog items. Statuses: planned → active → done\n\
-- PLAN-NNN: Implementation plans linked to backlog items. Statuses: draft → approved → in-progress → done\n\
+- TASK-NNN: Tasks (bugs, features, chores). Statuses: draft → backlog → planned → in-progress → done (also cancelled)\n\
+- EPIC-NNN: Strategic epics grouping related tasks. Statuses: planned → active → done\n\
+- PLAN-NNN: Implementation plans linked to tasks. Statuses: draft → approved → in-progress → done\n\
 - NOTE-NNN: Research notes, ideas, and decisions. Statuses: draft → active → archived\n\
 \n\
 ## Recommended Workflow\n\
 1. Use markplane_summary or markplane_query to understand current project state\n\
 2. Use markplane_show to read full details of any item by ID\n\
-3. Use markplane_add to create new backlog items (creates template with placeholder content)\n\
+3. Use markplane_add to create new tasks (creates template with placeholder content)\n\
 4. Use markplane_write to fill in the markdown body content after creating an item\n\
 5. Use markplane_start/markplane_done to track progress\n\
 6. Use markplane_sync to regenerate indexes and context summaries\n\
@@ -202,7 +202,7 @@ with the item's ID and the full markdown body to fill in the actual content. The
 3. markplane_update to set status to \"backlog\" once the item is fully defined\n\
 \n\
 ## Cross-References\n\
-Use [[BACK-042]] wiki-link syntax to reference other items in markdown body content. \
+Use [[TASK-042]] wiki-link syntax to reference other items in markdown body content. \
 The prefix determines the entity type and location."
     )
 }

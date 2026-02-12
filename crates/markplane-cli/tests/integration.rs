@@ -71,10 +71,10 @@ fn test_add_basic() {
         .args(["add", "Fix login bug"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Created BACK-001"))
+        .stdout(predicate::str::contains("Created TASK-001"))
         .stdout(predicate::str::contains("Fix login bug"));
 
-    assert!(tmp.path().join(".markplane/backlog/items/BACK-001.md").is_file());
+    assert!(tmp.path().join(".markplane/backlog/items/TASK-001.md").is_file());
 }
 
 #[test]
@@ -96,11 +96,11 @@ fn test_add_with_flags() {
         ])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Created BACK-001"));
+        .stdout(predicate::str::contains("Created TASK-001"));
 
     // Verify the file contains the right metadata
     let content =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/BACK-001.md")).unwrap();
+        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/TASK-001.md")).unwrap();
     assert!(content.contains("priority: high"));
     assert!(content.contains("type: feature"));
     assert!(content.contains("effort: large"));
@@ -123,10 +123,10 @@ fn test_add_with_epic() {
         .args(["add", "Task in epic", "--epic", "EPIC-001"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Created BACK-001"));
+        .stdout(predicate::str::contains("Created TASK-001"));
 
     let content =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/BACK-001.md")).unwrap();
+        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/TASK-001.md")).unwrap();
     assert!(content.contains("epic: EPIC-001"));
 }
 
@@ -138,25 +138,25 @@ fn test_add_sequential_ids() {
         .args(["add", "First"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("BACK-001"));
+        .stdout(predicate::str::contains("TASK-001"));
     cmd()
         .current_dir(tmp.path())
         .args(["add", "Second"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("BACK-002"));
+        .stdout(predicate::str::contains("TASK-002"));
     cmd()
         .current_dir(tmp.path())
         .args(["add", "Third"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("BACK-003"));
+        .stdout(predicate::str::contains("TASK-003"));
 }
 
 // ── Show ─────────────────────────────────────────────────────────────────
 
 #[test]
-fn test_show_backlog_item() {
+fn test_show_task() {
     let tmp = setup_project();
     cmd()
         .current_dir(tmp.path())
@@ -166,10 +166,10 @@ fn test_show_backlog_item() {
 
     cmd()
         .current_dir(tmp.path())
-        .args(["show", "BACK-001"])
+        .args(["show", "TASK-001"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("BACK-001"))
+        .stdout(predicate::str::contains("TASK-001"))
         .stdout(predicate::str::contains("Show me"))
         .stdout(predicate::str::contains("high"));
 }
@@ -179,7 +179,7 @@ fn test_show_not_found() {
     let tmp = setup_project();
     cmd()
         .current_dir(tmp.path())
-        .args(["show", "BACK-999"])
+        .args(["show", "TASK-999"])
         .assert()
         .failure();
 }
@@ -212,7 +212,7 @@ fn test_ls_empty() {
         .arg("ls")
         .assert()
         .success()
-        .stdout(predicate::str::contains("No backlog items found"));
+        .stdout(predicate::str::contains("No tasks found"));
 }
 
 #[test]
@@ -234,8 +234,8 @@ fn test_ls_with_items() {
         .arg("ls")
         .assert()
         .success()
-        .stdout(predicate::str::contains("BACK-001"))
-        .stdout(predicate::str::contains("BACK-002"))
+        .stdout(predicate::str::contains("TASK-001"))
+        .stdout(predicate::str::contains("TASK-002"))
         .stdout(predicate::str::contains("Task A"))
         .stdout(predicate::str::contains("Task B"));
 }
@@ -255,7 +255,7 @@ fn test_ls_filter_status() {
         .success();
     cmd()
         .current_dir(tmp.path())
-        .args(["status", "BACK-002", "in-progress"])
+        .args(["status", "TASK-002", "in-progress"])
         .assert()
         .success();
 
@@ -264,7 +264,7 @@ fn test_ls_filter_status() {
         .args(["ls", "--status", "in-progress"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("BACK-002"))
+        .stdout(predicate::str::contains("TASK-002"))
         .stdout(predicate::str::contains("Draft item").not());
 }
 
@@ -296,7 +296,7 @@ fn test_ls_plans() {
         .success();
     cmd()
         .current_dir(tmp.path())
-        .args(["plan", "BACK-001"])
+        .args(["plan", "TASK-001"])
         .assert()
         .success();
 
@@ -339,16 +339,16 @@ fn test_status_update() {
 
     cmd()
         .current_dir(tmp.path())
-        .args(["status", "BACK-001", "in-progress"])
+        .args(["status", "TASK-001", "in-progress"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("BACK-001"))
+        .stdout(predicate::str::contains("TASK-001"))
         .stdout(predicate::str::contains("in-progress"));
 
     // Verify the change
     cmd()
         .current_dir(tmp.path())
-        .args(["show", "BACK-001"])
+        .args(["show", "TASK-001"])
         .assert()
         .success()
         .stdout(predicate::str::contains("in-progress"));
@@ -365,7 +365,7 @@ fn test_status_invalid() {
 
     cmd()
         .current_dir(tmp.path())
-        .args(["status", "BACK-001", "invalid-status"])
+        .args(["status", "TASK-001", "invalid-status"])
         .assert()
         .failure();
 }
@@ -412,7 +412,7 @@ fn test_start_and_done() {
 
     cmd()
         .current_dir(tmp.path())
-        .args(["start", "BACK-001", "--user", "alice"])
+        .args(["start", "TASK-001", "--user", "alice"])
         .assert()
         .success()
         .stdout(predicate::str::contains("in-progress"))
@@ -420,13 +420,13 @@ fn test_start_and_done() {
 
     // Verify status and assignee
     let content =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/BACK-001.md")).unwrap();
+        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/TASK-001.md")).unwrap();
     assert!(content.contains("status: in-progress"));
     assert!(content.contains("assignee: alice"));
 
     cmd()
         .current_dir(tmp.path())
-        .args(["done", "BACK-001"])
+        .args(["done", "TASK-001"])
         .assert()
         .success()
         .stdout(predicate::str::contains("done"));
@@ -479,23 +479,23 @@ fn test_plan_creation() {
 
     cmd()
         .current_dir(tmp.path())
-        .args(["plan", "BACK-001", "--title", "Dark mode plan"])
+        .args(["plan", "TASK-001", "--title", "Dark mode plan"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Created PLAN-001"))
         .stdout(predicate::str::contains("Dark mode plan"))
-        .stdout(predicate::str::contains("Linked to BACK-001"));
+        .stdout(predicate::str::contains("Linked to TASK-001"));
 
-    // Verify backlog item has plan linked
+    // Verify task has plan linked
     let content =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/BACK-001.md")).unwrap();
+        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/TASK-001.md")).unwrap();
     assert!(content.contains("PLAN-001"));
 }
 
 // ── Promote ──────────────────────────────────────────────────────────────
 
 #[test]
-fn test_promote_note_to_backlog() {
+fn test_promote_note_to_task() {
     let tmp = setup_project();
     cmd()
         .current_dir(tmp.path())
@@ -509,11 +509,11 @@ fn test_promote_note_to_backlog() {
         .assert()
         .success()
         .stdout(predicate::str::contains("Promoted NOTE-001"))
-        .stdout(predicate::str::contains("BACK-001"));
+        .stdout(predicate::str::contains("TASK-001"));
 
     assert!(tmp
         .path()
-        .join(".markplane/backlog/items/BACK-001.md")
+        .join(".markplane/backlog/items/TASK-001.md")
         .is_file());
 }
 
@@ -528,7 +528,7 @@ fn test_promote_non_note_fails() {
 
     cmd()
         .current_dir(tmp.path())
-        .args(["promote", "BACK-001"])
+        .args(["promote", "TASK-001"])
         .assert()
         .failure();
 }
@@ -546,13 +546,13 @@ fn test_assign() {
 
     cmd()
         .current_dir(tmp.path())
-        .args(["assign", "BACK-001", "@daniel"])
+        .args(["assign", "TASK-001", "@daniel"])
         .assert()
         .success()
         .stdout(predicate::str::contains("assigned to daniel"));
 
     let content =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/BACK-001.md")).unwrap();
+        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/TASK-001.md")).unwrap();
     assert!(content.contains("assignee: daniel"));
 }
 
@@ -574,19 +574,19 @@ fn test_link_blocks() {
 
     cmd()
         .current_dir(tmp.path())
-        .args(["link", "BACK-001", "--blocks", "BACK-002"])
+        .args(["link", "TASK-001", "--blocks", "TASK-002"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("BACK-001 blocks BACK-002"));
+        .stdout(predicate::str::contains("TASK-001 blocks TASK-002"));
 
     // Verify bidirectional
     let blocker =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/BACK-001.md")).unwrap();
-    assert!(blocker.contains("BACK-002"));
+        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/TASK-001.md")).unwrap();
+    assert!(blocker.contains("TASK-002"));
 
     let blocked =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/BACK-002.md")).unwrap();
-    assert!(blocked.contains("BACK-001"));
+        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/TASK-002.md")).unwrap();
+    assert!(blocked.contains("TASK-001"));
 }
 
 #[test]
@@ -600,7 +600,7 @@ fn test_link_no_flags_fails() {
 
     cmd()
         .current_dir(tmp.path())
-        .args(["link", "BACK-001"])
+        .args(["link", "TASK-001"])
         .assert()
         .failure();
 }
@@ -618,13 +618,13 @@ fn test_tag() {
 
     cmd()
         .current_dir(tmp.path())
-        .args(["tag", "BACK-001", "ui,frontend"])
+        .args(["tag", "TASK-001", "ui,frontend"])
         .assert()
         .success()
         .stdout(predicate::str::contains("tagged with: ui, frontend"));
 
     let content =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/BACK-001.md")).unwrap();
+        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/TASK-001.md")).unwrap();
     assert!(content.contains("ui"));
     assert!(content.contains("frontend"));
 }
@@ -664,7 +664,7 @@ fn test_metrics() {
         .arg("metrics")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Backlog Status"))
+        .stdout(predicate::str::contains("Task Status"))
         .stdout(predicate::str::contains("Total:"));
 }
 
@@ -707,7 +707,7 @@ fn test_commands_fail_without_init() {
 
     cmd()
         .current_dir(tmp.path())
-        .args(["show", "BACK-001"])
+        .args(["show", "TASK-001"])
         .assert()
         .failure();
 }
@@ -774,7 +774,7 @@ fn test_stale_with_old_items() {
         .success();
 
     // Manually backdate the item's updated field to make it stale
-    let item_path = tmp.path().join(".markplane/backlog/items/BACK-001.md");
+    let item_path = tmp.path().join(".markplane/backlog/items/TASK-001.md");
     let content = std::fs::read_to_string(&item_path).unwrap();
     let old_date = "2020-01-01";
     let today = chrono::Local::now()
@@ -792,7 +792,7 @@ fn test_stale_with_old_items() {
         .args(["stale", "--days", "30"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("BACK-001"))
+        .stdout(predicate::str::contains("TASK-001"))
         .stdout(predicate::str::contains("Old item"));
 }
 
@@ -825,12 +825,12 @@ fn test_archive_dry_run() {
         .success();
     cmd()
         .current_dir(tmp.path())
-        .args(["status", "BACK-001", "done"])
+        .args(["status", "TASK-001", "done"])
         .assert()
         .success();
 
     // Backdate to make archivable
-    let item_path = tmp.path().join(".markplane/backlog/items/BACK-001.md");
+    let item_path = tmp.path().join(".markplane/backlog/items/TASK-001.md");
     let content = std::fs::read_to_string(&item_path).unwrap();
     let today = chrono::Local::now()
         .date_naive()
@@ -848,10 +848,10 @@ fn test_archive_dry_run() {
         .assert()
         .success()
         .stdout(predicate::str::contains("Would archive"))
-        .stdout(predicate::str::contains("BACK-001"));
+        .stdout(predicate::str::contains("TASK-001"));
 
     // File should still be in active dir (not moved)
-    assert!(tmp.path().join(".markplane/backlog/items/BACK-001.md").is_file());
+    assert!(tmp.path().join(".markplane/backlog/items/TASK-001.md").is_file());
 }
 
 #[test]
@@ -864,12 +864,12 @@ fn test_archive_actual() {
         .success();
     cmd()
         .current_dir(tmp.path())
-        .args(["status", "BACK-001", "done"])
+        .args(["status", "TASK-001", "done"])
         .assert()
         .success();
 
     // Backdate
-    let item_path = tmp.path().join(".markplane/backlog/items/BACK-001.md");
+    let item_path = tmp.path().join(".markplane/backlog/items/TASK-001.md");
     let content = std::fs::read_to_string(&item_path).unwrap();
     let today = chrono::Local::now()
         .date_naive()
@@ -886,14 +886,14 @@ fn test_archive_actual() {
         .arg("archive")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Archived BACK-001"));
+        .stdout(predicate::str::contains("Archived TASK-001"));
 
     // File should be in archive dir
     assert!(tmp
         .path()
-        .join(".markplane/backlog/archive/BACK-001.md")
+        .join(".markplane/backlog/archive/TASK-001.md")
         .is_file());
-    assert!(!tmp.path().join(".markplane/backlog/items/BACK-001.md").is_file());
+    assert!(!tmp.path().join(".markplane/backlog/items/TASK-001.md").is_file());
 }
 
 #[test]
@@ -906,12 +906,12 @@ fn test_archive_keep_cancelled() {
         .success();
     cmd()
         .current_dir(tmp.path())
-        .args(["status", "BACK-001", "cancelled"])
+        .args(["status", "TASK-001", "cancelled"])
         .assert()
         .success();
 
     // Backdate
-    let item_path = tmp.path().join(".markplane/backlog/items/BACK-001.md");
+    let item_path = tmp.path().join(".markplane/backlog/items/TASK-001.md");
     let content = std::fs::read_to_string(&item_path).unwrap();
     let today = chrono::Local::now()
         .date_naive()
@@ -932,7 +932,7 @@ fn test_archive_keep_cancelled() {
         .stdout(predicate::str::contains("No items eligible"));
 
     // File should still be in active dir
-    assert!(tmp.path().join(".markplane/backlog/items/BACK-001.md").is_file());
+    assert!(tmp.path().join(".markplane/backlog/items/TASK-001.md").is_file());
 }
 
 // ── Graph ─────────────────────────────────────────────────────────────────
@@ -952,17 +952,17 @@ fn test_graph() {
         .success();
     cmd()
         .current_dir(tmp.path())
-        .args(["link", "BACK-001", "--blocks", "BACK-002"])
+        .args(["link", "TASK-001", "--blocks", "TASK-002"])
         .assert()
         .success();
 
     cmd()
         .current_dir(tmp.path())
-        .args(["graph", "BACK-001"])
+        .args(["graph", "TASK-001"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("BACK-001"))
-        .stdout(predicate::str::contains("BACK-002"));
+        .stdout(predicate::str::contains("TASK-001"))
+        .stdout(predicate::str::contains("TASK-002"));
 }
 
 // ── Context ───────────────────────────────────────────────────────────────
@@ -994,10 +994,10 @@ fn test_context_for_item() {
 
     cmd()
         .current_dir(tmp.path())
-        .args(["context", "--item", "BACK-001"])
+        .args(["context", "--item", "TASK-001"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("BACK-001"))
+        .stdout(predicate::str::contains("TASK-001"))
         .stdout(predicate::str::contains("Context item"));
 }
 
@@ -1018,23 +1018,23 @@ fn test_status_update_nonexistent_item() {
     let tmp = setup_project();
     cmd()
         .current_dir(tmp.path())
-        .args(["status", "BACK-999", "in-progress"])
+        .args(["status", "TASK-999", "in-progress"])
         .assert()
         .failure();
 }
 
 #[test]
-fn test_plan_for_nonexistent_backlog() {
+fn test_plan_for_nonexistent_task() {
     let tmp = setup_project();
     cmd()
         .current_dir(tmp.path())
-        .args(["plan", "BACK-999"])
+        .args(["plan", "TASK-999"])
         .assert()
         .failure();
 }
 
 #[test]
-fn test_plan_for_non_backlog_item() {
+fn test_plan_for_non_task_item() {
     let tmp = setup_project();
     cmd()
         .current_dir(tmp.path())
@@ -1092,7 +1092,7 @@ fn test_full_workflow() {
         .assert()
         .success();
 
-    // Create backlog items
+    // Create tasks
     cmd()
         .current_dir(tmp.path())
         .args([
@@ -1125,28 +1125,28 @@ fn test_full_workflow() {
     // Link
     cmd()
         .current_dir(tmp.path())
-        .args(["link", "BACK-002", "--depends-on", "BACK-001"])
+        .args(["link", "TASK-002", "--depends-on", "TASK-001"])
         .assert()
         .success();
 
     // Start work
     cmd()
         .current_dir(tmp.path())
-        .args(["start", "BACK-001", "--user", "alice"])
+        .args(["start", "TASK-001", "--user", "alice"])
         .assert()
         .success();
 
     // Create plan
     cmd()
         .current_dir(tmp.path())
-        .args(["plan", "BACK-001"])
+        .args(["plan", "TASK-001"])
         .assert()
         .success();
 
     // Finish
     cmd()
         .current_dir(tmp.path())
-        .args(["done", "BACK-001"])
+        .args(["done", "TASK-001"])
         .assert()
         .success();
 
@@ -1170,8 +1170,8 @@ fn test_full_workflow() {
         .arg("ls")
         .assert()
         .success()
-        .stdout(predicate::str::contains("BACK-001"))
-        .stdout(predicate::str::contains("BACK-002"));
+        .stdout(predicate::str::contains("TASK-001"))
+        .stdout(predicate::str::contains("TASK-002"));
 
     // Dashboard should work
     cmd()

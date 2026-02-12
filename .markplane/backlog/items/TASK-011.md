@@ -1,5 +1,5 @@
 ---
-id: BACK-011
+id: TASK-011
 title: Implement rich context bundles for individual items
 status: backlog
 priority: medium
@@ -23,15 +23,15 @@ updated: 2026-02-10
 
 The `markplane context` command currently generates project-wide summaries (summary.md, active-work.md, blocked-items.md, metrics.md). There is no way to generate a focused context bundle for a single item — gathering the item itself, its parent epic, linked plan, dependencies, blockers, and related notes into one coherent document. This is exactly what an LLM needs when starting work on a specific task: all relevant context in one place, without loading the entire project.
 
-The design spec describes `markplane context --item BACK-042` as a key feature for AI-assisted development workflows.
+The design spec describes `markplane context --item TASK-042` as a key feature for AI-assisted development workflows.
 
 ## Acceptance Criteria
 
-- [ ] `markplane context --item BACK-042` generates a focused context bundle
+- [ ] `markplane context --item TASK-042` generates a focused context bundle
 - [ ] Bundle includes: the item's full content, parent epic summary, linked plan (if any), items it depends on, items it blocks
 - [ ] Bundle includes cross-referenced items found via `[[ID]]` syntax in the body
 - [ ] Output is a single markdown document optimized for LLM consumption (~2000 tokens target)
-- [ ] Works for all entity types (passing an epic ID shows the epic + all its backlog items)
+- [ ] Works for all entity types (passing an epic ID shows the epic + all its tasks)
 - [ ] MCP resource or tool exposes item context bundles
 - [ ] Context bundle respects the 2000-token-per-file design constraint
 

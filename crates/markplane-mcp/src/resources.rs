@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::fs;
 
-use markplane_core::{BacklogStatus, Project, QueryFilter, parse_id, IdPrefix};
+use markplane_core::{TaskStatus, Project, QueryFilter, parse_id, IdPrefix};
 use serde_json::{json, Value};
 
 use crate::protocol::{JsonRpcResponse, INTERNAL_ERROR, INVALID_PARAMS};
@@ -19,7 +19,7 @@ pub fn list_resources() -> Value {
             {
                 "uri": "markplane://active-work",
                 "name": "Active Work",
-                "description": "Currently in-progress backlog items",
+                "description": "Currently in-progress tasks",
                 "mimeType": "text/markdown"
             },
             {
@@ -31,9 +31,9 @@ pub fn list_resources() -> Value {
         ],
         "resourceTemplates": [
             {
-                "uriTemplate": "markplane://backlog/{id}",
-                "name": "Backlog Item",
-                "description": "Full content of a backlog item by ID",
+                "uriTemplate": "markplane://task/{id}",
+                "name": "Task",
+                "description": "Full content of a task by ID",
                 "mimeType": "text/markdown"
             },
             {
@@ -64,9 +64,9 @@ pub fn read_resource(id: Value, project: &Project, uri: &str) -> JsonRpcResponse
         "markplane://summary" => read_summary(project),
         "markplane://active-work" => read_active_work(project),
         "markplane://blocked" => read_blocked(project),
-        _ if uri.starts_with("markplane://backlog/") => {
-            let item_id = &uri["markplane://backlog/".len()..];
-            read_backlog_item(project, item_id)
+        _ if uri.starts_with("markplane://task/") => {
+            let item_id = &uri["markplane://task/".len()..];
+            read_task_item(project, item_id)
         }
         _ if uri.starts_with("markplane://epic/") => {
             let item_id = &uri["markplane://epic/".len()..];
@@ -114,7 +114,7 @@ fn read_summary(project: &Project) -> Result<String, String> {
     // Generate inline
     let config = project.load_config().map_err(|e| e.to_string())?;
     let items = project
-        .list_backlog_items(&QueryFilter::default())
+        .list_tasks(&QueryFilter::default())
         .map_err(|e| e.to_string())?;
 
     let mut in_progress = 0usize;
@@ -124,9 +124,9 @@ fn read_summary(project: &Project) -> Result<String, String> {
 
     for item in &items {
         match item.frontmatter.status {
-            BacklogStatus::InProgress => in_progress += 1,
-            BacklogStatus::Planned => planned += 1,
-            BacklogStatus::Done => done += 1,
+            TaskStatus::InProgress => in_progress += 1,
+            TaskStatus::Planned => planned += 1,
+            TaskStatus::Done => done += 1,
             _ => {}
         }
     }
@@ -144,7 +144,7 @@ fn read_active_work(project: &Project) -> Result<String, String> {
     };
 
     let items = project
-        .list_backlog_items(&filter)
+        .list_tasks(&filter)
         .map_err(|e| e.to_string())?;
 
     if items.is_empty() {
@@ -165,13 +165,13 @@ fn read_active_work(project: &Project) -> Result<String, String> {
 
 fn read_blocked(project: &Project) -> Result<String, String> {
     let items = project
-        .list_backlog_items(&QueryFilter::default())
+        .list_tasks(&QueryFilter::default())
         .map_err(|e| e.to_string())?;
 
     // Build a set of done item IDs
     let done_ids: HashSet<&str> = items
         .iter()
-        .filter(|doc| doc.frontmatter.status == BacklogStatus::Done)
+        .filter(|doc| doc.frontmatter.status == TaskStatus::Done)
         .map(|doc| doc.frontmatter.id.as_str())
         .collect();
 
@@ -179,8 +179,8 @@ fn read_blocked(project: &Project) -> Result<String, String> {
     let blocked: Vec<_> = items
         .iter()
         .filter(|doc| {
-            doc.frontmatter.status != BacklogStatus::Done
-                && doc.frontmatter.status != BacklogStatus::Cancelled
+            doc.frontmatter.status != TaskStatus::Done
+                && doc.frontmatter.status != TaskStatus::Cancelled
                 && !doc.frontmatter.depends_on.is_empty()
                 && doc
                     .frontmatter
@@ -214,11 +214,11 @@ fn read_blocked(project: &Project) -> Result<String, String> {
     Ok(output)
 }
 
-fn read_backlog_item(project: &Project, item_id: &str) -> Result<String, String> {
-    // Validate the ID is a BACK- item
+fn read_task_item(project: &Project, item_id: &str) -> Result<String, String> {
+    // Validate the ID is a TASK- item
     let (prefix, _) = parse_id(item_id).map_err(|e| e.to_string())?;
-    if prefix != IdPrefix::Back {
-        return Err(format!("Expected BACK- ID, got: {}", item_id));
+    if prefix != IdPrefix::Task {
+        return Err(format!("Expected TASK- ID, got: {}", item_id));
     }
     let path = project.item_path(item_id).map_err(|e| e.to_string())?;
     fs::read_to_string(&path).map_err(|e| e.to_string())

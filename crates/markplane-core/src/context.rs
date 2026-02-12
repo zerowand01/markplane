@@ -17,7 +17,7 @@ impl Project {
         let now = Local::now().format("%Y-%m-%d").to_string();
         let recent_days = config.context.recent_days;
 
-        let backlog_items = self.list_backlog_items(&QueryFilter::default())?;
+        let tasks = self.list_tasks(&QueryFilter::default())?;
         let epics = self.list_epics()?;
         let plans = self.list_plans()?;
 
@@ -34,14 +34,14 @@ impl Project {
         if !active_epics.is_empty() {
             content.push_str("## Active Epics\n");
             for epic in &active_epics {
-                let epic_items: Vec<_> = backlog_items
+                let epic_items: Vec<_> = tasks
                     .iter()
                     .filter(|i| i.frontmatter.epic.as_deref() == Some(&epic.frontmatter.id))
                     .collect();
                 let total = epic_items.len();
                 let done = epic_items
                     .iter()
-                    .filter(|i| i.frontmatter.status == BacklogStatus::Done)
+                    .filter(|i| i.frontmatter.status == TaskStatus::Done)
                     .count();
                 let remaining = total - done;
                 let pct = if total > 0 {
@@ -58,9 +58,9 @@ impl Project {
         }
 
         // In-progress work
-        let in_progress: Vec<_> = backlog_items
+        let in_progress: Vec<_> = tasks
             .iter()
-            .filter(|i| i.frontmatter.status == BacklogStatus::InProgress)
+            .filter(|i| i.frontmatter.status == TaskStatus::InProgress)
             .collect();
         if !in_progress.is_empty() {
             content.push_str("## In-Progress Work\n");
@@ -91,12 +91,12 @@ impl Project {
         }
 
         // Blocked items (items whose depends_on contains items that aren't done)
-        let done_ids: HashSet<&str> = backlog_items
+        let done_ids: HashSet<&str> = tasks
             .iter()
-            .filter(|i| i.frontmatter.status == BacklogStatus::Done)
+            .filter(|i| i.frontmatter.status == TaskStatus::Done)
             .map(|i| i.frontmatter.id.as_str())
             .collect();
-        let blocked = find_blocked_items(&backlog_items);
+        let blocked = find_blocked_items(&tasks);
         if !blocked.is_empty() {
             content.push_str("## Blocked Items\n");
             for item in &blocked {
@@ -123,9 +123,9 @@ impl Project {
         // Recent completions
         let today = Local::now().date_naive();
         let cutoff = today - chrono::Duration::days(recent_days as i64);
-        let recent_done: Vec<_> = backlog_items
+        let recent_done: Vec<_> = tasks
             .iter()
-            .filter(|i| i.frontmatter.status == BacklogStatus::Done && i.frontmatter.updated >= cutoff)
+            .filter(|i| i.frontmatter.status == TaskStatus::Done && i.frontmatter.updated >= cutoff)
             .collect();
         if !recent_done.is_empty() {
             content.push_str(&format!(
@@ -142,11 +142,11 @@ impl Project {
         }
 
         // Priority queue (next items: planned/backlog, sorted by priority)
-        let next_up: Vec<_> = backlog_items
+        let next_up: Vec<_> = tasks
             .iter()
             .filter(|i| {
-                i.frontmatter.status == BacklogStatus::Planned
-                    || i.frontmatter.status == BacklogStatus::Backlog
+                i.frontmatter.status == TaskStatus::Planned
+                    || i.frontmatter.status == TaskStatus::Backlog
             })
             .take(5)
             .collect();
@@ -167,20 +167,20 @@ impl Project {
 
         // Key metrics
         content.push_str("## Key Metrics\n");
-        let total_open = backlog_items
+        let total_open = tasks
             .iter()
             .filter(|i| {
-                i.frontmatter.status != BacklogStatus::Done
-                    && i.frontmatter.status != BacklogStatus::Cancelled
+                i.frontmatter.status != TaskStatus::Done
+                    && i.frontmatter.status != TaskStatus::Cancelled
             })
             .count();
         let by_priority = |p: &Priority| {
-            backlog_items
+            tasks
                 .iter()
                 .filter(|i| {
                     i.frontmatter.priority == *p
-                        && i.frontmatter.status != BacklogStatus::Done
-                        && i.frontmatter.status != BacklogStatus::Cancelled
+                        && i.frontmatter.status != TaskStatus::Done
+                        && i.frontmatter.status != TaskStatus::Cancelled
                 })
                 .count()
         };
@@ -211,7 +211,7 @@ impl Project {
 
     /// Generate .context/active-work.md
     pub fn generate_context_active_work(&self) -> Result<()> {
-        let backlog_items = self.list_backlog_items(&QueryFilter::default())?;
+        let tasks = self.list_tasks(&QueryFilter::default())?;
         let plans = self.list_plans()?;
         let now = Local::now().format("%Y-%m-%d").to_string();
 
@@ -220,9 +220,9 @@ impl Project {
             GENERATED_HEADER, now
         );
 
-        let in_progress: Vec<_> = backlog_items
+        let in_progress: Vec<_> = tasks
             .iter()
-            .filter(|i| i.frontmatter.status == BacklogStatus::InProgress)
+            .filter(|i| i.frontmatter.status == TaskStatus::InProgress)
             .collect();
 
         if in_progress.is_empty() {
@@ -290,7 +290,7 @@ impl Project {
 
     /// Generate .context/blocked-items.md
     pub fn generate_context_blocked(&self) -> Result<()> {
-        let backlog_items = self.list_backlog_items(&QueryFilter::default())?;
+        let tasks = self.list_tasks(&QueryFilter::default())?;
         let now = Local::now().format("%Y-%m-%d").to_string();
 
         let mut content = format!(
@@ -298,13 +298,13 @@ impl Project {
             GENERATED_HEADER, now
         );
 
-        let done_ids: HashSet<&str> = backlog_items
+        let done_ids: HashSet<&str> = tasks
             .iter()
-            .filter(|i| i.frontmatter.status == BacklogStatus::Done)
+            .filter(|i| i.frontmatter.status == TaskStatus::Done)
             .map(|i| i.frontmatter.id.as_str())
             .collect();
 
-        let blocked = find_blocked_items(&backlog_items);
+        let blocked = find_blocked_items(&tasks);
 
         if blocked.is_empty() {
             content.push_str("No blocked items.\n");
@@ -336,7 +336,7 @@ impl Project {
 
     /// Generate .context/metrics.md
     pub fn generate_context_metrics(&self) -> Result<()> {
-        let backlog_items = self.list_backlog_items(&QueryFilter::default())?;
+        let tasks = self.list_tasks(&QueryFilter::default())?;
         let epics = self.list_epics()?;
         let plans = self.list_plans()?;
         let now = Local::now().format("%Y-%m-%d").to_string();
@@ -347,30 +347,30 @@ impl Project {
         );
 
         // Overall counts
-        let total = backlog_items.len();
-        let done = backlog_items
+        let total = tasks.len();
+        let done = tasks
             .iter()
-            .filter(|i| i.frontmatter.status == BacklogStatus::Done)
+            .filter(|i| i.frontmatter.status == TaskStatus::Done)
             .count();
-        let cancelled = backlog_items
+        let cancelled = tasks
             .iter()
-            .filter(|i| i.frontmatter.status == BacklogStatus::Cancelled)
+            .filter(|i| i.frontmatter.status == TaskStatus::Cancelled)
             .count();
-        let in_progress = backlog_items
+        let in_progress = tasks
             .iter()
-            .filter(|i| i.frontmatter.status == BacklogStatus::InProgress)
+            .filter(|i| i.frontmatter.status == TaskStatus::InProgress)
             .count();
-        let planned = backlog_items
+        let planned = tasks
             .iter()
-            .filter(|i| i.frontmatter.status == BacklogStatus::Planned)
+            .filter(|i| i.frontmatter.status == TaskStatus::Planned)
             .count();
-        let backlog_count = backlog_items
+        let backlog_count = tasks
             .iter()
-            .filter(|i| i.frontmatter.status == BacklogStatus::Backlog)
+            .filter(|i| i.frontmatter.status == TaskStatus::Backlog)
             .count();
-        let draft = backlog_items
+        let draft = tasks
             .iter()
-            .filter(|i| i.frontmatter.status == BacklogStatus::Draft)
+            .filter(|i| i.frontmatter.status == TaskStatus::Draft)
             .count();
 
         content.push_str("## Backlog Status Distribution\n");
@@ -393,12 +393,12 @@ impl Project {
             ("Someday", Priority::Someday),
         ];
         for (label, priority) in &priority_order {
-            let count = backlog_items
+            let count = tasks
                 .iter()
                 .filter(|i| {
                     i.frontmatter.priority == *priority
-                        && i.frontmatter.status != BacklogStatus::Done
-                        && i.frontmatter.status != BacklogStatus::Cancelled
+                        && i.frontmatter.status != TaskStatus::Done
+                        && i.frontmatter.status != TaskStatus::Cancelled
                 })
                 .count();
             content.push_str(&format!("- {}: {}\n", label, count));
@@ -409,14 +409,14 @@ impl Project {
         if !epics.is_empty() {
             content.push_str("## Epic Progress\n");
             for epic in &epics {
-                let epic_items: Vec<_> = backlog_items
+                let epic_items: Vec<_> = tasks
                     .iter()
                     .filter(|i| i.frontmatter.epic.as_deref() == Some(&epic.frontmatter.id))
                     .collect();
                 let epic_total = epic_items.len();
                 let epic_done = epic_items
                     .iter()
-                    .filter(|i| i.frontmatter.status == BacklogStatus::Done)
+                    .filter(|i| i.frontmatter.status == TaskStatus::Done)
                     .count();
                 let pct = if epic_total > 0 {
                     (epic_done as f64 / epic_total as f64 * 100.0) as u32
@@ -506,7 +506,7 @@ mod tests {
         project.update_status("EPIC-001", "active").unwrap();
 
         project
-            .create_backlog_item(
+            .create_task(
                 "In progress item",
                 ItemType::Feature,
                 Priority::High,
@@ -515,10 +515,10 @@ mod tests {
                 vec![],
             )
             .unwrap();
-        project.update_status("BACK-001", "in-progress").unwrap();
+        project.update_status("TASK-001", "in-progress").unwrap();
 
         project
-            .create_backlog_item(
+            .create_task(
                 "Planned item",
                 ItemType::Feature,
                 Priority::Medium,
@@ -527,7 +527,7 @@ mod tests {
                 vec![],
             )
             .unwrap();
-        project.update_status("BACK-002", "planned").unwrap();
+        project.update_status("TASK-002", "planned").unwrap();
 
         project.generate_context_summary().unwrap();
         let content =
@@ -535,16 +535,16 @@ mod tests {
         assert!(content.contains("Active Epics"));
         assert!(content.contains("EPIC-001"));
         assert!(content.contains("In-Progress Work"));
-        assert!(content.contains("BACK-001"));
+        assert!(content.contains("TASK-001"));
         assert!(content.contains("Priority Queue"));
-        assert!(content.contains("BACK-002"));
+        assert!(content.contains("TASK-002"));
     }
 
     #[test]
     fn test_generate_context_summary_blocked() {
         let (_tmp, project) = setup_project();
         project
-            .create_backlog_item(
+            .create_task(
                 "Blocker",
                 ItemType::Feature,
                 Priority::High,
@@ -553,11 +553,11 @@ mod tests {
                 vec![],
             )
             .unwrap();
-        project.update_status("BACK-001", "in-progress").unwrap();
+        project.update_status("TASK-001", "in-progress").unwrap();
 
-        // Create item that depends on BACK-001 (not done)
+        // Create item that depends on TASK-001 (not done)
         project
-            .create_backlog_item(
+            .create_task(
                 "Blocked item",
                 ItemType::Feature,
                 Priority::High,
@@ -567,16 +567,16 @@ mod tests {
             )
             .unwrap();
         // Manually set depends_on by reading/writing the item
-        let mut doc: MarkplaneDocument<BacklogItem> = project.read_item("BACK-002").unwrap();
-        doc.frontmatter.depends_on = vec!["BACK-001".to_string()];
-        project.write_item("BACK-002", &doc).unwrap();
+        let mut doc: MarkplaneDocument<Task> = project.read_item("TASK-002").unwrap();
+        doc.frontmatter.depends_on = vec!["TASK-001".to_string()];
+        project.write_item("TASK-002", &doc).unwrap();
 
         project.generate_context_summary().unwrap();
         let content =
             fs::read_to_string(project.root().join(".context/summary.md")).unwrap();
         assert!(content.contains("Blocked Items"));
-        assert!(content.contains("BACK-002"));
-        assert!(content.contains("blocked by BACK-001"));
+        assert!(content.contains("TASK-002"));
+        assert!(content.contains("blocked by TASK-001"));
     }
 
     #[test]
@@ -592,7 +592,7 @@ mod tests {
     fn test_generate_context_active_work_with_items() {
         let (_tmp, project) = setup_project();
         project
-            .create_backlog_item(
+            .create_task(
                 "Active item",
                 ItemType::Bug,
                 Priority::Critical,
@@ -601,12 +601,12 @@ mod tests {
                 vec![],
             )
             .unwrap();
-        project.update_status("BACK-001", "in-progress").unwrap();
+        project.update_status("TASK-001", "in-progress").unwrap();
 
         project.generate_context_active_work().unwrap();
         let content =
             fs::read_to_string(project.root().join(".context/active-work.md")).unwrap();
-        assert!(content.contains("BACK-001"));
+        assert!(content.contains("TASK-001"));
         assert!(content.contains("Active item"));
         assert!(content.contains("critical"));
     }
@@ -624,7 +624,7 @@ mod tests {
     fn test_generate_context_blocked_with_items() {
         let (_tmp, project) = setup_project();
         project
-            .create_backlog_item(
+            .create_task(
                 "Blocker",
                 ItemType::Feature,
                 Priority::High,
@@ -634,7 +634,7 @@ mod tests {
             )
             .unwrap();
         project
-            .create_backlog_item(
+            .create_task(
                 "Blocked",
                 ItemType::Feature,
                 Priority::High,
@@ -643,16 +643,16 @@ mod tests {
                 vec![],
             )
             .unwrap();
-        let mut doc: MarkplaneDocument<BacklogItem> = project.read_item("BACK-002").unwrap();
-        doc.frontmatter.depends_on = vec!["BACK-001".to_string()];
-        project.write_item("BACK-002", &doc).unwrap();
+        let mut doc: MarkplaneDocument<Task> = project.read_item("TASK-002").unwrap();
+        doc.frontmatter.depends_on = vec!["TASK-001".to_string()];
+        project.write_item("TASK-002", &doc).unwrap();
 
         project.generate_context_blocked().unwrap();
         let content =
             fs::read_to_string(project.root().join(".context/blocked-items.md")).unwrap();
         assert!(content.contains("1 blocked items"));
-        assert!(content.contains("BACK-002"));
-        assert!(content.contains("[[BACK-001]]"));
+        assert!(content.contains("TASK-002"));
+        assert!(content.contains("[[TASK-001]]"));
     }
 
     #[test]
@@ -660,7 +660,7 @@ mod tests {
         let (_tmp, project) = setup_project();
         project.create_epic("Phase 1", Priority::High).unwrap();
         project
-            .create_backlog_item(
+            .create_task(
                 "Item 1",
                 ItemType::Feature,
                 Priority::High,
@@ -670,7 +670,7 @@ mod tests {
             )
             .unwrap();
         project
-            .create_backlog_item(
+            .create_task(
                 "Item 2",
                 ItemType::Bug,
                 Priority::Critical,
@@ -708,7 +708,7 @@ mod tests {
         let (_tmp, project) = setup_project();
         project.create_epic("Phase 1", Priority::High).unwrap();
         project
-            .create_backlog_item(
+            .create_task(
                 "Item 1",
                 ItemType::Feature,
                 Priority::High,

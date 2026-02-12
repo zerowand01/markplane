@@ -20,7 +20,7 @@ pub fn run(name: Option<String>, description: String) -> anyhow::Result<()> {
     println!("  ├── config.yaml");
     println!("  ├── INDEX.md");
     println!("  ├── roadmap/          (EPIC-NNN)");
-    println!("  ├── backlog/          (BACK-NNN)");
+    println!("  ├── backlog/          (TASK-NNN)");
     println!("  ├── plans/            (PLAN-NNN)");
     println!("  ├── notes/            (NOTE-NNN)");
     println!("  ├── templates/");

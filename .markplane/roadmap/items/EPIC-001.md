@@ -18,10 +18,10 @@ Make the MCP server a complete, spec-compliant interface for AI tools to manage 
 ## Key Results
 
 - [x] LLMs receive project-specific guidance via the `instructions` field in the initialize response
-- [x] All four entity types (BACK, EPIC, PLAN, NOTE) are accessible as MCP resources
+- [x] All four entity types (TASK, EPIC, PLAN, NOTE) are accessible as MCP resources
 - [x] LLMs can create items AND fill in their markdown content entirely through MCP tools
 - [x] Protocol version reports the current spec (2025-11-25)
 
 ## Notes
 
-This is the highest-priority epic because it directly impacts how well AI tools can work with Markplane. The `instructions` field (BACK-001) is the single most impactful improvement — it's the difference between an LLM guessing how to use tools and being explicitly taught. BACK-006 (documenting the create-then-edit workflow) is blocked by BACK-001 and BACK-005.
+This is the highest-priority epic because it directly impacts how well AI tools can work with Markplane. The `instructions` field (TASK-001) is the single most impactful improvement — it's the difference between an LLM guessing how to use tools and being explicitly taught. TASK-006 (documenting the create-then-edit workflow) is blocked by TASK-001 and TASK-005.

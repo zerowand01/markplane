@@ -12,7 +12,7 @@ updated: {DATE}
 
 ## Overview
 
-This plan implements the listed backlog items.
+This plan implements the listed tasks.
 
 ## Approach
 

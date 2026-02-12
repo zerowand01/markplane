@@ -131,8 +131,8 @@ impl Project {
 
     // ── CRUD Operations ───────────────────────────────────────────────────
 
-    /// Create a new backlog item.
-    pub fn create_backlog_item(
+    /// Create a new task.
+    pub fn create_task(
         &self,
         title: &str,
         item_type: ItemType,
@@ -140,9 +140,9 @@ impl Project {
         effort: Effort,
         epic: Option<String>,
         tags: Vec<String>,
-    ) -> Result<BacklogItem> {
+    ) -> Result<Task> {
         validate_title_length(title)?;
-        let id = self.next_id(&IdPrefix::Back)?;
+        let id = self.next_id(&IdPrefix::Task)?;
         let today = Local::now().date_naive();
         let date_str = today.format("%Y-%m-%d").to_string();
 
@@ -151,7 +151,7 @@ impl Project {
         let epic_yaml = epic.as_deref().unwrap_or("null");
 
         let content = render_template(
-            templates::BACKLOG_TEMPLATE,
+            templates::TASK_TEMPLATE,
             &[
                 ("{ID}", &id),
                 ("{TITLE}", &safe_title),
@@ -165,15 +165,15 @@ impl Project {
             ],
         );
 
-        let items_dir = self.item_dir(&IdPrefix::Back).join("items");
+        let items_dir = self.item_dir(&IdPrefix::Task).join("items");
         fs::create_dir_all(&items_dir)?;
         let path = items_dir.join(format!("{}.md", id));
         fs::write(&path, &content)?;
 
-        let item = BacklogItem {
+        let item = Task {
             id,
             title: title.to_string(),
-            status: BacklogStatus::Draft,
+            status: TaskStatus::Draft,
             priority,
             item_type,
             effort,
@@ -343,8 +343,8 @@ impl Project {
         let today = Local::now().date_naive();
 
         match prefix {
-            IdPrefix::Back => {
-                let mut doc: MarkplaneDocument<BacklogItem> = self.read_item(id)?;
+            IdPrefix::Task => {
+                let mut doc: MarkplaneDocument<Task> = self.read_item(id)?;
                 doc.frontmatter.status = new_status.parse()?;
                 doc.frontmatter.updated = today;
                 self.write_item(id, &doc)?;
@@ -378,8 +378,8 @@ impl Project {
         let today = Local::now().date_naive();
 
         match prefix {
-            IdPrefix::Back => {
-                let mut doc: MarkplaneDocument<BacklogItem> = self.read_item(id)?;
+            IdPrefix::Task => {
+                let mut doc: MarkplaneDocument<Task> = self.read_item(id)?;
                 doc.frontmatter.updated = today;
                 doc.body = new_body.to_string();
                 self.write_item(id, &doc)?;
@@ -506,7 +506,7 @@ impl Project {
         );
         fs::write(root.join("INDEX.md"), root_index)?;
         fs::write(root.join("roadmap/INDEX.md"), templates::ROADMAP_INDEX_TEMPLATE)?;
-        fs::write(root.join("backlog/INDEX.md"), templates::BACKLOG_INDEX_TEMPLATE)?;
+        fs::write(root.join("backlog/INDEX.md"), templates::TASK_INDEX_TEMPLATE)?;
         fs::write(root.join("plans/INDEX.md"), templates::PLANS_INDEX_TEMPLATE)?;
         fs::write(root.join("notes/INDEX.md"), templates::NOTES_INDEX_TEMPLATE)?;
         // Write special note files
@@ -515,8 +515,8 @@ impl Project {
 
         // Write template files
         fs::write(
-            root.join("templates/backlog-item.md"),
-            templates::BACKLOG_TEMPLATE,
+            root.join("templates/task.md"),
+            templates::TASK_TEMPLATE,
         )?;
         fs::write(root.join("templates/epic.md"), templates::EPIC_TEMPLATE)?;
         fs::write(
@@ -578,23 +578,23 @@ fn format_yaml_list(items: &[String]) -> String {
     }
 }
 
-/// Find backlog items that are blocked (have unresolved dependencies).
+/// Find tasks that are blocked (have unresolved dependencies).
 /// An item is blocked if it's not done/cancelled and has at least one
 /// dependency that isn't done.
 pub fn find_blocked_items(
-    items: &[MarkplaneDocument<BacklogItem>],
-) -> Vec<&MarkplaneDocument<BacklogItem>> {
+    items: &[MarkplaneDocument<Task>],
+) -> Vec<&MarkplaneDocument<Task>> {
     let done_ids: HashSet<&str> = items
         .iter()
-        .filter(|i| i.frontmatter.status == BacklogStatus::Done)
+        .filter(|i| i.frontmatter.status == TaskStatus::Done)
         .map(|i| i.frontmatter.id.as_str())
         .collect();
 
     items
         .iter()
         .filter(|i| {
-            i.frontmatter.status != BacklogStatus::Done
-                && i.frontmatter.status != BacklogStatus::Cancelled
+            i.frontmatter.status != TaskStatus::Done
+                && i.frontmatter.status != TaskStatus::Cancelled
                 && !i.frontmatter.depends_on.is_empty()
                 && i.frontmatter
                     .depends_on
@@ -637,7 +637,7 @@ mod tests {
         assert!(root.join("notes/archive").is_dir());
         assert!(root.join("notes/ideas.md").is_file());
         assert!(root.join("notes/decisions.md").is_file());
-        assert!(root.join("templates/backlog-item.md").is_file());
+        assert!(root.join("templates/task.md").is_file());
         assert!(root.join("templates/epic.md").is_file());
         assert!(root.join(".context").is_dir());
     }
@@ -649,7 +649,7 @@ mod tests {
         assert_eq!(config.project.name, "Test Project");
         assert_eq!(config.project.description, "A test project");
         assert_eq!(config.version, 1);
-        assert_eq!(config.counters.get("BACK"), Some(&0));
+        assert_eq!(config.counters.get("TASK"), Some(&0));
     }
 
     #[test]
@@ -663,19 +663,19 @@ mod tests {
     #[test]
     fn test_next_id() {
         let (_tmp, project) = setup_project();
-        let id1 = project.next_id(&IdPrefix::Back).unwrap();
-        assert_eq!(id1, "BACK-001");
-        let id2 = project.next_id(&IdPrefix::Back).unwrap();
-        assert_eq!(id2, "BACK-002");
+        let id1 = project.next_id(&IdPrefix::Task).unwrap();
+        assert_eq!(id1, "TASK-001");
+        let id2 = project.next_id(&IdPrefix::Task).unwrap();
+        assert_eq!(id2, "TASK-002");
         let id3 = project.next_id(&IdPrefix::Epic).unwrap();
         assert_eq!(id3, "EPIC-001");
     }
 
     #[test]
-    fn test_create_backlog_item() {
+    fn test_create_task() {
         let (_tmp, project) = setup_project();
         let item = project
-            .create_backlog_item(
+            .create_task(
                 "Fix login bug",
                 ItemType::Bug,
                 Priority::High,
@@ -685,15 +685,15 @@ mod tests {
             )
             .unwrap();
 
-        assert_eq!(item.id, "BACK-001");
+        assert_eq!(item.id, "TASK-001");
         assert_eq!(item.title, "Fix login bug");
-        assert_eq!(item.status, BacklogStatus::Draft);
+        assert_eq!(item.status, TaskStatus::Draft);
         assert_eq!(item.priority, Priority::High);
         assert_eq!(item.item_type, ItemType::Bug);
 
         // Verify file exists and is parseable
-        let doc: MarkplaneDocument<BacklogItem> = project.read_item("BACK-001").unwrap();
-        assert_eq!(doc.frontmatter.id, "BACK-001");
+        let doc: MarkplaneDocument<Task> = project.read_item("TASK-001").unwrap();
+        assert_eq!(doc.frontmatter.id, "TASK-001");
         assert_eq!(doc.frontmatter.title, "Fix login bug");
         assert!(doc.body.contains("# Fix login bug"));
     }
@@ -713,9 +713,9 @@ mod tests {
     #[test]
     fn test_create_plan() {
         let (_tmp, project) = setup_project();
-        // Create a backlog item first
+        // Create a task first
         project
-            .create_backlog_item(
+            .create_task(
                 "Dark mode",
                 ItemType::Feature,
                 Priority::High,
@@ -728,14 +728,14 @@ mod tests {
         let plan = project
             .create_plan(
                 "Dark mode implementation",
-                vec!["BACK-001".to_string()],
+                vec!["TASK-001".to_string()],
                 None,
             )
             .unwrap();
 
         assert_eq!(plan.id, "PLAN-001");
         assert_eq!(plan.status, PlanStatus::Draft);
-        assert_eq!(plan.implements, vec!["BACK-001"]);
+        assert_eq!(plan.implements, vec!["TASK-001"]);
     }
 
     #[test]
@@ -758,7 +758,7 @@ mod tests {
     fn test_update_status() {
         let (_tmp, project) = setup_project();
         project
-            .create_backlog_item(
+            .create_task(
                 "Test item",
                 ItemType::Feature,
                 Priority::Medium,
@@ -768,17 +768,17 @@ mod tests {
             )
             .unwrap();
 
-        project.update_status("BACK-001", "in-progress").unwrap();
+        project.update_status("TASK-001", "in-progress").unwrap();
 
-        let doc: MarkplaneDocument<BacklogItem> = project.read_item("BACK-001").unwrap();
-        assert_eq!(doc.frontmatter.status, BacklogStatus::InProgress);
+        let doc: MarkplaneDocument<Task> = project.read_item("TASK-001").unwrap();
+        assert_eq!(doc.frontmatter.status, TaskStatus::InProgress);
     }
 
     #[test]
     fn test_update_status_invalid() {
         let (_tmp, project) = setup_project();
         project
-            .create_backlog_item(
+            .create_task(
                 "Test item",
                 ItemType::Feature,
                 Priority::Medium,
@@ -788,7 +788,7 @@ mod tests {
             )
             .unwrap();
 
-        let result = project.update_status("BACK-001", "invalid-status");
+        let result = project.update_status("TASK-001", "invalid-status");
         assert!(result.is_err());
     }
 
@@ -796,7 +796,7 @@ mod tests {
     fn test_archive_item() {
         let (_tmp, project) = setup_project();
         project
-            .create_backlog_item(
+            .create_task(
                 "To archive",
                 ItemType::Chore,
                 Priority::Low,
@@ -806,35 +806,35 @@ mod tests {
             )
             .unwrap();
 
-        project.archive_item("BACK-001").unwrap();
+        project.archive_item("TASK-001").unwrap();
 
         // Should now be found in archive
-        let path = project.item_path("BACK-001").unwrap();
+        let path = project.item_path("TASK-001").unwrap();
         assert!(path.to_string_lossy().contains("archive"));
 
         // Reading should still work
-        let doc: MarkplaneDocument<BacklogItem> = project.read_item("BACK-001").unwrap();
+        let doc: MarkplaneDocument<Task> = project.read_item("TASK-001").unwrap();
         assert_eq!(doc.frontmatter.title, "To archive");
     }
 
     #[test]
     fn test_archive_nonexistent() {
         let (_tmp, project) = setup_project();
-        let result = project.archive_item("BACK-999");
+        let result = project.archive_item("TASK-999");
         assert!(result.is_err());
     }
 
     #[test]
     fn test_item_path_not_found() {
         let (_tmp, project) = setup_project();
-        let result = project.item_path("BACK-999");
+        let result = project.item_path("TASK-999");
         assert!(result.is_err());
     }
 
     #[test]
     fn test_item_dir() {
         let (_tmp, project) = setup_project();
-        let dir = project.item_dir(&IdPrefix::Back);
+        let dir = project.item_dir(&IdPrefix::Task);
         assert!(dir.ends_with("backlog"));
         let dir = project.item_dir(&IdPrefix::Epic);
         assert!(dir.ends_with("roadmap"));
@@ -844,7 +844,7 @@ mod tests {
     fn test_write_item() {
         let (_tmp, project) = setup_project();
         project
-            .create_backlog_item(
+            .create_task(
                 "Original title",
                 ItemType::Feature,
                 Priority::Medium,
@@ -854,12 +854,12 @@ mod tests {
             )
             .unwrap();
 
-        let mut doc: MarkplaneDocument<BacklogItem> = project.read_item("BACK-001").unwrap();
+        let mut doc: MarkplaneDocument<Task> = project.read_item("TASK-001").unwrap();
         doc.frontmatter.priority = Priority::High;
         doc.body = "# Updated body\n\nNew content.\n".to_string();
-        project.write_item("BACK-001", &doc).unwrap();
+        project.write_item("TASK-001", &doc).unwrap();
 
-        let updated: MarkplaneDocument<BacklogItem> = project.read_item("BACK-001").unwrap();
+        let updated: MarkplaneDocument<Task> = project.read_item("TASK-001").unwrap();
         assert_eq!(updated.frontmatter.priority, Priority::High);
         assert!(updated.body.contains("Updated body"));
     }
@@ -955,13 +955,13 @@ mod tests {
     fn test_find_blocked_items_none_blocked() {
         let (_tmp, project) = setup_project();
         project
-            .create_backlog_item("A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
         project
-            .create_backlog_item("B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
 
-        let items = project.list_backlog_items(&crate::query::QueryFilter::default()).unwrap();
+        let items = project.list_tasks(&crate::query::QueryFilter::default()).unwrap();
         let blocked = find_blocked_items(&items);
         assert!(blocked.is_empty());
     }
@@ -970,42 +970,42 @@ mod tests {
     fn test_find_blocked_items_with_blocked() {
         let (_tmp, project) = setup_project();
         project
-            .create_backlog_item("Blocker", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("Blocker", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
         project
-            .create_backlog_item("Blocked", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("Blocked", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
 
-        // Set BACK-002 to depend on BACK-001
-        let mut doc: MarkplaneDocument<BacklogItem> = project.read_item("BACK-002").unwrap();
-        doc.frontmatter.depends_on = vec!["BACK-001".to_string()];
-        project.write_item("BACK-002", &doc).unwrap();
+        // Set TASK-002 to depend on TASK-001
+        let mut doc: MarkplaneDocument<Task> = project.read_item("TASK-002").unwrap();
+        doc.frontmatter.depends_on = vec!["TASK-001".to_string()];
+        project.write_item("TASK-002", &doc).unwrap();
 
-        let items = project.list_backlog_items(&crate::query::QueryFilter::default()).unwrap();
+        let items = project.list_tasks(&crate::query::QueryFilter::default()).unwrap();
         let blocked = find_blocked_items(&items);
         assert_eq!(blocked.len(), 1);
-        assert_eq!(blocked[0].frontmatter.id, "BACK-002");
+        assert_eq!(blocked[0].frontmatter.id, "TASK-002");
     }
 
     #[test]
     fn test_find_blocked_items_resolved_dependency() {
         let (_tmp, project) = setup_project();
         project
-            .create_backlog_item("Blocker", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("Blocker", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
         project
-            .create_backlog_item("Blocked", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("Blocked", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
 
         // Set dependency
-        let mut doc: MarkplaneDocument<BacklogItem> = project.read_item("BACK-002").unwrap();
-        doc.frontmatter.depends_on = vec!["BACK-001".to_string()];
-        project.write_item("BACK-002", &doc).unwrap();
+        let mut doc: MarkplaneDocument<Task> = project.read_item("TASK-002").unwrap();
+        doc.frontmatter.depends_on = vec!["TASK-001".to_string()];
+        project.write_item("TASK-002", &doc).unwrap();
 
         // Mark blocker as done
-        project.update_status("BACK-001", "done").unwrap();
+        project.update_status("TASK-001", "done").unwrap();
 
-        let items = project.list_backlog_items(&crate::query::QueryFilter::default()).unwrap();
+        let items = project.list_tasks(&crate::query::QueryFilter::default()).unwrap();
         let blocked = find_blocked_items(&items);
         assert!(blocked.is_empty()); // No longer blocked
     }
@@ -1024,10 +1024,10 @@ mod tests {
     }
 
     #[test]
-    fn test_create_backlog_item_with_emoji_title() {
+    fn test_create_task_with_emoji_title() {
         let (_tmp, project) = setup_project();
         let item = project
-            .create_backlog_item(
+            .create_task(
                 "Fix login bug 🔥🚀",
                 ItemType::Bug,
                 Priority::High,
@@ -1039,7 +1039,7 @@ mod tests {
 
         assert_eq!(item.title, "Fix login bug 🔥🚀");
         // Read it back and verify
-        let doc: MarkplaneDocument<BacklogItem> = project.read_item("BACK-001").unwrap();
+        let doc: MarkplaneDocument<Task> = project.read_item("TASK-001").unwrap();
         assert_eq!(doc.frontmatter.title, "Fix login bug 🔥🚀");
     }
 
@@ -1075,22 +1075,22 @@ mod tests {
     // ── update_body ────────────────────────────────────────────────────
 
     #[test]
-    fn test_update_body_backlog() {
+    fn test_update_body_task() {
         let (_tmp, project) = setup_project();
         project
-            .create_backlog_item("Test item", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("Test item", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
 
-        let original: MarkplaneDocument<BacklogItem> = project.read_item("BACK-001").unwrap();
+        let original: MarkplaneDocument<Task> = project.read_item("TASK-001").unwrap();
         assert!(original.body.contains("[What needs to be done"));
 
         project
-            .update_body("BACK-001", "# Test item\n\nActual description here.\n")
+            .update_body("TASK-001", "# Test item\n\nActual description here.\n")
             .unwrap();
 
-        let updated: MarkplaneDocument<BacklogItem> = project.read_item("BACK-001").unwrap();
+        let updated: MarkplaneDocument<Task> = project.read_item("TASK-001").unwrap();
         assert!(updated.body.contains("Actual description here."));
-        assert_eq!(updated.frontmatter.id, "BACK-001");
+        assert_eq!(updated.frontmatter.id, "TASK-001");
         assert_eq!(updated.frontmatter.title, "Test item");
     }
 
@@ -1139,7 +1139,7 @@ mod tests {
     #[test]
     fn test_update_body_nonexistent() {
         let (_tmp, project) = setup_project();
-        let result = project.update_body("BACK-999", "new body");
+        let result = project.update_body("TASK-999", "new body");
         assert!(result.is_err());
     }
 

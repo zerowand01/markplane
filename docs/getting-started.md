@@ -27,7 +27,7 @@ Initialized Markplane project: My App
   ├── config.yaml
   ├── INDEX.md
   ├── roadmap/          (EPIC-NNN)
-  ├── backlog/          (BACK-NNN)
+  ├── backlog/          (TASK-NNN)
   ├── plans/            (PLAN-NNN)
   ├── notes/            (NOTE-NNN)
   ├── templates/
@@ -60,9 +60,9 @@ Epics start with status `planned`. You can list them with:
 markplane ls epics
 ```
 
-## 3. Add Backlog Items
+## 3. Add Tasks
 
-Backlog items are your primary work units. Create items linked to the epic:
+Tasks are your primary work units. Create items linked to the epic:
 
 ```bash
 markplane add "Implement login page" --type feature --priority high --effort medium --epic EPIC-001 --tags "auth,frontend"
@@ -71,7 +71,7 @@ markplane add "Implement login page" --type feature --priority high --effort med
 Output:
 
 ```
-Created BACK-001 — Implement login page
+Created TASK-001 — Implement login page
 ```
 
 Add a few more items:
@@ -88,11 +88,11 @@ markplane add "Add rate limiting to auth endpoints" --type enhancement --priorit
 - **Priorities**: `critical`, `high`, `medium`, `low`, `someday`
 - **Effort sizes**: `xs`, `small`, `medium`, `large`, `xl`
 
-All new backlog items start with status `draft`.
+All new tasks start with status `draft`.
 
 ## 4. List and Filter Items
 
-View all backlog items:
+View all tasks:
 
 ```bash
 markplane ls
@@ -128,13 +128,13 @@ markplane ls --assignee daniel
 Inspect a specific item:
 
 ```bash
-markplane show BACK-001
+markplane show TASK-001
 ```
 
 Output:
 
 ```
-BACK-001
+TASK-001
 Implement login page
 
   Status:   draft
@@ -153,21 +153,21 @@ Implement login page
 ...
 ```
 
-This works for any item type — backlog items, epics, plans, and notes.
+This works for any item type — tasks, epics, plans, and notes.
 
 ## 6. Move Items Through the Workflow
 
 ### Update status manually
 
 ```bash
-markplane status BACK-001 backlog
-markplane status BACK-001 planned
+markplane status TASK-001 backlog
+markplane status TASK-001 planned
 ```
 
 Output:
 
 ```
-BACK-001 → planned
+TASK-001 → planned
 ```
 
 ### Start working on an item
@@ -175,31 +175,31 @@ BACK-001 → planned
 The `start` command sets the status to `in-progress` and assigns the item to you:
 
 ```bash
-markplane start BACK-001
+markplane start TASK-001
 ```
 
 Output:
 
 ```
-BACK-001 → in-progress (assigned to daniel)
+TASK-001 → in-progress (assigned to daniel)
 ```
 
 You can specify a different user:
 
 ```bash
-markplane start BACK-002 --user alice
+markplane start TASK-002 --user alice
 ```
 
 ### Mark an item as done
 
 ```bash
-markplane done BACK-001
+markplane done TASK-001
 ```
 
 Output:
 
 ```
-BACK-001 → done
+TASK-001 → done
 ```
 
 ### Update epic status
@@ -213,27 +213,27 @@ markplane status EPIC-001 active
 Link items that depend on each other:
 
 ```bash
-# BACK-004 depends on BACK-002 being completed first
-markplane link BACK-004 --depends-on BACK-002
+# TASK-004 depends on TASK-002 being completed first
+markplane link TASK-004 --depends-on TASK-002
 
-# Equivalently, BACK-002 blocks BACK-004
-markplane link BACK-002 --blocks BACK-004
+# Equivalently, TASK-002 blocks TASK-004
+markplane link TASK-002 --blocks TASK-004
 ```
 
 Both directions are automatically maintained — adding a `depends-on` link also adds the reverse `blocks` link on the target.
 
 ## 8. Assign and Tag Items
 
-Assign a backlog item to someone:
+Assign a task to someone:
 
 ```bash
-markplane assign BACK-003 @daniel
+markplane assign TASK-003 @daniel
 ```
 
 Add tags to an existing item:
 
 ```bash
-markplane tag BACK-003 "urgent,sprint-3"
+markplane tag TASK-003 "urgent,sprint-3"
 ```
 
 Tags are additive — existing tags are preserved.
@@ -254,7 +254,7 @@ Created NOTE-001 — Evaluate OAuth providers
 
 Note types: `research`, `analysis`, `idea`, `decision`, `meeting`.
 
-When a note becomes actionable, promote it to a backlog item:
+When a note becomes actionable, promote it to a task:
 
 ```bash
 markplane promote NOTE-001 --priority high --effort medium
@@ -263,33 +263,33 @@ markplane promote NOTE-001 --priority high --effort medium
 Output:
 
 ```
-Promoted NOTE-001 → BACK-005 — Evaluate OAuth providers
+Promoted NOTE-001 → TASK-005 — Evaluate OAuth providers
 ```
 
-The new backlog item inherits the note's title and tags.
+The new task inherits the note's title and tags.
 
 ## 10. Create Implementation Plans
 
 For complex items, create a linked implementation plan:
 
 ```bash
-markplane plan BACK-001
+markplane plan TASK-001
 ```
 
 Output:
 
 ```
 Created PLAN-001 — Implementation plan for Implement login page
-Linked to BACK-001
+Linked to TASK-001
 ```
 
 You can provide a custom title:
 
 ```bash
-markplane plan BACK-002 --title "JWT auth architecture"
+markplane plan TASK-002 --title "JWT auth architecture"
 ```
 
-The plan is automatically linked back to the backlog item, and inherits the item's epic.
+The plan is automatically linked back to the task, and inherits the item's epic.
 
 List all plans:
 
@@ -321,7 +321,7 @@ markplane context
 Or generate focused context for a specific item (includes linked epic, plan, and dependencies):
 
 ```bash
-markplane context --item BACK-001
+markplane context --item TASK-001
 ```
 
 ## 12. Validate Cross-References
@@ -343,8 +343,8 @@ Output (with issues):
 ```
 ✗ 2 broken reference(s):
 
-  .markplane/backlog/items/BACK-003.md references BACK-999 (not found)
-  .markplane/plans/items/PLAN-001.md references BACK-050 (not found)
+  .markplane/backlog/items/TASK-003.md references TASK-999 (not found)
+  .markplane/plans/items/PLAN-001.md references TASK-050 (not found)
 ```
 
 Include orphan detection to find items with no incoming references:
@@ -367,8 +367,8 @@ Output:
 ! 2 item(s) not updated in 14 days:
 
  ID       | Title                  | Status   | Last Updated | Days Stale
- BACK-003 | Fix password reset ... | draft    | 2026-01-20   | 20
- BACK-004 | Add rate limiting ...  | planned  | 2026-01-25   | 15
+ TASK-003 | Fix password reset ... | draft    | 2026-01-20   | 20
+ TASK-004 | Add rate limiting ...  | planned  | 2026-01-25   | 15
 ```
 
 The default threshold is 30 days.
@@ -386,7 +386,7 @@ Output:
 ```
 → Would archive 1 item(s):
 
-  BACK-001 Implement login page (done)
+  TASK-001 Implement login page (done)
 
 Run without --dry-run to archive.
 ```
@@ -416,10 +416,10 @@ Output:
 ══════════════════════════════════════════════════════
 
 In Progress
-  BACK-002 Set up JWT token handling (high @alice)
+  TASK-002 Set up JWT token handling (high @alice)
 
 Blocked
-  BACK-004 Add rate limiting — blocked by BACK-002
+  TASK-004 Add rate limiting — blocked by TASK-002
 
 Active Epics
   EPIC-001 User Authentication System — 1/4 (25%)
@@ -442,16 +442,16 @@ This shows status distribution, priority breakdown, epic progress bars, and plan
 View the dependency graph for any item:
 
 ```bash
-markplane graph BACK-004 --depth 3
+markplane graph TASK-004 --depth 3
 ```
 
 Output:
 
 ```
-Dependency graph for BACK-004
+Dependency graph for TASK-004
 
-BACK-004
-  └─ BACK-002
+TASK-004
+  └─ TASK-002
 
 Referenced by:
   (none)

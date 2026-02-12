@@ -87,7 +87,7 @@ The server exposes 16 tools via the `tools/list` method.
 
 | Tool | Description | Required Params | Optional Params |
 |------|-------------|-----------------|-----------------|
-| `markplane_query` | Query backlog items with optional filters. Returns matching items. | *(none)* | `status` (string[]): filter by status; `priority` (string[]): filter by priority; `epic` (string): filter by epic ID; `tags` (string[]): filter by tags; `assignee` (string): filter by assignee |
+| `markplane_query` | Query tasks with optional filters. Returns matching items. | *(none)* | `status` (string[]): filter by status; `priority` (string[]): filter by priority; `epic` (string): filter by epic ID; `tags` (string[]): filter by tags; `assignee` (string): filter by assignee |
 | `markplane_show` | Get full details of any item by ID. Returns frontmatter and body. | `id` (string) | *(none)* |
 | `markplane_graph` | Build a reference graph showing how items relate to each other. | `id` (string) | `depth` (number): max traversal depth, default 2 |
 
@@ -95,18 +95,18 @@ The server exposes 16 tools via the `tools/list` method.
 
 | Tool | Description | Required Params | Optional Params |
 |------|-------------|-----------------|-----------------|
-| `markplane_add` | Create a new backlog item. | `title` (string) | `type` (string): feature/bug/enhancement/chore/research/spike, default feature; `priority` (string): critical/high/medium/low/someday, default medium; `effort` (string): xs/small/medium/large/xl, default medium; `epic` (string): parent epic ID; `tags` (string[]): tags for the item |
+| `markplane_add` | Create a new task. | `title` (string) | `type` (string): feature/bug/enhancement/chore/research/spike, default feature; `priority` (string): critical/high/medium/low/someday, default medium; `effort` (string): xs/small/medium/large/xl, default medium; `epic` (string): parent epic ID; `tags` (string[]): tags for the item |
 | `markplane_write` | Write or replace the markdown body content of an item. Preserves frontmatter. | `id` (string), `body` (string) | *(none)* |
 | `markplane_update` | Update fields on an existing item. | `id` (string) | `status` (string): new status; `priority` (string): new priority; `assignee` (string): new assignee |
-| `markplane_start` | Set a backlog item to in-progress status. | `id` (string) | *(none)* |
-| `markplane_done` | Mark a backlog item as done. | `id` (string) | *(none)* |
+| `markplane_start` | Set a task to in-progress status. | `id` (string) | *(none)* |
+| `markplane_done` | Mark a task as done. | `id` (string) | *(none)* |
 
 ### Workflow
 
 | Tool | Description | Required Params | Optional Params |
 |------|-------------|-----------------|-----------------|
-| `markplane_promote` | Promote a note to a backlog item. | `note_id` (string) | `priority` (string): default medium; `effort` (string): default medium |
-| `markplane_plan` | Create an implementation plan linked to a backlog item. | `backlog_id` (string) | `title` (string): defaults to "Implementation plan for {item title}" |
+| `markplane_promote` | Promote a note to a task. | `note_id` (string) | `priority` (string): default medium; `effort` (string): default medium |
+| `markplane_plan` | Create an implementation plan linked to a task. | `task_id` (string) | `title` (string): defaults to "Implementation plan for {item title}" |
 | `markplane_link` | Link two items with a blocks/depends_on relationship. | `from` (string), `to` (string), `relation` (string): `blocks` or `depends_on` | *(none)* |
 
 ### Maintenance
@@ -126,14 +126,14 @@ The server exposes 7 resources via the `resources/list` method. All resources re
 | URI | Name | Description |
 |-----|------|-------------|
 | `markplane://summary` | Project Summary | Overview of the project state including item counts by status |
-| `markplane://active-work` | Active Work | Currently in-progress backlog items |
+| `markplane://active-work` | Active Work | Currently in-progress tasks |
 | `markplane://blocked` | Blocked Items | Items that have unresolved dependencies or need attention |
 
 ### Dynamic Resource Templates
 
 | URI Template | Name | Description |
 |--------------|------|-------------|
-| `markplane://backlog/{id}` | Backlog Item | Full content of a backlog item by ID (e.g. `markplane://backlog/BACK-042`) |
+| `markplane://task/{id}` | Task | Full content of a task by ID (e.g. `markplane://task/TASK-042`) |
 | `markplane://epic/{id}` | Epic | Full content of an epic by ID (e.g. `markplane://epic/EPIC-001`) |
 | `markplane://plan/{id}` | Plan | Full content of an implementation plan by ID (e.g. `markplane://plan/PLAN-001`) |
 | `markplane://note/{id}` | Note | Full content of a note by ID (e.g. `markplane://note/NOTE-001`) |
@@ -203,7 +203,7 @@ The `instructions` field contains dynamic guidance built from the project's `con
     "content": [
       {
         "type": "text",
-        "text": "{\"id\":\"BACK-001\",\"title\":\"Add dark mode support\"}"
+        "text": "{\"id\":\"TASK-001\",\"title\":\"Add dark mode support\"}"
       }
     ]
   }
@@ -237,7 +237,7 @@ The `instructions` field contains dynamic guidance built from the project's `con
     "content": [
       {
         "type": "text",
-        "text": "[\n  {\n    \"id\": \"BACK-001\",\n    \"title\": \"Add dark mode support\",\n    \"status\": \"in-progress\",\n    \"priority\": \"high\",\n    \"effort\": \"medium\"\n  }\n]"
+        "text": "[\n  {\n    \"id\": \"TASK-001\",\n    \"title\": \"Add dark mode support\",\n    \"status\": \"in-progress\",\n    \"priority\": \"high\",\n    \"effort\": \"medium\"\n  }\n]"
       }
     ]
   }
@@ -255,7 +255,7 @@ The `instructions` field contains dynamic guidance built from the project's `con
   "params": {
     "name": "markplane_show",
     "arguments": {
-      "id": "BACK-001"
+      "id": "TASK-001"
     }
   }
 }
@@ -270,7 +270,7 @@ The `instructions` field contains dynamic guidance built from the project's `con
     "content": [
       {
         "type": "text",
-        "text": "---\nid: BACK-001\ntitle: \"Add dark mode support\"\nstatus: in-progress\npriority: high\ntype: feature\n...\n---\n\n# Add dark mode support\n\n## Description\n..."
+        "text": "---\nid: TASK-001\ntitle: \"Add dark mode support\"\nstatus: in-progress\npriority: high\ntype: feature\n...\n---\n\n# Add dark mode support\n\n## Description\n..."
       }
     ]
   }
@@ -296,7 +296,7 @@ The server uses standard JSON-RPC error codes:
   "id": 5,
   "error": {
     "code": -32603,
-    "message": "Item BACK-999 not found in backlog or its archive"
+    "message": "Item TASK-999 not found in backlog or its archive"
   }
 }
 ```

@@ -16,7 +16,7 @@ impl Project {
         let config = self.load_config()?;
         let now = Local::now().format("%Y-%m-%d").to_string();
 
-        let backlog_items = self.list_backlog_items(&QueryFilter::default())?;
+        let tasks = self.list_tasks(&QueryFilter::default())?;
         let epics = self.list_epics()?;
         let plans = self.list_plans()?;
         let notes = self.list_notes()?;
@@ -25,11 +25,11 @@ impl Project {
             .iter()
             .filter(|e| e.frontmatter.status != EpicStatus::Done)
             .count();
-        let open_backlog = backlog_items
+        let open_backlog = tasks
             .iter()
             .filter(|b| {
-                b.frontmatter.status != BacklogStatus::Done
-                    && b.frontmatter.status != BacklogStatus::Cancelled
+                b.frontmatter.status != TaskStatus::Done
+                    && b.frontmatter.status != TaskStatus::Cancelled
             })
             .count();
         let active_plans = plans
@@ -42,7 +42,7 @@ impl Project {
             .count();
 
         // Build counter string from config
-        let counter_parts: Vec<String> = ["EPIC", "BACK", "PLAN", "NOTE"]
+        let counter_parts: Vec<String> = ["EPIC", "TASK", "PLAN", "NOTE"]
             .iter()
             .map(|prefix| {
                 let count = config.counters.get(*prefix).copied().unwrap_or(0);
@@ -95,14 +95,14 @@ impl Project {
         let today = Local::now().date_naive();
         let recent_cutoff = today - chrono::Duration::days(config.context.recent_days as i64);
 
-        let items = self.list_backlog_items(&QueryFilter::default())?;
+        let items = self.list_tasks(&QueryFilter::default())?;
 
         let mut content = format!("{}\n# Backlog Index\n\n", GENERATED_HEADER);
 
         // Build done_ids set for blocked-item dependency resolution
         let done_ids: HashSet<&str> = items
             .iter()
-            .filter(|i| i.frontmatter.status == BacklogStatus::Done)
+            .filter(|i| i.frontmatter.status == TaskStatus::Done)
             .map(|i| i.frontmatter.id.as_str())
             .collect();
 
@@ -116,7 +116,7 @@ impl Project {
         // --- In Progress ---
         let in_progress: Vec<_> = items
             .iter()
-            .filter(|i| i.frontmatter.status == BacklogStatus::InProgress)
+            .filter(|i| i.frontmatter.status == TaskStatus::InProgress)
             .collect();
         content.push_str(&format!("## In Progress ({})\n\n", in_progress.len()));
         if !in_progress.is_empty() {
@@ -159,7 +159,7 @@ impl Project {
         let planned: Vec<_> = items
             .iter()
             .filter(|i| {
-                i.frontmatter.status == BacklogStatus::Planned
+                i.frontmatter.status == TaskStatus::Planned
                     && !blocked_ids.contains(i.frontmatter.id.as_str())
             })
             .collect();
@@ -182,7 +182,7 @@ impl Project {
         let backlog: Vec<_> = items
             .iter()
             .filter(|i| {
-                i.frontmatter.status == BacklogStatus::Backlog
+                i.frontmatter.status == TaskStatus::Backlog
                     && !blocked_ids.contains(i.frontmatter.id.as_str())
             })
             .collect();
@@ -205,7 +205,7 @@ impl Project {
         let drafts: Vec<_> = items
             .iter()
             .filter(|i| {
-                i.frontmatter.status == BacklogStatus::Draft
+                i.frontmatter.status == TaskStatus::Draft
                     && !blocked_ids.contains(i.frontmatter.id.as_str())
             })
             .collect();
@@ -228,7 +228,7 @@ impl Project {
         let recently_done: Vec<_> = items
             .iter()
             .filter(|i| {
-                i.frontmatter.status == BacklogStatus::Done
+                i.frontmatter.status == TaskStatus::Done
                     && i.frontmatter.updated >= recent_cutoff
             })
             .collect();
@@ -254,10 +254,10 @@ impl Project {
         Ok(())
     }
 
-    /// Regenerate roadmap/INDEX.md with epics and nested backlog item tables.
+    /// Regenerate roadmap/INDEX.md with epics and nested task tables.
     pub fn generate_roadmap_index(&self) -> Result<()> {
         let epics = self.list_epics()?;
-        let backlog_items = self.list_backlog_items(&QueryFilter::default())?;
+        let tasks = self.list_tasks(&QueryFilter::default())?;
 
         let mut content = format!("{}\n# Roadmap Index\n\n", GENERATED_HEADER);
 
@@ -277,7 +277,7 @@ impl Project {
             content.push_str(&format!("## {}\n\n", label));
 
             for epic in &group {
-                render_epic_with_items(&mut content, epic, &backlog_items);
+                render_epic_with_items(&mut content, epic, &tasks);
             }
         }
 
@@ -289,7 +289,7 @@ impl Project {
         if !done_epics.is_empty() {
             content.push_str("## Done Epics\n\n");
             for epic in &done_epics {
-                render_epic_with_items(&mut content, epic, &backlog_items);
+                render_epic_with_items(&mut content, epic, &tasks);
             }
         }
 
@@ -436,11 +436,11 @@ fn item_link(id: &str) -> String {
 }
 
 /// Format an item ID as a markdown link to its file in another directory.
-/// Resolves the prefix to the correct directory (e.g. BACK-001 → ../backlog/items/BACK-001.md).
+/// Resolves the prefix to the correct directory (e.g. TASK-001 → ../backlog/items/TASK-001.md).
 fn cross_link(id: &str) -> String {
     let dir = match id.split('-').next() {
         Some("EPIC") => "roadmap",
-        Some("BACK") => "backlog",
+        Some("TASK") => "backlog",
         Some("PLAN") => "plans",
         Some("NOTE") => "notes",
         _ => return id.to_string(),
@@ -448,14 +448,14 @@ fn cross_link(id: &str) -> String {
     format!("[{}](../{}/items/{}.md)", id, dir, id)
 }
 
-/// Render an epic heading with its nested backlog item table.
+/// Render an epic heading with its nested task table.
 fn render_epic_with_items(
     content: &mut String,
     epic: &MarkplaneDocument<Epic>,
-    backlog_items: &[MarkplaneDocument<BacklogItem>],
+    tasks: &[MarkplaneDocument<Task>],
 ) {
     let epic_id = &epic.frontmatter.id;
-    let (done, total) = epic_progress(epic_id, backlog_items);
+    let (done, total) = epic_progress(epic_id, tasks);
     let pct = if total > 0 {
         (done as f64 / total as f64 * 100.0) as u32
     } else {
@@ -466,13 +466,13 @@ fn render_epic_with_items(
         item_link(epic_id), epic.frontmatter.title, done, total, pct
     ));
 
-    let epic_items: Vec<_> = backlog_items
+    let epic_items: Vec<_> = tasks
         .iter()
         .filter(|i| i.frontmatter.epic.as_deref() == Some(epic_id.as_str()))
         .collect();
 
     if epic_items.is_empty() {
-        content.push_str("_No backlog items._\n\n");
+        content.push_str("_No tasks._\n\n");
     } else {
         content.push_str("| ID | Title | Status | Priority | Effort |\n");
         content.push_str("|----|-------|--------|----------|--------|\n");
@@ -487,8 +487,8 @@ fn render_epic_with_items(
     }
 }
 
-/// Count (done, total) backlog items for a given epic.
-fn epic_progress(epic_id: &str, items: &[MarkplaneDocument<BacklogItem>]) -> (usize, usize) {
+/// Count (done, total) tasks for a given epic.
+fn epic_progress(epic_id: &str, items: &[MarkplaneDocument<Task>]) -> (usize, usize) {
     let epic_items: Vec<_> = items
         .iter()
         .filter(|i| i.frontmatter.epic.as_deref() == Some(epic_id))
@@ -496,7 +496,7 @@ fn epic_progress(epic_id: &str, items: &[MarkplaneDocument<BacklogItem>]) -> (us
     let total = epic_items.len();
     let done = epic_items
         .iter()
-        .filter(|i| i.frontmatter.status == BacklogStatus::Done)
+        .filter(|i| i.frontmatter.status == TaskStatus::Done)
         .count();
     (done, total)
 }
@@ -530,7 +530,7 @@ mod tests {
         let (_tmp, project) = setup_project();
         project.create_epic("Phase 1", Priority::High).unwrap();
         project
-            .create_backlog_item(
+            .create_task(
                 "Item 1",
                 ItemType::Feature,
                 Priority::High,
@@ -545,7 +545,7 @@ mod tests {
         assert!(content.contains("1 active epics"));
         assert!(content.contains("1 open items"));
         assert!(content.contains("EPIC-001"));
-        assert!(content.contains("BACK-001"));
+        assert!(content.contains("TASK-001"));
     }
 
     #[test]
@@ -566,7 +566,7 @@ mod tests {
     fn test_generate_backlog_index_groups_by_status() {
         let (_tmp, project) = setup_project();
         project
-            .create_backlog_item(
+            .create_task(
                 "Draft item",
                 ItemType::Feature,
                 Priority::Medium,
@@ -576,7 +576,7 @@ mod tests {
             )
             .unwrap();
         project
-            .create_backlog_item(
+            .create_task(
                 "Progress item",
                 ItemType::Bug,
                 Priority::High,
@@ -585,21 +585,21 @@ mod tests {
                 vec![],
             )
             .unwrap();
-        project.update_status("BACK-002", "in-progress").unwrap();
+        project.update_status("TASK-002", "in-progress").unwrap();
 
         project.generate_backlog_index().unwrap();
         let content = fs::read_to_string(project.root().join("backlog/INDEX.md")).unwrap();
         assert!(content.contains("## In Progress (1)"));
         assert!(content.contains("## Drafts (1)"));
-        assert!(content.contains("[BACK-002](items/BACK-002.md)"));
-        assert!(content.contains("[BACK-001](items/BACK-001.md)"));
+        assert!(content.contains("[TASK-002](items/TASK-002.md)"));
+        assert!(content.contains("[TASK-001](items/TASK-001.md)"));
     }
 
     #[test]
     fn test_generate_backlog_index_sorted_by_priority() {
         let (_tmp, project) = setup_project();
         project
-            .create_backlog_item(
+            .create_task(
                 "Medium 1",
                 ItemType::Feature,
                 Priority::Medium,
@@ -609,7 +609,7 @@ mod tests {
             )
             .unwrap();
         project
-            .create_backlog_item(
+            .create_task(
                 "High 1",
                 ItemType::Feature,
                 Priority::High,
@@ -619,7 +619,7 @@ mod tests {
             )
             .unwrap();
         project
-            .create_backlog_item(
+            .create_task(
                 "High 2",
                 ItemType::Feature,
                 Priority::High,
@@ -632,9 +632,9 @@ mod tests {
         project.generate_backlog_index().unwrap();
         let content = fs::read_to_string(project.root().join("backlog/INDEX.md")).unwrap();
         assert!(content.contains("## Drafts (3)"));
-        // High items should appear before medium (sorted by list_backlog_items)
-        let high1_pos = content.find("[BACK-002](items/BACK-002.md)").unwrap();
-        let med_pos = content.find("[BACK-001](items/BACK-001.md)").unwrap();
+        // High items should appear before medium (sorted by list_tasks)
+        let high1_pos = content.find("[TASK-002](items/TASK-002.md)").unwrap();
+        let med_pos = content.find("[TASK-001](items/TASK-001.md)").unwrap();
         assert!(
             high1_pos < med_pos,
             "High priority items should come before medium"
@@ -646,7 +646,7 @@ mod tests {
         let (_tmp, project) = setup_project();
         project.create_epic("Phase 1", Priority::High).unwrap();
         project
-            .create_backlog_item(
+            .create_task(
                 "Item in epic",
                 ItemType::Feature,
                 Priority::High,
@@ -656,7 +656,7 @@ mod tests {
             )
             .unwrap();
         project
-            .create_backlog_item(
+            .create_task(
                 "Orphan item",
                 ItemType::Feature,
                 Priority::Medium,
@@ -676,7 +676,7 @@ mod tests {
     fn test_generate_backlog_index_blocked_section() {
         let (_tmp, project) = setup_project();
         project
-            .create_backlog_item(
+            .create_task(
                 "Blocker",
                 ItemType::Feature,
                 Priority::High,
@@ -686,7 +686,7 @@ mod tests {
             )
             .unwrap();
         project
-            .create_backlog_item(
+            .create_task(
                 "Blocked item",
                 ItemType::Feature,
                 Priority::High,
@@ -696,16 +696,16 @@ mod tests {
             )
             .unwrap();
 
-        // Set BACK-002 to depend on BACK-001
-        let mut doc: MarkplaneDocument<BacklogItem> = project.read_item("BACK-002").unwrap();
-        doc.frontmatter.depends_on = vec!["BACK-001".to_string()];
-        project.write_item("BACK-002", &doc).unwrap();
+        // Set TASK-002 to depend on TASK-001
+        let mut doc: MarkplaneDocument<Task> = project.read_item("TASK-002").unwrap();
+        doc.frontmatter.depends_on = vec!["TASK-001".to_string()];
+        project.write_item("TASK-002", &doc).unwrap();
 
         project.generate_backlog_index().unwrap();
         let content = fs::read_to_string(project.root().join("backlog/INDEX.md")).unwrap();
         assert!(content.contains("## Blocked (1)"));
-        assert!(content.contains("[BACK-001](../backlog/items/BACK-001.md)")); // In the Blocked By column
-        // BACK-001 is in Drafts (not blocked), BACK-002 is in Blocked
+        assert!(content.contains("[TASK-001](../backlog/items/TASK-001.md)")); // In the Blocked By column
+        // TASK-001 is in Drafts (not blocked), TASK-002 is in Blocked
         assert!(content.contains("## Drafts (1)"));
     }
 
@@ -713,7 +713,7 @@ mod tests {
     fn test_generate_backlog_index_recently_done() {
         let (_tmp, project) = setup_project();
         project
-            .create_backlog_item(
+            .create_task(
                 "Done item",
                 ItemType::Feature,
                 Priority::High,
@@ -723,7 +723,7 @@ mod tests {
             )
             .unwrap();
         project
-            .create_backlog_item(
+            .create_task(
                 "Still open",
                 ItemType::Feature,
                 Priority::Medium,
@@ -732,12 +732,12 @@ mod tests {
                 vec![],
             )
             .unwrap();
-        project.update_status("BACK-001", "done").unwrap();
+        project.update_status("TASK-001", "done").unwrap();
 
         project.generate_backlog_index().unwrap();
         let content = fs::read_to_string(project.root().join("backlog/INDEX.md")).unwrap();
         assert!(content.contains("## Recently Done (1)"));
-        assert!(content.contains("[BACK-001](items/BACK-001.md)"));
+        assert!(content.contains("[TASK-001](items/TASK-001.md)"));
         // The open item should be in Drafts, not in Recently Done
         assert!(content.contains("## Drafts (1)"));
     }
@@ -746,7 +746,7 @@ mod tests {
     fn test_generate_backlog_index_no_recently_done_when_empty() {
         let (_tmp, project) = setup_project();
         project
-            .create_backlog_item(
+            .create_task(
                 "Open item",
                 ItemType::Feature,
                 Priority::Medium,
@@ -770,9 +770,9 @@ mod tests {
             .create_epic("Planned Epic", Priority::Medium)
             .unwrap();
 
-        // Add a backlog item linked to the active epic
+        // Add a task linked to the active epic
         project
-            .create_backlog_item(
+            .create_task(
                 "Item 1",
                 ItemType::Feature,
                 Priority::High,
@@ -787,7 +787,7 @@ mod tests {
         assert!(content.contains(GENERATED_HEADER));
         assert!(content.contains("## Active Epics"));
         assert!(content.contains("### [EPIC-001](items/EPIC-001.md) Active Epic (0/1, 0%)"));
-        assert!(content.contains("[BACK-001](../backlog/items/BACK-001.md)"));
+        assert!(content.contains("[TASK-001](../backlog/items/TASK-001.md)"));
         assert!(content.contains("## Planned Epics"));
         assert!(content.contains("### [EPIC-002](items/EPIC-002.md) Planned Epic (0/0, 0%)"));
     }
@@ -799,7 +799,7 @@ mod tests {
         project.update_status("EPIC-001", "active").unwrap();
 
         project
-            .create_backlog_item(
+            .create_task(
                 "Task A",
                 ItemType::Feature,
                 Priority::High,
@@ -809,7 +809,7 @@ mod tests {
             )
             .unwrap();
         project
-            .create_backlog_item(
+            .create_task(
                 "Task B",
                 ItemType::Bug,
                 Priority::Medium,
@@ -818,14 +818,14 @@ mod tests {
                 vec![],
             )
             .unwrap();
-        project.update_status("BACK-001", "done").unwrap();
+        project.update_status("TASK-001", "done").unwrap();
 
         project.generate_roadmap_index().unwrap();
         let content = fs::read_to_string(project.root().join("roadmap/INDEX.md")).unwrap();
         assert!(content.contains("### [EPIC-001](items/EPIC-001.md) Test Epic (1/2, 50%)"));
         assert!(content.contains("| ID | Title | Status | Priority | Effort |"));
-        assert!(content.contains("[BACK-001](../backlog/items/BACK-001.md)"));
-        assert!(content.contains("[BACK-002](../backlog/items/BACK-002.md)"));
+        assert!(content.contains("[TASK-001](../backlog/items/TASK-001.md)"));
+        assert!(content.contains("[TASK-002](../backlog/items/TASK-002.md)"));
     }
 
     #[test]
@@ -833,7 +833,7 @@ mod tests {
         let (_tmp, project) = setup_project();
         project.create_epic("Done Epic", Priority::High).unwrap();
         project
-            .create_backlog_item(
+            .create_task(
                 "Task A",
                 ItemType::Feature,
                 Priority::High,
@@ -842,7 +842,7 @@ mod tests {
                 vec![],
             )
             .unwrap();
-        project.update_status("BACK-001", "done").unwrap();
+        project.update_status("TASK-001", "done").unwrap();
         project.update_status("EPIC-001", "done").unwrap();
 
         project
@@ -872,7 +872,7 @@ mod tests {
     fn test_generate_plans_index() {
         let (_tmp, project) = setup_project();
         project
-            .create_plan("Active Plan", vec!["BACK-001".to_string()], None)
+            .create_plan("Active Plan", vec!["TASK-001".to_string()], None)
             .unwrap();
         project.create_plan("Done Plan", vec![], None).unwrap();
         project.update_status("PLAN-002", "done").unwrap();
@@ -881,7 +881,7 @@ mod tests {
         let content = fs::read_to_string(project.root().join("plans/INDEX.md")).unwrap();
         assert!(content.contains("Active Plans"));
         assert!(content.contains("[PLAN-001](items/PLAN-001.md)"));
-        assert!(content.contains("[BACK-001](../backlog/items/BACK-001.md)"));
+        assert!(content.contains("[TASK-001](../backlog/items/TASK-001.md)"));
         assert!(content.contains("Completed Plans"));
         assert!(content.contains("[PLAN-002](items/PLAN-002.md)"));
     }
@@ -911,7 +911,7 @@ mod tests {
         let (_tmp, project) = setup_project();
         project.create_epic("Phase 1", Priority::High).unwrap();
         project
-            .create_backlog_item(
+            .create_task(
                 "Item 1",
                 ItemType::Feature,
                 Priority::High,

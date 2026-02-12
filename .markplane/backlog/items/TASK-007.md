@@ -1,5 +1,5 @@
 ---
-id: BACK-007
+id: TASK-007
 title: Add markplane edit command to open items in editor
 status: backlog
 priority: medium
@@ -20,14 +20,14 @@ updated: 2026-02-10
 
 ## Description
 
-After creating an item with `markplane add`, users must open the markdown file directly in their editor to fill in content. There's no `markplane edit BACK-001` command that resolves the ID to a file path and opens it in `$EDITOR`. This is a basic quality-of-life feature that every file-based tool provides (e.g., `git commit` opens `$EDITOR`, `kubectl edit` opens a resource in `$EDITOR`).
+After creating an item with `markplane add`, users must open the markdown file directly in their editor to fill in content. There's no `markplane edit TASK-001` command that resolves the ID to a file path and opens it in `$EDITOR`. This is a basic quality-of-life feature that every file-based tool provides (e.g., `git commit` opens `$EDITOR`, `kubectl edit` opens a resource in `$EDITOR`).
 
 ## Acceptance Criteria
 
-- [ ] New `edit` subcommand added to CLI: `markplane edit BACK-001`
+- [ ] New `edit` subcommand added to CLI: `markplane edit TASK-001`
 - [ ] Resolves item ID to file path via `project.item_path()`
 - [ ] Opens the file in `$EDITOR` (falls back to `$VISUAL`, then `vi`)
-- [ ] Works for all entity types (BACK, EPIC, PLAN, NOTE)
+- [ ] Works for all entity types (TASK, EPIC, PLAN, NOTE)
 - [ ] Updates the `updated` date in frontmatter after the editor closes (if file was modified)
 - [ ] Prints an error if the item doesn't exist
 

@@ -1,5 +1,5 @@
 use chrono::Local;
-use markplane_core::{parse_id, BacklogItem, IdPrefix, MarkplaneDocument, Project};
+use markplane_core::{parse_id, Task, IdPrefix, MarkplaneDocument, Project};
 
 pub fn run(id: String, blocks: Option<String>, depends_on: Option<String>) -> anyhow::Result<()> {
     if blocks.is_none() && depends_on.is_none() {
@@ -9,11 +9,11 @@ pub fn run(id: String, blocks: Option<String>, depends_on: Option<String>) -> an
     let project = Project::from_current_dir()?;
     let (prefix, _) = parse_id(&id)?;
 
-    if prefix != IdPrefix::Back {
-        anyhow::bail!("Link is currently only supported for backlog items. Got: {}", id);
+    if prefix != IdPrefix::Task {
+        anyhow::bail!("Link is currently only supported for tasks. Got: {}", id);
     }
 
-    let mut doc: MarkplaneDocument<BacklogItem> = project.read_item(&id)?;
+    let mut doc: MarkplaneDocument<Task> = project.read_item(&id)?;
     let today = Local::now().date_naive();
 
     if let Some(ref target) = blocks {
@@ -25,8 +25,8 @@ pub fn run(id: String, blocks: Option<String>, depends_on: Option<String>) -> an
 
         // Add reverse link on target
         let (target_prefix, _) = parse_id(target)?;
-        if target_prefix == IdPrefix::Back {
-            let mut target_doc: MarkplaneDocument<BacklogItem> = project.read_item(target)?;
+        if target_prefix == IdPrefix::Task {
+            let mut target_doc: MarkplaneDocument<Task> = project.read_item(target)?;
             if !target_doc.frontmatter.depends_on.contains(&id) {
                 target_doc.frontmatter.depends_on.push(id.clone());
                 target_doc.frontmatter.updated = today;
@@ -46,8 +46,8 @@ pub fn run(id: String, blocks: Option<String>, depends_on: Option<String>) -> an
 
         // Add reverse link on target
         let (target_prefix, _) = parse_id(target)?;
-        if target_prefix == IdPrefix::Back {
-            let mut target_doc: MarkplaneDocument<BacklogItem> = project.read_item(target)?;
+        if target_prefix == IdPrefix::Task {
+            let mut target_doc: MarkplaneDocument<Task> = project.read_item(target)?;
             if !target_doc.frontmatter.blocks.contains(&id) {
                 target_doc.frontmatter.blocks.push(id.clone());
                 target_doc.frontmatter.updated = today;

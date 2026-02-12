@@ -1,5 +1,5 @@
 ---
-id: BACK-002
+id: TASK-002
 title: Add missing PLAN and NOTE resource templates to MCP
 status: done
 priority: high
@@ -20,7 +20,7 @@ updated: 2026-02-11
 
 ## Description
 
-The MCP `resources/list` response includes `resourceTemplates` for `markplane://backlog/{id}` and `markplane://epic/{id}`, but omits plans and notes. An LLM can read any plan or note via the `markplane_show` tool, but the resource interface — which is the standard MCP way to expose readable data — doesn't advertise them. This is an oversight from the initial implementation.
+The MCP `resources/list` response includes `resourceTemplates` for `markplane://task/{id}` and `markplane://epic/{id}`, but omits plans and notes. An LLM can read any plan or note via the `markplane_show` tool, but the resource interface — which is the standard MCP way to expose readable data — doesn't advertise them. This is an oversight from the initial implementation.
 
 ## Acceptance Criteria
 
@@ -33,4 +33,4 @@ The MCP `resources/list` response includes `resourceTemplates` for `markplane://
 
 ## Notes
 
-The implementation follows the exact same pattern as `read_backlog_item()` and `read_epic_item()` in `resources.rs` — validate prefix, resolve path, read file.
+The implementation follows the exact same pattern as `read_task_item()` and `read_epic_item()` in `resources.rs` — validate prefix, resolve path, read file.

@@ -1,5 +1,5 @@
 ---
-id: BACK-004
+id: TASK-004
 title: Add serverInfo.description to MCP initialize response
 status: done
 priority: high
@@ -30,4 +30,4 @@ The MCP spec's `serverInfo` object supports a `description` field that gives the
 
 ## Notes
 
-One-line addition to the `serverInfo` JSON in `handle_initialize()`. Should be done alongside BACK-001 and BACK-003 since they all touch the same function.
+One-line addition to the `serverInfo` JSON in `handle_initialize()`. Should be done alongside TASK-001 and TASK-003 since they all touch the same function.

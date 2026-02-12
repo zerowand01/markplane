@@ -1,5 +1,5 @@
 ---
-id: BACK-001
+id: TASK-001
 title: Add instructions field to MCP initialize response
 status: done
 priority: high
@@ -12,7 +12,7 @@ epic: EPIC-001
 plan: null
 depends_on: []
 blocks:
-- BACK-006
+- TASK-006
 assignee: null
 created: 2026-02-10
 updated: 2026-02-11
@@ -29,7 +29,7 @@ The instructions should be built dynamically from the project's `config.yaml` so
 ## Acceptance Criteria
 
 - [ ] `handle_initialize()` returns an `instructions` field in the response
-- [ ] Instructions describe: what Markplane is, the 4 entity types (BACK/EPIC/PLAN/NOTE), status workflows, recommended tool call sequence, cross-reference syntax
+- [ ] Instructions describe: what Markplane is, the 4 entity types (TASK/EPIC/PLAN/NOTE), status workflows, recommended tool call sequence, cross-reference syntax
 - [ ] Instructions include the project name from config.yaml
 - [ ] Instructions are built dynamically (not a static string) so they can reflect config in the future
 - [ ] Existing MCP integration tests still pass

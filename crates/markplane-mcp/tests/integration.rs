@@ -81,22 +81,22 @@ fn test_initialize() {
         .contains("markplane"));
     assert!(response["result"]["capabilities"]["tools"].is_object());
     assert!(response["result"]["capabilities"]["resources"].is_object());
-    // BACK-003: Protocol version should be 2025-11-25
+    // Protocol version should be 2025-11-25
     assert_eq!(response["result"]["protocolVersion"], "2025-11-25");
-    // BACK-004: serverInfo should include a description
+    // serverInfo should include a description
     let description = response["result"]["serverInfo"]["description"]
         .as_str()
         .unwrap();
     assert!(description.contains("markdown-first"));
-    // BACK-001: instructions field should be present and include project name
+    // instructions field should be present and include project name
     let instructions = response["result"]["instructions"].as_str().unwrap();
     assert!(!instructions.is_empty());
     assert!(instructions.contains("Test Project"));
-    assert!(instructions.contains("BACK-NNN"));
+    assert!(instructions.contains("TASK-NNN"));
     assert!(instructions.contains("EPIC-NNN"));
     assert!(instructions.contains("PLAN-NNN"));
     assert!(instructions.contains("NOTE-NNN"));
-    // BACK-006: instructions should describe create-then-edit workflow
+    // instructions should describe create-then-edit workflow
     assert!(instructions.contains("markplane_write"));
     assert!(instructions.contains("Create-Then-Edit"));
 }
@@ -240,7 +240,7 @@ fn test_resources_list() {
     assert!(uris.contains(&"markplane://active-work"));
     assert!(uris.contains(&"markplane://blocked"));
 
-    // BACK-002: PLAN and NOTE resource templates should be present
+    // PLAN and NOTE resource templates should be present
     let templates = &response["result"]["resourceTemplates"];
     assert!(templates.is_array());
     let template_uris: Vec<&str> = templates
@@ -249,7 +249,7 @@ fn test_resources_list() {
         .iter()
         .map(|t| t["uriTemplate"].as_str().unwrap())
         .collect();
-    assert!(template_uris.contains(&"markplane://backlog/{id}"));
+    assert!(template_uris.contains(&"markplane://task/{id}"));
     assert!(template_uris.contains(&"markplane://epic/{id}"));
     assert!(template_uris.contains(&"markplane://plan/{id}"));
     assert!(template_uris.contains(&"markplane://note/{id}"));
@@ -306,7 +306,7 @@ fn test_tool_add() {
     assert!(response["error"].is_null());
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
     let result: Value = serde_json::from_str(text).unwrap();
-    assert_eq!(result["id"], "BACK-001");
+    assert_eq!(result["id"], "TASK-001");
     assert_eq!(result["title"], "Build the API");
 }
 
@@ -357,14 +357,14 @@ fn test_tool_show() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_show",
-                "arguments": { "id": "BACK-001" }
+                "arguments": { "id": "TASK-001" }
             }
         }),
     );
 
     assert!(response["error"].is_null());
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
-    assert!(text.contains("BACK-001"));
+    assert!(text.contains("TASK-001"));
     assert!(text.contains("Show me"));
 }
 
@@ -379,7 +379,7 @@ fn test_tool_show_invalid_id() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_show",
-                "arguments": { "id": "BACK-999" }
+                "arguments": { "id": "TASK-999" }
             }
         }),
     );
@@ -485,7 +485,7 @@ fn test_tool_update() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_update",
-                "arguments": { "id": "BACK-001", "status": "in-progress" }
+                "arguments": { "id": "TASK-001", "status": "in-progress" }
             }
         }),
     );
@@ -503,7 +503,7 @@ fn test_tool_update() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_show",
-                "arguments": { "id": "BACK-001" }
+                "arguments": { "id": "TASK-001" }
             }
         }),
     );
@@ -537,7 +537,7 @@ fn test_tool_start() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_start",
-                "arguments": { "id": "BACK-001" }
+                "arguments": { "id": "TASK-001" }
             }
         }),
     );
@@ -573,7 +573,7 @@ fn test_tool_done() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_done",
-                "arguments": { "id": "BACK-001" }
+                "arguments": { "id": "TASK-001" }
             }
         }),
     );
@@ -651,14 +651,14 @@ fn test_tool_context_for_item() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_context",
-                "arguments": { "item": "BACK-001" }
+                "arguments": { "item": "TASK-001" }
             }
         }),
     );
 
     assert!(response["error"].is_null());
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
-    assert!(text.contains("BACK-001"));
+    assert!(text.contains("TASK-001"));
     assert!(text.contains("Context target"));
 }
 
@@ -773,7 +773,7 @@ fn test_tool_graph() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_link",
-                "arguments": { "from": "BACK-001", "to": "BACK-002", "relation": "blocks" }
+                "arguments": { "from": "TASK-001", "to": "TASK-002", "relation": "blocks" }
             }
         }),
     );
@@ -786,15 +786,15 @@ fn test_tool_graph() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_graph",
-                "arguments": { "id": "BACK-001" }
+                "arguments": { "id": "TASK-001" }
             }
         }),
     );
 
     assert!(response["error"].is_null());
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
-    assert!(text.contains("Reference Graph for BACK-001"));
-    assert!(text.contains("BACK-002"));
+    assert!(text.contains("Reference Graph for TASK-001"));
+    assert!(text.contains("TASK-002"));
 }
 
 // ── Tool: markplane_promote ──────────────────────────────────────────────
@@ -825,7 +825,7 @@ fn test_tool_promote() {
     assert!(response["error"].is_null());
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
     let result: Value = serde_json::from_str(text).unwrap();
-    assert_eq!(result["id"], "BACK-001");
+    assert_eq!(result["id"], "TASK-001");
     assert_eq!(result["promoted_from"], "NOTE-001");
 }
 
@@ -855,7 +855,7 @@ fn test_tool_plan() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_plan",
-                "arguments": { "backlog_id": "BACK-001", "title": "My plan" }
+                "arguments": { "task_id": "TASK-001", "title": "My plan" }
             }
         }),
     );
@@ -864,7 +864,7 @@ fn test_tool_plan() {
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
     let result: Value = serde_json::from_str(text).unwrap();
     assert_eq!(result["id"], "PLAN-001");
-    assert_eq!(result["implements"], "BACK-001");
+    assert_eq!(result["implements"], "TASK-001");
 }
 
 // ── Tool: markplane_link ─────────────────────────────────────────────────
@@ -900,8 +900,8 @@ fn test_tool_link_blocks() {
                 "params": {
                     "name": "markplane_link",
                     "arguments": {
-                        "from": "BACK-001",
-                        "to": "BACK-002",
+                        "from": "TASK-001",
+                        "to": "TASK-002",
                         "relation": "blocks"
                     }
                 }
@@ -926,7 +926,7 @@ fn test_tool_link_missing_params() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_link",
-                "arguments": { "from": "BACK-001" }
+                "arguments": { "from": "TASK-001" }
             }
         }),
     );
@@ -1059,13 +1059,13 @@ fn test_resource_blocked() {
 }
 
 #[test]
-fn test_resource_backlog_item() {
+fn test_resource_task_item() {
     let tmp = setup_project();
     // Create an item first
     let root = tmp.path().join(".markplane");
     let project = markplane_core::Project::new(root);
     project
-        .create_backlog_item(
+        .create_task(
             "Resource test",
             markplane_core::ItemType::Feature,
             markplane_core::Priority::Medium,
@@ -1081,7 +1081,7 @@ fn test_resource_backlog_item() {
             "jsonrpc": "2.0",
             "id": 203,
             "method": "resources/read",
-            "params": { "uri": "markplane://backlog/BACK-001" }
+            "params": { "uri": "markplane://task/TASK-001" }
         }),
     );
 
@@ -1089,7 +1089,7 @@ fn test_resource_backlog_item() {
     let text = response["result"]["contents"][0]["text"]
         .as_str()
         .unwrap();
-    assert!(text.contains("BACK-001"));
+    assert!(text.contains("TASK-001"));
     assert!(text.contains("Resource test"));
 }
 
@@ -1155,7 +1155,7 @@ fn test_resource_missing_uri() {
     assert!(response["error"].is_object());
 }
 
-// ── BACK-002: Plan and Note resource reads ──────────────────────────────
+// ── Plan and Note resource reads ─────────────────────────────────────────
 
 #[test]
 fn test_resource_plan_item() {
@@ -1194,7 +1194,7 @@ fn test_resource_plan_wrong_prefix() {
     let root = tmp.path().join(".markplane");
     let project = markplane_core::Project::new(root);
     project
-        .create_backlog_item(
+        .create_task(
             "Not a plan",
             markplane_core::ItemType::Feature,
             markplane_core::Priority::Medium,
@@ -1210,7 +1210,7 @@ fn test_resource_plan_wrong_prefix() {
             "jsonrpc": "2.0",
             "id": 211,
             "method": "resources/read",
-            "params": { "uri": "markplane://plan/BACK-001" }
+            "params": { "uri": "markplane://plan/TASK-001" }
         }),
     );
 
@@ -1258,7 +1258,7 @@ fn test_resource_note_wrong_prefix() {
     let root = tmp.path().join(".markplane");
     let project = markplane_core::Project::new(root);
     project
-        .create_backlog_item(
+        .create_task(
             "Not a note",
             markplane_core::ItemType::Feature,
             markplane_core::Priority::Medium,
@@ -1274,7 +1274,7 @@ fn test_resource_note_wrong_prefix() {
             "jsonrpc": "2.0",
             "id": 213,
             "method": "resources/read",
-            "params": { "uri": "markplane://note/BACK-001" }
+            "params": { "uri": "markplane://note/TASK-001" }
         }),
     );
 
@@ -1285,10 +1285,10 @@ fn test_resource_note_wrong_prefix() {
         .contains("Expected NOTE-"));
 }
 
-// ── BACK-005: markplane_write tool ──────────────────────────────────────
+// ── markplane_write tool ─────────────────────────────────────────────────
 
 #[test]
-fn test_tool_write_backlog() {
+fn test_tool_write_task() {
     let tmp = setup_project();
     // Create an item first
     send_request(
@@ -1314,7 +1314,7 @@ fn test_tool_write_backlog() {
             "params": {
                 "name": "markplane_write",
                 "arguments": {
-                    "id": "BACK-001",
+                    "id": "TASK-001",
                     "body": "# Write test\n\n## Description\n\nThis is the actual content.\n"
                 }
             }
@@ -1334,7 +1334,7 @@ fn test_tool_write_backlog() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_show",
-                "arguments": { "id": "BACK-001" }
+                "arguments": { "id": "TASK-001" }
             }
         }),
     );
@@ -1342,7 +1342,7 @@ fn test_tool_write_backlog() {
     let content = show_resp["result"]["content"][0]["text"].as_str().unwrap();
     assert!(content.contains("This is the actual content."));
     // Frontmatter should still be intact
-    assert!(content.contains("BACK-001"));
+    assert!(content.contains("TASK-001"));
     assert!(content.contains("Write test"));
 }
 
@@ -1417,7 +1417,7 @@ fn test_tool_write_missing_body() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_write",
-                "arguments": { "id": "BACK-001" }
+                "arguments": { "id": "TASK-001" }
             }
         }),
     );
@@ -1436,7 +1436,7 @@ fn test_tool_write_invalid_id() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_write",
-                "arguments": { "id": "BACK-999", "body": "content" }
+                "arguments": { "id": "TASK-999", "body": "content" }
             }
         }),
     );

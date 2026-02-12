@@ -47,12 +47,12 @@
 │
 ├── backlog/                         # Work items
 │   ├── INDEX.md                     # Backlog kanban: in-progress, blocked, backlog, drafts
-│   ├── items/                       # Individual backlog items
-│   │   ├── BACK-001.md
-│   │   ├── BACK-002.md
-│   │   └── BACK-003.md
+│   ├── items/                       # Individual task files
+│   │   ├── TASK-001.md
+│   │   ├── TASK-002.md
+│   │   └── TASK-003.md
 │   └── archive/                     # Completed/cancelled items
-│       └── BACK-000.md
+│       └── TASK-000.md
 │
 ├── plans/                           # Implementation plans
 │   ├── INDEX.md                     # Active plans summary
@@ -76,7 +76,7 @@
 │   └── archive/                     # Archived notes
 │
 ├── templates/                       # Document templates
-│   ├── backlog-item.md
+│   ├── task.md
 │   ├── epic.md
 │   ├── plan-implementation.md
 │   ├── plan-refactor.md
@@ -119,7 +119,7 @@ Markplane can coexist with or replace an existing `docs/` directory:
 | Prefix | Entity | Example |
 |--------|--------|---------|
 | `EPIC` | Roadmap epic/phase | `EPIC-001` |
-| `BACK` | Backlog item | `BACK-042` |
+| `TASK` | Task | `TASK-042` |
 | `PLAN` | Implementation plan | `PLAN-015` |
 | `NOTE` | Note/research/analysis | `NOTE-007` |
 
@@ -127,31 +127,31 @@ Markplane can coexist with or replace an existing `docs/` directory:
 
 1. **IDs are permanent**: Once assigned, an ID never changes or gets reused.
 2. **IDs are sequential**: New items get the next available number. Gaps are OK (deleted items leave gaps).
-3. **IDs map to filenames**: `BACK-042` lives at `.markplane/backlog/items/BACK-042.md` (or `.markplane/backlog/archive/BACK-042.md` if archived).
-4. **Cross-reference syntax**: Use `[[BACK-042]]` to reference any item from any document. This works because:
+3. **IDs map to filenames**: `TASK-042` lives at `.markplane/backlog/items/TASK-042.md` (or `.markplane/backlog/archive/TASK-042.md` if archived).
+4. **Cross-reference syntax**: Use `[[TASK-042]]` to reference any item from any document. This works because:
    - The prefix tells you the type (and therefore the directory)
    - The number tells you the file
    - Tools can resolve these to paths; humans can navigate manually
 
 ### Cross-Reference Examples
 
-In a backlog item:
+In a task:
 ```markdown
 ## Related
 - Epic: [[EPIC-003]]
 - Plan: [[PLAN-012]]
-- See also: [[NOTE-005]], [[BACK-039]]
+- See also: [[NOTE-005]], [[TASK-039]]
 ```
 
 In a plan:
 ```markdown
 ## Overview
-This plan implements [[BACK-042]] and [[BACK-043]], part of [[EPIC-003]].
+This plan implements [[TASK-042]] and [[TASK-043]], part of [[EPIC-003]].
 ```
 
 In a note:
 ```markdown
-Research findings relevant to [[BACK-042]]. May also impact [[EPIC-005]].
+Research findings relevant to [[TASK-042]]. May also impact [[EPIC-005]].
 ```
 
 ### Referential Integrity
@@ -160,20 +160,20 @@ The CLI can validate references:
 ```bash
 markplane check         # Find broken references
 markplane orphans       # Find items with no incoming references
-markplane graph BACK-042  # Show reference graph for an item
+markplane graph TASK-042  # Show reference graph for an item
 ```
 
 ---
 
-## 4. Backlog Item Format
+## 4. Task Format
 
-Each backlog item is a standalone markdown file with YAML frontmatter.
+Each task is a standalone markdown file with YAML frontmatter.
 
-### Template: `.markplane/templates/backlog-item.md`
+### Template: `.markplane/templates/task.md`
 
 ```markdown
 ---
-id: BACK-{NUMBER}
+id: TASK-{NUMBER}
 title: "{Title}"
 status: draft                    # draft | backlog | planned | in-progress | done | cancelled
 priority: medium                 # critical | high | medium | low | someday
@@ -182,8 +182,8 @@ effort: medium                   # xs (< 1h) | small (< 4h) | medium (< 1d) | la
 tags: []                         # freeform tags for filtering
 epic: null                       # e.g., EPIC-003
 plan: null                       # e.g., PLAN-012
-depends_on: []                   # e.g., [BACK-039, BACK-040]
-blocks: []                       # e.g., [BACK-045]
+depends_on: []                   # e.g., [TASK-039, TASK-040]
+blocks: []                       # e.g., [TASK-045]
 assignee: null                   # person or team
 created: 2026-02-09
 updated: 2026-02-09
@@ -208,14 +208,14 @@ updated: 2026-02-09
 ## References
 
 - Related: [[NOTE-005]]
-- Depends on: [[BACK-039]]
+- Depends on: [[TASK-039]]
 ```
 
-### Example: `BACK-042.md`
+### Example: `TASK-042.md`
 
 ```markdown
 ---
-id: BACK-042
+id: TASK-042
 title: "Add dark mode support to dashboard"
 status: backlog
 priority: high
@@ -224,8 +224,8 @@ effort: medium
 tags: [ui, theming, accessibility]
 epic: EPIC-003
 plan: null
-depends_on: [BACK-038]
-blocks: [BACK-045]
+depends_on: [TASK-038]
+blocks: [TASK-045]
 assignee: null
 created: 2026-01-15
 updated: 2026-02-09
@@ -251,8 +251,8 @@ Design system already has CSS custom properties for both themes. Main work is wi
 ## References
 
 - Epic: [[EPIC-003]]
-- Depends on: [[BACK-038]] (design system token finalization)
-- Blocks: [[BACK-045]] (themed email templates)
+- Depends on: [[TASK-038]] (design system token finalization)
+- Blocks: [[TASK-045]] (themed email templates)
 ```
 
 ### Status Workflow
@@ -274,7 +274,7 @@ draft ──→ backlog ──→ planned ──→ in-progress ──→ done �
 
 ## 5. Epic / Roadmap Format
 
-Epics represent high-level phases or themes of work. They group backlog items and provide strategic tracking.
+Epics represent high-level phases or themes of work. They group tasks and provide strategic tracking.
 
 ### Template: `.markplane/templates/epic.md`
 
@@ -309,7 +309,7 @@ depends_on: []                   # e.g., [EPIC-001]
 
 ### Progress Tracking
 
-Epic progress is currently shown in the **roadmap INDEX.md** — each epic heading includes item counts and completion percentage, with a table of linked backlog items underneath. Epic files themselves contain only human-authored content (Objective, Key Results, Notes), keeping derived data in INDEX.md as a materialized view.
+Epic progress is currently shown in the **roadmap INDEX.md** — each epic heading includes item counts and completion percentage, with a table of linked tasks underneath. Epic files themselves contain only human-authored content (Objective, Key Results, Notes), keeping derived data in INDEX.md as a materialized view.
 
 **Future enhancement**: `markplane sync` could optionally write a generated progress section into epic files using fenced markers (`<!-- BEGIN GENERATED -->` / `<!-- END GENERATED -->`), giving per-epic visibility without leaving the file. A targeted `markplane sync EPIC-003` variant could regenerate only the affected indexes and context files.
 
@@ -317,7 +317,7 @@ Epic progress is currently shown in the **roadmap INDEX.md** — each epic headi
 
 ## 6. Plan Format
 
-Plans are detailed implementation documents linked to one or more backlog items.
+Plans are detailed implementation documents linked to one or more tasks.
 
 ### Markplane preserves the existing plan templates
 
@@ -328,7 +328,7 @@ Markplane's plan format builds on common implementation plan templates with one 
 id: PLAN-{NUMBER}
 title: "{Feature/Refactor Name}"
 status: draft                    # draft | approved | in-progress | done
-implements: [BACK-042, BACK-043] # backlog items this plan addresses
+implements: [TASK-042, TASK-043] # tasks this plan addresses
 epic: EPIC-003
 created: 2026-02-09
 updated: 2026-02-09
@@ -346,8 +346,8 @@ draft ──→ approved ──→ in-progress ──→ done ──→ (archive
 ```
 
 - **draft**: Plan is being designed. May be reviewed in PR.
-- **approved**: Plan reviewed and accepted. Backlog items move to `planned`.
-- **in-progress**: Implementation underway. Backlog items move to `in-progress`.
+- **approved**: Plan reviewed and accepted. Tasks move to `planned`.
+- **in-progress**: Implementation underway. Tasks move to `in-progress`.
 - **done**: Implementation complete. Plan moves to `archive/`.
 
 ---
@@ -363,7 +363,7 @@ title: "{Topic}"
 type: research                   # research | analysis | idea | decision | meeting
 status: active                   # draft | active | archived
 tags: [topic-a, topic-b]
-related: [BACK-042, PLAN-012]   # links to relevant items
+related: [TASK-042, PLAN-012]   # links to relevant items
 created: 2026-02-09
 updated: 2026-02-09
 ---
@@ -377,18 +377,18 @@ updated: 2026-02-09
 
 Some notes are ongoing, living documents that don't need individual IDs:
 
-- **`ideas.md`**: Quick capture file. Bullet points for things that aren't backlog items yet.
+- **`ideas.md`**: Quick capture file. Bullet points for things that aren't tasks yet.
 - **`decisions.md`**: Lightweight decision log. `## YYYY-MM-DD: Decision Title` format.
 
 ### Promotion Workflow
 
-Notes can be promoted to backlog items:
+Notes can be promoted to tasks:
 
 ```bash
-markplane promote NOTE-007     # Creates BACK-XXX from NOTE-007, links them
+markplane promote NOTE-007     # Creates TASK-XXX from NOTE-007, links them
 ```
 
-This creates a new backlog item pre-populated from the note, and adds a reference back.
+This creates a new task pre-populated from the note, and adds a reference back.
 
 ---
 
@@ -407,26 +407,26 @@ The `.context/` directory contains generated summaries optimized for AI consumpt
 - EPIC-005: API & Performance (30% complete, 7 items remaining)
 
 ## In-Progress Work
-- BACK-042: Add dark mode support (high, @daniel)
-- BACK-055: API response caching (medium, @daniel)
+- TASK-042: Add dark mode support (high, @daniel)
+- TASK-055: API response caching (medium, @daniel)
 - PLAN-012: Dark mode implementation (Phase 2 of 3)
 
 ## Blocked Items
-- BACK-045: Themed email templates (blocked by BACK-042)
+- TASK-045: Themed email templates (blocked by TASK-042)
 
 ## Recent Completions (last 7 days)
-- BACK-041: Fix pagination on user list (done 2026-02-08)
+- TASK-041: Fix pagination on user list (done 2026-02-08)
 - PLAN-011: Pagination refactor (done 2026-02-08)
 
 ## Priority Queue (next up)
-1. BACK-043: Add search to dashboard (high, planned)
-2. BACK-044: Export reports to CSV (high, backlog)
-3. BACK-046: Optimize database queries (medium, backlog)
+1. TASK-043: Add search to dashboard (high, planned)
+2. TASK-044: Export reports to CSV (high, backlog)
+3. TASK-046: Optimize database queries (medium, backlog)
 
 ## Key Metrics
 - Backlog: 47 items (8 critical, 15 high, 18 medium, 6 low)
 - Velocity: ~5 items/week (last 4 weeks)
-- Oldest open item: BACK-003 (45 days, low priority)
+- Oldest open item: TASK-003 (45 days, low priority)
 ```
 
 ### `active-work.md` - Current Sprint Focus (~500 tokens)
@@ -439,7 +439,7 @@ When an AI agent needs context about the project:
 
 1. **Read `.markplane/INDEX.md`** - Understand the system structure
 2. **Read `.markplane/.context/summary.md`** - Get project state overview
-3. **Based on task, read specific files** - e.g., if working on auth, read `roadmap/items/EPIC-003.md`, `backlog/items/BACK-042.md`, `plans/items/PLAN-012.md`
+3. **Based on task, read specific files** - e.g., if working on auth, read `roadmap/items/EPIC-003.md`, `backlog/items/TASK-042.md`, `plans/items/PLAN-012.md`
 
 This three-step pattern keeps total context under ~4,000 tokens for most tasks, well within the effective window identified by Stanford research.
 
@@ -448,7 +448,7 @@ This three-step pattern keeps total context under ~4,000 tokens for most tasks, 
 ```bash
 markplane context              # Regenerate all .context/ files
 markplane context --focus auth  # Generate focused context for auth-related work
-markplane context --item BACK-042  # Generate deep context for a specific item
+markplane context --item TASK-042  # Generate deep context for a specific item
 ```
 
 The `--item` variant pulls in: the item itself, its epic, its plan, its dependencies, its blockers, and relevant notes. This is the "everything an AI needs to work on this item" bundle.
@@ -476,7 +476,7 @@ Every directory has an INDEX.md that serves as a table of contents and routing g
 | AI Context | [.context/](.context/summary.md) | Generated summaries | Auto-updated |
 
 ## System Info
-- ID counter: EPIC-008, BACK-063, PLAN-019, NOTE-023
+- ID counter: EPIC-008, TASK-063, PLAN-019, NOTE-023
 - Last sync: 2026-02-09
 - Config: [config.yaml](config.yaml)
 ```
@@ -493,36 +493,36 @@ A prioritized kanban view organized by workflow state. Done and cancelled items 
 
 | ID | Title | Epic | Priority | Effort |
 |----|-------|------|----------|--------|
-| [BACK-042](items/BACK-042.md) | Add dark mode support | EPIC-003 | high | medium |
-| [BACK-055](items/BACK-055.md) | API response caching | EPIC-005 | medium | large |
+| [TASK-042](items/TASK-042.md) | Add dark mode support | EPIC-003 | high | medium |
+| [TASK-055](items/TASK-055.md) | API response caching | EPIC-005 | medium | large |
 
 ## Blocked (1)
 
 | ID | Title | Blocked By | Epic | Priority |
 |----|-------|------------|------|----------|
-| [BACK-045](items/BACK-045.md) | Themed email templates | BACK-042 | EPIC-003 | medium |
+| [TASK-045](items/TASK-045.md) | Themed email templates | TASK-042 | EPIC-003 | medium |
 
 ## Planned (3)
 
 | ID | Title | Epic | Priority | Effort |
 |----|-------|------|----------|--------|
-| [BACK-043](items/BACK-043.md) | Add search to dashboard | EPIC-003 | high | medium |
-| [BACK-044](items/BACK-044.md) | Export reports to CSV | EPIC-005 | high | large |
-| [BACK-048](items/BACK-048.md) | Form validation enhancements | EPIC-003 | medium | medium |
+| [TASK-043](items/TASK-043.md) | Add search to dashboard | EPIC-003 | high | medium |
+| [TASK-044](items/TASK-044.md) | Export reports to CSV | EPIC-005 | high | large |
+| [TASK-048](items/TASK-048.md) | Form validation enhancements | EPIC-003 | medium | medium |
 
 ## Backlog (15)
 
 | ID | Title | Epic | Priority | Effort |
 |----|-------|------|----------|--------|
-| [BACK-046](items/BACK-046.md) | Optimize database queries | EPIC-005 | medium | large |
-| [BACK-047](items/BACK-047.md) | User profile customization | — | low | medium |
+| [TASK-046](items/TASK-046.md) | Optimize database queries | EPIC-005 | medium | large |
+| [TASK-047](items/TASK-047.md) | User profile customization | — | low | medium |
 [... truncated for brevity ...]
 
 ## Drafts (8)
 
 | ID | Title | Epic | Priority | Effort |
 |----|-------|------|----------|--------|
-| [BACK-060](items/BACK-060.md) | Custom avatar file upload | EPIC-003 | medium | small |
+| [TASK-060](items/TASK-060.md) | Custom avatar file upload | EPIC-003 | medium | small |
 [... truncated for brevity ...]
 ```
 
@@ -543,7 +543,7 @@ project:
 # ID counters (managed by CLI, can be edited manually)
 counters:
   EPIC: 8
-  BACK: 63
+  TASK: 63
   PLAN: 19
   NOTE: 23
 
@@ -599,7 +599,7 @@ documentation_paths:             # Scanned for *.md; linked in root INDEX + .con
  │  Ideas   │────▶│  Backlog  │────▶│   Plans    │────▶│   Archive  │
  │ (notes)  │     │  (items)  │     │  (detail)  │     │ (history)  │
  └─────────┘     └──────────┘     └───────────┘     └────────────┘
-   ideas.md        BACK-xxx.md      PLAN-xxx.md       archive/
+   ideas.md        TASK-xxx.md      PLAN-xxx.md       archive/
    NOTE-xxx.md     status: draft→   status: draft→
                    backlog→planned   approved→done
                    →in-progress→done
@@ -608,9 +608,9 @@ documentation_paths:             # Scanned for *.md; linked in root INDEX + .con
 ### Concrete Workflow
 
 1. **Capture**: Developer has an idea → adds bullet to `notes/ideas.md` or creates `NOTE-xxx.md`
-2. **Promote**: Idea is worth pursuing → `markplane promote NOTE-007` → creates `BACK-063`
-3. **Triage**: Backlog item gets priority and effort estimates → status moves to `backlog`
-4. **Plan**: Complex item needs a plan → `markplane plan BACK-063` → creates `PLAN-019`, links them, status moves to `planned`
+2. **Promote**: Idea is worth pursuing → `markplane promote NOTE-007` → creates `TASK-063`
+3. **Triage**: Task gets priority and effort estimates → status moves to `backlog`
+4. **Plan**: Complex item needs a plan → `markplane plan TASK-063` → creates `PLAN-019`, links them, status moves to `planned`
 5. **Execute**: Implementation begins → status moves to `in-progress`
 6. **Complete**: Work done, acceptance criteria met → status moves to `done`
 7. **Archive**: After configured period → item moves to `archive/` directory
@@ -647,30 +647,30 @@ pip install markplane         # Python projects
 markplane init                    # Create .markplane/ structure in current repo
 
 # Create items
-markplane add                     # Interactive: create backlog item
+markplane add                     # Interactive: create task
 markplane add "Fix login bug" --type bug --priority high
 markplane epic "Phase 5: Observability"
-markplane plan BACK-042           # Create plan linked to backlog item
+markplane plan TASK-042           # Create plan linked to task
 markplane note "Research: caching strategies" --type research
 
 # View & navigate
-markplane ls                      # List active backlog items
+markplane ls                      # List active tasks
 markplane ls --status in-progress # Filter by status
 markplane ls --epic EPIC-003      # Filter by epic
 markplane ls --priority critical,high  # Filter by priority
-markplane show BACK-042           # Display item details
-markplane graph BACK-042          # Show dependency graph
+markplane show TASK-042           # Display item details
+markplane graph TASK-042          # Show dependency graph
 
 # Update
-markplane status BACK-042 in-progress  # Change status
-markplane assign BACK-042 @daniel      # Assign item
-markplane tag BACK-042 cache,permissions  # Add tags
-markplane link BACK-042 --blocks BACK-045  # Add dependency
+markplane status TASK-042 in-progress  # Change status
+markplane assign TASK-042 @daniel      # Assign item
+markplane tag TASK-042 cache,permissions  # Add tags
+markplane link TASK-042 --blocks TASK-045  # Add dependency
 
 # Workflow shortcuts
-markplane start BACK-042          # Set to in-progress + assign to current user
-markplane done BACK-042           # Set to done
-markplane promote NOTE-007        # Note → backlog item
+markplane start TASK-042          # Set to in-progress + assign to current user
+markplane done TASK-042           # Set to done
+markplane promote NOTE-007        # Note → task
 
 # Project health
 markplane status                  # Dashboard: summary of project state
@@ -681,7 +681,7 @@ markplane metrics                 # Velocity, burndown, age distribution
 # AI context
 markplane context                 # Regenerate .context/ files
 markplane context --focus auth    # Focused context for a domain
-markplane context --item BACK-042 # Deep context for specific item
+markplane context --item TASK-042 # Deep context for specific item
 markplane context --clipboard     # Copy context to clipboard for AI chat
 
 # Sync & maintenance
@@ -696,13 +696,13 @@ The CLI is designed so AI coding agents can use it directly:
 
 ```bash
 # AI agent reads project context
-markplane context --item BACK-042 --format markdown
+markplane context --item TASK-042 --format markdown
 
 # AI agent creates a plan
-markplane plan BACK-042 --title "Cache invalidation implementation"
+markplane plan TASK-042 --title "Cache invalidation implementation"
 
 # AI agent updates status
-markplane done BACK-042
+markplane done TASK-042
 
 # AI agent creates follow-up items
 markplane add "Update documentation for cache changes" --type chore --epic EPIC-003
@@ -724,7 +724,7 @@ This project uses Markplane for project management. Key files:
 - `.markplane/.context/summary.md` - Current project state
 - `.markplane/backlog/INDEX.md` - All work items
 - `.markplane/plans/INDEX.md` - Implementation plans
-When working on a task, read the relevant backlog item and its linked plan first.
+When working on a task, read the relevant task and its linked plan first.
 ```
 
 ---
@@ -772,12 +772,12 @@ Most projects already have some form of documentation — a monolithic TASK.md, 
 | Current Pattern | Markplane Migration | Approach |
 |-----------------|-------------------|----------|
 | Monolithic roadmap file (TASK.md, ROADMAP.md) | `roadmap/EPIC-xxx.md` files | Split by phase/epic, add frontmatter, archive completed phases |
-| Flat backlog file (BACKLOG.md, TODO.md) | `backlog/BACK-xxx.md` files | Extract each item, assign IDs, add structured frontmatter |
-| Plans directory (`docs/plans/`) | `plans/PLAN-xxx.md` files | Add frontmatter with `implements` links to backlog items |
+| Flat backlog file (BACKLOG.md, TODO.md) | `backlog/TASK-xxx.md` files | Extract each item, assign IDs, add structured frontmatter |
+| Plans directory (`docs/plans/`) | `plans/PLAN-xxx.md` files | Add frontmatter with `implements` links to tasks |
 | Notes / drafts / research | `notes/NOTE-xxx.md` files | Add IDs and frontmatter with type field |
 | Architecture docs (`docs/blueprint/`, `docs/architecture/`) | Keep in `docs/`, configure `documentation_paths` | Add `documentation_paths: ["docs"]` to config.yaml for INDEX/context integration |
 | Ideas / brainstorming files | `notes/ideas.md` | Keep as quick-capture, promote items to backlog with `markplane promote` |
-| Plan templates | `templates/` | Expand with backlog, epic, and note templates |
+| Plan templates | `templates/` | Expand with task, epic, and note templates |
 
 ### Migration CLI
 
@@ -789,9 +789,9 @@ markplane migrate --source docs/            # Execute migration
 ### Phased Migration Approach
 
 1. **Phase 1**: Create `.markplane/` structure, config, templates, INDEX.md files. Keep existing docs in place.
-2. **Phase 2**: Migrate backlog items to individual files with frontmatter. Highest-value change.
+2. **Phase 2**: Migrate tasks to individual files with frontmatter. Highest-value change.
 3. **Phase 3**: Split monolithic roadmap into epic files. Archive completed phases.
-4. **Phase 4**: Add frontmatter to existing plans, link to backlog items. Migrate notes with IDs.
+4. **Phase 4**: Add frontmatter to existing plans, link to tasks. Migrate notes with IDs.
 5. **Phase 5**: Generate `.context/` summaries. Update CLAUDE.md/AGENTS.md with Markplane integration.
 
 ---
@@ -800,7 +800,7 @@ markplane migrate --source docs/            # Execute migration
 
 ### Before (Typical Docs-Based PM)
 
-**Finding a backlog item:**
+**Finding a task:**
 1. Open a single large backlog file (could be 100+ items)
 2. Ctrl+F to search
 3. No structured metadata, no status tracking, no IDs
@@ -819,16 +819,16 @@ markplane migrate --source docs/            # Execute migration
 
 ### After (Markplane)
 
-**Finding a backlog item:**
-1. `markplane show BACK-042` or open `.markplane/backlog/items/BACK-042.md`
+**Finding a task:**
+1. `markplane show TASK-042` or open `.markplane/backlog/items/TASK-042.md`
 2. Full metadata in frontmatter: status, priority, epic, plan, dependencies
-3. Cross-references via `[[BACK-042]]` syntax
+3. Cross-references via `[[TASK-042]]` syntax
 
 **AI context for a task:**
 1. AI reads `.markplane/.context/summary.md` (~1,000 tokens)
-2. AI reads `BACK-042.md` (~300 tokens) and `PLAN-012.md` (~800 tokens)
+2. AI reads `TASK-042.md` (~300 tokens) and `PLAN-012.md` (~800 tokens)
 3. Total context: ~2,100 tokens, high signal-to-noise
-4. Or: `markplane context --item BACK-042` generates a focused bundle
+4. Or: `markplane context --item TASK-042` generates a focused bundle
 
 **Tracking progress:**
 1. `markplane status` shows dashboard
@@ -842,7 +842,7 @@ markplane migrate --source docs/            # Execute migration
 
 | Decision | Rationale |
 |----------|-----------|
-| Individual files per backlog item | AI context windows degrade with large files (Stanford: >32k tokens). One item = one focused file (~300 tokens). |
+| Individual files per task | AI context windows degrade with large files (Stanford: >32k tokens). One item = one focused file (~300 tokens). |
 | YAML frontmatter over inline metadata | Structured, parseable, consistent. YAML is the standard for markdown metadata. |
 | `[[ID]]` cross-reference syntax | Familiar (wiki-style), unambiguous, tooling-friendly. Prefix determines location. |
 | `.markplane/` directory name | Dot-prefix keeps it out of the way. Clear branding. Version controlled by default. |
@@ -862,7 +862,7 @@ Based on the Stanford "lost-in-the-middle" research and Manus context engineerin
 
 | Document Type | Target Size | Rationale |
 |--------------|-------------|-----------|
-| Backlog item | ~200-400 tokens | One focused concern. Read several without budget pressure. |
+| Task | ~200-400 tokens | One focused concern. Read several without budget pressure. |
 | Epic | ~400-600 tokens | Strategic overview + item table. |
 | Plan | ~800-2,000 tokens | Detailed but phased. AI reads relevant phase only. |
 | Note | ~200-1,000 tokens | Varies. Research can be longer. |
@@ -901,15 +901,15 @@ markplane_context        // Get focused context for a specific item or domain
   { item?: string, focus?: string, include_plan?: boolean }
 
 // Query & Search
-markplane_query          // Query backlog items with filters
+markplane_query          // Query tasks with filters
   { status?: string[], priority?: string[], epic?: string, tags?: string[], assignee?: string }
 markplane_show           // Get full details of any item
-  { id: string }         // e.g., "BACK-042", "EPIC-003", "PLAN-012"
+  { id: string }         // e.g., "TASK-042", "EPIC-003", "PLAN-012"
 markplane_graph          // Get dependency graph for an item
   { id: string, depth?: number }
 
 // Create & Update
-markplane_add            // Create a new backlog item
+markplane_add            // Create a new task
   { title: string, type?: string, priority?: string, epic?: string, tags?: string[], depends_on?: string[] }
 markplane_update         // Update item fields
   { id: string, status?: string, priority?: string, assignee?: string, tags?: string[] }
@@ -919,10 +919,10 @@ markplane_done           // Mark item complete
   { id: string }
 
 // Workflow
-markplane_promote        // Promote a note to a backlog item
+markplane_promote        // Promote a note to a task
   { note_id: string }
-markplane_plan           // Create a plan linked to a backlog item
-  { backlog_id: string, title: string }
+markplane_plan           // Create a plan linked to a task
+  { task_id: string, title: string }
 markplane_link           // Link items together
   { from: string, to: string, relation: "blocks" | "depends_on" | "related" }
 
@@ -939,12 +939,12 @@ markplane_stale          // List items not updated in N days
 1. AI calls markplane_summary → understands project state
 2. AI calls markplane_query { status: ["backlog"], priority: ["critical", "high"] }
      → gets prioritized list of available work
-3. AI calls markplane_start { id: "BACK-042" }
+3. AI calls markplane_start { id: "TASK-042" }
      → claims the item, status moves to in-progress
-4. AI calls markplane_context { item: "BACK-042", include_plan: true }
+4. AI calls markplane_context { item: "TASK-042", include_plan: true }
      → gets item + plan + dependencies as focused context
 5. AI implements the feature using code tools
-6. AI calls markplane_done { id: "BACK-042" }
+6. AI calls markplane_done { id: "TASK-042" }
      → marks complete, INDEX.md and .context/ auto-update
 7. AI calls markplane_add { title: "Update docs for cache changes", epic: "EPIC-003" }
      → creates follow-up item discovered during implementation
@@ -958,7 +958,7 @@ MCP also supports resources — structured data the AI can pull into context:
 
 ```
 markplane://summary              # Project state summary
-markplane://backlog/BACK-042     # Specific item details
+markplane://task/TASK-042        # Specific item details
 markplane://epic/EPIC-003        # Epic with progress
 markplane://active-work          # Currently in-progress items
 markplane://blocked              # Items needing attention

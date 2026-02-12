@@ -37,7 +37,7 @@ pub enum Commands {
         description: String,
     },
 
-    /// Create a new backlog item
+    /// Create a new task
     Add {
         /// Title of the item
         title: String,
@@ -60,13 +60,13 @@ pub enum Commands {
 
     /// Show details of an item
     Show {
-        /// Item ID (e.g. BACK-042)
+        /// Item ID (e.g. TASK-042)
         id: String,
     },
 
     /// List items
     Ls {
-        /// Item kind to list: backlog (default), epics, plans, notes
+        /// Item kind to list: tasks (default), epics, plans, notes
         #[command(subcommand)]
         kind: Option<LsKind>,
 
@@ -92,7 +92,7 @@ pub enum Commands {
 
     /// Update the status of an item
     Status {
-        /// Item ID (e.g. BACK-042)
+        /// Item ID (e.g. TASK-042)
         id: String,
         /// New status value
         new_status: String,
@@ -103,7 +103,7 @@ pub enum Commands {
 
     /// Start working on an item (sets status to in-progress and assigns to you)
     Start {
-        /// Item ID (e.g. BACK-042)
+        /// Item ID (e.g. TASK-042)
         id: String,
         /// Assignee name (defaults to $USER or "me")
         #[arg(long)]
@@ -112,25 +112,25 @@ pub enum Commands {
 
     /// Mark an item as done
     Done {
-        /// Item ID (e.g. BACK-042)
+        /// Item ID (e.g. TASK-042)
         id: String,
     },
 
-    /// Promote a note to a backlog item
+    /// Promote a note to a task
     Promote {
         /// Note ID (e.g. NOTE-007)
         id: String,
-        /// Priority for the new backlog item
+        /// Priority for the new task
         #[arg(long, default_value = "medium")]
         priority: String,
-        /// Effort estimate for the new backlog item
+        /// Effort estimate for the new task
         #[arg(long, default_value = "medium")]
         effort: String,
     },
 
-    /// Create a linked implementation plan for a backlog item
+    /// Create a linked implementation plan for a task
     Plan {
-        /// Backlog item ID (e.g. BACK-042)
+        /// Task ID (e.g. TASK-042)
         id: String,
         /// Plan title (defaults to "Implementation plan for <item title>")
         #[arg(long)]
@@ -160,7 +160,7 @@ pub enum Commands {
 
     /// Assign an item to a user
     Assign {
-        /// Item ID (e.g. BACK-042)
+        /// Item ID (e.g. TASK-042)
         id: String,
         /// User to assign (e.g. @daniel)
         user: String,
@@ -180,7 +180,7 @@ pub enum Commands {
 
     /// Add tags to an item
     Tag {
-        /// Item ID (e.g. BACK-042)
+        /// Item ID (e.g. TASK-042)
         id: String,
         /// Comma-separated tags to add
         tags: String,
@@ -222,7 +222,7 @@ pub enum Commands {
 
     /// Show dependency graph for an item
     Graph {
-        /// Item ID (e.g. BACK-042)
+        /// Item ID (e.g. TASK-042)
         id: String,
         /// Maximum depth to traverse
         #[arg(long, default_value = "3")]

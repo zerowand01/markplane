@@ -7,33 +7,33 @@
 
 | ID | Title | Status | Priority | Effort |
 |----|-------|--------|----------|--------|
-| [BACK-007](../backlog/items/BACK-007.md) | Add markplane edit command to open items in editor | backlog | medium | small |
-| [BACK-008](../backlog/items/BACK-008.md) | Swap serde_yaml to serde_yaml_ng | backlog | low | small |
+| [TASK-007](../backlog/items/TASK-007.md) | Add markplane edit command to open items in editor | backlog | medium | small |
+| [TASK-008](../backlog/items/TASK-008.md) | Swap serde_yaml to serde_yaml_ng | backlog | low | small |
 
 ### [EPIC-003](items/EPIC-003.md) Core Architecture (0/2, 0%)
 
 | ID | Title | Status | Priority | Effort |
 |----|-------|--------|----------|--------|
-| [BACK-009](../backlog/items/BACK-009.md) | Implement configurable workflows for statuses, priorities, and effort sizes | backlog | medium | large |
-| [BACK-010](../backlog/items/BACK-010.md) | Add Sprint/Iteration entity type | backlog | low | large |
+| [TASK-009](../backlog/items/TASK-009.md) | Implement configurable workflows for statuses, priorities, and effort sizes | backlog | medium | large |
+| [TASK-010](../backlog/items/TASK-010.md) | Add Sprint/Iteration entity type | backlog | low | large |
 
 ### [EPIC-004](items/EPIC-004.md) Context and AI Integration (0/3, 0%)
 
 | ID | Title | Status | Priority | Effort |
 |----|-------|--------|----------|--------|
-| [BACK-011](../backlog/items/BACK-011.md) | Implement rich context bundles for individual items | backlog | medium | medium |
-| [BACK-012](../backlog/items/BACK-012.md) | Add domain-focused context generation | backlog | medium | medium |
-| [BACK-013](../backlog/items/BACK-013.md) | Add clipboard context output | backlog | low | xs |
+| [TASK-011](../backlog/items/TASK-011.md) | Implement rich context bundles for individual items | backlog | medium | medium |
+| [TASK-012](../backlog/items/TASK-012.md) | Add domain-focused context generation | backlog | medium | medium |
+| [TASK-013](../backlog/items/TASK-013.md) | Add clipboard context output | backlog | low | xs |
 
 ### [EPIC-005](items/EPIC-005.md) Platform and Ecosystem (0/5, 0%)
 
 | ID | Title | Status | Priority | Effort |
 |----|-------|--------|----------|--------|
-| [BACK-014](../backlog/items/BACK-014.md) | Build migration tooling for importing from existing docs | backlog | low | large |
-| [BACK-015](../backlog/items/BACK-015.md) | Add file watching for real-time MCP updates | backlog | low | medium |
-| [BACK-016](../backlog/items/BACK-016.md) | Add SSE transport for MCP server | backlog | low | medium |
-| [BACK-017](../backlog/items/BACK-017.md) | Build web UI with React and Tailwind | backlog | someday | xl |
-| [BACK-018](../backlog/items/BACK-018.md) | Implement plugin system for external integrations | backlog | someday | xl |
+| [TASK-014](../backlog/items/TASK-014.md) | Build migration tooling for importing from existing docs | backlog | low | large |
+| [TASK-015](../backlog/items/TASK-015.md) | Add file watching for real-time MCP updates | backlog | low | medium |
+| [TASK-016](../backlog/items/TASK-016.md) | Add SSE transport for MCP server | backlog | low | medium |
+| [TASK-017](../backlog/items/TASK-017.md) | Build web UI with React and Tailwind | backlog | someday | xl |
+| [TASK-018](../backlog/items/TASK-018.md) | Implement plugin system for external integrations | backlog | someday | xl |
 
 ## Done Epics
 
@@ -41,10 +41,10 @@
 
 | ID | Title | Status | Priority | Effort |
 |----|-------|--------|----------|--------|
-| [BACK-001](../backlog/items/BACK-001.md) | Add instructions field to MCP initialize response | done | high | small |
-| [BACK-002](../backlog/items/BACK-002.md) | Add missing PLAN and NOTE resource templates to MCP | done | high | xs |
-| [BACK-003](../backlog/items/BACK-003.md) | Update MCP protocol version to 2025-11-25 | done | high | xs |
-| [BACK-004](../backlog/items/BACK-004.md) | Add serverInfo.description to MCP initialize response | done | high | xs |
-| [BACK-005](../backlog/items/BACK-005.md) | Add markplane_write MCP tool for updating markdown body content | done | high | medium |
-| [BACK-006](../backlog/items/BACK-006.md) | Document create-then-edit workflow in MCP instructions | done | medium | small |
+| [TASK-001](../backlog/items/TASK-001.md) | Add instructions field to MCP initialize response | done | high | small |
+| [TASK-002](../backlog/items/TASK-002.md) | Add missing PLAN and NOTE resource templates to MCP | done | high | xs |
+| [TASK-003](../backlog/items/TASK-003.md) | Update MCP protocol version to 2025-11-25 | done | high | xs |
+| [TASK-004](../backlog/items/TASK-004.md) | Add serverInfo.description to MCP initialize response | done | high | xs |
+| [TASK-005](../backlog/items/TASK-005.md) | Add markplane_write MCP tool for updating markdown body content | done | high | medium |
+| [TASK-006](../backlog/items/TASK-006.md) | Document create-then-edit workflow in MCP instructions | done | medium | small |
 

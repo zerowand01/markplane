@@ -14,7 +14,7 @@ markplane --help
 
 ## add
 
-Create a new backlog item.
+Create a new task.
 
 ```
 markplane add <TITLE> [OPTIONS]
@@ -42,7 +42,7 @@ New items are created with status `draft`.
 
 ```bash
 markplane add "Implement dark mode" --type feature --priority high --effort large --epic EPIC-003 --tags "ui,theming"
-# Created BACK-001 — Implement dark mode
+# Created TASK-001 — Implement dark mode
 ```
 
 ---
@@ -68,8 +68,8 @@ Items are eligible for archiving when their status is `done` (or `cancelled` if 
 ```bash
 markplane archive --dry-run
 # → Would archive 2 item(s):
-#   BACK-001 Implement login page (done)
-#   BACK-005 Remove deprecated API (done)
+#   TASK-001 Implement login page (done)
+#   TASK-005 Remove deprecated API (done)
 
 markplane archive
 # ✓ Archived 2 item(s).
@@ -79,7 +79,7 @@ markplane archive
 
 ## assign
 
-Assign a backlog item to a user.
+Assign a task to a user.
 
 ```
 markplane assign <ID> <USER>
@@ -89,16 +89,16 @@ markplane assign <ID> <USER>
 
 | Argument | Description |
 |----------|-------------|
-| `<ID>` | Backlog item ID (e.g. `BACK-042`) |
+| `<ID>` | Task ID (e.g. `TASK-042`) |
 | `<USER>` | Username to assign (leading `@` is stripped automatically) |
 
-Currently only supported for backlog items (`BACK-NNN`).
+Currently only supported for tasks (`TASK-NNN`).
 
 **Example:**
 
 ```bash
-markplane assign BACK-001 @daniel
-# BACK-001 assigned to daniel
+markplane assign TASK-001 @daniel
+# TASK-001 assigned to daniel
 ```
 
 ---
@@ -128,7 +128,7 @@ markplane check
 markplane check --orphans
 # ✓ No broken references found.
 # ! 1 orphan item(s) (no incoming references):
-#   BACK-007
+#   TASK-007
 ```
 
 ---
@@ -168,7 +168,7 @@ When `--item` is specified, prints the item along with its linked epic, plan, an
 markplane context
 # ✓ Context files regenerated in .context/
 
-markplane context --item BACK-001
+markplane context --item TASK-001
 # Prints item details, linked epic, plan, and dependencies
 ```
 
@@ -196,7 +196,7 @@ markplane dashboard
 # ══════════════════════════════════════════════════════
 #
 # In Progress
-#   BACK-002 Set up JWT handling (high @alice)
+#   TASK-002 Set up JWT handling (high @alice)
 #
 # 3 open items | 1 in-progress | 0 blocked | 1 critical
 ```
@@ -215,15 +215,15 @@ markplane done <ID>
 
 | Argument | Description |
 |----------|-------------|
-| `<ID>` | Item ID (e.g. `BACK-042`, `PLAN-001`) |
+| `<ID>` | Item ID (e.g. `TASK-042`, `PLAN-001`) |
 
-Works with backlog items, epics, plans, and notes. Sets the status to `done`.
+Works with tasks, epics, plans, and notes. Sets the status to `done`.
 
 **Example:**
 
 ```bash
-markplane done BACK-001
-# BACK-001 → done
+markplane done TASK-001
+# TASK-001 → done
 ```
 
 ---
@@ -271,7 +271,7 @@ markplane graph <ID> [OPTIONS]
 
 | Argument | Description |
 |----------|-------------|
-| `<ID>` | Item ID (e.g. `BACK-042`) |
+| `<ID>` | Item ID (e.g. `TASK-042`) |
 
 **Options:**
 
@@ -284,15 +284,15 @@ Displays outgoing references (dependencies) as an indented tree and incoming ref
 **Example:**
 
 ```bash
-markplane graph BACK-004 --depth 2
-# Dependency graph for BACK-004
+markplane graph TASK-004 --depth 2
+# Dependency graph for TASK-004
 #
-# BACK-004
-#   └─ BACK-002
-#     └─ BACK-001
+# TASK-004
+#   └─ TASK-002
+#     └─ TASK-001
 #
 # Referenced by:
-#   BACK-006 → BACK-004
+#   TASK-006 → TASK-004
 ```
 
 ---
@@ -325,7 +325,7 @@ markplane init --name "My App" --description "A web application"
 
 ## link
 
-Add a dependency link between backlog items.
+Add a dependency link between tasks.
 
 ```
 markplane link <ID> [OPTIONS]
@@ -335,7 +335,7 @@ markplane link <ID> [OPTIONS]
 
 | Argument | Description |
 |----------|-------------|
-| `<ID>` | Source backlog item ID |
+| `<ID>` | Source task ID |
 
 **Options:**
 
@@ -346,16 +346,16 @@ markplane link <ID> [OPTIONS]
 
 At least one of `--blocks` or `--depends-on` must be specified. Both can be used together. Reverse links are automatically maintained on the target item.
 
-Currently only supported for backlog items (`BACK-NNN`).
+Currently only supported for tasks (`TASK-NNN`).
 
 **Example:**
 
 ```bash
-markplane link BACK-003 --depends-on BACK-001
-# BACK-003 depends on BACK-001
+markplane link TASK-003 --depends-on TASK-001
+# TASK-003 depends on TASK-001
 
-markplane link BACK-002 --blocks BACK-005
-# BACK-002 blocks BACK-005
+markplane link TASK-002 --blocks TASK-005
+# TASK-002 blocks TASK-005
 ```
 
 ---
@@ -372,12 +372,12 @@ markplane ls [KIND] [OPTIONS]
 
 | Kind | Description |
 |------|-------------|
-| *(none)* | List backlog items (default) |
+| *(none)* | List tasks (default) |
 | `epics` | List epics |
 | `plans` | List plans |
 | `notes` | List notes |
 
-**Options (backlog only):**
+**Options (tasks only):**
 
 | Option | Description |
 |--------|-------------|
@@ -452,7 +452,7 @@ markplane note "Evaluate caching strategies" --type research --tags "performance
 
 ## plan
 
-Create a linked implementation plan for a backlog item.
+Create a linked implementation plan for a task.
 
 ```
 markplane plan <ID> [OPTIONS]
@@ -462,7 +462,7 @@ markplane plan <ID> [OPTIONS]
 
 | Argument | Description |
 |----------|-------------|
-| `<ID>` | Backlog item ID (e.g. `BACK-042`) |
+| `<ID>` | Task ID (e.g. `TASK-042`) |
 
 **Options:**
 
@@ -470,27 +470,27 @@ markplane plan <ID> [OPTIONS]
 |--------|---------|-------------|
 | `--title <TITLE>` | `"Implementation plan for <item title>"` | Custom plan title |
 
-Creates a plan that references the backlog item via `implements` and links the plan back to the item's `plan` field. Inherits the item's epic.
+Creates a plan that references the task via `implements` and links the plan back to the item's `plan` field. Inherits the item's epic.
 
-Only works with backlog items (`BACK-NNN`).
+Only works with tasks (`TASK-NNN`).
 
 **Example:**
 
 ```bash
-markplane plan BACK-001
+markplane plan TASK-001
 # Created PLAN-001 — Implementation plan for Implement login page
-# Linked to BACK-001
+# Linked to TASK-001
 
-markplane plan BACK-002 --title "JWT architecture design"
+markplane plan TASK-002 --title "JWT architecture design"
 # Created PLAN-002 — JWT architecture design
-# Linked to BACK-002
+# Linked to TASK-002
 ```
 
 ---
 
 ## promote
 
-Promote a note to a backlog item.
+Promote a note to a task.
 
 ```
 markplane promote <ID> [OPTIONS]
@@ -506,16 +506,16 @@ markplane promote <ID> [OPTIONS]
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `--priority <PRIORITY>` | `medium` | Priority for the new backlog item |
-| `--effort <EFFORT>` | `medium` | Effort estimate for the new backlog item |
+| `--priority <PRIORITY>` | `medium` | Priority for the new task |
+| `--effort <EFFORT>` | `medium` | Effort estimate for the new task |
 
-Creates a new backlog item with the note's title and tags, using item type `feature`. Only works with notes (`NOTE-NNN`).
+Creates a new task with the note's title and tags, using item type `feature`. Only works with notes (`NOTE-NNN`).
 
 **Example:**
 
 ```bash
 markplane promote NOTE-001 --priority high --effort small
-# Promoted NOTE-001 → BACK-003 — Evaluate caching strategies
+# Promoted NOTE-001 → TASK-003 — Evaluate caching strategies
 ```
 
 ---
@@ -532,7 +532,7 @@ markplane show <ID>
 
 | Argument | Description |
 |----------|-------------|
-| `<ID>` | Item ID (e.g. `BACK-042`, `EPIC-001`, `PLAN-003`, `NOTE-007`) |
+| `<ID>` | Item ID (e.g. `TASK-042`, `EPIC-001`, `PLAN-003`, `NOTE-007`) |
 
 Displays all metadata fields and the markdown body. Works with all item types. Also finds archived items.
 
@@ -561,7 +561,7 @@ markplane stale --days 14
 # ! 2 item(s) not updated in 14 days:
 #
 #  ID       | Title            | Status  | Last Updated | Days Stale
-#  BACK-003 | Fix password ... | draft   | 2026-01-20   | 20
+#  TASK-003 | Fix password ... | draft   | 2026-01-20   | 20
 ```
 
 ---
@@ -578,7 +578,7 @@ markplane start <ID> [OPTIONS]
 
 | Argument | Description |
 |----------|-------------|
-| `<ID>` | Item ID (e.g. `BACK-042`) |
+| `<ID>` | Item ID (e.g. `TASK-042`) |
 
 **Options:**
 
@@ -586,16 +586,16 @@ markplane start <ID> [OPTIONS]
 |--------|---------|-------------|
 | `--user <USER>` | `$USER` env var (or `"me"`) | Assignee name |
 
-For backlog items, sets both status and assignee. For other item types, only updates status.
+For tasks, sets both status and assignee. For other item types, only updates status.
 
 **Example:**
 
 ```bash
-markplane start BACK-001
-# BACK-001 → in-progress (assigned to daniel)
+markplane start TASK-001
+# TASK-001 → in-progress (assigned to daniel)
 
-markplane start BACK-002 --user alice
-# BACK-002 → in-progress (assigned to alice)
+markplane start TASK-002 --user alice
+# TASK-002 → in-progress (assigned to alice)
 ```
 
 ---
@@ -612,14 +612,14 @@ markplane status <ID> <NEW_STATUS>
 
 | Argument | Description |
 |----------|-------------|
-| `<ID>` | Item ID (e.g. `BACK-042`) |
+| `<ID>` | Item ID (e.g. `TASK-042`) |
 | `<NEW_STATUS>` | New status value |
 
 **Valid statuses by type:**
 
 | Prefix | Valid statuses |
 |--------|---------------|
-| `BACK` | `draft`, `backlog`, `planned`, `in-progress`, `done`, `cancelled` |
+| `TASK` | `draft`, `backlog`, `planned`, `in-progress`, `done`, `cancelled` |
 | `EPIC` | `planned`, `active`, `done` |
 | `PLAN` | `draft`, `approved`, `in-progress`, `done` |
 | `NOTE` | `draft`, `active`, `archived` |
@@ -627,8 +627,8 @@ markplane status <ID> <NEW_STATUS>
 **Example:**
 
 ```bash
-markplane status BACK-001 in-progress
-# BACK-001 → in-progress
+markplane status TASK-001 in-progress
+# TASK-001 → in-progress
 
 markplane status EPIC-001 active
 # EPIC-001 → active
@@ -668,14 +668,14 @@ markplane tag <ID> <TAGS>
 
 | Argument | Description |
 |----------|-------------|
-| `<ID>` | Item ID (e.g. `BACK-042`, `NOTE-001`) |
+| `<ID>` | Item ID (e.g. `TASK-042`, `NOTE-001`) |
 | `<TAGS>` | Comma-separated tags to add |
 
-Tags are additive — existing tags are preserved, duplicates are ignored. Currently supported for backlog items and notes.
+Tags are additive — existing tags are preserved, duplicates are ignored. Currently supported for tasks and notes.
 
 **Example:**
 
 ```bash
-markplane tag BACK-001 "frontend,urgent"
-# BACK-001 tagged with: frontend, urgent
+markplane tag TASK-001 "frontend,urgent"
+# TASK-001 tagged with: frontend, urgent
 ```

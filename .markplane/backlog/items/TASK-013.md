@@ -1,5 +1,5 @@
 ---
-id: BACK-013
+id: TASK-013
 title: Add clipboard context output
 status: backlog
 priority: low
@@ -30,7 +30,7 @@ This is a tiny quality-of-life feature — just pipe stdout to `pbcopy` (macOS) 
 - [ ] `markplane context --clipboard` copies the context output to the system clipboard
 - [ ] Works on macOS (`pbcopy`), Linux (`xclip` or `xsel`), and Windows (`clip.exe`)
 - [ ] Prints a confirmation message (e.g., "Context copied to clipboard (1,234 chars)")
-- [ ] Can be combined with other context flags (e.g., `--item BACK-042 --clipboard`)
+- [ ] Can be combined with other context flags (e.g., `--item TASK-042 --clipboard`)
 - [ ] Falls back gracefully if clipboard tool is not available
 
 ## Notes

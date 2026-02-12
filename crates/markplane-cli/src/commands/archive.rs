@@ -1,6 +1,6 @@
 use chrono::Local;
 use colored::Colorize;
-use markplane_core::{BacklogStatus, Project, QueryFilter};
+use markplane_core::{TaskStatus, Project, QueryFilter};
 
 pub fn run(dry_run: bool) -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
@@ -8,14 +8,14 @@ pub fn run(dry_run: bool) -> anyhow::Result<()> {
     let today = Local::now().date_naive();
     let cutoff = today - chrono::Duration::days(config.archive.auto_archive_after_days as i64);
 
-    let items = project.list_backlog_items(&QueryFilter::default())?;
+    let items = project.list_tasks(&QueryFilter::default())?;
 
     let archivable: Vec<_> = items
         .iter()
         .filter(|doc| {
             let fm = &doc.frontmatter;
-            let is_done = fm.status == BacklogStatus::Done;
-            let is_cancelled = fm.status == BacklogStatus::Cancelled && !config.archive.keep_cancelled;
+            let is_done = fm.status == TaskStatus::Done;
+            let is_cancelled = fm.status == TaskStatus::Cancelled && !config.archive.keep_cancelled;
             (is_done || is_cancelled) && fm.updated <= cutoff
         })
         .collect();

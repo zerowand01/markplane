@@ -10,7 +10,7 @@ pub mod error;
 
 pub use error::{MarkplaneError, Result};
 pub use models::{
-    BacklogItem, BacklogStatus, Config, Effort, Epic, EpicStatus, IdPrefix, ItemType,
+    Task, TaskStatus, Config, Effort, Epic, EpicStatus, IdPrefix, ItemType,
     MarkplaneDocument, Note, NoteStatus, NoteType, Plan, PlanStatus, Priority,
     format_id, parse_id,
 };

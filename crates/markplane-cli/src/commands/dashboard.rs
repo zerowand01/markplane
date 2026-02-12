@@ -1,10 +1,10 @@
 use colored::Colorize;
-use markplane_core::{BacklogStatus, Priority, Project, QueryFilter, find_blocked_items};
+use markplane_core::{TaskStatus, Priority, Project, QueryFilter, find_blocked_items};
 
 pub fn run() -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
     let config = project.load_config()?;
-    let items = project.list_backlog_items(&QueryFilter::default())?;
+    let items = project.list_tasks(&QueryFilter::default())?;
     let epics = project.list_epics()?;
 
     println!(
@@ -17,7 +17,7 @@ pub fn run() -> anyhow::Result<()> {
     // In-progress work
     let in_progress: Vec<_> = items
         .iter()
-        .filter(|i| i.frontmatter.status == BacklogStatus::InProgress)
+        .filter(|i| i.frontmatter.status == TaskStatus::InProgress)
         .collect();
     if !in_progress.is_empty() {
         println!("{}", "In Progress".bold().yellow());
@@ -38,7 +38,7 @@ pub fn run() -> anyhow::Result<()> {
     if !blocked.is_empty() {
         let done_ids: std::collections::HashSet<&str> = items
             .iter()
-            .filter(|i| i.frontmatter.status == BacklogStatus::Done)
+            .filter(|i| i.frontmatter.status == TaskStatus::Done)
             .map(|i| i.frontmatter.id.as_str())
             .collect();
         println!("{}", "Blocked".bold().red());
@@ -75,7 +75,7 @@ pub fn run() -> anyhow::Result<()> {
             let total = epic_items.len();
             let done_count = epic_items
                 .iter()
-                .filter(|i| i.frontmatter.status == BacklogStatus::Done)
+                .filter(|i| i.frontmatter.status == TaskStatus::Done)
                 .count();
             let pct = if total > 0 {
                 (done_count as f64 / total as f64 * 100.0) as u32
@@ -94,16 +94,16 @@ pub fn run() -> anyhow::Result<()> {
     let open = items
         .iter()
         .filter(|i| {
-            i.frontmatter.status != BacklogStatus::Done
-                && i.frontmatter.status != BacklogStatus::Cancelled
+            i.frontmatter.status != TaskStatus::Done
+                && i.frontmatter.status != TaskStatus::Cancelled
         })
         .count();
     let critical = items
         .iter()
         .filter(|i| {
             i.frontmatter.priority == Priority::Critical
-                && i.frontmatter.status != BacklogStatus::Done
-                && i.frontmatter.status != BacklogStatus::Cancelled
+                && i.frontmatter.status != TaskStatus::Done
+                && i.frontmatter.status != TaskStatus::Cancelled
         })
         .count();
 

@@ -1,5 +1,5 @@
 ---
-id: BACK-012
+id: TASK-012
 title: Add domain-focused context generation
 status: backlog
 priority: medium

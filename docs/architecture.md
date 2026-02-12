@@ -34,10 +34,10 @@ The core library contains all domain logic. It exposes a `Project` struct that r
 
 | Module | Purpose |
 |--------|---------|
-| `models` | Entity structs (`BacklogItem`, `Epic`, `Plan`, `Note`), enums (`BacklogStatus`, `Priority`, etc.), `Config`, `MarkplaneDocument<T>` wrapper, ID parsing/formatting |
+| `models` | Entity structs (`Task`, `Epic`, `Plan`, `Note`), enums (`TaskStatus`, `Priority`, etc.), `Config`, `MarkplaneDocument<T>` wrapper, ID parsing/formatting |
 | `project` | `Project` struct — init, config, ID management, CRUD operations, archiving, `find_blocked_items()` |
 | `frontmatter` | Parse and serialize `---\nyaml\n---\nbody` format |
-| `query` | `QueryFilter` struct, `list_backlog_items()`, `list_epics()`, `list_plans()`, `list_notes()` with filtering and sorting |
+| `query` | `QueryFilter` struct, `list_tasks()`, `list_epics()`, `list_plans()`, `list_notes()` with filtering and sorting |
 | `references` | `extract_references()` (wiki-link `[[ID]]` scanning), `validate_references()`, `find_orphans()`, `build_reference_graph()` |
 | `index` | INDEX.md generation for all directories (root, backlog, roadmap, plans, notes) |
 | `context` | `.context/` file generation — summary, active-work, blocked-items, metrics |
@@ -58,8 +58,8 @@ The CLI crate provides the user-facing terminal interface.
 The MCP server enables AI tools (Claude, Cursor, etc.) to interact with the project.
 
 - **Protocol**: JSON-RPC 2.0 over stdio (one JSON object per line)
-- **Tools**: 15 tools — `markplane_summary`, `markplane_query`, `markplane_show`, `markplane_add`, `markplane_update`, `markplane_start`, `markplane_done`, `markplane_sync`, `markplane_epic`, `markplane_note`, `markplane_plan`, `markplane_check`, `markplane_link`, `markplane_graph`, `markplane_archive`
-- **Resources**: 3 static resources (`markplane://summary`, `markplane://active-work`, `markplane://blocked`) + 2 dynamic templates (`markplane://backlog/{id}`, `markplane://epic/{id}`)
+- **Tools**: 16 tools — `markplane_summary`, `markplane_context`, `markplane_query`, `markplane_show`, `markplane_graph`, `markplane_add`, `markplane_write`, `markplane_update`, `markplane_start`, `markplane_done`, `markplane_promote`, `markplane_plan`, `markplane_link`, `markplane_sync`, `markplane_check`, `markplane_stale`
+- **Resources**: 3 static resources (`markplane://summary`, `markplane://active-work`, `markplane://blocked`) + 4 dynamic templates (`markplane://task/{id}`, `markplane://epic/{id}`, `markplane://plan/{id}`, `markplane://note/{id}`)
 - **Error handling**: Tool handlers return `Result<String, String>`; errors map to JSON-RPC error codes
 
 ## Data Model
@@ -70,7 +70,7 @@ All items are wrapped in a generic document type that separates YAML frontmatter
 
 ```rust
 pub struct MarkplaneDocument<T> {
-    pub frontmatter: T,   // Deserialized YAML (BacklogItem, Epic, etc.)
+    pub frontmatter: T,   // Deserialized YAML (Task, Epic, etc.)
     pub body: String,      // Markdown content after the closing ---
 }
 ```
@@ -86,8 +86,8 @@ pub struct MarkplaneDocument<T> {
                     └──────────────────────┘
 
   ┌───────────────┐  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐
-  │   BacklogItem │  │     Epic      │  │     Plan      │  │     Note      │
-  │ BACK-NNN      │  │ EPIC-NNN      │  │ PLAN-NNN      │  │ NOTE-NNN      │
+  │     Task      │  │     Epic      │  │     Plan      │  │     Note      │
+  │ TASK-NNN      │  │ EPIC-NNN      │  │ PLAN-NNN      │  │ NOTE-NNN      │
   │               │  │               │  │               │  │               │
   │ id, title,    │  │ id, title,    │  │ id, title,    │  │ id, title,    │
   │ status,       │  │ status,       │  │ status,       │  │ type,         │
@@ -105,10 +105,10 @@ pub struct MarkplaneDocument<T> {
 ```
 
 Relationships between entities:
-- `BacklogItem.epic` → links to an `Epic`
-- `BacklogItem.plan` → links to a `Plan`
-- `BacklogItem.depends_on[]` / `blocks[]` → links to other `BacklogItem`s
-- `Plan.implements[]` → links to `BacklogItem`s it implements
+- `Task.epic` → links to an `Epic`
+- `Task.plan` → links to a `Plan`
+- `Task.depends_on[]` / `blocks[]` → links to other `Task`s
+- `Plan.implements[]` → links to `Task`s it implements
 - `Plan.epic` → links to an `Epic`
 - `Note.related[]` → links to any item type
 - `Epic.depends_on[]` → links to other `Epic`s
@@ -123,14 +123,14 @@ CLI: markplane add "Fix login bug" --type bug --priority high
   ├─ Parse args via clap
   ├─ Project::from_current_dir()  → find .markplane/
   ├─ validate_title_length(title) → reject if > 500 chars
-  ├─ project.next_id(&IdPrefix::Back)
+  ├─ project.next_id(&IdPrefix::Task)
   │    ├─ Lock config.yaml (fs2 advisory lock)
   │    ├─ Read counter, increment, write back
   │    └─ Unlock
   ├─ sanitize_yaml_string(title)
-  ├─ render_template(BACKLOG_TEMPLATE, vars)
-  ├─ Write .markplane/backlog/items/BACK-001.md
-  └─ Return BacklogItem struct
+  ├─ render_template(TASK_TEMPLATE, vars)
+  ├─ Write .markplane/backlog/items/TASK-001.md
+  └─ Return Task struct
 ```
 
 ### Sync
@@ -197,7 +197,7 @@ Core errors are typed and specific. The CLI converts them to user-friendly messa
 - **Title length**: Capped at 500 characters to prevent resource exhaustion
 - **YAML sanitization**: `sanitize_yaml_string()` escapes `\`, `"`, `\n`, `\r` before embedding in YAML templates, preventing YAML injection
 - **Tag quoting**: `format_yaml_list()` quotes each tag value and escapes inner quotes
-- **ID validation**: `parse_id()` enforces strict `PREFIX-NUMBER` format — only `EPIC`, `BACK`, `PLAN`, `NOTE` prefixes accepted. This prevents path traversal since IDs determine file paths.
+- **ID validation**: `parse_id()` enforces strict `PREFIX-NUMBER` format — only `EPIC`, `TASK`, `PLAN`, `NOTE` prefixes accepted. This prevents path traversal since IDs determine file paths.
 
 ### Concurrency Safety
 - **File locking**: `next_id()` acquires an exclusive `fs2` advisory lock on `config.yaml` before reading/incrementing counters, preventing duplicate IDs from concurrent processes.
@@ -221,7 +221,7 @@ Every directory has an INDEX.md that summarizes its contents. AI agents read the
 Rather than depending on a full markdown parser, Markplane uses a simple `---\nyaml\n---\nbody` splitter. This is faster, has zero dependencies beyond `serde_yaml`, and is sufficient since the frontmatter format is fully controlled.
 
 ### Manual Reference Extraction
-Cross-references (`[[BACK-042]]`) are extracted via byte scanning rather than regex. This avoids a regex dependency and gives precise control over what constitutes a valid reference (must pass `parse_id()` validation).
+Cross-references (`[[TASK-042]]`) are extracted via byte scanning rather than regex. This avoids a regex dependency and gives precise control over what constitutes a valid reference (must pass `parse_id()` validation).
 
 ### Generic Document Wrapper
 `MarkplaneDocument<T>` separates the typed frontmatter from the freeform markdown body. This allows a single `read_item<T>()` / `write_item<T>()` path for all entity types while preserving type safety.

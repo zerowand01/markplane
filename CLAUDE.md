@@ -25,15 +25,15 @@ CLI binary ──→ Core Library (Rust) ←── MCP Server (stdio/SSE)
 - **Filesystem as database**: Each work item is an individual markdown file with YAML frontmatter. No SQL database.
 - **INDEX.md router pattern**: Every directory has an INDEX.md that serves as a routing layer. AI reads the index (~200 tokens), then loads only relevant files.
 - **AI context layer**: `.context/` directory contains generated summaries compressing project state for AI consumption (~1000 tokens for full project state).
-- **ID system**: `{PREFIX}-{NUMBER}` — `EPIC-NNN`, `BACK-NNN`, `PLAN-NNN`, `NOTE-NNN`. IDs are permanent, sequential, never reused. Prefix determines directory location.
-- **Cross-references**: `[[BACK-042]]` wiki-style syntax. Prefix resolves to type and directory.
+- **ID system**: `{PREFIX}-{NUMBER}` — `EPIC-NNN`, `TASK-NNN`, `PLAN-NNN`, `NOTE-NNN`. IDs are permanent, sequential, never reused. Prefix determines directory location.
+- **Cross-references**: `[[TASK-042]]` wiki-style syntax. Prefix resolves to type and directory.
 
 ### Directory modules (within `.markplane/`)
 
 | Directory | Purpose | Entity prefix |
 |-----------|---------|---------------|
 | `roadmap/` | Strategic epics & phases | `EPIC` |
-| `backlog/` | Work items (primary) | `BACK` |
+| `backlog/` | Work items (primary) | `TASK` |
 | `plans/` | Implementation details | `PLAN` |
 | `notes/` | Research, ideas, decisions | `NOTE` |
 | `templates/` | Document templates | — |
@@ -41,14 +41,14 @@ CLI binary ──→ Core Library (Rust) ←── MCP Server (stdio/SSE)
 
 ### Status workflows
 
-- **Backlog**: `draft → backlog → planned → in-progress → done → archive` (also `cancelled`)
+- **Tasks**: `draft → backlog → planned → in-progress → done → archive` (also `cancelled`)
 - **Epics**: `planned → active → done`
 - **Plans**: `draft → approved → in-progress → done → archive`
 
 ### Lifecycle flow
 
 ```
-ideas.md / NOTE-xxx → BACK-xxx → PLAN-xxx → Done → Archive
+ideas.md / NOTE-xxx → TASK-xxx → PLAN-xxx → Done → Archive
 ```
 
 ## Build & Development
@@ -63,15 +63,15 @@ No build system exists yet. When implemented:
 
 ```bash
 markplane init                         # Scaffold .markplane/ structure
-markplane add "title" --type --priority  # Create backlog item
-markplane show BACK-042                # View item
+markplane add "title" --type --priority  # Create task
+markplane show TASK-042                # View item
 markplane ls --status in-progress      # List/filter items
-markplane status BACK-042 in-progress  # Update status
+markplane status TASK-042 in-progress  # Update status
 markplane sync                         # Regenerate INDEX.md files + .context/
-markplane context --item BACK-042      # Generate focused AI context bundle
+markplane context --item TASK-042      # Generate focused AI context bundle
 markplane check                        # Validate cross-references
-markplane promote NOTE-007             # Note → backlog item
-markplane plan BACK-042                # Create linked implementation plan
+markplane promote NOTE-007             # Note → task
+markplane plan TASK-042                # Create linked implementation plan
 ```
 
 ### MCP server
@@ -96,4 +96,4 @@ This project uses Markplane for project management. Key files:
 - `.markplane/.context/summary.md` - Current project state
 - `.markplane/backlog/INDEX.md` - All work items
 - `.markplane/plans/INDEX.md` - Implementation plans
-When working on a task, read the relevant backlog item and its linked plan first.
+When working on a task, read the relevant task item and its linked plan first.

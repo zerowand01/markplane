@@ -9,12 +9,12 @@ use crate::error::{MarkplaneError, Result};
 
 // ── ID System ──────────────────────────────────────────────────────────────
 
-/// Prefix for Markplane item IDs: EPIC, BACK, PLAN, NOTE.
+/// Prefix for Markplane item IDs: EPIC, TASK, PLAN, NOTE.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum IdPrefix {
     Epic,
-    Back,
+    Task,
     Plan,
     Note,
 }
@@ -24,7 +24,7 @@ impl IdPrefix {
     pub fn as_str(&self) -> &'static str {
         match self {
             IdPrefix::Epic => "EPIC",
-            IdPrefix::Back => "BACK",
+            IdPrefix::Task => "TASK",
             IdPrefix::Plan => "PLAN",
             IdPrefix::Note => "NOTE",
         }
@@ -34,17 +34,17 @@ impl IdPrefix {
     pub fn directory(&self) -> &'static str {
         match self {
             IdPrefix::Epic => "roadmap",
-            IdPrefix::Back => "backlog",
+            IdPrefix::Task => "backlog",
             IdPrefix::Plan => "plans",
             IdPrefix::Note => "notes",
         }
     }
 
-    /// Parse a prefix from a string like "EPIC", "BACK", etc.
+    /// Parse a prefix from a string like "EPIC", "TASK", etc.
     pub fn parse(s: &str) -> Result<Self> {
         match s.to_uppercase().as_str() {
             "EPIC" => Ok(IdPrefix::Epic),
-            "BACK" => Ok(IdPrefix::Back),
+            "TASK" => Ok(IdPrefix::Task),
             "PLAN" => Ok(IdPrefix::Plan),
             "NOTE" => Ok(IdPrefix::Note),
             _ => Err(MarkplaneError::InvalidId(format!(
@@ -61,7 +61,7 @@ impl fmt::Display for IdPrefix {
     }
 }
 
-/// Parse an item ID string like "BACK-042" into its prefix and number.
+/// Parse an item ID string like "TASK-042" into its prefix and number.
 pub fn parse_id(id: &str) -> Result<(IdPrefix, u32)> {
     let parts: Vec<&str> = id.splitn(2, '-').collect();
     if parts.len() != 2 {
@@ -77,7 +77,7 @@ pub fn parse_id(id: &str) -> Result<(IdPrefix, u32)> {
     Ok((prefix, number))
 }
 
-/// Format a prefix and number into an ID string like "BACK-042".
+/// Format a prefix and number into an ID string like "TASK-042".
 pub fn format_id(prefix: &IdPrefix, number: u32) -> String {
     format!("{}-{:03}", prefix.as_str(), number)
 }
@@ -86,7 +86,7 @@ pub fn format_id(prefix: &IdPrefix, number: u32) -> String {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum BacklogStatus {
+pub enum TaskStatus {
     Draft,
     Backlog,
     Planned,
@@ -95,30 +95,30 @@ pub enum BacklogStatus {
     Cancelled,
 }
 
-impl fmt::Display for BacklogStatus {
+impl fmt::Display for TaskStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            BacklogStatus::Draft => write!(f, "draft"),
-            BacklogStatus::Backlog => write!(f, "backlog"),
-            BacklogStatus::Planned => write!(f, "planned"),
-            BacklogStatus::InProgress => write!(f, "in-progress"),
-            BacklogStatus::Done => write!(f, "done"),
-            BacklogStatus::Cancelled => write!(f, "cancelled"),
+            TaskStatus::Draft => write!(f, "draft"),
+            TaskStatus::Backlog => write!(f, "backlog"),
+            TaskStatus::Planned => write!(f, "planned"),
+            TaskStatus::InProgress => write!(f, "in-progress"),
+            TaskStatus::Done => write!(f, "done"),
+            TaskStatus::Cancelled => write!(f, "cancelled"),
         }
     }
 }
 
-impl FromStr for BacklogStatus {
+impl FromStr for TaskStatus {
     type Err = MarkplaneError;
 
     fn from_str(s: &str) -> Result<Self> {
         match s {
-            "draft" => Ok(BacklogStatus::Draft),
-            "backlog" => Ok(BacklogStatus::Backlog),
-            "planned" => Ok(BacklogStatus::Planned),
-            "in-progress" => Ok(BacklogStatus::InProgress),
-            "done" => Ok(BacklogStatus::Done),
-            "cancelled" => Ok(BacklogStatus::Cancelled),
+            "draft" => Ok(TaskStatus::Draft),
+            "backlog" => Ok(TaskStatus::Backlog),
+            "planned" => Ok(TaskStatus::Planned),
+            "in-progress" => Ok(TaskStatus::InProgress),
+            "done" => Ok(TaskStatus::Done),
+            "cancelled" => Ok(TaskStatus::Cancelled),
             _ => Err(MarkplaneError::InvalidStatus(s.into())),
         }
     }
@@ -388,10 +388,10 @@ impl FromStr for NoteType {
 // ── Entity Structs ─────────────────────────────────────────────────────────
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct BacklogItem {
+pub struct Task {
     pub id: String,
     pub title: String,
-    pub status: BacklogStatus,
+    pub status: TaskStatus,
     pub priority: Priority,
     #[serde(rename = "type")]
     pub item_type: ItemType,
@@ -492,7 +492,7 @@ impl Default for Config {
     fn default() -> Self {
         let mut counters = HashMap::new();
         counters.insert("EPIC".to_string(), 0);
-        counters.insert("BACK".to_string(), 0);
+        counters.insert("TASK".to_string(), 0);
         counters.insert("PLAN".to_string(), 0);
         counters.insert("NOTE".to_string(), 0);
 
@@ -533,42 +533,43 @@ mod tests {
     #[test]
     fn test_id_prefix_roundtrip() {
         assert_eq!(IdPrefix::parse("EPIC").unwrap(), IdPrefix::Epic);
-        assert_eq!(IdPrefix::parse("back").unwrap(), IdPrefix::Back);
+        assert_eq!(IdPrefix::parse("task").unwrap(), IdPrefix::Task);
         assert_eq!(IdPrefix::Epic.as_str(), "EPIC");
-        assert_eq!(IdPrefix::Back.directory(), "backlog");
+        assert_eq!(IdPrefix::Task.as_str(), "TASK");
+        assert_eq!(IdPrefix::Task.directory(), "backlog");
     }
 
     #[test]
     fn test_parse_id() {
-        let (prefix, num) = parse_id("BACK-042").unwrap();
-        assert_eq!(prefix, IdPrefix::Back);
+        let (prefix, num) = parse_id("TASK-042").unwrap();
+        assert_eq!(prefix, IdPrefix::Task);
         assert_eq!(num, 42);
     }
 
     #[test]
     fn test_format_id() {
-        assert_eq!(format_id(&IdPrefix::Back, 42), "BACK-042");
+        assert_eq!(format_id(&IdPrefix::Task, 42), "TASK-042");
         assert_eq!(format_id(&IdPrefix::Epic, 1), "EPIC-001");
     }
 
     #[test]
-    fn test_backlog_status_display() {
-        assert_eq!(BacklogStatus::InProgress.to_string(), "in-progress");
-        assert_eq!(BacklogStatus::Draft.to_string(), "draft");
+    fn test_task_status_display() {
+        assert_eq!(TaskStatus::InProgress.to_string(), "in-progress");
+        assert_eq!(TaskStatus::Draft.to_string(), "draft");
     }
 
     #[test]
-    fn test_backlog_status_serde_roundtrip() {
-        let yaml = serde_yaml::to_string(&BacklogStatus::InProgress).unwrap();
+    fn test_task_status_serde_roundtrip() {
+        let yaml = serde_yaml::to_string(&TaskStatus::InProgress).unwrap();
         assert!(yaml.contains("in-progress"));
-        let parsed: BacklogStatus = serde_yaml::from_str(&yaml).unwrap();
-        assert_eq!(parsed, BacklogStatus::InProgress);
+        let parsed: TaskStatus = serde_yaml::from_str(&yaml).unwrap();
+        assert_eq!(parsed, TaskStatus::InProgress);
     }
 
     #[test]
-    fn test_backlog_item_serde() {
+    fn test_task_serde() {
         let yaml = r#"
-id: BACK-042
+id: TASK-042
 title: "Add dark mode"
 status: in-progress
 priority: high
@@ -577,24 +578,24 @@ effort: medium
 tags: [ui, theming]
 epic: EPIC-003
 plan: null
-depends_on: [BACK-038]
-blocks: [BACK-045]
+depends_on: [TASK-038]
+blocks: [TASK-045]
 assignee: daniel
 created: 2026-01-15
 updated: 2026-02-09
 "#;
-        let item: BacklogItem = serde_yaml::from_str(yaml).unwrap();
-        assert_eq!(item.id, "BACK-042");
-        assert_eq!(item.status, BacklogStatus::InProgress);
+        let item: Task = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(item.id, "TASK-042");
+        assert_eq!(item.status, TaskStatus::InProgress);
         assert_eq!(item.item_type, ItemType::Feature);
         assert_eq!(item.tags, vec!["ui", "theming"]);
         assert_eq!(item.epic, Some("EPIC-003".to_string()));
         assert!(item.plan.is_none());
-        assert_eq!(item.depends_on, vec!["BACK-038"]);
+        assert_eq!(item.depends_on, vec!["TASK-038"]);
 
         // Round-trip
         let serialized = serde_yaml::to_string(&item).unwrap();
-        let reparsed: BacklogItem = serde_yaml::from_str(&serialized).unwrap();
+        let reparsed: Task = serde_yaml::from_str(&serialized).unwrap();
         assert_eq!(reparsed.id, item.id);
         assert_eq!(reparsed.status, item.status);
     }
@@ -624,7 +625,7 @@ depends_on: [EPIC-001]
 id: PLAN-012
 title: "Dark mode implementation"
 status: in-progress
-implements: [BACK-042, BACK-043]
+implements: [TASK-042, TASK-043]
 epic: EPIC-003
 created: 2026-02-01
 updated: 2026-02-09
@@ -632,7 +633,7 @@ updated: 2026-02-09
         let plan: Plan = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(plan.id, "PLAN-012");
         assert_eq!(plan.status, PlanStatus::InProgress);
-        assert_eq!(plan.implements, vec!["BACK-042", "BACK-043"]);
+        assert_eq!(plan.implements, vec!["TASK-042", "TASK-043"]);
     }
 
     #[test]
@@ -643,7 +644,7 @@ title: "Caching strategies research"
 type: research
 status: active
 tags: [cache, performance]
-related: [BACK-042, PLAN-012]
+related: [TASK-042, PLAN-012]
 created: 2026-02-05
 updated: 2026-02-09
 "#;
@@ -657,7 +658,7 @@ updated: 2026-02-09
     fn test_config_default() {
         let config = Config::default();
         assert_eq!(config.version, 1);
-        assert_eq!(config.counters.get("BACK"), Some(&0));
+        assert_eq!(config.counters.get("TASK"), Some(&0));
         assert_eq!(config.context.token_budget, 1000);
         assert!(config.archive.keep_cancelled);
     }
@@ -680,7 +681,7 @@ updated: 2026-02-09
 
     #[test]
     fn test_parse_id_no_number() {
-        assert!(parse_id("BACK-").is_err());
+        assert!(parse_id("TASK-").is_err());
     }
 
     #[test]
@@ -691,14 +692,14 @@ updated: 2026-02-09
     #[test]
     fn test_parse_id_lowercase() {
         // IdPrefix::parse does to_uppercase, so lowercase should work
-        let (prefix, num) = parse_id("back-042").unwrap();
-        assert_eq!(prefix, IdPrefix::Back);
+        let (prefix, num) = parse_id("task-042").unwrap();
+        assert_eq!(prefix, IdPrefix::Task);
         assert_eq!(num, 42);
     }
 
     #[test]
     fn test_parse_id_no_separator() {
-        assert!(parse_id("BACK042").is_err());
+        assert!(parse_id("TASK042").is_err());
     }
 
     #[test]
@@ -710,7 +711,7 @@ updated: 2026-02-09
     fn test_parse_id_all_prefixes() {
         let cases = [
             ("EPIC-001", IdPrefix::Epic, 1),
-            ("BACK-042", IdPrefix::Back, 42),
+            ("TASK-042", IdPrefix::Task, 42),
             ("PLAN-003", IdPrefix::Plan, 3),
             ("NOTE-007", IdPrefix::Note, 7),
         ];

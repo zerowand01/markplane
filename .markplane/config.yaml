@@ -4,7 +4,7 @@ project:
   description: AI-native, markdown-first project management system
 counters:
   EPIC: 5
-  BACK: 18
+  TASK: 18
   PLAN: 0
   NOTE: 0
 context:

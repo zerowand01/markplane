@@ -1,5 +1,5 @@
 ---
-id: BACK-009
+id: TASK-009
 title: Implement configurable workflows for statuses, priorities, and effort sizes
 status: backlog
 priority: medium
@@ -40,7 +40,7 @@ This is a large architectural change that touches models, serialization, validat
 
 ## Notes
 
-Consider a phased approach: first add the config schema and parsing with defaults matching current enums, then swap enum-based validation to config-based validation. The hardest part is replacing strongly-typed enums with validated strings throughout the codebase while maintaining type safety. A `ValidatedStatus(String)` newtype pattern could help. The MCP `instructions` field (BACK-001) should dynamically list available statuses once this lands.
+Consider a phased approach: first add the config schema and parsing with defaults matching current enums, then swap enum-based validation to config-based validation. The hardest part is replacing strongly-typed enums with validated strings throughout the codebase while maintaining type safety. A `ValidatedStatus(String)` newtype pattern could help. The MCP `instructions` field (TASK-001) should dynamically list available statuses once this lands.
 
 ## References
 

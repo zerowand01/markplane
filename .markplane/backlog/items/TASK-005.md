@@ -1,5 +1,5 @@
 ---
-id: BACK-005
+id: TASK-005
 title: Add markplane_write MCP tool for updating markdown body content
 status: done
 priority: high
@@ -12,7 +12,7 @@ epic: EPIC-001
 plan: null
 depends_on: []
 blocks:
-- BACK-006
+- TASK-006
 assignee: null
 created: 2026-02-10
 updated: 2026-02-11
@@ -32,7 +32,7 @@ A `markplane_write` tool should accept an item ID and new body content (everythi
 - [ ] Tool replaces only the markdown body, preserving YAML frontmatter untouched
 - [ ] Tool updates the `updated` date in frontmatter
 - [ ] Tool listed in `list_tools()` with proper JSON Schema
-- [ ] Works for all entity types (BACK, EPIC, PLAN, NOTE)
+- [ ] Works for all entity types (TASK, EPIC, PLAN, NOTE)
 - [ ] Integration tests for writing body content and verifying frontmatter preservation
 - [ ] Error handling for invalid IDs
 

@@ -1,5 +1,5 @@
 ---
-id: BACK-006
+id: TASK-006
 title: Document create-then-edit workflow in MCP instructions
 status: done
 priority: medium
@@ -11,8 +11,8 @@ tags:
 epic: EPIC-001
 plan: null
 depends_on:
-- BACK-001
-- BACK-005
+- TASK-001
+- TASK-005
 blocks: []
 assignee: null
 created: 2026-02-10
@@ -23,7 +23,7 @@ updated: 2026-02-11
 
 ## Description
 
-The MCP `instructions` field (BACK-001) needs to clearly explain the two-step workflow for creating items: first create the item (which scaffolds a template with placeholder content), then fill in the markdown body (via `markplane_write` from BACK-005 or direct file editing). Without this guidance, an LLM might create items and leave them with placeholder text, or not understand why items have empty descriptions.
+The MCP `instructions` field (TASK-001) needs to clearly explain the two-step workflow for creating items: first create the item (which scaffolds a template with placeholder content), then fill in the markdown body (via `markplane_write` from TASK-005 or direct file editing). Without this guidance, an LLM might create items and leave them with placeholder text, or not understand why items have empty descriptions.
 
 ## Acceptance Criteria
 
@@ -34,4 +34,4 @@ The MCP `instructions` field (BACK-001) needs to clearly explain the two-step wo
 
 ## Notes
 
-This is a content update to the instructions string built in BACK-001, not a code change. Blocked by BACK-001 (instructions field must exist) and BACK-005 (write tool must exist to be documented).
+This is a content update to the instructions string built in TASK-001, not a code change. Blocked by TASK-001 (instructions field must exist) and TASK-005 (write tool must exist to be documented).

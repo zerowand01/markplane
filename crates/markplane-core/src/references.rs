@@ -74,7 +74,7 @@ pub fn validate_references(project: &Project) -> Result<Vec<BrokenReference>> {
     // Scan all .md files in all directories
     let dirs = [
         IdPrefix::Epic,
-        IdPrefix::Back,
+        IdPrefix::Task,
         IdPrefix::Plan,
         IdPrefix::Note,
     ];
@@ -114,7 +114,7 @@ pub fn find_orphans(project: &Project) -> Result<Vec<String>> {
 
     let dirs = [
         IdPrefix::Epic,
-        IdPrefix::Back,
+        IdPrefix::Task,
         IdPrefix::Plan,
         IdPrefix::Note,
     ];
@@ -191,7 +191,7 @@ fn extract_frontmatter_references(content: &str) -> Vec<String> {
 
 /// Extract ID patterns (PREFIX-NNN) from a line of text.
 fn extract_ids_from_line(line: &str, refs: &mut Vec<String>) {
-    let prefixes = ["EPIC-", "BACK-", "PLAN-", "NOTE-"];
+    let prefixes = ["EPIC-", "TASK-", "PLAN-", "NOTE-"];
     for prefix in &prefixes {
         let mut start = 0;
         while let Some(pos) = line[start..].find(prefix) {
@@ -220,7 +220,7 @@ pub fn build_reference_graph(project: &Project) -> Result<HashMap<String, Vec<St
 
     let dirs = [
         IdPrefix::Epic,
-        IdPrefix::Back,
+        IdPrefix::Task,
         IdPrefix::Plan,
         IdPrefix::Note,
     ];
@@ -259,9 +259,9 @@ mod tests {
 
     #[test]
     fn test_extract_references_basic() {
-        let content = "See [[BACK-042]] and [[EPIC-003]] for details.";
+        let content = "See [[TASK-042]] and [[EPIC-003]] for details.";
         let refs = extract_references(content);
-        assert_eq!(refs, vec!["BACK-042", "EPIC-003"]);
+        assert_eq!(refs, vec!["TASK-042", "EPIC-003"]);
     }
 
     #[test]
@@ -273,28 +273,28 @@ mod tests {
 
     #[test]
     fn test_extract_references_multiline() {
-        let content = "- [[BACK-001]]\n- [[PLAN-012]]\n- [[NOTE-007]]";
+        let content = "- [[TASK-001]]\n- [[PLAN-012]]\n- [[NOTE-007]]";
         let refs = extract_references(content);
-        assert_eq!(refs, vec!["BACK-001", "PLAN-012", "NOTE-007"]);
+        assert_eq!(refs, vec!["TASK-001", "PLAN-012", "NOTE-007"]);
     }
 
     #[test]
     fn test_extract_references_invalid_id() {
-        let content = "[[INVALID-001]] and [[BACK-042]]";
+        let content = "[[INVALID-001]] and [[TASK-042]]";
         let refs = extract_references(content);
-        assert_eq!(refs, vec!["BACK-042"]);
+        assert_eq!(refs, vec!["TASK-042"]);
     }
 
     #[test]
     fn test_extract_references_nested_brackets() {
-        let content = "[[BACK-042]] then [not a ref] then [[PLAN-001]]";
+        let content = "[[TASK-042]] then [not a ref] then [[PLAN-001]]";
         let refs = extract_references(content);
-        assert_eq!(refs, vec!["BACK-042", "PLAN-001"]);
+        assert_eq!(refs, vec!["TASK-042", "PLAN-001"]);
     }
 
     #[test]
     fn test_extract_references_no_newline_in_ref() {
-        let content = "[[BACK\n-042]]";
+        let content = "[[TASK\n-042]]";
         let refs = extract_references(content);
         assert!(refs.is_empty());
     }
@@ -309,8 +309,8 @@ mod tests {
     #[test]
     fn test_extract_ids_from_line_list() {
         let mut refs = Vec::new();
-        extract_ids_from_line("implements: [BACK-042, BACK-043]", &mut refs);
-        assert_eq!(refs, vec!["BACK-042", "BACK-043"]);
+        extract_ids_from_line("implements: [TASK-042, TASK-043]", &mut refs);
+        assert_eq!(refs, vec!["TASK-042", "TASK-043"]);
     }
 
     // ── extract_references edge cases ────────────────────────────────────
@@ -324,30 +324,30 @@ mod tests {
 
     #[test]
     fn test_extract_references_unclosed() {
-        let content = "Unclosed [[BACK-001 never closed.";
+        let content = "Unclosed [[TASK-001 never closed.";
         let refs = extract_references(content);
         assert!(refs.is_empty());
     }
 
     #[test]
     fn test_extract_references_at_start() {
-        let content = "[[BACK-001]] is at the start.";
+        let content = "[[TASK-001]] is at the start.";
         let refs = extract_references(content);
-        assert_eq!(refs, vec!["BACK-001"]);
+        assert_eq!(refs, vec!["TASK-001"]);
     }
 
     #[test]
     fn test_extract_references_at_end() {
-        let content = "Ref at the end: [[BACK-001]]";
+        let content = "Ref at the end: [[TASK-001]]";
         let refs = extract_references(content);
-        assert_eq!(refs, vec!["BACK-001"]);
+        assert_eq!(refs, vec!["TASK-001"]);
     }
 
     #[test]
     fn test_extract_references_adjacent() {
-        let content = "[[BACK-001]][[PLAN-002]]";
+        let content = "[[TASK-001]][[PLAN-002]]";
         let refs = extract_references(content);
-        assert_eq!(refs, vec!["BACK-001", "PLAN-002"]);
+        assert_eq!(refs, vec!["TASK-001", "PLAN-002"]);
     }
 
     #[test]
@@ -370,17 +370,17 @@ mod tests {
         let project = Project::init(root, "Test", "Test").unwrap();
 
         project
-            .create_backlog_item("Item A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("Item A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
         project
-            .create_backlog_item("Item B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("Item B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
 
-        // Add a valid reference from BACK-001 to BACK-002 in the body
-        let mut doc: crate::models::MarkplaneDocument<crate::models::BacklogItem> =
-            project.read_item("BACK-001").unwrap();
-        doc.body = "# Item A\n\nSee [[BACK-002]] for details.\n".to_string();
-        project.write_item("BACK-001", &doc).unwrap();
+        // Add a valid reference from TASK-001 to TASK-002 in the body
+        let mut doc: crate::models::MarkplaneDocument<crate::models::Task> =
+            project.read_item("TASK-001").unwrap();
+        doc.body = "# Item A\n\nSee [[TASK-002]] for details.\n".to_string();
+        project.write_item("TASK-001", &doc).unwrap();
 
         let broken = validate_references(&project).unwrap();
         assert!(broken.is_empty());
@@ -397,18 +397,18 @@ mod tests {
         let project = Project::init(root, "Test", "Test").unwrap();
 
         project
-            .create_backlog_item("Item A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("Item A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
 
         // Add a broken reference to a non-existent item
-        let mut doc: crate::models::MarkplaneDocument<crate::models::BacklogItem> =
-            project.read_item("BACK-001").unwrap();
-        doc.body = "# Item A\n\nSee [[BACK-999]] for details.\n".to_string();
-        project.write_item("BACK-001", &doc).unwrap();
+        let mut doc: crate::models::MarkplaneDocument<crate::models::Task> =
+            project.read_item("TASK-001").unwrap();
+        doc.body = "# Item A\n\nSee [[TASK-999]] for details.\n".to_string();
+        project.write_item("TASK-001", &doc).unwrap();
 
         let broken = validate_references(&project).unwrap();
         assert_eq!(broken.len(), 1);
-        assert_eq!(broken[0].target_id, "BACK-999");
+        assert_eq!(broken[0].target_id, "TASK-999");
     }
 
     // ── find_orphans ─────────────────────────────────────────────────────
@@ -424,22 +424,22 @@ mod tests {
         let project = Project::init(root, "Test", "Test").unwrap();
 
         project
-            .create_backlog_item("Item A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("Item A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
         project
-            .create_backlog_item("Item B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("Item B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
 
         // A references B, B references A
-        let mut doc_a: crate::models::MarkplaneDocument<crate::models::BacklogItem> =
-            project.read_item("BACK-001").unwrap();
-        doc_a.body = "# A\nSee [[BACK-002]]\n".to_string();
-        project.write_item("BACK-001", &doc_a).unwrap();
+        let mut doc_a: crate::models::MarkplaneDocument<crate::models::Task> =
+            project.read_item("TASK-001").unwrap();
+        doc_a.body = "# A\nSee [[TASK-002]]\n".to_string();
+        project.write_item("TASK-001", &doc_a).unwrap();
 
-        let mut doc_b: crate::models::MarkplaneDocument<crate::models::BacklogItem> =
-            project.read_item("BACK-002").unwrap();
-        doc_b.body = "# B\nSee [[BACK-001]]\n".to_string();
-        project.write_item("BACK-002", &doc_b).unwrap();
+        let mut doc_b: crate::models::MarkplaneDocument<crate::models::Task> =
+            project.read_item("TASK-002").unwrap();
+        doc_b.body = "# B\nSee [[TASK-001]]\n".to_string();
+        project.write_item("TASK-002", &doc_b).unwrap();
 
         let orphans = find_orphans(&project).unwrap();
         assert!(orphans.is_empty());
@@ -456,18 +456,18 @@ mod tests {
         let project = Project::init(root, "Test", "Test").unwrap();
 
         project
-            .create_backlog_item("Referenced", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("Referenced", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
         project
-            .create_backlog_item("Orphan", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("Orphan", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
 
-        // Only BACK-001 references BACK-002 via frontmatter (depends_on or body), but neither references the other
-        // BACK-002 body references BACK-001, leaving BACK-002 as orphan since nothing refs it
-        let mut doc: crate::models::MarkplaneDocument<crate::models::BacklogItem> =
-            project.read_item("BACK-001").unwrap();
+        // Only TASK-001 references TASK-002 via frontmatter (depends_on or body), but neither references the other
+        // TASK-002 body references TASK-001, leaving TASK-002 as orphan since nothing refs it
+        let mut doc: crate::models::MarkplaneDocument<crate::models::Task> =
+            project.read_item("TASK-001").unwrap();
         doc.body = "# Referenced\nStandalone.\n".to_string();
-        project.write_item("BACK-001", &doc).unwrap();
+        project.write_item("TASK-001", &doc).unwrap();
 
         let orphans = find_orphans(&project).unwrap();
         // Both items are orphans since neither references the other
@@ -487,25 +487,25 @@ mod tests {
         let project = Project::init(root, "Test", "Test").unwrap();
 
         project
-            .create_backlog_item("A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
         project
-            .create_backlog_item("B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
 
         // A's body references B
-        let mut doc: crate::models::MarkplaneDocument<crate::models::BacklogItem> =
-            project.read_item("BACK-001").unwrap();
-        doc.body = "# A\n\nSee [[BACK-002]].\n".to_string();
-        project.write_item("BACK-001", &doc).unwrap();
+        let mut doc: crate::models::MarkplaneDocument<crate::models::Task> =
+            project.read_item("TASK-001").unwrap();
+        doc.body = "# A\n\nSee [[TASK-002]].\n".to_string();
+        project.write_item("TASK-001", &doc).unwrap();
 
         let graph = build_reference_graph(&project).unwrap();
-        assert!(graph.contains_key("BACK-001"));
-        assert!(graph["BACK-001"].contains(&"BACK-002".to_string()));
+        assert!(graph.contains_key("TASK-001"));
+        assert!(graph["TASK-001"].contains(&"TASK-002".to_string()));
 
         // B doesn't reference A
-        if let Some(b_refs) = graph.get("BACK-002") {
-            assert!(!b_refs.contains(&"BACK-001".to_string()));
+        if let Some(b_refs) = graph.get("TASK-002") {
+            assert!(!b_refs.contains(&"TASK-001".to_string()));
         }
     }
 

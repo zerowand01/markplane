@@ -24,14 +24,14 @@ pub fn run(days: u32) -> anyhow::Result<()> {
     let today = Local::now().date_naive();
     let cutoff = today - chrono::Duration::days(days as i64);
 
-    let items = project.list_backlog_items(&QueryFilter::default())?;
+    let items = project.list_tasks(&QueryFilter::default())?;
 
     let stale: Vec<StaleRow> = items
         .iter()
         .filter(|doc| {
             let fm = &doc.frontmatter;
-            fm.status != markplane_core::BacklogStatus::Done
-                && fm.status != markplane_core::BacklogStatus::Cancelled
+            fm.status != markplane_core::TaskStatus::Done
+                && fm.status != markplane_core::TaskStatus::Cancelled
                 && fm.updated < cutoff
         })
         .map(|doc| {

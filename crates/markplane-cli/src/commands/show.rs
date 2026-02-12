@@ -1,6 +1,6 @@
 use colored::Colorize;
 use markplane_core::{
-    parse_id, BacklogItem, Epic, IdPrefix, MarkplaneDocument, Note, Plan, Project,
+    parse_id, Task, Epic, IdPrefix, MarkplaneDocument, Note, Plan, Project,
 };
 
 use super::formatting::{colorize_status, colorize_priority};
@@ -10,7 +10,7 @@ pub fn run(id: String) -> anyhow::Result<()> {
     let (prefix, _) = parse_id(&id)?;
 
     match prefix {
-        IdPrefix::Back => show_backlog(&project, &id)?,
+        IdPrefix::Task => show_task(&project, &id)?,
         IdPrefix::Epic => show_epic(&project, &id)?,
         IdPrefix::Plan => show_plan(&project, &id)?,
         IdPrefix::Note => show_note(&project, &id)?,
@@ -19,8 +19,8 @@ pub fn run(id: String) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn show_backlog(project: &Project, id: &str) -> anyhow::Result<()> {
-    let doc: MarkplaneDocument<BacklogItem> = project.read_item(id)?;
+fn show_task(project: &Project, id: &str) -> anyhow::Result<()> {
+    let doc: MarkplaneDocument<Task> = project.read_item(id)?;
     let fm = &doc.frontmatter;
 
     println!("{}", fm.id.bold());

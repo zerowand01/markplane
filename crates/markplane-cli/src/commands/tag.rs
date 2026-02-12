@@ -1,5 +1,5 @@
 use chrono::Local;
-use markplane_core::{parse_id, BacklogItem, IdPrefix, MarkplaneDocument, Note, Project};
+use markplane_core::{parse_id, Task, IdPrefix, MarkplaneDocument, Note, Project};
 
 use super::parse_comma_list;
 
@@ -10,8 +10,8 @@ pub fn run(id: String, tags: String) -> anyhow::Result<()> {
     let today = Local::now().date_naive();
 
     match prefix {
-        IdPrefix::Back => {
-            let mut doc: MarkplaneDocument<BacklogItem> = project.read_item(&id)?;
+        IdPrefix::Task => {
+            let mut doc: MarkplaneDocument<Task> = project.read_item(&id)?;
             for tag in &new_tags {
                 if !doc.frontmatter.tags.contains(tag) {
                     doc.frontmatter.tags.push(tag.clone());
@@ -31,7 +31,7 @@ pub fn run(id: String, tags: String) -> anyhow::Result<()> {
             project.write_item(&id, &doc)?;
         }
         _ => {
-            anyhow::bail!("Tag is currently only supported for backlog items and notes. Got: {}", id);
+            anyhow::bail!("Tag is currently only supported for tasks and notes. Got: {}", id);
         }
     }
 

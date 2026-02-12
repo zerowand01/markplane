@@ -16,7 +16,7 @@ pub fn run(id: String, priority: String, effort: String) -> anyhow::Result<()> {
     let priority: Priority = priority.parse()?;
     let effort: Effort = effort.parse()?;
 
-    let item = project.create_backlog_item(
+    let item = project.create_task(
         &note.title,
         ItemType::Feature,
         priority,

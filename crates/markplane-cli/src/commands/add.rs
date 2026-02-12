@@ -17,7 +17,7 @@ pub fn run(
     let effort: Effort = effort.parse()?;
     let tags = tags.map(|t| parse_comma_list(&t)).unwrap_or_default();
 
-    let item = project.create_backlog_item(&title, item_type, priority, effort, epic, tags)?;
+    let item = project.create_task(&title, item_type, priority, effort, epic, tags)?;
 
     println!("Created {} — {}", item.id, item.title);
 

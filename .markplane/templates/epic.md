@@ -21,7 +21,7 @@ depends_on: []
 - [ ] KR2: [Measurable outcome]
 - [ ] KR3: [Measurable outcome]
 
-## Backlog Items
+## Tasks
 
 | ID | Title | Status | Priority | Effort |
 |----|-------|--------|----------|--------|

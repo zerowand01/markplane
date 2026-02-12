@@ -19,8 +19,8 @@ Evolve the core data model to support team customization and time-boxed work pla
 
 - [ ] Statuses, priorities, and effort sizes are defined in `config.yaml` and validated at runtime
 - [ ] Default config matches current hardcoded values (zero migration burden)
-- [ ] Sprint entity type available as an optional time-boxed container for backlog items
+- [ ] Sprint entity type available as an optional time-boxed container for tasks
 
 ## Notes
 
-These are the two largest architectural changes on the roadmap. Configurable workflows (BACK-009) touches models, serialization, validation, CLI, and MCP — it's a deep refactor. Sprints (BACK-010) adds a new entity type. Both should be designed carefully and likely deserve implementation plans before coding begins. Sprints should remain optional — many teams prefer continuous flow.
+These are the two largest architectural changes on the roadmap. Configurable workflows (TASK-009) touches models, serialization, validation, CLI, and MCP — it's a deep refactor. Sprints (TASK-010) adds a new entity type. Both should be designed carefully and likely deserve implementation plans before coding begins. Sprints should remain optional — many teams prefer continuous flow.

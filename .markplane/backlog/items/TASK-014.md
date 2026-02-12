@@ -1,5 +1,5 @@
 ---
-id: BACK-014
+id: TASK-014
 title: Build migration tooling for importing from existing docs
 status: backlog
 priority: low
@@ -27,8 +27,8 @@ This is an ecosystem feature that becomes important once Markplane is mature eno
 
 ## Acceptance Criteria
 
-- [ ] `markplane import github --repo owner/repo` imports open GitHub issues as backlog items
-- [ ] `markplane import markdown <path>` imports a directory of markdown files as notes or backlog items
+- [ ] `markplane import github --repo owner/repo` imports open GitHub issues as tasks
+- [ ] `markplane import markdown <path>` imports a directory of markdown files as notes or tasks
 - [ ] `markplane import csv <file>` imports from a CSV with columns mapped to frontmatter fields
 - [ ] Import preserves original IDs as references in the body (e.g., "Imported from GitHub #42")
 - [ ] Import assigns new Markplane IDs (does not reuse external IDs)

@@ -32,8 +32,8 @@ fn generate_item_context(project: &Project, id: &str) -> anyhow::Result<()> {
     let (prefix, _) = markplane_core::parse_id(id)?;
 
     match prefix {
-        markplane_core::IdPrefix::Back => {
-            let doc: markplane_core::MarkplaneDocument<markplane_core::BacklogItem> =
+        markplane_core::IdPrefix::Task => {
+            let doc: markplane_core::MarkplaneDocument<markplane_core::Task> =
                 project.read_item(id)?;
             let fm = &doc.frontmatter;
 
@@ -85,7 +85,7 @@ fn generate_item_context(project: &Project, id: &str) -> anyhow::Result<()> {
 
             // Dependencies
             for dep_id in &fm.depends_on {
-                if let Ok(dep_doc) = project.read_item::<markplane_core::BacklogItem>(dep_id) {
+                if let Ok(dep_doc) = project.read_item::<markplane_core::Task>(dep_id) {
                     println!();
                     println!("{}", "─".repeat(60).dimmed());
                     println!("## Dependency: {} — {} ({})", dep_doc.frontmatter.id, dep_doc.frontmatter.title, dep_doc.frontmatter.status);
@@ -93,7 +93,7 @@ fn generate_item_context(project: &Project, id: &str) -> anyhow::Result<()> {
             }
         }
         _ => {
-            // For non-backlog items, just show the item content
+            // For non-task items, just show the item content
             let path = project.item_path(id)?;
             let content = fs::read_to_string(path)?;
             println!("{}", content);

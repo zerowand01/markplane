@@ -17,14 +17,14 @@ pub struct QueryFilter {
 }
 
 impl Project {
-    /// List backlog items, optionally filtered.
+    /// List tasks, optionally filtered.
     /// Results are sorted by priority (critical first), then by ID.
-    pub fn list_backlog_items(
+    pub fn list_tasks(
         &self,
         filter: &QueryFilter,
-    ) -> Result<Vec<MarkplaneDocument<BacklogItem>>> {
-        let dir = self.item_dir(&IdPrefix::Back);
-        let mut items = scan_directory::<BacklogItem>(&dir)?;
+    ) -> Result<Vec<MarkplaneDocument<Task>>> {
+        let dir = self.item_dir(&IdPrefix::Task);
+        let mut items = scan_directory::<Task>(&dir)?;
 
         items.retain(|doc| {
             let fm = &doc.frontmatter;
@@ -165,18 +165,18 @@ mod tests {
     }
 
     #[test]
-    fn test_list_backlog_items_empty() {
+    fn test_list_tasks_empty() {
         let (_tmp, project) = setup_project();
-        let items = project.list_backlog_items(&QueryFilter::default()).unwrap();
+        let items = project.list_tasks(&QueryFilter::default()).unwrap();
         assert!(items.is_empty());
     }
 
     #[test]
-    fn test_list_backlog_items_with_items() {
+    fn test_list_tasks_with_items() {
         let (_tmp, project) = setup_project();
 
         project
-            .create_backlog_item(
+            .create_task(
                 "Low item",
                 ItemType::Chore,
                 Priority::Low,
@@ -186,7 +186,7 @@ mod tests {
             )
             .unwrap();
         project
-            .create_backlog_item(
+            .create_task(
                 "High item",
                 ItemType::Feature,
                 Priority::High,
@@ -196,7 +196,7 @@ mod tests {
             )
             .unwrap();
         project
-            .create_backlog_item(
+            .create_task(
                 "Critical item",
                 ItemType::Bug,
                 Priority::Critical,
@@ -206,7 +206,7 @@ mod tests {
             )
             .unwrap();
 
-        let items = project.list_backlog_items(&QueryFilter::default()).unwrap();
+        let items = project.list_tasks(&QueryFilter::default()).unwrap();
         assert_eq!(items.len(), 3);
 
         // Should be sorted: critical, high, low
@@ -216,11 +216,11 @@ mod tests {
     }
 
     #[test]
-    fn test_list_backlog_items_filter_status() {
+    fn test_list_tasks_filter_status() {
         let (_tmp, project) = setup_project();
 
         project
-            .create_backlog_item(
+            .create_task(
                 "Draft item",
                 ItemType::Feature,
                 Priority::Medium,
@@ -230,7 +230,7 @@ mod tests {
             )
             .unwrap();
         project
-            .create_backlog_item(
+            .create_task(
                 "Another draft",
                 ItemType::Bug,
                 Priority::High,
@@ -241,23 +241,23 @@ mod tests {
             .unwrap();
 
         // Change one to in-progress
-        project.update_status("BACK-001", "in-progress").unwrap();
+        project.update_status("TASK-001", "in-progress").unwrap();
 
         let filter = QueryFilter {
             status: Some(vec!["draft".to_string()]),
             ..Default::default()
         };
-        let items = project.list_backlog_items(&filter).unwrap();
+        let items = project.list_tasks(&filter).unwrap();
         assert_eq!(items.len(), 1);
-        assert_eq!(items[0].frontmatter.id, "BACK-002");
+        assert_eq!(items[0].frontmatter.id, "TASK-002");
     }
 
     #[test]
-    fn test_list_backlog_items_filter_priority() {
+    fn test_list_tasks_filter_priority() {
         let (_tmp, project) = setup_project();
 
         project
-            .create_backlog_item(
+            .create_task(
                 "High",
                 ItemType::Feature,
                 Priority::High,
@@ -267,7 +267,7 @@ mod tests {
             )
             .unwrap();
         project
-            .create_backlog_item(
+            .create_task(
                 "Low",
                 ItemType::Feature,
                 Priority::Low,
@@ -281,17 +281,17 @@ mod tests {
             priority: Some(vec!["high".to_string()]),
             ..Default::default()
         };
-        let items = project.list_backlog_items(&filter).unwrap();
+        let items = project.list_tasks(&filter).unwrap();
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].frontmatter.title, "High");
     }
 
     #[test]
-    fn test_list_backlog_items_filter_tags() {
+    fn test_list_tasks_filter_tags() {
         let (_tmp, project) = setup_project();
 
         project
-            .create_backlog_item(
+            .create_task(
                 "UI item",
                 ItemType::Feature,
                 Priority::Medium,
@@ -301,7 +301,7 @@ mod tests {
             )
             .unwrap();
         project
-            .create_backlog_item(
+            .create_task(
                 "API item",
                 ItemType::Feature,
                 Priority::Medium,
@@ -315,7 +315,7 @@ mod tests {
             tags: Some(vec!["ui".to_string()]),
             ..Default::default()
         };
-        let items = project.list_backlog_items(&filter).unwrap();
+        let items = project.list_tasks(&filter).unwrap();
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].frontmatter.title, "UI item");
     }

@@ -17,7 +17,7 @@ Improve the day-to-day experience of using Markplane from the command line. The 
 
 ## Key Results
 
-- [ ] Users can open any item in their editor with `markplane edit BACK-001`
+- [ ] Users can open any item in their editor with `markplane edit TASK-001`
 - [ ] `serde_yaml` replaced with `serde_yaml_ng` (maintained fork, identical API)
 - [ ] All existing tests continue to pass after dependency swap
 

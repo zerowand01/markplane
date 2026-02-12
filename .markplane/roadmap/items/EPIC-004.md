@@ -17,10 +17,10 @@ Make the `.context/` layer smarter and more useful for AI-assisted development w
 
 ## Key Results
 
-- [ ] `markplane context --item BACK-042` produces a focused bundle with the item, its epic, dependencies, and related items
+- [ ] `markplane context --item TASK-042` produces a focused bundle with the item, its epic, dependencies, and related items
 - [ ] `markplane context --tag mcp` produces domain-filtered context relevant to a specific area
 - [ ] `markplane context --clipboard` copies context to the system clipboard for pasting into non-MCP AI tools
 
 ## Notes
 
-The existing `extract_references()` function and `QueryFilter` infrastructure provide the building blocks. Per-item context (BACK-011) is the most impactful — it's what an AI needs when starting work on a specific task. Domain filtering (BACK-012) builds on QueryFilter. Clipboard output (BACK-013) is trivial but enables workflows with AI tools that don't support MCP.
+The existing `extract_references()` function and `QueryFilter` infrastructure provide the building blocks. Per-item context (TASK-011) is the most impactful — it's what an AI needs when starting work on a specific task. Domain filtering (TASK-012) builds on QueryFilter. Clipboard output (TASK-013) is trivial but enables workflows with AI tools that don't support MCP.

@@ -12,8 +12,8 @@
 | AI Context | [.context/](.context/summary.md) | Generated summaries | Auto-updated |
 
 ## System Info
-- ID counter: EPIC-005, BACK-018, PLAN-000, NOTE-000
-- Last sync: 2026-02-11
+- ID counter: EPIC-005, TASK-018, PLAN-000, NOTE-000
+- Last sync: 2026-02-12
 - Config: [config.yaml](config.yaml)
 
 ## Project Documentation

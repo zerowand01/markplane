@@ -1,6 +1,6 @@
 # Ideas
 
-Quick capture for ideas that aren't backlog items yet. Promote to backlog with `markplane promote NOTE-xxx`.
+Quick capture for ideas that aren't tasks yet. Promote to backlog with `markplane promote NOTE-xxx`.
 
 ## Unsorted
 

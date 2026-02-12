@@ -1,5 +1,5 @@
 use chrono::Local;
-use markplane_core::{parse_id, BacklogItem, IdPrefix, MarkplaneDocument, Project};
+use markplane_core::{parse_id, Task, IdPrefix, MarkplaneDocument, Project};
 
 pub fn run(id: String, user: String) -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
@@ -9,14 +9,14 @@ pub fn run(id: String, user: String) -> anyhow::Result<()> {
     let user = user.strip_prefix('@').unwrap_or(&user).to_string();
 
     match prefix {
-        IdPrefix::Back => {
-            let mut doc: MarkplaneDocument<BacklogItem> = project.read_item(&id)?;
+        IdPrefix::Task => {
+            let mut doc: MarkplaneDocument<Task> = project.read_item(&id)?;
             doc.frontmatter.assignee = Some(user.clone());
             doc.frontmatter.updated = Local::now().date_naive();
             project.write_item(&id, &doc)?;
         }
         _ => {
-            anyhow::bail!("Assign is currently only supported for backlog items. Got: {}", id);
+            anyhow::bail!("Assign is currently only supported for tasks. Got: {}", id);
         }
     }
 

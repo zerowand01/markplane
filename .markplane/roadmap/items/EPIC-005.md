@@ -24,4 +24,4 @@ Expand Markplane beyond CLI and MCP into a broader platform — migration toolin
 
 ## Notes
 
-This is the most ambitious and lowest-priority epic — all items here are future work that should only be tackled once the core system (EPIC-001 through EPIC-004) is mature and stable. The web UI (BACK-017) and plugin system (BACK-018) are particularly large efforts. SSE transport (BACK-016) is a prerequisite for the web UI. File watching (BACK-015) improves the MCP experience but isn't blocking anything.
+This is the most ambitious and lowest-priority epic — all items here are future work that should only be tackled once the core system (EPIC-001 through EPIC-004) is mature and stable. The web UI (TASK-017) and plugin system (TASK-018) are particularly large efforts. SSE transport (TASK-016) is a prerequisite for the web UI. File watching (TASK-015) improves the MCP experience but isn't blocking anything.

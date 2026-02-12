@@ -1,5 +1,5 @@
 ---
-id: BACK-015
+id: TASK-015
 title: Add file watching for real-time MCP updates
 status: backlog
 priority: low
@@ -36,4 +36,4 @@ This becomes important when users edit markdown files directly (in their editor)
 
 ## Notes
 
-The `notify` crate (already mentioned in CLAUDE.md as a planned dependency) provides cross-platform file watching. Use `notify::RecommendedWatcher` with debouncing. The main complexity is mapping file paths back to MCP resource URIs (e.g., `.markplane/backlog/BACK-001.md` → `markplane://backlog/BACK-001`). File watching requires an async runtime or a background thread since the MCP server's main loop reads stdin synchronously.
+The `notify` crate (already mentioned in CLAUDE.md as a planned dependency) provides cross-platform file watching. Use `notify::RecommendedWatcher` with debouncing. The main complexity is mapping file paths back to MCP resource URIs (e.g., `.markplane/backlog/items/TASK-001.md` → `markplane://task/TASK-001`). File watching requires an async runtime or a background thread since the MCP server's main loop reads stdin synchronously.

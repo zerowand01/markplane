@@ -1,10 +1,10 @@
 use colored::Colorize;
-use markplane_core::{BacklogStatus, Priority, Project, QueryFilter};
+use markplane_core::{TaskStatus, Priority, Project, QueryFilter};
 
 pub fn run() -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
     let config = project.load_config()?;
-    let items = project.list_backlog_items(&QueryFilter::default())?;
+    let items = project.list_tasks(&QueryFilter::default())?;
     let epics = project.list_epics()?;
     let plans = project.list_plans()?;
 
@@ -14,16 +14,16 @@ pub fn run() -> anyhow::Result<()> {
 
     // Status distribution
     let total = items.len();
-    let count_status = |s: &BacklogStatus| items.iter().filter(|i| i.frontmatter.status == *s).count();
+    let count_status = |s: &TaskStatus| items.iter().filter(|i| i.frontmatter.status == *s).count();
 
-    let in_progress = count_status(&BacklogStatus::InProgress);
-    let planned = count_status(&BacklogStatus::Planned);
-    let backlog = count_status(&BacklogStatus::Backlog);
-    let draft = count_status(&BacklogStatus::Draft);
-    let done = count_status(&BacklogStatus::Done);
-    let cancelled = count_status(&BacklogStatus::Cancelled);
+    let in_progress = count_status(&TaskStatus::InProgress);
+    let planned = count_status(&TaskStatus::Planned);
+    let backlog = count_status(&TaskStatus::Backlog);
+    let draft = count_status(&TaskStatus::Draft);
+    let done = count_status(&TaskStatus::Done);
+    let cancelled = count_status(&TaskStatus::Cancelled);
 
-    println!("{}", "Backlog Status".bold());
+    println!("{}", "Task Status".bold());
     println!("  Total:       {}", total);
     println!("  In Progress: {}", in_progress.to_string().yellow());
     println!("  Planned:     {}", planned.to_string().cyan());
@@ -39,8 +39,8 @@ pub fn run() -> anyhow::Result<()> {
             .iter()
             .filter(|i| {
                 i.frontmatter.priority == *p
-                    && i.frontmatter.status != BacklogStatus::Done
-                    && i.frontmatter.status != BacklogStatus::Cancelled
+                    && i.frontmatter.status != TaskStatus::Done
+                    && i.frontmatter.status != TaskStatus::Cancelled
             })
             .count()
     };
@@ -79,7 +79,7 @@ pub fn run() -> anyhow::Result<()> {
             let epic_total = epic_items.len();
             let epic_done = epic_items
                 .iter()
-                .filter(|i| i.frontmatter.status == BacklogStatus::Done)
+                .filter(|i| i.frontmatter.status == TaskStatus::Done)
                 .count();
             let pct = if epic_total > 0 {
                 (epic_done as f64 / epic_total as f64 * 100.0) as u32

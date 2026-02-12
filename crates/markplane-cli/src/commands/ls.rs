@@ -5,7 +5,7 @@ use super::{parse_comma_list, LsKind};
 use super::formatting::{truncate, colorize_status, colorize_priority};
 
 #[derive(Tabled)]
-struct BacklogRow {
+struct TaskRow {
     #[tabled(rename = "ID")]
     id: String,
     #[tabled(rename = "Title")]
@@ -71,11 +71,11 @@ pub fn run(
         Some(LsKind::Epics) => list_epics(&project),
         Some(LsKind::Plans) => list_plans(&project),
         Some(LsKind::Notes) => list_notes(&project),
-        None => list_backlog(&project, status, priority, epic, tags, assignee, item_type),
+        None => list_tasks(&project, status, priority, epic, tags, assignee, item_type),
     }
 }
 
-fn list_backlog(
+fn list_tasks(
     project: &Project,
     status: Option<String>,
     priority: Option<String>,
@@ -93,18 +93,18 @@ fn list_backlog(
         item_type: item_type.map(|s| parse_comma_list(&s)),
     };
 
-    let items = project.list_backlog_items(&filter)?;
+    let items = project.list_tasks(&filter)?;
 
     if items.is_empty() {
-        println!("No backlog items found.");
+        println!("No tasks found.");
         return Ok(());
     }
 
-    let rows: Vec<BacklogRow> = items
+    let rows: Vec<TaskRow> = items
         .iter()
         .map(|doc| {
             let fm = &doc.frontmatter;
-            BacklogRow {
+            TaskRow {
                 id: fm.id.clone(),
                 title: truncate(&fm.title, 40),
                 status: colorize_status(&fm.status.to_string()),

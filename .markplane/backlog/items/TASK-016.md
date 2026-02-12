@@ -1,5 +1,5 @@
 ---
-id: BACK-016
+id: TASK-016
 title: Add SSE transport for MCP server
 status: backlog
 priority: low
@@ -22,7 +22,7 @@ updated: 2026-02-10
 
 The MCP server currently only supports stdio transport — it reads JSON-RPC from stdin and writes to stdout. This works for desktop clients like Claude Code and Cursor that spawn the server as a subprocess, but it doesn't work for web-based clients or remote connections. The MCP spec defines an SSE (Server-Sent Events) transport where the server listens on an HTTP port and clients connect via SSE for server-to-client messages and HTTP POST for client-to-server messages.
 
-SSE transport is a prerequisite for the web UI (BACK-017) and enables remote MCP access.
+SSE transport is a prerequisite for the web UI (TASK-017) and enables remote MCP access.
 
 ## Acceptance Criteria
 

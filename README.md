@@ -9,11 +9,11 @@ Markplane stores all project management data as markdown files with YAML frontma
 - **Filesystem as database** — Every work item is an individual markdown file. Browse, edit, and grep your project data with standard tools.
 - **Markdown + YAML frontmatter** — Structured metadata (status, priority, effort, tags) in YAML; free-form details in markdown.
 - **AI-optimized context layer** — Generated `.context/` summaries compress full project state into ~1000 tokens for AI consumption.
-- **Cross-references** — `[[BACK-042]]` wiki-style links between items, with validation via `markplane check`.
+- **Cross-references** — `[[TASK-042]]` wiki-style links between items, with validation via `markplane check`.
 - **INDEX.md router pattern** — Each directory has an INDEX.md that lets AI agents load only what they need (~200 tokens per index).
 - **MCP server** — Structured tool access for AI coding assistants (Claude, Cursor, etc.) via JSON-RPC over stdio.
 - **Dependency tracking** — `blocks` / `depends_on` relationships with visual dependency graphs.
-- **Built-in workflows** — Status progressions for backlog items, epics, plans, and notes.
+- **Built-in workflows** — Status progressions for tasks, epics, plans, and notes.
 
 ## Installation
 
@@ -44,11 +44,11 @@ markplane add "Implement user auth" --type feature --priority high --epic EPIC-0
 markplane add "Fix login redirect" --type bug --priority critical --tags "auth,urgent"
 
 # View and manage
-markplane ls                            # List backlog items
+markplane ls                            # List tasks
 markplane ls epics                      # List epics
-markplane show BACK-001                 # View item details
-markplane start BACK-001                # Set to in-progress + assign to you
-markplane done BACK-001                 # Mark as done
+markplane show TASK-001                 # View item details
+markplane start TASK-001                # Set to in-progress + assign to you
+markplane done TASK-001                 # Mark as done
 
 # Keep things organized
 markplane sync                          # Regenerate INDEX.md + .context/
@@ -66,7 +66,7 @@ After `markplane init`, your repo gets a `.markplane/` directory:
 ├── config.yaml           # Project settings and ID counters
 ├── INDEX.md              # Root navigation
 ├── roadmap/              # Epics (EPIC-NNN)
-├── backlog/              # Work items (BACK-NNN)
+├── backlog/              # Work items (TASK-NNN)
 ├── plans/                # Implementation plans (PLAN-NNN)
 ├── notes/                # Research, ideas, decisions (NOTE-NNN)
 ├── templates/            # Document templates
@@ -77,7 +77,7 @@ After `markplane init`, your repo gets a `.markplane/` directory:
 
 | Type | Statuses |
 |------|----------|
-| Backlog | `draft` → `backlog` → `planned` → `in-progress` → `done` (also `cancelled`) |
+| Task | `draft` → `backlog` → `planned` → `in-progress` → `done` (also `cancelled`) |
 | Epic | `planned` → `active` → `done` |
 | Plan | `draft` → `approved` → `in-progress` → `done` |
 | Note | `draft` → `active` → `archived` |
