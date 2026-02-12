@@ -447,7 +447,6 @@ impl Project {
             "plans",
             "plans/items",
             "plans/archive",
-            "plans/templates",
             "notes",
             "notes/items",
             "notes/archive",
@@ -598,7 +597,6 @@ mod tests {
         assert!(root.join("plans/INDEX.md").is_file());
         assert!(root.join("plans/items").is_dir());
         assert!(root.join("plans/archive").is_dir());
-        assert!(root.join("plans/templates").is_dir());
         assert!(root.join("notes/INDEX.md").is_file());
         assert!(root.join("notes/items").is_dir());
         assert!(root.join("notes/archive").is_dir());
