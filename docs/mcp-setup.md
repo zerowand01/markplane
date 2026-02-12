@@ -1,6 +1,6 @@
 # MCP Server Setup Guide
 
-MCP (Model Context Protocol) is the standard protocol for connecting AI coding tools to external systems, and Markplane's MCP server provides structured, typed access to your project management data over JSON-RPC 2.0 via stdio.
+MCP (Model Context Protocol) is the standard protocol for connecting AI coding tools to external systems, and Markplane's MCP server provides structured, typed access to your project management data over JSON-RPC 2.0 via stdio. A remote HTTP transport is planned for future releases.
 
 ## Installation
 
@@ -18,9 +18,44 @@ markplane-mcp --help
 
 ## Configuration
 
+### Scopes
+
+MCP servers can be configured at different scopes depending on who needs access:
+
+| Scope | Purpose | Storage |
+|-------|---------|---------|
+| **Local** (default) | Private to you, current project only | `~/.claude.json` (under project path) |
+| **Project** | Shared with your team via version control | `.mcp.json` at repo root |
+| **User** | Available to you across all projects | `~/.claude.json` |
+
 ### Claude Code
 
-Add to `~/.claude/mcp.json`:
+The recommended approach is the `claude mcp add` command:
+
+```bash
+# Local scope (default) — just for you, this project
+claude mcp add --transport stdio markplane -- markplane-mcp
+
+# Point at a different repo's .markplane/ (rare — only if it's not in your working directory)
+claude mcp add --transport stdio markplane -- markplane-mcp --project /path/to/repo
+
+# User scope — available across all your projects
+claude mcp add --transport stdio --scope user markplane -- markplane-mcp
+```
+
+Manage servers with:
+
+```bash
+claude mcp list                  # List configured servers
+claude mcp get markplane         # View server details
+claude mcp remove markplane      # Remove a server
+```
+
+Inside Claude Code, use `/mcp` to check server status.
+
+### Project-wide (`.mcp.json`)
+
+To share the MCP server with your team, add a `.mcp.json` file at the repo root and commit it to version control:
 
 ```json
 {
@@ -34,23 +69,19 @@ Add to `~/.claude/mcp.json`:
 }
 ```
 
-To specify an explicit project path:
+Or create it via the CLI:
 
-```json
-{
-  "mcpServers": {
-    "markplane": {
-      "command": "markplane-mcp",
-      "args": ["--project", "/path/to/repo"],
-      "env": {}
-    }
-  }
-}
+```bash
+claude mcp add --transport stdio --scope project markplane -- markplane-mcp
 ```
+
+Claude Code prompts for approval before using project-scoped servers. To reset approval choices: `claude mcp reset-project-choices`.
+
+The `.mcp.json` format supports environment variable expansion (`${VAR}` or `${VAR:-default}`) for machine-specific paths and secrets.
 
 ### Cursor
 
-Add to `.cursor/mcp.json` in your project root (same format):
+Add to `.cursor/mcp.json` in your project root:
 
 ```json
 {
@@ -64,9 +95,13 @@ Add to `.cursor/mcp.json` in your project root (same format):
 }
 ```
 
+To specify an explicit project path, add `"--project", "/path/to/repo"` to the `args` array.
+
 ## How It Works
 
-The MCP server runs as a stdio process. It reads JSON-RPC 2.0 requests (one per line) from stdin and writes responses to stdout. Diagnostic messages go to stderr. The server automatically locates the `.markplane/` directory by walking up from the current working directory, or uses the `--project` argument if provided.
+The MCP server runs as a stdio process. It reads JSON-RPC 2.0 requests (one per line) from stdin and writes responses to stdout. Diagnostic messages go to stderr.
+
+The server inherits its working directory from the AI tool that launches it (e.g. Claude Code uses the project folder you're in). It automatically locates `.markplane/` by walking up from that directory. The `--project` argument overrides this — use it when your `.markplane/` directory lives in a different repo than the one you're coding in.
 
 **Protocol version**: `2025-11-25`
 
@@ -310,9 +345,19 @@ The server recognizes the `notifications/initialized` and `initialized` methods 
 The MCP server wraps the same `markplane-core` library used by the CLI:
 
 ```
-CLI binary ──> Core Library (Rust) <── MCP Server (stdio)
+CLI binary ──> Core Library (Rust) <── MCP Server (stdio / HTTP planned)
                      |
               .markplane/ (markdown files)
 ```
 
 Both the CLI and MCP server share identical file parsing, YAML handling, cross-reference validation, and context generation logic.
+
+### Transport roadmap
+
+The server currently supports **stdio** transport (local process). A **remote HTTP** transport is planned, which will enable:
+
+- Connecting from cloud-hosted AI tools without a local binary
+- Team-wide shared server instances
+- Configuration via `claude mcp add --transport http` or URL-based `.mcp.json` entries
+
+SSE transport is deprecated in the MCP ecosystem — the HTTP (Streamable HTTP) transport is the recommended remote option.

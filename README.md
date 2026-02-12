@@ -90,7 +90,15 @@ After `markplane init`, your repo gets a `.markplane/` directory:
 
 ## MCP Integration
 
-Markplane includes an MCP server for AI tool integration. Configure it in your AI tool's MCP settings:
+Markplane includes an MCP server for AI tool integration.
+
+**Claude Code** (recommended — uses the `claude mcp add` command):
+
+```bash
+claude mcp add --transport stdio markplane -- markplane-mcp
+```
+
+**Project-wide** (shared with your team via `.mcp.json` at repo root):
 
 ```json
 {
@@ -103,7 +111,7 @@ Markplane includes an MCP server for AI tool integration. Configure it in your A
 }
 ```
 
-See the [MCP Setup Guide](docs/mcp-setup.md) for the full tool and resource catalog.
+See the [MCP Setup Guide](docs/mcp-setup.md) for scopes, configuration options, and the full tool and resource catalog.
 
 ## License
 
