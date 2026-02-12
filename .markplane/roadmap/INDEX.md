@@ -7,42 +7,42 @@
 
 | ID | Title | Status | Priority | Effort |
 |----|-------|--------|----------|--------|
-| BACK-001 | Add instructions field to MCP initialize response | backlog | high | small |
-| BACK-002 | Add missing PLAN and NOTE resource templates to MCP | backlog | high | xs |
-| BACK-003 | Update MCP protocol version to 2025-11-25 | backlog | high | xs |
-| BACK-004 | Add serverInfo.description to MCP initialize response | backlog | high | xs |
-| BACK-005 | Add markplane_write MCP tool for updating markdown body content | backlog | high | medium |
-| BACK-006 | Document create-then-edit workflow in MCP instructions | backlog | medium | small |
+| [BACK-001](../backlog/items/BACK-001.md) | Add instructions field to MCP initialize response | backlog | high | small |
+| [BACK-002](../backlog/items/BACK-002.md) | Add missing PLAN and NOTE resource templates to MCP | backlog | high | xs |
+| [BACK-003](../backlog/items/BACK-003.md) | Update MCP protocol version to 2025-11-25 | backlog | high | xs |
+| [BACK-004](../backlog/items/BACK-004.md) | Add serverInfo.description to MCP initialize response | backlog | high | xs |
+| [BACK-005](../backlog/items/BACK-005.md) | Add markplane_write MCP tool for updating markdown body content | backlog | high | medium |
+| [BACK-006](../backlog/items/BACK-006.md) | Document create-then-edit workflow in MCP instructions | backlog | medium | small |
 
 ### [EPIC-002](items/EPIC-002.md) Developer Experience (0/2, 0%)
 
 | ID | Title | Status | Priority | Effort |
 |----|-------|--------|----------|--------|
-| BACK-007 | Add markplane edit command to open items in editor | backlog | medium | small |
-| BACK-008 | Swap serde_yaml to serde_yaml_ng | backlog | low | small |
+| [BACK-007](../backlog/items/BACK-007.md) | Add markplane edit command to open items in editor | backlog | medium | small |
+| [BACK-008](../backlog/items/BACK-008.md) | Swap serde_yaml to serde_yaml_ng | backlog | low | small |
 
 ### [EPIC-003](items/EPIC-003.md) Core Architecture (0/2, 0%)
 
 | ID | Title | Status | Priority | Effort |
 |----|-------|--------|----------|--------|
-| BACK-009 | Implement configurable workflows for statuses, priorities, and effort sizes | backlog | medium | large |
-| BACK-010 | Add Sprint/Iteration entity type | backlog | low | large |
+| [BACK-009](../backlog/items/BACK-009.md) | Implement configurable workflows for statuses, priorities, and effort sizes | backlog | medium | large |
+| [BACK-010](../backlog/items/BACK-010.md) | Add Sprint/Iteration entity type | backlog | low | large |
 
 ### [EPIC-004](items/EPIC-004.md) Context and AI Integration (0/3, 0%)
 
 | ID | Title | Status | Priority | Effort |
 |----|-------|--------|----------|--------|
-| BACK-011 | Implement rich context bundles for individual items | backlog | medium | medium |
-| BACK-012 | Add domain-focused context generation | backlog | medium | medium |
-| BACK-013 | Add clipboard context output | backlog | low | xs |
+| [BACK-011](../backlog/items/BACK-011.md) | Implement rich context bundles for individual items | backlog | medium | medium |
+| [BACK-012](../backlog/items/BACK-012.md) | Add domain-focused context generation | backlog | medium | medium |
+| [BACK-013](../backlog/items/BACK-013.md) | Add clipboard context output | backlog | low | xs |
 
 ### [EPIC-005](items/EPIC-005.md) Platform and Ecosystem (0/5, 0%)
 
 | ID | Title | Status | Priority | Effort |
 |----|-------|--------|----------|--------|
-| BACK-014 | Build migration tooling for importing from existing docs | backlog | low | large |
-| BACK-015 | Add file watching for real-time MCP updates | backlog | low | medium |
-| BACK-016 | Add SSE transport for MCP server | backlog | low | medium |
-| BACK-017 | Build web UI with React and Tailwind | backlog | someday | xl |
-| BACK-018 | Implement plugin system for external integrations | backlog | someday | xl |
+| [BACK-014](../backlog/items/BACK-014.md) | Build migration tooling for importing from existing docs | backlog | low | large |
+| [BACK-015](../backlog/items/BACK-015.md) | Add file watching for real-time MCP updates | backlog | low | medium |
+| [BACK-016](../backlog/items/BACK-016.md) | Add SSE transport for MCP server | backlog | low | medium |
+| [BACK-017](../backlog/items/BACK-017.md) | Build web UI with React and Tailwind | backlog | someday | xl |
+| [BACK-018](../backlog/items/BACK-018.md) | Implement plugin system for external integrations | backlog | someday | xl |
 

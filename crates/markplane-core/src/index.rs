@@ -136,11 +136,11 @@ impl Project {
             content.push_str("|----|-------|------------|------|----------|\n");
             for item in &blocked {
                 let fm = &item.frontmatter;
-                let unresolved: Vec<&str> = fm
+                let unresolved: Vec<String> = fm
                     .depends_on
                     .iter()
                     .filter(|dep| !done_ids.contains(dep.as_str()))
-                    .map(|dep| dep.as_str())
+                    .map(|dep| cross_link(dep))
                     .collect();
                 let epic_str = epic_cell(&fm.epic);
                 content.push_str(&format!(
@@ -273,7 +273,7 @@ impl Project {
                         let fm = &item.frontmatter;
                         content.push_str(&format!(
                             "| {} | {} | {} | {} | {} |\n",
-                            fm.id, fm.title, fm.status, fm.priority, fm.effort
+                            cross_link(&fm.id), fm.title, fm.status, fm.priority, fm.effort
                         ));
                     }
                     content.push('\n');
@@ -307,7 +307,7 @@ impl Project {
                     plan.frontmatter
                         .implements
                         .iter()
-                        .map(|id| id.to_string())
+                        .map(|id| cross_link(id))
                         .collect::<Vec<_>>()
                         .join(", ")
                 };
@@ -411,17 +411,29 @@ impl Project {
     }
 }
 
-/// Format an optional epic reference as a table cell value.
-/// Uses plain text ID (cross-directory reference, not a link).
+/// Format an optional epic reference as a cross-directory link.
 fn epic_cell(epic: &Option<String>) -> String {
     epic.as_ref()
-        .map(|e| e.to_string())
+        .map(|e| cross_link(e))
         .unwrap_or_else(|| "\u{2014}".to_string())
 }
 
-/// Format an item ID as a markdown link to its file in the items/ subdirectory.
+/// Format an item ID as a markdown link to its file in the same directory's items/ subdirectory.
 fn item_link(id: &str) -> String {
     format!("[{}](items/{}.md)", id, id)
+}
+
+/// Format an item ID as a markdown link to its file in another directory.
+/// Resolves the prefix to the correct directory (e.g. BACK-001 → ../backlog/items/BACK-001.md).
+fn cross_link(id: &str) -> String {
+    let dir = match id.split('-').next() {
+        Some("EPIC") => "roadmap",
+        Some("BACK") => "backlog",
+        Some("PLAN") => "plans",
+        Some("NOTE") => "notes",
+        _ => return id.to_string(),
+    };
+    format!("[{}](../{}/items/{}.md)", id, dir, id)
 }
 
 /// Count (done, total) backlog items for a given epic.
@@ -605,7 +617,7 @@ mod tests {
 
         project.generate_backlog_index().unwrap();
         let content = fs::read_to_string(project.root().join("backlog/INDEX.md")).unwrap();
-        assert!(content.contains("EPIC-001"));
+        assert!(content.contains("[EPIC-001](../roadmap/items/EPIC-001.md)"));
         assert!(content.contains("\u{2014}"));
     }
 
@@ -641,7 +653,7 @@ mod tests {
         project.generate_backlog_index().unwrap();
         let content = fs::read_to_string(project.root().join("backlog/INDEX.md")).unwrap();
         assert!(content.contains("## Blocked (1)"));
-        assert!(content.contains("BACK-001")); // In the Blocked By column
+        assert!(content.contains("[BACK-001](../backlog/items/BACK-001.md)")); // In the Blocked By column
         // BACK-001 is in Drafts (not blocked), BACK-002 is in Blocked
         assert!(content.contains("## Drafts (1)"));
     }
@@ -672,7 +684,7 @@ mod tests {
         assert!(content.contains(GENERATED_HEADER));
         assert!(content.contains("## Active Epics"));
         assert!(content.contains("### [EPIC-001](items/EPIC-001.md) Active Epic (0/1, 0%)"));
-        assert!(content.contains("BACK-001"));
+        assert!(content.contains("[BACK-001](../backlog/items/BACK-001.md)"));
         assert!(content.contains("## Planned Epics"));
         assert!(content.contains("### [EPIC-002](items/EPIC-002.md) Planned Epic (0/0, 0%)"));
     }
@@ -709,8 +721,8 @@ mod tests {
         let content = fs::read_to_string(project.root().join("roadmap/INDEX.md")).unwrap();
         assert!(content.contains("### [EPIC-001](items/EPIC-001.md) Test Epic (1/2, 50%)"));
         assert!(content.contains("| ID | Title | Status | Priority | Effort |"));
-        assert!(content.contains("BACK-001"));
-        assert!(content.contains("BACK-002"));
+        assert!(content.contains("[BACK-001](../backlog/items/BACK-001.md)"));
+        assert!(content.contains("[BACK-002](../backlog/items/BACK-002.md)"));
     }
 
     #[test]
@@ -726,7 +738,7 @@ mod tests {
         let content = fs::read_to_string(project.root().join("plans/INDEX.md")).unwrap();
         assert!(content.contains("Active Plans"));
         assert!(content.contains("[PLAN-001](items/PLAN-001.md)"));
-        assert!(content.contains("BACK-001"));
+        assert!(content.contains("[BACK-001](../backlog/items/BACK-001.md)"));
         assert!(content.contains("Completed Plans"));
         assert!(content.contains("[PLAN-002](items/PLAN-002.md)"));
     }
