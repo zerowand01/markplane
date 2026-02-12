@@ -114,6 +114,20 @@ Markplane targets ~1000 tokens for full project state via context files. Individ
 7. markplane_sync              -> regenerate indexes and context files
 ```
 
+### Example: AI creating a new item
+
+The create-then-edit workflow uses `markplane_add` to scaffold the item, then `markplane_write` to fill in the body:
+
+```
+1. markplane_add               -> create the item (scaffolded from template)
+   { title: "Add caching layer", priority: "high" }
+   returns: { id: "BACK-043" }
+2. markplane_write             -> fill in the markdown body content
+   { id: "BACK-043", body: "# Add caching layer\n\n## Description\n\n..." }
+3. markplane_update            -> move from draft to backlog once fully defined
+   { id: "BACK-043", status: "backlog" }
+```
+
 Total context consumed: ~2000-3000 tokens for the project management layer, leaving the rest of the context window for code.
 
 ### Cross-references

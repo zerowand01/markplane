@@ -41,6 +41,18 @@ pub fn list_resources() -> Value {
                 "name": "Epic",
                 "description": "Full content of an epic by ID",
                 "mimeType": "text/markdown"
+            },
+            {
+                "uriTemplate": "markplane://plan/{id}",
+                "name": "Plan",
+                "description": "Full content of an implementation plan by ID",
+                "mimeType": "text/markdown"
+            },
+            {
+                "uriTemplate": "markplane://note/{id}",
+                "name": "Note",
+                "description": "Full content of a note by ID",
+                "mimeType": "text/markdown"
             }
         ]
     })
@@ -59,6 +71,14 @@ pub fn read_resource(id: Value, project: &Project, uri: &str) -> JsonRpcResponse
         _ if uri.starts_with("markplane://epic/") => {
             let item_id = &uri["markplane://epic/".len()..];
             read_epic_item(project, item_id)
+        }
+        _ if uri.starts_with("markplane://plan/") => {
+            let item_id = &uri["markplane://plan/".len()..];
+            read_plan_item(project, item_id)
+        }
+        _ if uri.starts_with("markplane://note/") => {
+            let item_id = &uri["markplane://note/".len()..];
+            read_note_item(project, item_id)
         }
         _ => {
             return JsonRpcResponse::error(
@@ -209,6 +229,24 @@ fn read_epic_item(project: &Project, item_id: &str) -> Result<String, String> {
     let (prefix, _) = parse_id(item_id).map_err(|e| e.to_string())?;
     if prefix != IdPrefix::Epic {
         return Err(format!("Expected EPIC- ID, got: {}", item_id));
+    }
+    let path = project.item_path(item_id).map_err(|e| e.to_string())?;
+    fs::read_to_string(&path).map_err(|e| e.to_string())
+}
+
+fn read_plan_item(project: &Project, item_id: &str) -> Result<String, String> {
+    let (prefix, _) = parse_id(item_id).map_err(|e| e.to_string())?;
+    if prefix != IdPrefix::Plan {
+        return Err(format!("Expected PLAN- ID, got: {}", item_id));
+    }
+    let path = project.item_path(item_id).map_err(|e| e.to_string())?;
+    fs::read_to_string(&path).map_err(|e| e.to_string())
+}
+
+fn read_note_item(project: &Project, item_id: &str) -> Result<String, String> {
+    let (prefix, _) = parse_id(item_id).map_err(|e| e.to_string())?;
+    if prefix != IdPrefix::Note {
+        return Err(format!("Expected NOTE- ID, got: {}", item_id));
     }
     let path = project.item_path(item_id).map_err(|e| e.to_string())?;
     fs::read_to_string(&path).map_err(|e| e.to_string())

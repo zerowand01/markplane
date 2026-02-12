@@ -1,7 +1,7 @@
 ---
 id: BACK-004
 title: Add serverInfo.description to MCP initialize response
-status: backlog
+status: done
 priority: high
 type: feature
 effort: xs
@@ -13,7 +13,7 @@ depends_on: []
 blocks: []
 assignee: null
 created: 2026-02-10
-updated: 2026-02-10
+updated: 2026-02-11
 ---
 
 # Add serverInfo.description to MCP initialize response

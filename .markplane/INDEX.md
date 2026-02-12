@@ -5,8 +5,8 @@
 
 | Module | Path | Purpose | Active Items |
 |--------|------|---------|-------------|
-| Roadmap | [roadmap/](roadmap/INDEX.md) | Strategic phases & epics | 5 active epics |
-| Backlog | [backlog/](backlog/INDEX.md) | All work items | 18 open items |
+| Roadmap | [roadmap/](roadmap/INDEX.md) | Strategic phases & epics | 4 active epics |
+| Backlog | [backlog/](backlog/INDEX.md) | All work items | 12 open items |
 | Plans | [plans/](plans/INDEX.md) | Implementation details | 0 active plans |
 | Notes | [notes/](notes/INDEX.md) | Research & ideas | 0 active notes |
 | AI Context | [.context/](.context/summary.md) | Generated summaries | Auto-updated |

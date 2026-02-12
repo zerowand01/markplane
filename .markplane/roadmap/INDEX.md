@@ -3,17 +3,6 @@
 
 ## Planned Epics
 
-### [EPIC-001](items/EPIC-001.md) MCP Protocol Improvements (0/6, 0%)
-
-| ID | Title | Status | Priority | Effort |
-|----|-------|--------|----------|--------|
-| [BACK-001](../backlog/items/BACK-001.md) | Add instructions field to MCP initialize response | backlog | high | small |
-| [BACK-002](../backlog/items/BACK-002.md) | Add missing PLAN and NOTE resource templates to MCP | backlog | high | xs |
-| [BACK-003](../backlog/items/BACK-003.md) | Update MCP protocol version to 2025-11-25 | backlog | high | xs |
-| [BACK-004](../backlog/items/BACK-004.md) | Add serverInfo.description to MCP initialize response | backlog | high | xs |
-| [BACK-005](../backlog/items/BACK-005.md) | Add markplane_write MCP tool for updating markdown body content | backlog | high | medium |
-| [BACK-006](../backlog/items/BACK-006.md) | Document create-then-edit workflow in MCP instructions | backlog | medium | small |
-
 ### [EPIC-002](items/EPIC-002.md) Developer Experience (0/2, 0%)
 
 | ID | Title | Status | Priority | Effort |

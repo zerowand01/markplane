@@ -1,7 +1,7 @@
 ---
 id: BACK-006
 title: Document create-then-edit workflow in MCP instructions
-status: backlog
+status: done
 priority: medium
 type: enhancement
 effort: small
@@ -16,7 +16,7 @@ depends_on:
 blocks: []
 assignee: null
 created: 2026-02-10
-updated: 2026-02-10
+updated: 2026-02-11
 ---
 
 # Document create-then-edit workflow in MCP instructions

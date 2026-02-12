@@ -1,7 +1,7 @@
 ---
 id: BACK-002
 title: Add missing PLAN and NOTE resource templates to MCP
-status: backlog
+status: done
 priority: high
 type: bug
 effort: xs
@@ -13,7 +13,7 @@ depends_on: []
 blocks: []
 assignee: null
 created: 2026-02-10
-updated: 2026-02-10
+updated: 2026-02-11
 ---
 
 # Add missing PLAN and NOTE resource templates to MCP

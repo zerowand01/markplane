@@ -3,23 +3,14 @@
 
 ## In Progress (0)
 
-## Blocked (1)
-
-| ID | Title | Blocked By | Epic | Priority |
-|----|-------|------------|------|----------|
-| [BACK-006](items/BACK-006.md) | Document create-then-edit workflow in MCP instructions | [BACK-001](../backlog/items/BACK-001.md), [BACK-005](../backlog/items/BACK-005.md) | [EPIC-001](../roadmap/items/EPIC-001.md) | medium |
+## Blocked (0)
 
 ## Planned (0)
 
-## Backlog (17)
+## Backlog (12)
 
 | ID | Title | Epic | Priority | Effort |
 |----|-------|------|----------|--------|
-| [BACK-001](items/BACK-001.md) | Add instructions field to MCP initialize response | [EPIC-001](../roadmap/items/EPIC-001.md) | high | small |
-| [BACK-002](items/BACK-002.md) | Add missing PLAN and NOTE resource templates to MCP | [EPIC-001](../roadmap/items/EPIC-001.md) | high | xs |
-| [BACK-003](items/BACK-003.md) | Update MCP protocol version to 2025-11-25 | [EPIC-001](../roadmap/items/EPIC-001.md) | high | xs |
-| [BACK-004](items/BACK-004.md) | Add serverInfo.description to MCP initialize response | [EPIC-001](../roadmap/items/EPIC-001.md) | high | xs |
-| [BACK-005](items/BACK-005.md) | Add markplane_write MCP tool for updating markdown body content | [EPIC-001](../roadmap/items/EPIC-001.md) | high | medium |
 | [BACK-007](items/BACK-007.md) | Add markplane edit command to open items in editor | [EPIC-002](../roadmap/items/EPIC-002.md) | medium | small |
 | [BACK-009](items/BACK-009.md) | Implement configurable workflows for statuses, priorities, and effort sizes | [EPIC-003](../roadmap/items/EPIC-003.md) | medium | large |
 | [BACK-011](items/BACK-011.md) | Implement rich context bundles for individual items | [EPIC-004](../roadmap/items/EPIC-004.md) | medium | medium |

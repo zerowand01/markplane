@@ -1,7 +1,7 @@
 ---
 id: BACK-003
 title: Update MCP protocol version to 2025-11-25
-status: backlog
+status: done
 priority: high
 type: chore
 effort: xs
@@ -13,7 +13,7 @@ depends_on: []
 blocks: []
 assignee: null
 created: 2026-02-10
-updated: 2026-02-10
+updated: 2026-02-11
 ---
 
 # Update MCP protocol version to 2025-11-25

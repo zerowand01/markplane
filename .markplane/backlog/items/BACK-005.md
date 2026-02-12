@@ -1,7 +1,7 @@
 ---
 id: BACK-005
 title: Add markplane_write MCP tool for updating markdown body content
-status: backlog
+status: done
 priority: high
 type: feature
 effort: medium
@@ -15,7 +15,7 @@ blocks:
 - BACK-006
 assignee: null
 created: 2026-02-10
-updated: 2026-02-10
+updated: 2026-02-11
 ---
 
 # Add markplane_write MCP tool for updating markdown body content

@@ -1,7 +1,7 @@
 ---
 id: BACK-001
 title: Add instructions field to MCP initialize response
-status: backlog
+status: done
 priority: high
 type: feature
 effort: small
@@ -15,7 +15,7 @@ blocks:
 - BACK-006
 assignee: null
 created: 2026-02-10
-updated: 2026-02-10
+updated: 2026-02-11
 ---
 
 # Add instructions field to MCP initialize response

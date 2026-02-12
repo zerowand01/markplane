@@ -2,6 +2,4 @@
 # Blocked Items
 <!-- Last updated: 2026-02-11 -->
 
-1 blocked items:
-
-- **[[BACK-006]]** Document create-then-edit workflow in MCP instructions (medium) — blocked by [[BACK-001]], [[BACK-005]]
+No blocked items.

@@ -54,13 +54,13 @@ Add to `.cursor/mcp.json` in your project root (same format):
 
 The MCP server runs as a stdio process. It reads JSON-RPC 2.0 requests (one per line) from stdin and writes responses to stdout. Diagnostic messages go to stderr. The server automatically locates the `.markplane/` directory by walking up from the current working directory, or uses the `--project` argument if provided.
 
-**Protocol version**: `2024-11-05`
+**Protocol version**: `2025-11-25`
 
 **Security limits**: Input lines are capped at 1 MB to prevent memory exhaustion.
 
 ## Tool Catalog
 
-The server exposes 15 tools via the `tools/list` method.
+The server exposes 16 tools via the `tools/list` method.
 
 ### Context & Navigation
 
@@ -82,6 +82,7 @@ The server exposes 15 tools via the `tools/list` method.
 | Tool | Description | Required Params | Optional Params |
 |------|-------------|-----------------|-----------------|
 | `markplane_add` | Create a new backlog item. | `title` (string) | `type` (string): feature/bug/enhancement/chore/research/spike, default feature; `priority` (string): critical/high/medium/low/someday, default medium; `effort` (string): xs/small/medium/large/xl, default medium; `epic` (string): parent epic ID; `tags` (string[]): tags for the item |
+| `markplane_write` | Write or replace the markdown body content of an item. Preserves frontmatter. | `id` (string), `body` (string) | *(none)* |
 | `markplane_update` | Update fields on an existing item. | `id` (string) | `status` (string): new status; `priority` (string): new priority; `assignee` (string): new assignee |
 | `markplane_start` | Set a backlog item to in-progress status. | `id` (string) | *(none)* |
 | `markplane_done` | Mark a backlog item as done. | `id` (string) | *(none)* |
@@ -104,7 +105,7 @@ The server exposes 15 tools via the `tools/list` method.
 
 ## Resource Catalog
 
-The server exposes 5 resources via the `resources/list` method. All resources return `text/markdown` content.
+The server exposes 7 resources via the `resources/list` method. All resources return `text/markdown` content.
 
 ### Static Resources
 
@@ -120,6 +121,8 @@ The server exposes 5 resources via the `resources/list` method. All resources re
 |--------------|------|-------------|
 | `markplane://backlog/{id}` | Backlog Item | Full content of a backlog item by ID (e.g. `markplane://backlog/BACK-042`) |
 | `markplane://epic/{id}` | Epic | Full content of an epic by ID (e.g. `markplane://epic/EPIC-001`) |
+| `markplane://plan/{id}` | Plan | Full content of an implementation plan by ID (e.g. `markplane://plan/PLAN-001`) |
+| `markplane://note/{id}` | Note | Full content of a note by ID (e.g. `markplane://note/NOTE-001`) |
 
 ## JSON-RPC Examples
 
@@ -138,18 +141,22 @@ All communication uses [JSON-RPC 2.0](https://www.jsonrpc.org/specification). Ea
   "jsonrpc": "2.0",
   "id": 1,
   "result": {
-    "protocolVersion": "2024-11-05",
+    "protocolVersion": "2025-11-25",
     "capabilities": {
       "tools": {},
       "resources": {}
     },
     "serverInfo": {
       "name": "markplane",
-      "version": "0.1.0"
-    }
+      "version": "0.1.0",
+      "description": "AI-native, markdown-first project management. Files are the source of truth, git is the changelog."
+    },
+    "instructions": "Markplane is an AI-native, markdown-first project management system for the project \"My Project\". ..."
   }
 }
 ```
+
+The `instructions` field contains dynamic guidance built from the project's `config.yaml`, including entity types, status workflows, the create-then-edit workflow, and cross-reference syntax. The full text is typically ~1500 characters.
 
 ### markplane_add
 

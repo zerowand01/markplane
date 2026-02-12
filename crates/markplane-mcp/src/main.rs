@@ -131,7 +131,7 @@ fn handle_request(project: &Project, request: &JsonRpcRequest) -> Option<JsonRpc
     let id = request.id.clone().unwrap_or(Value::Null);
 
     match request.method.as_str() {
-        "initialize" => Some(handle_initialize(id)),
+        "initialize" => Some(handle_initialize(id, project)),
         "tools/list" => Some(handle_tools_list(id)),
         "tools/call" => Some(handle_tools_call(id, project, &request.params)),
         "resources/list" => Some(handle_resources_list(id)),
@@ -148,20 +148,62 @@ fn handle_request(project: &Project, request: &JsonRpcRequest) -> Option<JsonRpc
     }
 }
 
-fn handle_initialize(id: Value) -> JsonRpcResponse {
+fn handle_initialize(id: Value, project: &Project) -> JsonRpcResponse {
+    let instructions = build_instructions(project);
+
     JsonRpcResponse::success(
         id,
         json!({
-            "protocolVersion": "2024-11-05",
+            "protocolVersion": "2025-11-25",
             "capabilities": {
                 "tools": {},
                 "resources": {}
             },
             "serverInfo": {
                 "name": "markplane",
-                "version": env!("CARGO_PKG_VERSION")
-            }
+                "version": env!("CARGO_PKG_VERSION"),
+                "description": "AI-native, markdown-first project management. Files are the source of truth, git is the changelog."
+            },
+            "instructions": instructions
         }),
+    )
+}
+
+fn build_instructions(project: &Project) -> String {
+    let project_name = project
+        .load_config()
+        .map(|c| c.project.name)
+        .unwrap_or_else(|_| "Unknown".to_string());
+
+    format!(
+        "Markplane is an AI-native, markdown-first project management system for the project \"{project_name}\". \
+Files are the source of truth, git is the changelog.\n\
+\n\
+## Entity Types\n\
+- BACK-NNN: Backlog items (tasks, bugs, features). Statuses: draft → backlog → planned → in-progress → done (also cancelled)\n\
+- EPIC-NNN: Strategic epics grouping related backlog items. Statuses: planned → active → done\n\
+- PLAN-NNN: Implementation plans linked to backlog items. Statuses: draft → approved → in-progress → done\n\
+- NOTE-NNN: Research notes, ideas, and decisions. Statuses: draft → active → archived\n\
+\n\
+## Recommended Workflow\n\
+1. Use markplane_summary or markplane_query to understand current project state\n\
+2. Use markplane_show to read full details of any item by ID\n\
+3. Use markplane_add to create new backlog items (creates template with placeholder content)\n\
+4. Use markplane_write to fill in the markdown body content after creating an item\n\
+5. Use markplane_start/markplane_done to track progress\n\
+6. Use markplane_sync to regenerate indexes and context summaries\n\
+\n\
+## Create-Then-Edit Workflow\n\
+When creating items with markplane_add, the file is scaffolded from a template with placeholder \
+content (e.g., \"[What needs to be done and why]\"). After creating an item, use markplane_write \
+with the item's ID and the full markdown body to fill in the actual content. The typical pattern is:\n\
+1. markplane_add to create the item (status starts as \"draft\")\n\
+2. markplane_write to fill in the description, acceptance criteria, etc.\n\
+3. markplane_update to set status to \"backlog\" once the item is fully defined\n\
+\n\
+## Cross-References\n\
+Use [[BACK-042]] wiki-link syntax to reference other items in markdown body content. \
+The prefix determines the entity type and location."
     )
 }
 

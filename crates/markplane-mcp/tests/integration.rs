@@ -81,6 +81,24 @@ fn test_initialize() {
         .contains("markplane"));
     assert!(response["result"]["capabilities"]["tools"].is_object());
     assert!(response["result"]["capabilities"]["resources"].is_object());
+    // BACK-003: Protocol version should be 2025-11-25
+    assert_eq!(response["result"]["protocolVersion"], "2025-11-25");
+    // BACK-004: serverInfo should include a description
+    let description = response["result"]["serverInfo"]["description"]
+        .as_str()
+        .unwrap();
+    assert!(description.contains("markdown-first"));
+    // BACK-001: instructions field should be present and include project name
+    let instructions = response["result"]["instructions"].as_str().unwrap();
+    assert!(!instructions.is_empty());
+    assert!(instructions.contains("Test Project"));
+    assert!(instructions.contains("BACK-NNN"));
+    assert!(instructions.contains("EPIC-NNN"));
+    assert!(instructions.contains("PLAN-NNN"));
+    assert!(instructions.contains("NOTE-NNN"));
+    // BACK-006: instructions should describe create-then-edit workflow
+    assert!(instructions.contains("markplane_write"));
+    assert!(instructions.contains("Create-Then-Edit"));
 }
 
 // ── Ping ─────────────────────────────────────────────────────────────────
@@ -180,6 +198,7 @@ fn test_tools_list() {
     assert!(tool_names.contains(&"markplane_query"));
     assert!(tool_names.contains(&"markplane_show"));
     assert!(tool_names.contains(&"markplane_add"));
+    assert!(tool_names.contains(&"markplane_write"));
     assert!(tool_names.contains(&"markplane_update"));
     assert!(tool_names.contains(&"markplane_start"));
     assert!(tool_names.contains(&"markplane_done"));
@@ -220,6 +239,20 @@ fn test_resources_list() {
     assert!(uris.contains(&"markplane://summary"));
     assert!(uris.contains(&"markplane://active-work"));
     assert!(uris.contains(&"markplane://blocked"));
+
+    // BACK-002: PLAN and NOTE resource templates should be present
+    let templates = &response["result"]["resourceTemplates"];
+    assert!(templates.is_array());
+    let template_uris: Vec<&str> = templates
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|t| t["uriTemplate"].as_str().unwrap())
+        .collect();
+    assert!(template_uris.contains(&"markplane://backlog/{id}"));
+    assert!(template_uris.contains(&"markplane://epic/{id}"));
+    assert!(template_uris.contains(&"markplane://plan/{id}"));
+    assert!(template_uris.contains(&"markplane://note/{id}"));
 }
 
 // ── Tool: markplane_summary ──────────────────────────────────────────────
@@ -1116,6 +1149,295 @@ fn test_resource_missing_uri() {
             "id": 206,
             "method": "resources/read",
             "params": {}
+        }),
+    );
+
+    assert!(response["error"].is_object());
+}
+
+// ── BACK-002: Plan and Note resource reads ──────────────────────────────
+
+#[test]
+fn test_resource_plan_item() {
+    let tmp = setup_project();
+    let root = tmp.path().join(".markplane");
+    let project = markplane_core::Project::new(root);
+    project
+        .create_plan(
+            "Plan resource test",
+            vec![],
+            None,
+        )
+        .unwrap();
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 210,
+            "method": "resources/read",
+            "params": { "uri": "markplane://plan/PLAN-001" }
+        }),
+    );
+
+    assert!(response["error"].is_null());
+    let text = response["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap();
+    assert!(text.contains("PLAN-001"));
+    assert!(text.contains("Plan resource test"));
+}
+
+#[test]
+fn test_resource_plan_wrong_prefix() {
+    let tmp = setup_project();
+    let root = tmp.path().join(".markplane");
+    let project = markplane_core::Project::new(root);
+    project
+        .create_backlog_item(
+            "Not a plan",
+            markplane_core::ItemType::Feature,
+            markplane_core::Priority::Medium,
+            markplane_core::Effort::Small,
+            None,
+            vec![],
+        )
+        .unwrap();
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 211,
+            "method": "resources/read",
+            "params": { "uri": "markplane://plan/BACK-001" }
+        }),
+    );
+
+    assert!(response["error"].is_object());
+    assert!(response["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("Expected PLAN-"));
+}
+
+#[test]
+fn test_resource_note_item() {
+    let tmp = setup_project();
+    let root = tmp.path().join(".markplane");
+    let project = markplane_core::Project::new(root);
+    project
+        .create_note(
+            "Note resource test",
+            markplane_core::NoteType::Research,
+            vec![],
+        )
+        .unwrap();
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 212,
+            "method": "resources/read",
+            "params": { "uri": "markplane://note/NOTE-001" }
+        }),
+    );
+
+    assert!(response["error"].is_null());
+    let text = response["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap();
+    assert!(text.contains("NOTE-001"));
+    assert!(text.contains("Note resource test"));
+}
+
+#[test]
+fn test_resource_note_wrong_prefix() {
+    let tmp = setup_project();
+    let root = tmp.path().join(".markplane");
+    let project = markplane_core::Project::new(root);
+    project
+        .create_backlog_item(
+            "Not a note",
+            markplane_core::ItemType::Feature,
+            markplane_core::Priority::Medium,
+            markplane_core::Effort::Small,
+            None,
+            vec![],
+        )
+        .unwrap();
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 213,
+            "method": "resources/read",
+            "params": { "uri": "markplane://note/BACK-001" }
+        }),
+    );
+
+    assert!(response["error"].is_object());
+    assert!(response["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("Expected NOTE-"));
+}
+
+// ── BACK-005: markplane_write tool ──────────────────────────────────────
+
+#[test]
+fn test_tool_write_backlog() {
+    let tmp = setup_project();
+    // Create an item first
+    send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "Write test" }
+            }
+        }),
+    );
+
+    // Write body content
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 220,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_write",
+                "arguments": {
+                    "id": "BACK-001",
+                    "body": "# Write test\n\n## Description\n\nThis is the actual content.\n"
+                }
+            }
+        }),
+    );
+
+    assert!(response["error"].is_null());
+    let text = response["result"]["content"][0]["text"].as_str().unwrap();
+    assert!(text.contains("success"));
+
+    // Verify body was written
+    let show_resp = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 221,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_show",
+                "arguments": { "id": "BACK-001" }
+            }
+        }),
+    );
+
+    let content = show_resp["result"]["content"][0]["text"].as_str().unwrap();
+    assert!(content.contains("This is the actual content."));
+    // Frontmatter should still be intact
+    assert!(content.contains("BACK-001"));
+    assert!(content.contains("Write test"));
+}
+
+#[test]
+fn test_tool_write_epic() {
+    let tmp = setup_project();
+    let root = tmp.path().join(".markplane");
+    let project = markplane_core::Project::new(root);
+    project
+        .create_epic("Write epic test", markplane_core::Priority::High)
+        .unwrap();
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 222,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_write",
+                "arguments": {
+                    "id": "EPIC-001",
+                    "body": "# Write epic test\n\n## Objective\n\nCustom epic content.\n"
+                }
+            }
+        }),
+    );
+
+    assert!(response["error"].is_null());
+}
+
+#[test]
+fn test_tool_write_missing_id() {
+    let tmp = setup_project();
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 223,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_write",
+                "arguments": { "body": "content" }
+            }
+        }),
+    );
+
+    assert!(response["error"].is_object());
+}
+
+#[test]
+fn test_tool_write_missing_body() {
+    let tmp = setup_project();
+    send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "Missing body test" }
+            }
+        }),
+    );
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 224,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_write",
+                "arguments": { "id": "BACK-001" }
+            }
+        }),
+    );
+
+    assert!(response["error"].is_object());
+}
+
+#[test]
+fn test_tool_write_invalid_id() {
+    let tmp = setup_project();
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 225,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_write",
+                "arguments": { "id": "BACK-999", "body": "content" }
+            }
         }),
     );
 

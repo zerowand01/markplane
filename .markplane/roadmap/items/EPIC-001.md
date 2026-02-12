@@ -1,7 +1,7 @@
 ---
 id: EPIC-001
-title: "MCP Protocol Improvements"
-status: planned
+title: MCP Protocol Improvements
+status: done
 priority: high
 started: null
 target: null
@@ -17,10 +17,10 @@ Make the MCP server a complete, spec-compliant interface for AI tools to manage 
 
 ## Key Results
 
-- [ ] LLMs receive project-specific guidance via the `instructions` field in the initialize response
-- [ ] All four entity types (BACK, EPIC, PLAN, NOTE) are accessible as MCP resources
-- [ ] LLMs can create items AND fill in their markdown content entirely through MCP tools
-- [ ] Protocol version reports the current spec (2025-11-25)
+- [x] LLMs receive project-specific guidance via the `instructions` field in the initialize response
+- [x] All four entity types (BACK, EPIC, PLAN, NOTE) are accessible as MCP resources
+- [x] LLMs can create items AND fill in their markdown content entirely through MCP tools
+- [x] Protocol version reports the current spec (2025-11-25)
 
 ## Notes
 

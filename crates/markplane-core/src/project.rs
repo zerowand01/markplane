@@ -371,6 +371,41 @@ impl Project {
         Ok(())
     }
 
+    /// Update the markdown body of any item, preserving frontmatter.
+    /// Also updates the `updated` date in frontmatter where applicable.
+    pub fn update_body(&self, id: &str, new_body: &str) -> Result<()> {
+        let (prefix, _) = parse_id(id)?;
+        let today = Local::now().date_naive();
+
+        match prefix {
+            IdPrefix::Back => {
+                let mut doc: MarkplaneDocument<BacklogItem> = self.read_item(id)?;
+                doc.frontmatter.updated = today;
+                doc.body = new_body.to_string();
+                self.write_item(id, &doc)?;
+            }
+            IdPrefix::Epic => {
+                let mut doc: MarkplaneDocument<Epic> = self.read_item(id)?;
+                doc.body = new_body.to_string();
+                self.write_item(id, &doc)?;
+            }
+            IdPrefix::Plan => {
+                let mut doc: MarkplaneDocument<Plan> = self.read_item(id)?;
+                doc.frontmatter.updated = today;
+                doc.body = new_body.to_string();
+                self.write_item(id, &doc)?;
+            }
+            IdPrefix::Note => {
+                let mut doc: MarkplaneDocument<Note> = self.read_item(id)?;
+                doc.frontmatter.updated = today;
+                doc.body = new_body.to_string();
+                self.write_item(id, &doc)?;
+            }
+        }
+
+        Ok(())
+    }
+
     /// Move an item to the archive/ subdirectory.
     pub fn archive_item(&self, id: &str) -> Result<()> {
         let (prefix, _) = parse_id(id)?;
@@ -1035,6 +1070,77 @@ mod tests {
         assert_eq!(sanitize_yaml_string("it's \"fine\""), "it's \\\"fine\\\"");
         assert_eq!(sanitize_yaml_string("line\nbreak"), "line\\nbreak");
         assert_eq!(sanitize_yaml_string("back\\slash"), "back\\\\slash");
+    }
+
+    // ── update_body ────────────────────────────────────────────────────
+
+    #[test]
+    fn test_update_body_backlog() {
+        let (_tmp, project) = setup_project();
+        project
+            .create_backlog_item("Test item", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+
+        let original: MarkplaneDocument<BacklogItem> = project.read_item("BACK-001").unwrap();
+        assert!(original.body.contains("[What needs to be done"));
+
+        project
+            .update_body("BACK-001", "# Test item\n\nActual description here.\n")
+            .unwrap();
+
+        let updated: MarkplaneDocument<BacklogItem> = project.read_item("BACK-001").unwrap();
+        assert!(updated.body.contains("Actual description here."));
+        assert_eq!(updated.frontmatter.id, "BACK-001");
+        assert_eq!(updated.frontmatter.title, "Test item");
+    }
+
+    #[test]
+    fn test_update_body_epic() {
+        let (_tmp, project) = setup_project();
+        project.create_epic("Phase 1", Priority::High).unwrap();
+
+        project
+            .update_body("EPIC-001", "# Phase 1\n\n## Objective\n\nBuild the foundation.\n")
+            .unwrap();
+
+        let updated: MarkplaneDocument<Epic> = project.read_item("EPIC-001").unwrap();
+        assert!(updated.body.contains("Build the foundation."));
+        assert_eq!(updated.frontmatter.id, "EPIC-001");
+    }
+
+    #[test]
+    fn test_update_body_plan() {
+        let (_tmp, project) = setup_project();
+        project.create_plan("Plan A", vec![], None).unwrap();
+
+        project
+            .update_body("PLAN-001", "# Plan A\n\nDetailed steps.\n")
+            .unwrap();
+
+        let updated: MarkplaneDocument<Plan> = project.read_item("PLAN-001").unwrap();
+        assert!(updated.body.contains("Detailed steps."));
+    }
+
+    #[test]
+    fn test_update_body_note() {
+        let (_tmp, project) = setup_project();
+        project
+            .create_note("Research A", NoteType::Research, vec![])
+            .unwrap();
+
+        project
+            .update_body("NOTE-001", "# Research A\n\nFindings here.\n")
+            .unwrap();
+
+        let updated: MarkplaneDocument<Note> = project.read_item("NOTE-001").unwrap();
+        assert!(updated.body.contains("Findings here."));
+    }
+
+    #[test]
+    fn test_update_body_nonexistent() {
+        let (_tmp, project) = setup_project();
+        let result = project.update_body("BACK-999", "new body");
+        assert!(result.is_err());
     }
 
     #[test]
