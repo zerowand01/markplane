@@ -91,6 +91,10 @@ impl Project {
 
     /// Regenerate backlog/INDEX.md as a prioritized kanban view.
     pub fn generate_backlog_index(&self) -> Result<()> {
+        let config = self.load_config()?;
+        let today = Local::now().date_naive();
+        let recent_cutoff = today - chrono::Duration::days(config.context.recent_days as i64);
+
         let items = self.list_backlog_items(&QueryFilter::default())?;
 
         let mut content = format!("{}\n# Backlog Index\n\n", GENERATED_HEADER);
@@ -220,6 +224,32 @@ impl Project {
             content.push('\n');
         }
 
+        // --- Recently Done (completed within recent_days) ---
+        let recently_done: Vec<_> = items
+            .iter()
+            .filter(|i| {
+                i.frontmatter.status == BacklogStatus::Done
+                    && i.frontmatter.updated >= recent_cutoff
+            })
+            .collect();
+        if !recently_done.is_empty() {
+            content.push_str(&format!(
+                "## Recently Done ({})\n\n",
+                recently_done.len()
+            ));
+            content.push_str("| ID | Title | Epic | Completed |\n");
+            content.push_str("|----|-------|------|-----------|\n");
+            for item in &recently_done {
+                let fm = &item.frontmatter;
+                let epic_str = epic_cell(&fm.epic);
+                content.push_str(&format!(
+                    "| {} | {} | {} | {} |\n",
+                    item_link(&fm.id), fm.title, epic_str, fm.updated
+                ));
+            }
+            content.push('\n');
+        }
+
         fs::write(self.root().join("backlog/INDEX.md"), content)?;
         Ok(())
     }
@@ -247,37 +277,19 @@ impl Project {
             content.push_str(&format!("## {}\n\n", label));
 
             for epic in &group {
-                let epic_id = &epic.frontmatter.id;
-                let (done, total) = epic_progress(epic_id, &backlog_items);
-                let pct = if total > 0 {
-                    (done as f64 / total as f64 * 100.0) as u32
-                } else {
-                    0
-                };
-                content.push_str(&format!(
-                    "### {} {} ({}/{}, {}%)\n\n",
-                    item_link(epic_id), epic.frontmatter.title, done, total, pct
-                ));
+                render_epic_with_items(&mut content, epic, &backlog_items);
+            }
+        }
 
-                let epic_items: Vec<_> = backlog_items
-                    .iter()
-                    .filter(|i| i.frontmatter.epic.as_deref() == Some(epic_id.as_str()))
-                    .collect();
-
-                if epic_items.is_empty() {
-                    content.push_str("_No backlog items._\n\n");
-                } else {
-                    content.push_str("| ID | Title | Status | Priority | Effort |\n");
-                    content.push_str("|----|-------|--------|----------|--------|\n");
-                    for item in &epic_items {
-                        let fm = &item.frontmatter;
-                        content.push_str(&format!(
-                            "| {} | {} | {} | {} | {} |\n",
-                            cross_link(&fm.id), fm.title, fm.status, fm.priority, fm.effort
-                        ));
-                    }
-                    content.push('\n');
-                }
+        // --- Done Epics ---
+        let done_epics: Vec<_> = epics
+            .iter()
+            .filter(|e| e.frontmatter.status == EpicStatus::Done)
+            .collect();
+        if !done_epics.is_empty() {
+            content.push_str("## Done Epics\n\n");
+            for epic in &done_epics {
+                render_epic_with_items(&mut content, epic, &backlog_items);
             }
         }
 
@@ -434,6 +446,45 @@ fn cross_link(id: &str) -> String {
         _ => return id.to_string(),
     };
     format!("[{}](../{}/items/{}.md)", id, dir, id)
+}
+
+/// Render an epic heading with its nested backlog item table.
+fn render_epic_with_items(
+    content: &mut String,
+    epic: &MarkplaneDocument<Epic>,
+    backlog_items: &[MarkplaneDocument<BacklogItem>],
+) {
+    let epic_id = &epic.frontmatter.id;
+    let (done, total) = epic_progress(epic_id, backlog_items);
+    let pct = if total > 0 {
+        (done as f64 / total as f64 * 100.0) as u32
+    } else {
+        0
+    };
+    content.push_str(&format!(
+        "### {} {} ({}/{}, {}%)\n\n",
+        item_link(epic_id), epic.frontmatter.title, done, total, pct
+    ));
+
+    let epic_items: Vec<_> = backlog_items
+        .iter()
+        .filter(|i| i.frontmatter.epic.as_deref() == Some(epic_id.as_str()))
+        .collect();
+
+    if epic_items.is_empty() {
+        content.push_str("_No backlog items._\n\n");
+    } else {
+        content.push_str("| ID | Title | Status | Priority | Effort |\n");
+        content.push_str("|----|-------|--------|----------|--------|\n");
+        for item in &epic_items {
+            let fm = &item.frontmatter;
+            content.push_str(&format!(
+                "| {} | {} | {} | {} | {} |\n",
+                cross_link(&fm.id), fm.title, fm.status, fm.priority, fm.effort
+            ));
+        }
+        content.push('\n');
+    }
 }
 
 /// Count (done, total) backlog items for a given epic.
@@ -659,6 +710,58 @@ mod tests {
     }
 
     #[test]
+    fn test_generate_backlog_index_recently_done() {
+        let (_tmp, project) = setup_project();
+        project
+            .create_backlog_item(
+                "Done item",
+                ItemType::Feature,
+                Priority::High,
+                Effort::Small,
+                None,
+                vec![],
+            )
+            .unwrap();
+        project
+            .create_backlog_item(
+                "Still open",
+                ItemType::Feature,
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+            )
+            .unwrap();
+        project.update_status("BACK-001", "done").unwrap();
+
+        project.generate_backlog_index().unwrap();
+        let content = fs::read_to_string(project.root().join("backlog/INDEX.md")).unwrap();
+        assert!(content.contains("## Recently Done (1)"));
+        assert!(content.contains("[BACK-001](items/BACK-001.md)"));
+        // The open item should be in Drafts, not in Recently Done
+        assert!(content.contains("## Drafts (1)"));
+    }
+
+    #[test]
+    fn test_generate_backlog_index_no_recently_done_when_empty() {
+        let (_tmp, project) = setup_project();
+        project
+            .create_backlog_item(
+                "Open item",
+                ItemType::Feature,
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+            )
+            .unwrap();
+
+        project.generate_backlog_index().unwrap();
+        let content = fs::read_to_string(project.root().join("backlog/INDEX.md")).unwrap();
+        assert!(!content.contains("Recently Done"));
+    }
+
+    #[test]
     fn test_generate_roadmap_index() {
         let (_tmp, project) = setup_project();
         project.create_epic("Active Epic", Priority::High).unwrap();
@@ -723,6 +826,46 @@ mod tests {
         assert!(content.contains("| ID | Title | Status | Priority | Effort |"));
         assert!(content.contains("[BACK-001](../backlog/items/BACK-001.md)"));
         assert!(content.contains("[BACK-002](../backlog/items/BACK-002.md)"));
+    }
+
+    #[test]
+    fn test_generate_roadmap_index_done_epics() {
+        let (_tmp, project) = setup_project();
+        project.create_epic("Done Epic", Priority::High).unwrap();
+        project
+            .create_backlog_item(
+                "Task A",
+                ItemType::Feature,
+                Priority::High,
+                Effort::Small,
+                Some("EPIC-001".to_string()),
+                vec![],
+            )
+            .unwrap();
+        project.update_status("BACK-001", "done").unwrap();
+        project.update_status("EPIC-001", "done").unwrap();
+
+        project
+            .create_epic("Active Epic", Priority::Medium)
+            .unwrap();
+        project.update_status("EPIC-002", "active").unwrap();
+
+        project.generate_roadmap_index().unwrap();
+        let content = fs::read_to_string(project.root().join("roadmap/INDEX.md")).unwrap();
+        assert!(content.contains("## Done Epics"));
+        assert!(content.contains("Done Epic (1/1, 100%)"));
+        assert!(content.contains("## Active Epics"));
+        assert!(content.contains("Active Epic"));
+    }
+
+    #[test]
+    fn test_generate_roadmap_index_no_done_section_when_empty() {
+        let (_tmp, project) = setup_project();
+        project.create_epic("Planned Epic", Priority::High).unwrap();
+
+        project.generate_roadmap_index().unwrap();
+        let content = fs::read_to_string(project.root().join("roadmap/INDEX.md")).unwrap();
+        assert!(!content.contains("Done Epics"));
     }
 
     #[test]

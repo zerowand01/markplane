@@ -26,3 +26,14 @@
 
 ## Drafts (0)
 
+## Recently Done (6)
+
+| ID | Title | Epic | Completed |
+|----|-------|------|-----------|
+| [BACK-001](items/BACK-001.md) | Add instructions field to MCP initialize response | [EPIC-001](../roadmap/items/EPIC-001.md) | 2026-02-11 |
+| [BACK-002](items/BACK-002.md) | Add missing PLAN and NOTE resource templates to MCP | [EPIC-001](../roadmap/items/EPIC-001.md) | 2026-02-11 |
+| [BACK-003](items/BACK-003.md) | Update MCP protocol version to 2025-11-25 | [EPIC-001](../roadmap/items/EPIC-001.md) | 2026-02-11 |
+| [BACK-004](items/BACK-004.md) | Add serverInfo.description to MCP initialize response | [EPIC-001](../roadmap/items/EPIC-001.md) | 2026-02-11 |
+| [BACK-005](items/BACK-005.md) | Add markplane_write MCP tool for updating markdown body content | [EPIC-001](../roadmap/items/EPIC-001.md) | 2026-02-11 |
+| [BACK-006](items/BACK-006.md) | Document create-then-edit workflow in MCP instructions | [EPIC-001](../roadmap/items/EPIC-001.md) | 2026-02-11 |
+

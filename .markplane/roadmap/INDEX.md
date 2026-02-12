@@ -35,3 +35,16 @@
 | [BACK-017](../backlog/items/BACK-017.md) | Build web UI with React and Tailwind | backlog | someday | xl |
 | [BACK-018](../backlog/items/BACK-018.md) | Implement plugin system for external integrations | backlog | someday | xl |
 
+## Done Epics
+
+### [EPIC-001](items/EPIC-001.md) MCP Protocol Improvements (6/6, 100%)
+
+| ID | Title | Status | Priority | Effort |
+|----|-------|--------|----------|--------|
+| [BACK-001](../backlog/items/BACK-001.md) | Add instructions field to MCP initialize response | done | high | small |
+| [BACK-002](../backlog/items/BACK-002.md) | Add missing PLAN and NOTE resource templates to MCP | done | high | xs |
+| [BACK-003](../backlog/items/BACK-003.md) | Update MCP protocol version to 2025-11-25 | done | high | xs |
+| [BACK-004](../backlog/items/BACK-004.md) | Add serverInfo.description to MCP initialize response | done | high | xs |
+| [BACK-005](../backlog/items/BACK-005.md) | Add markplane_write MCP tool for updating markdown body content | done | high | medium |
+| [BACK-006](../backlog/items/BACK-006.md) | Document create-then-edit workflow in MCP instructions | done | medium | small |
+
