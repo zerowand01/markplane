@@ -5,8 +5,8 @@
 ## Backlog Status Distribution
 - Total: 18
 - In Progress: 0
-- Planned: 0
-- Backlog: 12
+- Planned: 1
+- Backlog: 11
 - Draft: 0
 - Done: 6
 - Cancelled: 0
@@ -25,3 +25,6 @@
 - [[EPIC-004]] Context and AI Integration: 0/3 (0%) — planned
 - [[EPIC-005]] Platform and Ecosystem: 0/5 (0%) — planned
 
+## Plans Summary
+- Active: 1
+- Completed: 0

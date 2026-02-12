@@ -5,9 +5,13 @@
 
 ## Blocked (0)
 
-## Planned (0)
+## Planned (1)
 
-## Backlog (12)
+| ID | Title | Epic | Priority | Effort |
+|----|-------|------|----------|--------|
+| [TASK-017](items/TASK-017.md) | Build web UI with React and Tailwind | [EPIC-005](../roadmap/items/EPIC-005.md) | someday | xl |
+
+## Backlog (11)
 
 | ID | Title | Epic | Priority | Effort |
 |----|-------|------|----------|--------|
@@ -21,7 +25,6 @@
 | [TASK-014](items/TASK-014.md) | Build migration tooling for importing from existing docs | [EPIC-005](../roadmap/items/EPIC-005.md) | low | large |
 | [TASK-015](items/TASK-015.md) | Add file watching for real-time MCP updates | [EPIC-005](../roadmap/items/EPIC-005.md) | low | medium |
 | [TASK-016](items/TASK-016.md) | Add SSE transport for MCP server | [EPIC-005](../roadmap/items/EPIC-005.md) | low | medium |
-| [TASK-017](items/TASK-017.md) | Build web UI with React and Tailwind | [EPIC-005](../roadmap/items/EPIC-005.md) | someday | xl |
 | [TASK-018](items/TASK-018.md) | Implement plugin system for external integrations | [EPIC-005](../roadmap/items/EPIC-005.md) | someday | xl |
 
 ## Drafts (0)

@@ -32,7 +32,7 @@
 | [TASK-014](../backlog/items/TASK-014.md) | Build migration tooling for importing from existing docs | backlog | low | large |
 | [TASK-015](../backlog/items/TASK-015.md) | Add file watching for real-time MCP updates | backlog | low | medium |
 | [TASK-016](../backlog/items/TASK-016.md) | Add SSE transport for MCP server | backlog | low | medium |
-| [TASK-017](../backlog/items/TASK-017.md) | Build web UI with React and Tailwind | backlog | someday | xl |
+| [TASK-017](../backlog/items/TASK-017.md) | Build web UI with React and Tailwind | planned | someday | xl |
 | [TASK-018](../backlog/items/TASK-018.md) | Implement plugin system for external integrations | backlog | someday | xl |
 
 ## Done Epics
