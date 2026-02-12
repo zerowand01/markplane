@@ -26,7 +26,8 @@ cargo install markplane
 > ```bash
 > git clone https://github.com/your-org/markplane.git
 > cd markplane
-> cargo install --path crates/markplane-cli
+> cargo install --path crates/markplane-cli    # CLI (markplane command)
+> cargo install --path crates/markplane-mcp    # MCP server (for AI tool integration)
 > ```
 
 Requires Rust 1.93.0 or later.

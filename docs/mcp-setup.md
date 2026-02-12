@@ -2,6 +2,20 @@
 
 MCP (Model Context Protocol) is the standard protocol for connecting AI coding tools to external systems, and Markplane's MCP server provides structured, typed access to your project management data over JSON-RPC 2.0 via stdio.
 
+## Installation
+
+The MCP server is a separate binary from the CLI. Install it with:
+
+```bash
+cargo install --path crates/markplane-mcp
+```
+
+This puts `markplane-mcp` in your Cargo bin directory (typically `~/.cargo/bin/`). Verify it's available:
+
+```bash
+markplane-mcp --help
+```
+
 ## Configuration
 
 ### Claude Code
