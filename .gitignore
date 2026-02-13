@@ -3,3 +3,8 @@
 *.swp
 *.swo
 *~
+
+# Web UI
+crates/markplane-web/ui/node_modules/
+crates/markplane-web/ui/out/
+crates/markplane-web/ui/.next/

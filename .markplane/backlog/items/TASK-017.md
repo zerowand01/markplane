@@ -1,7 +1,7 @@
 ---
 id: TASK-017
 title: Build web UI with React and Tailwind
-status: planned
+status: done
 priority: someday
 type: feature
 effort: xl
@@ -13,7 +13,7 @@ depends_on: []
 blocks: []
 assignee: null
 created: 2026-02-10
-updated: 2026-02-12
+updated: 2026-02-13
 ---
 # Build web UI with React and Tailwind
 

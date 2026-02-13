@@ -3,13 +3,14 @@
 
 ## In Progress (0)
 
-## Blocked (0)
+## Blocked (2)
 
-## Planned (1)
+| ID | Title | Blocked By | Epic | Priority |
+|----|-------|------------|------|----------|
+| [TASK-022](items/TASK-022.md) | Build GitHub Actions release workflow with embedded web UI | [TASK-021](../backlog/items/TASK-021.md) | [EPIC-006](../roadmap/items/EPIC-006.md) | high |
+| [TASK-023](items/TASK-023.md) | Create Homebrew tap for markplane | [TASK-022](../backlog/items/TASK-022.md) | [EPIC-006](../roadmap/items/EPIC-006.md) | medium |
 
-| ID | Title | Epic | Priority | Effort |
-|----|-------|------|----------|--------|
-| [TASK-017](items/TASK-017.md) | Build web UI with React and Tailwind | [EPIC-005](../roadmap/items/EPIC-005.md) | someday | xl |
+## Planned (0)
 
 ## Backlog (11)
 
@@ -27,9 +28,15 @@
 | [TASK-016](items/TASK-016.md) | Add SSE transport for MCP server | [EPIC-005](../roadmap/items/EPIC-005.md) | low | medium |
 | [TASK-018](items/TASK-018.md) | Implement plugin system for external integrations | [EPIC-005](../roadmap/items/EPIC-005.md) | someday | xl |
 
-## Drafts (0)
+## Drafts (3)
 
-## Recently Done (7)
+| ID | Title | Epic | Priority | Effort |
+|----|-------|------|----------|--------|
+| [TASK-021](items/TASK-021.md) | Set up GitHub Actions CI pipeline | [EPIC-006](../roadmap/items/EPIC-006.md) | high | medium |
+| [TASK-020](items/TASK-020.md) | Sort items in generated INDEX.md sections | — | medium | small |
+| [TASK-024](items/TASK-024.md) | Publish markplane-core to crates.io | [EPIC-006](../roadmap/items/EPIC-006.md) | low | small |
+
+## Recently Done (8)
 
 | ID | Title | Epic | Completed |
 |----|-------|------|-----------|
@@ -40,4 +47,5 @@
 | [TASK-005](items/TASK-005.md) | Add markplane_write MCP tool for updating markdown body content | [EPIC-001](../roadmap/items/EPIC-001.md) | 2026-02-11 |
 | [TASK-019](items/TASK-019.md) | Remove markplane_write MCP tool and update instructions to prefer direct file editing | — | 2026-02-12 |
 | [TASK-006](items/TASK-006.md) | Document create-then-edit workflow in MCP instructions | [EPIC-001](../roadmap/items/EPIC-001.md) | 2026-02-11 |
+| [TASK-017](items/TASK-017.md) | Build web UI with React and Tailwind | [EPIC-005](../roadmap/items/EPIC-005.md) | 2026-02-13 |
 

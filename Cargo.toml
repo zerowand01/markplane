@@ -36,5 +36,22 @@ anyhow = "1.0"
 colored = "3.1"
 tabled = "0.20"
 
+# HTTP server
+axum = { version = "0.8", features = ["ws"] }
+tokio = { version = "1", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "fs"] }
+
+# File watching
+notify = { version = "7.0", default-features = false, features = ["macos_fsevent"] }
+notify-debouncer-mini = "0.5"
+
+# Async utilities
+futures = "0.3"
+
+# Static file embedding
+rust-embed = "8"
+mime_guess = "2"
+
 # Internal crates
 markplane-core = { path = "crates/markplane-core" }

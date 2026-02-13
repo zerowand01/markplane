@@ -1,12 +1,12 @@
 ---
 id: PLAN-001
 title: Web UI implementation plan
-status: draft
+status: done
 implements:
 - TASK-017
 epic: EPIC-005
 created: 2026-02-12
-updated: 2026-02-12
+updated: 2026-02-13
 ---
 # Web UI Implementation Plan
 

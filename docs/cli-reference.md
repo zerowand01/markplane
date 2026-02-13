@@ -520,6 +520,41 @@ markplane promote NOTE-001 --priority high --effort small
 
 ---
 
+## serve
+
+Start the web UI server.
+
+```
+markplane serve [OPTIONS]
+```
+
+**Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--port <PORT>` | `4200` | Port to listen on |
+| `--open` | `false` | Open browser automatically after starting |
+| `--dev` | `false` | Dev mode: API only, no static file serving (use with Next.js dev server) |
+
+Starts an HTTP server that serves the web dashboard and a REST API backed by `markplane-core`. Also runs a WebSocket server at `/ws` that broadcasts real-time file change events.
+
+In production builds compiled with `--features embed-ui`, the web UI is embedded in the binary. Otherwise, it serves static files from `crates/markplane-web/ui/out/`.
+
+**Example:**
+
+```bash
+markplane serve
+# Markplane web UI starting on http://localhost:4200
+
+markplane serve --port 8080 --open
+# Starts on port 8080 and opens the browser
+
+markplane serve --dev
+# API only on :4200 — run `npm run dev` in ui/ for the frontend
+```
+
+---
+
 ## show
 
 Show details of an item.

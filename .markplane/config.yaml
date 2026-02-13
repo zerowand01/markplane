@@ -4,9 +4,9 @@ project:
   description: AI-native, markdown-first project management system
 counters:
   NOTE: 0
-  EPIC: 5
-  TASK: 20
+  TASK: 24
   PLAN: 1
+  EPIC: 6
 context:
   token_budget: 1000
   recent_days: 7

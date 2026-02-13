@@ -3,6 +3,15 @@
 
 ## Planned Epics
 
+### [EPIC-006](items/EPIC-006.md) Release & Distribution (0/4, 0%)
+
+| ID | Title | Status | Priority | Effort |
+|----|-------|--------|----------|--------|
+| [TASK-021](../backlog/items/TASK-021.md) | Set up GitHub Actions CI pipeline | draft | high | medium |
+| [TASK-022](../backlog/items/TASK-022.md) | Build GitHub Actions release workflow with embedded web UI | draft | high | large |
+| [TASK-023](../backlog/items/TASK-023.md) | Create Homebrew tap for markplane | draft | medium | medium |
+| [TASK-024](../backlog/items/TASK-024.md) | Publish markplane-core to crates.io | draft | low | small |
+
 ### [EPIC-002](items/EPIC-002.md) Developer Experience (0/2, 0%)
 
 | ID | Title | Status | Priority | Effort |
@@ -25,14 +34,14 @@
 | [TASK-012](../backlog/items/TASK-012.md) | Add domain-focused context generation | backlog | medium | medium |
 | [TASK-013](../backlog/items/TASK-013.md) | Add clipboard context output | backlog | low | xs |
 
-### [EPIC-005](items/EPIC-005.md) Platform and Ecosystem (0/5, 0%)
+### [EPIC-005](items/EPIC-005.md) Platform and Ecosystem (1/5, 20%)
 
 | ID | Title | Status | Priority | Effort |
 |----|-------|--------|----------|--------|
 | [TASK-014](../backlog/items/TASK-014.md) | Build migration tooling for importing from existing docs | backlog | low | large |
 | [TASK-015](../backlog/items/TASK-015.md) | Add file watching for real-time MCP updates | backlog | low | medium |
 | [TASK-016](../backlog/items/TASK-016.md) | Add SSE transport for MCP server | backlog | low | medium |
-| [TASK-017](../backlog/items/TASK-017.md) | Build web UI with React and Tailwind | planned | someday | xl |
+| [TASK-017](../backlog/items/TASK-017.md) | Build web UI with React and Tailwind | done | someday | xl |
 | [TASK-018](../backlog/items/TASK-018.md) | Implement plugin system for external integrations | backlog | someday | xl |
 
 ## Done Epics

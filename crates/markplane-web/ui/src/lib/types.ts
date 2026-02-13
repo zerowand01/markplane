@@ -1,0 +1,152 @@
+export type TaskStatus = "draft" | "backlog" | "planned" | "in-progress" | "done" | "cancelled";
+export type EpicStatus = "planned" | "active" | "done";
+export type PlanStatus = "draft" | "approved" | "in-progress" | "done";
+export type NoteStatus = "draft" | "active" | "archived";
+export type Priority = "critical" | "high" | "medium" | "low" | "someday";
+export type ItemType = "feature" | "bug" | "enhancement" | "chore" | "research" | "spike";
+export type Effort = "xs" | "small" | "medium" | "large" | "xl";
+export type NoteType = "research" | "analysis" | "idea" | "decision" | "meeting";
+
+export interface Task {
+  id: string;
+  title: string;
+  status: TaskStatus;
+  priority: Priority;
+  type: ItemType;
+  effort: Effort;
+  tags: string[];
+  epic: string | null;
+  plan: string | null;
+  depends_on: string[];
+  blocks: string[];
+  assignee: string | null;
+  created: string;
+  updated: string;
+  body: string;
+}
+
+export interface Epic {
+  id: string;
+  title: string;
+  status: EpicStatus;
+  priority: Priority;
+  started: string | null;
+  target: string | null;
+  tags: string[];
+  depends_on: string[];
+  body: string;
+  task_count: number;
+  done_count: number;
+  progress: number;
+  status_breakdown: Record<string, number>;
+}
+
+export interface Plan {
+  id: string;
+  title: string;
+  status: PlanStatus;
+  implements: string[];
+  epic: string | null;
+  created: string;
+  updated: string;
+  body: string;
+}
+
+export interface Note {
+  id: string;
+  title: string;
+  type: NoteType;
+  status: NoteStatus;
+  tags: string[];
+  related: string[];
+  created: string;
+  updated: string;
+  body: string;
+}
+
+export interface ProjectSummary {
+  name: string;
+  description: string;
+  counts: {
+    total: number;
+    in_progress: number;
+    planned: number;
+    backlog: number;
+    draft: number;
+    done: number;
+    blocked: number;
+  };
+  active_epics: Epic[];
+  in_progress_tasks: Task[];
+  blocked_tasks: Task[];
+  recent_completions: Task[];
+  context_summary: string | null;
+  context_last_synced: string | null;
+}
+
+export interface CreateTaskRequest {
+  title: string;
+  type?: ItemType;
+  priority?: Priority;
+  effort?: Effort;
+  epic?: string;
+  tags?: string[];
+}
+
+export interface UpdateTaskRequest {
+  title?: string;
+  status?: TaskStatus;
+  priority?: Priority;
+  effort?: Effort;
+  type?: ItemType;
+  tags?: string[];
+  epic?: string;
+  plan?: string;
+  assignee?: string;
+  depends_on?: string[];
+  blocks?: string[];
+}
+
+export interface ApiResponse<T> {
+  data: T;
+}
+
+export interface ApiListResponse<T> {
+  data: T[];
+  meta: { total: number };
+}
+
+export interface GraphNode {
+  id: string;
+  type: "task" | "epic" | "plan" | "note";
+  title: string;
+  status: string;
+  priority?: string;
+}
+
+export interface GraphEdge {
+  source: string;
+  target: string;
+  relation: "blocks" | "depends_on" | "implements" | "epic" | "related";
+}
+
+export interface GraphData {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
+
+export interface SearchResult {
+  id: string;
+  entity_type: "task" | "epic" | "plan" | "note";
+  title: string;
+  status: string;
+  priority?: string;
+  snippet: string;
+  score: number;
+}
+
+export type WsEvent =
+  | { type: "file_changed"; entity: "task" | "epic" | "plan" | "note"; id: string; action: "created" | "modified" | "deleted" }
+  | { type: "config_changed" }
+  | { type: "sync_complete" }
+  | { type: "connected"; version: string };

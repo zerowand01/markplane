@@ -22,6 +22,7 @@ mod metrics;
 mod graph;
 mod claude_md;
 mod dashboard;
+mod serve;
 
 use clap::Subcommand;
 
@@ -234,6 +235,19 @@ pub enum Commands {
 
     /// Show project dashboard overview
     Dashboard,
+
+    /// Start the web UI server
+    Serve {
+        /// Port to listen on
+        #[arg(long, default_value = "4200")]
+        port: u16,
+        /// Open browser automatically
+        #[arg(long)]
+        open: bool,
+        /// Dev mode: API only, no static files
+        #[arg(long)]
+        dev: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -290,6 +304,10 @@ pub fn execute(cmd: Commands) -> anyhow::Result<()> {
         Commands::Graph { id, depth } => graph::run(id, depth),
         Commands::ClaudeMd => claude_md::run(),
         Commands::Dashboard => dashboard::run(),
+        Commands::Serve { port, open, dev } => {
+            let rt = tokio::runtime::Runtime::new()?;
+            rt.block_on(serve::run(port, open, dev))
+        }
     }
 }
 

@@ -21,6 +21,20 @@ tabled.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true
 serde_json.workspace = true
+axum.workspace = true
+tokio.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+notify.workspace = true
+notify-debouncer-mini.workspace = true
+futures.workspace = true
+open = "5"
+rust-embed = { workspace = true, optional = true }
+mime_guess = { workspace = true, optional = true }
+
+[features]
+default = []
+embed-ui = ["rust-embed", "mime_guess"]
 
 [dev-dependencies]
 tempfile = "3"

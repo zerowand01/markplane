@@ -5,15 +5,15 @@
 
 | Module | Path | Purpose | Active Items |
 |--------|------|---------|-------------|
-| Roadmap | [roadmap/](roadmap/INDEX.md) | Strategic phases & epics | 4 active epics |
-| Backlog | [backlog/](backlog/INDEX.md) | All work items | 12 open items |
-| Plans | [plans/](plans/INDEX.md) | Implementation details | 1 active plans |
+| Roadmap | [roadmap/](roadmap/INDEX.md) | Strategic phases & epics | 5 active epics |
+| Backlog | [backlog/](backlog/INDEX.md) | All work items | 16 open items |
+| Plans | [plans/](plans/INDEX.md) | Implementation details | 0 active plans |
 | Notes | [notes/](notes/INDEX.md) | Research & ideas | 0 active notes |
 | AI Context | [.context/](.context/summary.md) | Generated summaries | Auto-updated |
 
 ## System Info
-- ID counter: EPIC-005, TASK-019, PLAN-001, NOTE-000
-- Last sync: 2026-02-12
+- ID counter: EPIC-006, TASK-024, PLAN-001, NOTE-000
+- Last sync: 2026-02-13
 - Config: [config.yaml](config.yaml)
 
 ## Project Documentation
@@ -27,3 +27,4 @@
 | file-format | [../docs/file-format.md](../docs/file-format.md) |
 | getting-started | [../docs/getting-started.md](../docs/getting-started.md) |
 | mcp-setup | [../docs/mcp-setup.md](../docs/mcp-setup.md) |
+| web-ui-guide | [../docs/web-ui-guide.md](../docs/web-ui-guide.md) |
