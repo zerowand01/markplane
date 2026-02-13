@@ -96,9 +96,9 @@ fn test_initialize() {
     assert!(instructions.contains("EPIC-NNN"));
     assert!(instructions.contains("PLAN-NNN"));
     assert!(instructions.contains("NOTE-NNN"));
-    // instructions should describe create-then-edit workflow
-    assert!(instructions.contains("markplane_write"));
-    assert!(instructions.contains("Create-Then-Edit"));
+    // instructions should describe file editing workflow
+    assert!(instructions.contains("File Editing"));
+    assert!(instructions.contains("free-form markdown"));
 }
 
 // ── Ping ─────────────────────────────────────────────────────────────────
@@ -198,7 +198,6 @@ fn test_tools_list() {
     assert!(tool_names.contains(&"markplane_query"));
     assert!(tool_names.contains(&"markplane_show"));
     assert!(tool_names.contains(&"markplane_add"));
-    assert!(tool_names.contains(&"markplane_write"));
     assert!(tool_names.contains(&"markplane_update"));
     assert!(tool_names.contains(&"markplane_start"));
     assert!(tool_names.contains(&"markplane_done"));
@@ -1285,161 +1284,3 @@ fn test_resource_note_wrong_prefix() {
         .contains("Expected NOTE-"));
 }
 
-// ── markplane_write tool ─────────────────────────────────────────────────
-
-#[test]
-fn test_tool_write_task() {
-    let tmp = setup_project();
-    // Create an item first
-    send_request(
-        &tmp,
-        &json!({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/call",
-            "params": {
-                "name": "markplane_add",
-                "arguments": { "title": "Write test" }
-            }
-        }),
-    );
-
-    // Write body content
-    let response = send_request(
-        &tmp,
-        &json!({
-            "jsonrpc": "2.0",
-            "id": 220,
-            "method": "tools/call",
-            "params": {
-                "name": "markplane_write",
-                "arguments": {
-                    "id": "TASK-001",
-                    "body": "# Write test\n\n## Description\n\nThis is the actual content.\n"
-                }
-            }
-        }),
-    );
-
-    assert!(response["error"].is_null());
-    let text = response["result"]["content"][0]["text"].as_str().unwrap();
-    assert!(text.contains("success"));
-
-    // Verify body was written
-    let show_resp = send_request(
-        &tmp,
-        &json!({
-            "jsonrpc": "2.0",
-            "id": 221,
-            "method": "tools/call",
-            "params": {
-                "name": "markplane_show",
-                "arguments": { "id": "TASK-001" }
-            }
-        }),
-    );
-
-    let content = show_resp["result"]["content"][0]["text"].as_str().unwrap();
-    assert!(content.contains("This is the actual content."));
-    // Frontmatter should still be intact
-    assert!(content.contains("TASK-001"));
-    assert!(content.contains("Write test"));
-}
-
-#[test]
-fn test_tool_write_epic() {
-    let tmp = setup_project();
-    let root = tmp.path().join(".markplane");
-    let project = markplane_core::Project::new(root);
-    project
-        .create_epic("Write epic test", markplane_core::Priority::High)
-        .unwrap();
-
-    let response = send_request(
-        &tmp,
-        &json!({
-            "jsonrpc": "2.0",
-            "id": 222,
-            "method": "tools/call",
-            "params": {
-                "name": "markplane_write",
-                "arguments": {
-                    "id": "EPIC-001",
-                    "body": "# Write epic test\n\n## Objective\n\nCustom epic content.\n"
-                }
-            }
-        }),
-    );
-
-    assert!(response["error"].is_null());
-}
-
-#[test]
-fn test_tool_write_missing_id() {
-    let tmp = setup_project();
-    let response = send_request(
-        &tmp,
-        &json!({
-            "jsonrpc": "2.0",
-            "id": 223,
-            "method": "tools/call",
-            "params": {
-                "name": "markplane_write",
-                "arguments": { "body": "content" }
-            }
-        }),
-    );
-
-    assert!(response["error"].is_object());
-}
-
-#[test]
-fn test_tool_write_missing_body() {
-    let tmp = setup_project();
-    send_request(
-        &tmp,
-        &json!({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/call",
-            "params": {
-                "name": "markplane_add",
-                "arguments": { "title": "Missing body test" }
-            }
-        }),
-    );
-
-    let response = send_request(
-        &tmp,
-        &json!({
-            "jsonrpc": "2.0",
-            "id": 224,
-            "method": "tools/call",
-            "params": {
-                "name": "markplane_write",
-                "arguments": { "id": "TASK-001" }
-            }
-        }),
-    );
-
-    assert!(response["error"].is_object());
-}
-
-#[test]
-fn test_tool_write_invalid_id() {
-    let tmp = setup_project();
-    let response = send_request(
-        &tmp,
-        &json!({
-            "jsonrpc": "2.0",
-            "id": 225,
-            "method": "tools/call",
-            "params": {
-                "name": "markplane_write",
-                "arguments": { "id": "TASK-999", "body": "content" }
-            }
-        }),
-    );
-
-    assert!(response["error"].is_object());
-}

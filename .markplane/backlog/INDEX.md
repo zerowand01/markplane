@@ -29,7 +29,7 @@
 
 ## Drafts (0)
 
-## Recently Done (6)
+## Recently Done (7)
 
 | ID | Title | Epic | Completed |
 |----|-------|------|-----------|
@@ -38,5 +38,6 @@
 | [TASK-003](items/TASK-003.md) | Update MCP protocol version to 2025-11-25 | [EPIC-001](../roadmap/items/EPIC-001.md) | 2026-02-11 |
 | [TASK-004](items/TASK-004.md) | Add serverInfo.description to MCP initialize response | [EPIC-001](../roadmap/items/EPIC-001.md) | 2026-02-11 |
 | [TASK-005](items/TASK-005.md) | Add markplane_write MCP tool for updating markdown body content | [EPIC-001](../roadmap/items/EPIC-001.md) | 2026-02-11 |
+| [TASK-019](items/TASK-019.md) | Remove markplane_write MCP tool and update instructions to prefer direct file editing | — | 2026-02-12 |
 | [TASK-006](items/TASK-006.md) | Document create-then-edit workflow in MCP instructions | [EPIC-001](../roadmap/items/EPIC-001.md) | 2026-02-11 |
 

@@ -116,14 +116,14 @@ Markplane targets ~1000 tokens for full project state via context files. Individ
 
 ### Example: AI creating a new item
 
-The create-then-edit workflow uses `markplane_add` to scaffold the item, then `markplane_write` to fill in the body:
+The create-then-edit workflow uses `markplane_add` to scaffold the item, then the AI edits the markdown file directly:
 
 ```
 1. markplane_add               -> create the item (scaffolded from template)
    { title: "Add caching layer", priority: "high" }
    returns: { id: "TASK-043" }
-2. markplane_write             -> fill in the markdown body content
-   { id: "TASK-043", body: "# Add caching layer\n\n## Description\n\n..." }
+2. Edit file directly           -> fill in the free-form markdown body
+   .markplane/backlog/items/TASK-043.md (edit below frontmatter)
 3. markplane_update            -> move from draft to backlog once fully defined
    { id: "TASK-043", status: "backlog" }
 ```

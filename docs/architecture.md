@@ -58,7 +58,7 @@ The CLI crate provides the user-facing terminal interface.
 The MCP server enables AI tools (Claude, Cursor, etc.) to interact with the project.
 
 - **Protocol**: JSON-RPC 2.0 over stdio (one JSON object per line)
-- **Tools**: 16 tools — `markplane_summary`, `markplane_context`, `markplane_query`, `markplane_show`, `markplane_graph`, `markplane_add`, `markplane_write`, `markplane_update`, `markplane_start`, `markplane_done`, `markplane_promote`, `markplane_plan`, `markplane_link`, `markplane_sync`, `markplane_check`, `markplane_stale`
+- **Tools**: 15 tools — `markplane_summary`, `markplane_context`, `markplane_query`, `markplane_show`, `markplane_graph`, `markplane_add`, `markplane_update`, `markplane_start`, `markplane_done`, `markplane_promote`, `markplane_plan`, `markplane_link`, `markplane_sync`, `markplane_check`, `markplane_stale`
 - **Resources**: 3 static resources (`markplane://summary`, `markplane://active-work`, `markplane://blocked`) + 4 dynamic templates (`markplane://task/{id}`, `markplane://epic/{id}`, `markplane://plan/{id}`, `markplane://note/{id}`)
 - **Error handling**: Tool handlers return `Result<String, String>`; errors map to JSON-RPC error codes
 

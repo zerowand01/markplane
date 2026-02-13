@@ -109,7 +109,7 @@ The server inherits its working directory from the AI tool that launches it (e.g
 
 ## Tool Catalog
 
-The server exposes 16 tools via the `tools/list` method.
+The server exposes 15 tools via the `tools/list` method.
 
 ### Context & Navigation
 
@@ -131,7 +131,6 @@ The server exposes 16 tools via the `tools/list` method.
 | Tool | Description | Required Params | Optional Params |
 |------|-------------|-----------------|-----------------|
 | `markplane_add` | Create a new task. | `title` (string) | `type` (string): feature/bug/enhancement/chore/research/spike, default feature; `priority` (string): critical/high/medium/low/someday, default medium; `effort` (string): xs/small/medium/large/xl, default medium; `epic` (string): parent epic ID; `tags` (string[]): tags for the item |
-| `markplane_write` | Write or replace the markdown body content of an item. Preserves frontmatter. | `id` (string), `body` (string) | *(none)* |
 | `markplane_update` | Update fields on an existing item. | `id` (string) | `status` (string): new status; `priority` (string): new priority; `assignee` (string): new assignee |
 | `markplane_start` | Set a task to in-progress status. | `id` (string) | *(none)* |
 | `markplane_done` | Mark a task as done. | `id` (string) | *(none)* |

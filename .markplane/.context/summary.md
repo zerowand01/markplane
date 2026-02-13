@@ -7,6 +7,7 @@
 - TASK-003: Update MCP protocol version to 2025-11-25 (done 2026-02-11)
 - TASK-004: Add serverInfo.description to MCP initialize response (done 2026-02-11)
 - TASK-005: Add markplane_write MCP tool for updating markdown body content (done 2026-02-11)
+- TASK-019: Remove markplane_write MCP tool and update instructions to prefer direct file editing (done 2026-02-12)
 - TASK-006: Document create-then-edit workflow in MCP instructions (done 2026-02-11)
 
 ## Priority Queue (next up)

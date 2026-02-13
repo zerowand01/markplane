@@ -107,24 +107,6 @@ pub fn list_tools() -> Value {
                 }
             },
             {
-                "name": "markplane_write",
-                "description": "Write or replace the markdown body content of an item. Preserves frontmatter.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "id": {
-                            "type": "string",
-                            "description": "Item ID (e.g. TASK-001, EPIC-001, PLAN-001, NOTE-001)"
-                        },
-                        "body": {
-                            "type": "string",
-                            "description": "The full markdown body content (everything below the YAML frontmatter)"
-                        }
-                    },
-                    "required": ["id", "body"]
-                }
-            },
-            {
                 "name": "markplane_update",
                 "description": "Update fields on an existing item.",
                 "inputSchema": {
@@ -320,7 +302,6 @@ pub fn call_tool(id: Value, project: &Project, name: &str, args: Value) -> JsonR
         "markplane_query" => handle_query(project, &args),
         "markplane_show" => handle_show(project, &args),
         "markplane_add" => handle_add(project, &args),
-        "markplane_write" => handle_write(project, &args),
         "markplane_update" => handle_update(project, &args),
         "markplane_start" => handle_start(project, &args),
         "markplane_done" => handle_done(project, &args),
@@ -450,24 +431,6 @@ fn handle_show(project: &Project, args: &Value) -> Result<String, String> {
 
     let path = project.item_path(id).map_err(|e| e.to_string())?;
     fs::read_to_string(&path).map_err(|e| e.to_string())
-}
-
-fn handle_write(project: &Project, args: &Value) -> Result<String, String> {
-    let id = args
-        .get("id")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| "Missing required parameter: id".to_string())?;
-
-    let body = args
-        .get("body")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| "Missing required parameter: body".to_string())?;
-
-    project
-        .update_body(id, body)
-        .map_err(|e| e.to_string())?;
-
-    Ok(r#"{"success":true}"#.to_string())
 }
 
 fn handle_add(project: &Project, args: &Value) -> Result<String, String> {

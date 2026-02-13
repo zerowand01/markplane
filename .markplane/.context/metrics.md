@@ -3,12 +3,12 @@
 <!-- Last updated: 2026-02-12 -->
 
 ## Backlog Status Distribution
-- Total: 18
+- Total: 19
 - In Progress: 0
 - Planned: 1
 - Backlog: 11
 - Draft: 0
-- Done: 6
+- Done: 7
 - Cancelled: 0
 
 ## Priority Distribution (open items)

@@ -189,17 +189,19 @@ Files are the source of truth, git is the changelog.\n\
 1. Use markplane_summary or markplane_query to understand current project state\n\
 2. Use markplane_show to read full details of any item by ID\n\
 3. Use markplane_add to create new tasks (creates template with placeholder content)\n\
-4. Use markplane_write to fill in the markdown body content after creating an item\n\
-5. Use markplane_start/markplane_done to track progress\n\
+4. Edit the markdown file directly to fill in the body content\n\
+5. Use markplane_update/markplane_start/markplane_done to track progress\n\
 6. Use markplane_sync to regenerate indexes and context summaries\n\
 \n\
-## Create-Then-Edit Workflow\n\
-When creating items with markplane_add, the file is scaffolded from a template with placeholder \
-content (e.g., \"[What needs to be done and why]\"). After creating an item, use markplane_write \
-with the item's ID and the full markdown body to fill in the actual content. The typical pattern is:\n\
-1. markplane_add to create the item (status starts as \"draft\")\n\
-2. markplane_write to fill in the description, acceptance criteria, etc.\n\
-3. markplane_update to set status to \"backlog\" once the item is fully defined\n\
+## File Editing\n\
+Items are markdown files in .markplane/ — edit them directly using your file editing tools:\n\
+- Tasks: .markplane/backlog/items/TASK-NNN.md\n\
+- Epics: .markplane/roadmap/items/EPIC-NNN.md\n\
+- Plans: .markplane/plans/items/PLAN-NNN.md\n\
+- Notes: .markplane/notes/items/NOTE-NNN.md\n\
+The body content (below the YAML frontmatter) is free-form markdown. \
+Use markplane tools for structural operations (create, status, linking, sync) \
+and edit files directly for content changes (descriptions, acceptance criteria, notes).\n\
 \n\
 ## Cross-References\n\
 Use [[TASK-042]] wiki-link syntax to reference other items in markdown body content. \
