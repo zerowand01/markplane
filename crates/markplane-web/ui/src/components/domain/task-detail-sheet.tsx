@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { STATUS_CONFIG, PRIORITY_CONFIG } from "@/lib/constants";
+import { STATUS_CONFIG } from "@/lib/constants";
 import type { TaskStatus, Priority } from "@/lib/types";
 
 const ALL_STATUSES: TaskStatus[] = [
@@ -136,13 +136,7 @@ export function TaskDetailSheet({
                             updateTask.mutate({ id: task.id, priority: p })
                           }
                         >
-                          <span
-                            className="mr-2"
-                            style={{ color: `var(--priority-${p})` }}
-                          >
-                            {PRIORITY_CONFIG[p].icon}
-                          </span>
-                          {PRIORITY_CONFIG[p].label}
+                          <PriorityIndicator priority={p} showLabel />
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuContent>

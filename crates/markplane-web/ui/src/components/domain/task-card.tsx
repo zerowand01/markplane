@@ -37,11 +37,11 @@ export function TaskCard({
         <CardContent className="p-3 space-y-2">
           <div className="flex items-center gap-2">
             <PriorityIndicator priority={task.priority} />
-            <span className="font-mono text-xs text-muted-foreground">
+            <span className="font-mono text-sm text-muted-foreground">
               {task.id}
             </span>
             {task.effort && (
-              <span className="ml-auto text-[10px] font-medium px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground uppercase">
+              <span className="ml-auto text-sm font-medium px-2 py-0.5 rounded bg-secondary text-secondary-foreground uppercase">
                 {task.effort === "xs"
                   ? "XS"
                   : task.effort === "xl"
@@ -50,13 +50,13 @@ export function TaskCard({
               </span>
             )}
           </div>
-          <p className="text-sm font-medium leading-snug line-clamp-2">
+          <p className="text-base font-medium leading-snug line-clamp-2">
             {task.title}
           </p>
           <div className="flex items-center gap-2 flex-wrap">
             {task.epic && (
               <span
-                className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+                className="text-sm font-mono px-2 py-0.5 rounded"
                 style={{
                   backgroundColor:
                     "color-mix(in oklch, var(--entity-epic) 15%, transparent)",
@@ -69,7 +69,7 @@ export function TaskCard({
             {task.tags.map((tag) => (
               <span
                 key={tag}
-                className="text-[10px] text-muted-foreground"
+                className="text-sm text-muted-foreground"
               >
                 #{tag}
               </span>

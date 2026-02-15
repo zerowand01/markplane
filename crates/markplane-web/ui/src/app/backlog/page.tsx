@@ -102,6 +102,7 @@ function BacklogContent() {
   const [filterEpic, setFilterEpic] = useState<string>("all");
   const [filterAssignee, setFilterAssignee] = useState<string>("all");
   const [filterTag, setFilterTag] = useState<string>("all");
+  const [sortKey, setSortKey] = useState<SortKey>("manual");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(
     searchParams.get("task")
   );
@@ -171,10 +172,6 @@ function BacklogContent() {
     );
   }
 
-  const openCount = (tasks || []).filter(
-    (t) => t.status !== "done" && t.status !== "cancelled"
-  ).length;
-
   const epicOptions = [
     ...new Set((tasks || []).map((t) => t.epic).filter(Boolean) as string[]),
   ];
@@ -190,23 +187,16 @@ function BacklogContent() {
   return (
     <PageTransition>
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Backlog</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {openCount} open tasks
-          </p>
-        </div>
-
-        {/* View toggle */}
+      {/* Header — tabs, filters & sort on one line */}
+      <div className="flex items-center gap-3 flex-wrap">
+        {/* Tabs */}
         <div className="flex gap-4 border-b">
           {(["board", "backlog"] as const).map((v) => (
             <button
               key={v}
-              className={`text-sm capitalize pb-2 -mb-px transition-colors ${
+              className={`capitalize text-base pb-2 -mb-px transition-colors ${
                 view === v
-                  ? "text-primary border-b-2 border-primary font-medium"
+                  ? "text-primary border-b-2 border-primary font-semibold"
                   : "text-muted-foreground hover:text-foreground"
               }`}
               onClick={() => changeView(v)}
@@ -215,72 +205,95 @@ function BacklogContent() {
             </button>
           ))}
         </div>
-      </div>
 
-      {/* Filter bar */}
-      <div className="flex gap-2 flex-wrap overflow-x-auto pb-1">
-        <Select value={filterPriority} onValueChange={setFilterPriority}>
-          <SelectTrigger className="w-[140px] h-8 text-xs">
-            <SelectValue placeholder="Priority" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All priorities</SelectItem>
-            <SelectItem value="critical">Critical</SelectItem>
-            <SelectItem value="high">High</SelectItem>
-            <SelectItem value="medium">Medium</SelectItem>
-            <SelectItem value="low">Low</SelectItem>
-            <SelectItem value="someday">Someday</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex-1" />
 
-        {epicOptions.length > 0 && (
-          <Select value={filterEpic} onValueChange={setFilterEpic}>
-            <SelectTrigger className="w-[140px] h-8 text-xs">
-              <SelectValue placeholder="Epic" />
+        {/* Filters */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm text-muted-foreground font-medium shrink-0">Filter</span>
+          <Select value={filterPriority} onValueChange={setFilterPriority}>
+            <SelectTrigger className="w-[130px] h-7 text-xs">
+              <SelectValue placeholder="Priority" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All epics</SelectItem>
-              {epicOptions.map((e) => (
-                <SelectItem key={e} value={e}>
-                  {e}
-                </SelectItem>
-              ))}
+              <SelectItem value="all">All priorities</SelectItem>
+              <SelectItem value="critical">Critical</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
+              <SelectItem value="someday">Someday</SelectItem>
             </SelectContent>
           </Select>
+
+          {epicOptions.length > 0 && (
+            <Select value={filterEpic} onValueChange={setFilterEpic}>
+              <SelectTrigger className="w-[130px] h-7 text-xs">
+                <SelectValue placeholder="Epic" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All epics</SelectItem>
+                {epicOptions.map((e) => (
+                  <SelectItem key={e} value={e}>
+                    {e}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {tagOptions.length > 0 && (
+            <Select value={filterTag} onValueChange={setFilterTag}>
+              <SelectTrigger className="w-[130px] h-7 text-xs">
+                <SelectValue placeholder="Tag" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All tags</SelectItem>
+                {tagOptions.map((tag) => (
+                  <SelectItem key={tag} value={tag}>
+                    #{tag}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {assigneeOptions.length > 0 && (
+            <Select value={filterAssignee} onValueChange={setFilterAssignee}>
+              <SelectTrigger className="w-[130px] h-7 text-xs">
+                <SelectValue placeholder="Assignee" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All assignees</SelectItem>
+                {assigneeOptions.map((a) => (
+                  <SelectItem key={a} value={a}>
+                    @{a}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+
+        {/* Sort (backlog tab only) */}
+        {view === "backlog" && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm text-muted-foreground font-medium shrink-0">Sort</span>
+            <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+              <SelectTrigger className="w-[100px] h-7 text-xs">
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.key} value={opt.key}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
 
-        {tagOptions.length > 0 && (
-          <Select value={filterTag} onValueChange={setFilterTag}>
-            <SelectTrigger className="w-[140px] h-8 text-xs">
-              <SelectValue placeholder="Tag" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All tags</SelectItem>
-              {tagOptions.map((tag) => (
-                <SelectItem key={tag} value={tag}>
-                  #{tag}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-
-        {assigneeOptions.length > 0 && (
-          <Select value={filterAssignee} onValueChange={setFilterAssignee}>
-            <SelectTrigger className="w-[140px] h-8 text-xs">
-              <SelectValue placeholder="Assignee" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All assignees</SelectItem>
-              {assigneeOptions.map((a) => (
-                <SelectItem key={a} value={a}>
-                  @{a}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-
+        {/* Clear filters */}
         {(filterPriority !== "all" ||
           filterEpic !== "all" ||
           filterAssignee !== "all" ||
@@ -288,7 +301,7 @@ function BacklogContent() {
           <Button
             variant="ghost"
             size="sm"
-            className="text-xs h-8"
+            className="text-xs h-7"
             onClick={() => {
               setFilterPriority("all");
               setFilterEpic("all");
@@ -296,7 +309,7 @@ function BacklogContent() {
               setFilterTag("all");
             }}
           >
-            Clear filters
+            Clear
           </Button>
         )}
       </div>
@@ -306,7 +319,7 @@ function BacklogContent() {
         <KanbanView tasks={filteredTasks} onTaskClick={openTask} />
       )}
       {view === "backlog" && (
-        <BacklogListView tasks={filteredTasks} onTaskClick={openTask} />
+        <BacklogListView tasks={filteredTasks} onTaskClick={openTask} sortKey={sortKey} />
       )}
 
       {/* Task detail sheet */}
@@ -525,13 +538,14 @@ function KanbanColumn({
 function BacklogListView({
   tasks,
   onTaskClick,
+  sortKey,
 }: {
   tasks: Task[];
   onTaskClick: (id: string) => void;
+  sortKey: SortKey;
 }) {
   const updateTask = useUpdateTask();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>("manual");
 
   // Optimistic local state — updated synchronously on drop so dnd-kit
   // sees the new order before CSS transforms are removed.
@@ -706,23 +720,9 @@ function BacklogListView({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      {/* Promote drop zone + sort toggle */}
-      <div className="flex items-center gap-3 mb-3">
-        <div className="flex-1">
-          <PromoteDropZone />
-        </div>
-        <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
-          <SelectTrigger className="w-[120px] h-8 text-xs shrink-0">
-            <SelectValue placeholder="Sort" />
-          </SelectTrigger>
-          <SelectContent>
-            {SORT_OPTIONS.map((opt) => (
-              <SelectItem key={opt.key} value={opt.key}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Promote drop zone */}
+      <div className="mb-3">
+        <PromoteDropZone />
       </div>
 
       {/* Priority groups */}
@@ -865,18 +865,13 @@ function BacklogRow({
       {/* Desktop layout */}
       <div className="hidden md:flex items-center gap-3">
         <PriorityIndicator priority={task.priority} />
-        <span className="font-mono text-xs text-muted-foreground w-20 shrink-0">
+        <span className="font-mono text-sm text-muted-foreground w-20 shrink-0">
           {task.id}
         </span>
-        <span className="text-sm font-medium truncate flex-1">{task.title}</span>
-        {task.effort && (
-          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground uppercase shrink-0">
-            {effortLabel}
-          </span>
-        )}
+        <span className="text-base font-medium truncate flex-1">{task.title}</span>
         {task.epic && (
           <span
-            className="text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0"
+            className="text-sm font-mono px-2 py-0.5 rounded shrink-0"
             style={{
               backgroundColor:
                 "color-mix(in oklch, var(--entity-epic) 15%, transparent)",
@@ -886,7 +881,11 @@ function BacklogRow({
             {task.epic}
           </span>
         )}
-        <span className="text-xs text-muted-foreground shrink-0">{task.updated}</span>
+        {task.effort && (
+          <span className="text-sm font-medium px-2 py-0.5 rounded bg-secondary text-secondary-foreground uppercase shrink-0">
+            {effortLabel}
+          </span>
+        )}
         {onPromote && !isOverlay ? (
           <button
             title="Move to Board"
@@ -903,7 +902,7 @@ function BacklogRow({
       <div className="md:hidden space-y-1">
         <div className="flex items-center gap-2">
           <PriorityIndicator priority={task.priority} />
-          <span className="font-mono text-xs text-muted-foreground">
+          <span className="font-mono text-sm text-muted-foreground">
             {task.id}
           </span>
           <StatusBadge status={task.status} />
@@ -918,16 +917,11 @@ function BacklogRow({
             </button>
           )}
         </div>
-        <p className="text-sm font-medium">{task.title}</p>
-        <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
-          {task.effort && (
-            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground uppercase">
-              {effortLabel}
-            </span>
-          )}
+        <p className="text-base font-medium">{task.title}</p>
+        <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
           {task.epic && (
             <span
-              className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+              className="text-sm font-mono px-2 py-0.5 rounded"
               style={{
                 backgroundColor:
                   "color-mix(in oklch, var(--entity-epic) 15%, transparent)",
@@ -937,7 +931,11 @@ function BacklogRow({
               {task.epic}
             </span>
           )}
-          <span>{task.updated}</span>
+          {task.effort && (
+            <span className="text-sm font-medium px-2 py-0.5 rounded bg-secondary text-secondary-foreground uppercase">
+              {effortLabel}
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -952,15 +950,17 @@ function PromoteDropZone() {
   return (
     <div
       ref={setNodeRef}
-      className={`rounded-lg border-2 border-dashed p-2.5 text-center transition-colors ${
+      className={`rounded-lg border-2 border-dashed py-5 px-4 text-center transition-colors ${
         isOver
-          ? "border-primary bg-primary/5"
-          : "border-muted-foreground/20"
+          ? "border-primary bg-primary/10"
+          : "border-muted-foreground/25 bg-muted/30"
       }`}
     >
-      <p className="text-xs text-muted-foreground flex items-center justify-center gap-1.5">
-        <ArrowUpRight className="size-3.5" />
-        Drop to move to Board
+      <p className={`text-sm flex items-center justify-center gap-2 transition-colors ${
+        isOver ? "text-primary font-medium" : "text-muted-foreground"
+      }`}>
+        <ArrowUpRight className="size-4" />
+        Drop here to move to Board
       </p>
     </div>
   );
@@ -971,16 +971,11 @@ function PromoteDropZone() {
 function BacklogSkeleton() {
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-8 w-32" />
-        <div className="flex gap-4">
-          <Skeleton className="h-6 w-14" />
-          <Skeleton className="h-6 w-14" />
-        </div>
-      </div>
-      <div className="flex gap-2">
-        <Skeleton className="h-8 w-[140px]" />
-        <Skeleton className="h-8 w-[140px]" />
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-7 w-32" />
+        <div className="flex-1" />
+        <Skeleton className="h-7 w-[130px]" />
+        <Skeleton className="h-7 w-[130px]" />
       </div>
       <div className="flex gap-4">
         {Array.from({ length: 3 }).map((_, i) => (
