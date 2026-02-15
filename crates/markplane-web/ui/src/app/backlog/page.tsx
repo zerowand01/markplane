@@ -10,11 +10,13 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import type { DragStartEvent, DragEndEvent, DragOverEvent } from "@dnd-kit/core";
+import type { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
 import {
   SortableContext,
+  useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useDroppable } from "@dnd-kit/core";
 import { useTasks } from "@/lib/hooks/use-tasks";
 import { useEpics } from "@/lib/hooks/use-epics";
@@ -32,29 +34,41 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Card, CardContent } from "@/components/ui/card";
-import { STATUS_CONFIG } from "@/lib/constants";
 import { PageTransition } from "@/components/domain/page-transition";
+import { ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import type { Task, TaskStatus, Priority, Effort } from "@/lib/types";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const KANBAN_COLUMNS: { status: TaskStatus; label: string; wipLimit?: number }[] = [
-  { status: "in-progress", label: "In Progress", wipLimit: 5 },
   { status: "planned", label: "Planned" },
-  { status: "backlog", label: "Backlog" },
-  { status: "draft", label: "Drafts" },
+  { status: "in-progress", label: "In Progress", wipLimit: 5 },
+  { status: "done", label: "Done" },
 ];
 
-type ViewMode = "kanban" | "list" | "table";
+type ViewMode = "board" | "backlog";
+
+const BOARD_STATUSES: TaskStatus[] = ["planned", "in-progress", "done"];
+const BACKLOG_STATUSES: TaskStatus[] = ["draft", "backlog"];
+
+const PRIORITY_GROUPS: { priority: Priority; label: string }[] = [
+  { priority: "critical", label: "Critical" },
+  { priority: "high", label: "High" },
+  { priority: "medium", label: "Medium" },
+  { priority: "low", label: "Low" },
+  { priority: "someday", label: "Someday" },
+];
+
+const EFFORT_RANK: Record<Effort, number> = {
+  xs: 0,
+  small: 1,
+  medium: 2,
+  large: 3,
+  xl: 4,
+};
+
+type SortKey = "title" | "effort" | "epic" | "updated";
+type SortDir = "asc" | "desc";
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 
@@ -70,9 +84,10 @@ function BacklogContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const viewParam = searchParams.get("view") as ViewMode | null;
-  const [view, setView] = useState<ViewMode>(viewParam || "kanban");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+  // Normalize old URL params for backward compat
+  const viewParam = searchParams.get("view");
+  const normalizedView: ViewMode = viewParam === "backlog" ? "backlog" : "board";
+  const [view, setView] = useState<ViewMode>(normalizedView);
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [filterEpic, setFilterEpic] = useState<string>("all");
   const [filterAssignee, setFilterAssignee] = useState<string>("all");
@@ -86,8 +101,9 @@ function BacklogContent() {
 
   const filteredTasks = useMemo(() => {
     if (!tasks) return [];
+    const viewStatuses = view === "board" ? BOARD_STATUSES : BACKLOG_STATUSES;
     return tasks.filter((t) => {
-      if (filterStatus !== "all" && t.status !== filterStatus) return false;
+      if (!viewStatuses.includes(t.status)) return false;
       if (filterPriority !== "all" && t.priority !== filterPriority)
         return false;
       if (filterEpic !== "all" && t.epic !== filterEpic) return false;
@@ -96,7 +112,7 @@ function BacklogContent() {
       if (filterTag !== "all" && !t.tags.includes(filterTag)) return false;
       return true;
     });
-  }, [tasks, filterStatus, filterPriority, filterEpic, filterAssignee, filterTag]);
+  }, [tasks, view, filterPriority, filterEpic, filterAssignee, filterTag]);
 
   const openTask = useCallback(
     (id: string) => {
@@ -120,7 +136,7 @@ function BacklogContent() {
     (v: ViewMode) => {
       setView(v);
       const params = new URLSearchParams(searchParams.toString());
-      if (v === "kanban") {
+      if (v === "board") {
         params.delete("view");
       } else {
         params.set("view", v);
@@ -174,38 +190,25 @@ function BacklogContent() {
         </div>
 
         {/* View toggle */}
-        <div className="flex gap-1 bg-secondary rounded-lg p-1">
-          {(["kanban", "list", "table"] as const).map((v) => (
-            <Button
+        <div className="flex gap-4 border-b">
+          {(["board", "backlog"] as const).map((v) => (
+            <button
               key={v}
-              variant={view === v ? "default" : "ghost"}
-              size="sm"
-              className="text-xs capitalize"
+              className={`text-sm capitalize pb-2 -mb-px transition-colors ${
+                view === v
+                  ? "text-primary border-b-2 border-primary font-medium"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
               onClick={() => changeView(v)}
             >
               {v}
-            </Button>
+            </button>
           ))}
         </div>
       </div>
 
       {/* Filter bar */}
       <div className="flex gap-2 flex-wrap overflow-x-auto pb-1">
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[120px] sm:w-[140px] h-8 text-xs shrink-0">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="in-progress">In Progress</SelectItem>
-            <SelectItem value="planned">Planned</SelectItem>
-            <SelectItem value="backlog">Backlog</SelectItem>
-            <SelectItem value="draft">Draft</SelectItem>
-            <SelectItem value="done">Done</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-          </SelectContent>
-        </Select>
-
         <Select value={filterPriority} onValueChange={setFilterPriority}>
           <SelectTrigger className="w-[140px] h-8 text-xs">
             <SelectValue placeholder="Priority" />
@@ -268,8 +271,7 @@ function BacklogContent() {
           </Select>
         )}
 
-        {(filterStatus !== "all" ||
-          filterPriority !== "all" ||
+        {(filterPriority !== "all" ||
           filterEpic !== "all" ||
           filterAssignee !== "all" ||
           filterTag !== "all") && (
@@ -278,7 +280,6 @@ function BacklogContent() {
             size="sm"
             className="text-xs h-8"
             onClick={() => {
-              setFilterStatus("all");
               setFilterPriority("all");
               setFilterEpic("all");
               setFilterAssignee("all");
@@ -291,14 +292,11 @@ function BacklogContent() {
       </div>
 
       {/* Views */}
-      {view === "kanban" && (
+      {view === "board" && (
         <KanbanView tasks={filteredTasks} onTaskClick={openTask} />
       )}
-      {view === "list" && (
-        <ListView tasks={filteredTasks} onTaskClick={openTask} />
-      )}
-      {view === "table" && (
-        <TableView tasks={filteredTasks} onTaskClick={openTask} />
+      {view === "backlog" && (
+        <BacklogListView tasks={filteredTasks} onTaskClick={openTask} />
       )}
 
       {/* Task detail sheet */}
@@ -330,16 +328,29 @@ function KanbanView({
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
-  const tasksByStatus = useMemo(() => {
+  const DONE_LIMIT = 10;
+
+  const { tasksByStatus, totalsByStatus } = useMemo(() => {
     const map = new Map<TaskStatus, Task[]>();
+    const totals = new Map<TaskStatus, number>();
     for (const col of KANBAN_COLUMNS) {
       map.set(col.status, []);
+      totals.set(col.status, 0);
     }
     for (const task of tasks) {
       const list = map.get(task.status);
-      if (list) list.push(task);
+      if (list) {
+        list.push(task);
+        totals.set(task.status, (totals.get(task.status) || 0) + 1);
+      }
     }
-    return map;
+    // Truncate Done column to most recent items
+    const doneTasks = map.get("done");
+    if (doneTasks && doneTasks.length > DONE_LIMIT) {
+      doneTasks.sort((a, b) => b.updated.localeCompare(a.updated));
+      map.set("done", doneTasks.slice(0, DONE_LIMIT));
+    }
+    return { tasksByStatus: map, totalsByStatus: totals };
   }, [tasks]);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -392,6 +403,7 @@ function KanbanView({
       <div className="flex flex-col md:flex-row gap-4 overflow-x-auto pb-4">
         {KANBAN_COLUMNS.map((col) => {
           const columnTasks = tasksByStatus.get(col.status) || [];
+          const totalCount = totalsByStatus.get(col.status) || 0;
           const isOverWip =
             col.wipLimit !== undefined && columnTasks.length > col.wipLimit;
 
@@ -401,10 +413,12 @@ function KanbanView({
               status={col.status}
               label={col.label}
               count={columnTasks.length}
+              totalCount={totalCount}
               wipLimit={col.wipLimit}
               isOverWip={isOverWip}
               tasks={columnTasks}
               onTaskClick={onTaskClick}
+              onDemote={col.status === "planned" ? (id) => updateTask.mutate({ id, status: "backlog" }) : undefined}
             />
           );
         })}
@@ -425,20 +439,25 @@ function KanbanColumn({
   status,
   label,
   count,
+  totalCount,
   wipLimit,
   isOverWip,
   tasks,
   onTaskClick,
+  onDemote,
 }: {
   status: TaskStatus;
   label: string;
   count: number;
+  totalCount: number;
   wipLimit?: number;
   isOverWip: boolean;
   tasks: Task[];
   onTaskClick: (id: string) => void;
+  onDemote?: (id: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
+  const isTruncated = totalCount > count;
 
   return (
     <div
@@ -452,7 +471,7 @@ function KanbanColumn({
         <span
           className={`text-xs ${isOverWip ? "text-destructive font-bold" : "text-muted-foreground"}`}
         >
-          ({count}
+          ({isTruncated ? `${count} of ${totalCount}` : count}
           {wipLimit !== undefined && `/${wipLimit}`})
         </span>
       </div>
@@ -463,11 +482,22 @@ function KanbanColumn({
       >
         <div className="space-y-2 min-h-[60px]">
           {tasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onClick={() => onTaskClick(task.id)}
-            />
+            <div key={task.id} className="group/card relative">
+              <TaskCard
+                task={task}
+                onClick={() => onTaskClick(task.id)}
+              />
+              {onDemote && (
+                <button
+                  title="Send to Backlog"
+                  className="absolute top-2 right-2 size-6 flex items-center justify-center rounded opacity-0 group-hover/card:opacity-100 transition-opacity text-muted-foreground hover:text-primary hover:bg-primary/10 bg-card/80"
+                  onClick={(e) => { e.stopPropagation(); onDemote(task.id); }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  <ArrowDownLeft className="size-3.5" />
+                </button>
+              )}
+            </div>
           ))}
           {tasks.length === 0 && (
             <div className="rounded-lg border border-dashed p-6 text-center">
@@ -480,268 +510,414 @@ function KanbanColumn({
   );
 }
 
-// ── List View ──────────────────────────────────────────────────────────────
+// ── Backlog List View ──────────────────────────────────────────────────────
 
-function ListView({
+function BacklogListView({
   tasks,
   onTaskClick,
 }: {
   tasks: Task[];
   onTaskClick: (id: string) => void;
 }) {
-  const activeTasks = tasks.filter(
-    (t) => t.status !== "done" && t.status !== "cancelled"
+  const updateTask = useUpdateTask();
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>("updated");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
+
+  const sortTasks = useCallback(
+    (list: Task[]) => {
+      const sorted = [...list];
+      sorted.sort((a, b) => {
+        let cmp = 0;
+        switch (sortKey) {
+          case "title":
+            cmp = a.title.localeCompare(b.title);
+            break;
+          case "effort":
+            cmp = EFFORT_RANK[a.effort] - EFFORT_RANK[b.effort];
+            break;
+          case "epic":
+            cmp = (a.epic || "").localeCompare(b.epic || "");
+            break;
+          case "updated":
+            cmp = a.updated.localeCompare(b.updated);
+            break;
+        }
+        return sortDir === "asc" ? cmp : -cmp;
+      });
+      return sorted;
+    },
+    [sortKey, sortDir]
+  );
+
+  const tasksByPriority = useMemo(() => {
+    const map = new Map<Priority, Task[]>();
+    for (const group of PRIORITY_GROUPS) {
+      map.set(group.priority, []);
+    }
+    for (const task of tasks) {
+      const list = map.get(task.priority);
+      if (list) list.push(task);
+    }
+    // Sort within each group
+    for (const [priority, list] of map) {
+      map.set(priority, sortTasks(list));
+    }
+    return map;
+  }, [tasks, sortTasks]);
+
+  const toggleSort = useCallback(
+    (key: SortKey) => {
+      if (sortKey === key) {
+        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      } else {
+        setSortKey(key);
+        setSortDir(key === "updated" ? "desc" : "asc");
+      }
+    },
+    [sortKey]
+  );
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const task = event.active.data.current?.task as Task | undefined;
+    if (task) setActiveTask(task);
+  }, []);
+
+  const handlePromote = useCallback(
+    (taskId: string) => {
+      updateTask.mutate({ id: taskId, status: "planned" });
+    },
+    [updateTask]
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      setActiveTask(null);
+      const { active, over } = event;
+      if (!over) return;
+
+      const taskId = active.id as string;
+      const overId = over.id as string;
+
+      // Check if dropped on the promote zone
+      if (overId === "promote-to-board") {
+        updateTask.mutate({ id: taskId, status: "planned" });
+        return;
+      }
+
+      // Determine target priority
+      let targetPriority: Priority | null = null;
+      // Check if dropped on a priority group directly
+      const group = PRIORITY_GROUPS.find((g) => g.priority === overId);
+      if (group) {
+        targetPriority = group.priority;
+      } else {
+        // Dropped on a task — find that task's priority
+        const overTask = tasks.find((t) => t.id === overId);
+        if (overTask) {
+          targetPriority = overTask.priority;
+        }
+      }
+
+      if (!targetPriority) return;
+
+      // Only update if priority actually changed
+      const currentTask = tasks.find((t) => t.id === taskId);
+      if (currentTask && currentTask.priority !== targetPriority) {
+        updateTask.mutate({ id: taskId, priority: targetPriority });
+      }
+    },
+    [tasks, updateTask]
   );
 
   return (
-    <div className="space-y-2 max-w-[900px]">
-      {activeTasks.map((task) => (
-        <Card
-          key={task.id}
-          className="hover:border-muted-foreground/30 transition-colors cursor-pointer"
-          onClick={() => onTaskClick(task.id)}
-        >
-          <CardContent className="p-3 flex items-center gap-3">
-            <PriorityIndicator priority={task.priority} />
-            <span className="font-mono text-xs text-muted-foreground w-20 shrink-0">
-              {task.id}
-            </span>
-            <StatusBadge status={task.status} />
-            <span className="text-sm font-medium truncate flex-1">
-              {task.title}
-            </span>
-            {task.epic && (
-              <span
-                className="text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0"
-                style={{
-                  backgroundColor:
-                    "color-mix(in oklch, var(--entity-epic) 15%, transparent)",
-                  color: "var(--entity-epic)",
-                }}
-              >
-                {task.epic}
-              </span>
-            )}
-            {task.effort && (
-              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground uppercase shrink-0">
-                {task.effort === "xs"
-                  ? "XS"
-                  : task.effort === "xl"
-                    ? "XL"
-                    : task.effort.charAt(0).toUpperCase()}
-              </span>
-            )}
-            {task.assignee && (
-              <span className="text-xs text-muted-foreground shrink-0">
-                @{task.assignee}
-              </span>
-            )}
-          </CardContent>
-        </Card>
-      ))}
-      {activeTasks.length === 0 && (
-        <p className="text-center text-sm text-muted-foreground py-8">
-          No tasks match the current filters.
-        </p>
-      )}
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      {/* Promote drop zone */}
+      <PromoteDropZone />
+
+      {/* Sort headers (desktop) */}
+      <div className="hidden md:grid grid-cols-[120px_1fr_80px_80px_100px_28px] gap-2 px-3 pb-1 mt-3 text-xs text-muted-foreground">
+        <div />
+        <SortableHeader label="Title" sortId="title" currentSort={sortKey} currentDir={sortDir} onToggle={toggleSort} />
+        <SortableHeader label="Effort" sortId="effort" currentSort={sortKey} currentDir={sortDir} onToggle={toggleSort} />
+        <SortableHeader label="Epic" sortId="epic" currentSort={sortKey} currentDir={sortDir} onToggle={toggleSort} />
+        <SortableHeader label="Updated" sortId="updated" currentSort={sortKey} currentDir={sortDir} onToggle={toggleSort} />
+        <div />
+      </div>
+
+      {/* Priority groups */}
+      <div className="space-y-4">
+        {PRIORITY_GROUPS.map((group) => {
+          const groupTasks = tasksByPriority.get(group.priority) || [];
+          return (
+            <PriorityGroup
+              key={group.priority}
+              priority={group.priority}
+              label={group.label}
+              tasks={groupTasks}
+              onTaskClick={onTaskClick}
+              onPromote={handlePromote}
+            />
+          );
+        })}
+      </div>
+
+      <DragOverlay>
+        {activeTask ? (
+          <BacklogRow task={activeTask} isOverlay />
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
+}
+
+// ── Priority Group ─────────────────────────────────────────────────────────
+
+function PriorityGroup({
+  priority,
+  label,
+  tasks,
+  onTaskClick,
+  onPromote,
+}: {
+  priority: Priority;
+  label: string;
+  tasks: Task[];
+  onTaskClick: (id: string) => void;
+  onPromote: (id: string) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: priority });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`rounded-lg p-2 transition-colors ${
+        isOver ? "bg-accent/50" : ""
+      }`}
+    >
+      <div className="flex items-center gap-2 mb-2 px-1">
+        <PriorityIndicator priority={priority} />
+        <h3 className="text-sm font-semibold">{label}</h3>
+        <span className="text-xs text-muted-foreground">({tasks.length})</span>
+      </div>
+
+      <SortableContext
+        items={tasks.map((t) => t.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="space-y-1 min-h-[36px]">
+          {tasks.map((task) => (
+            <BacklogRow
+              key={task.id}
+              task={task}
+              onClick={() => onTaskClick(task.id)}
+              onPromote={() => onPromote(task.id)}
+            />
+          ))}
+          {tasks.length === 0 && (
+            <div className="rounded border border-dashed p-3 text-center">
+              <p className="text-xs text-muted-foreground">
+                Drop tasks here to set {label.toLowerCase()} priority
+              </p>
+            </div>
+          )}
+        </div>
+      </SortableContext>
     </div>
   );
 }
 
-// ── Table View ─────────────────────────────────────────────────────────────
+// ── Backlog Row ────────────────────────────────────────────────────────────
 
-function TableView({
-  tasks,
-  onTaskClick,
+function BacklogRow({
+  task,
+  onClick,
+  onPromote,
+  isOverlay,
 }: {
-  tasks: Task[];
-  onTaskClick: (id: string) => void;
+  task: Task;
+  onClick?: () => void;
+  onPromote?: () => void;
+  isOverlay?: boolean;
 }) {
-  const [sortKey, setSortKey] = useState<string>("priority");
-  const [sortAsc, setSortAsc] = useState(true);
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id, data: { task } });
 
-  const activeTasks = tasks.filter(
-    (t) => t.status !== "done" && t.status !== "cancelled"
-  );
-
-  const priorityRank: Record<Priority, number> = {
-    critical: 0,
-    high: 1,
-    medium: 2,
-    low: 3,
-    someday: 4,
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
   };
 
-  const effortRank: Record<Effort, number> = {
-    xs: 0,
-    small: 1,
-    medium: 2,
-    large: 3,
-    xl: 4,
-  };
-
-  const sorted = useMemo(() => {
-    const list = [...activeTasks];
-    list.sort((a, b) => {
-      let cmp = 0;
-      switch (sortKey) {
-        case "title":
-          cmp = a.title.localeCompare(b.title);
-          break;
-        case "status":
-          cmp = a.status.localeCompare(b.status);
-          break;
-        case "priority":
-          cmp = priorityRank[a.priority] - priorityRank[b.priority];
-          break;
-        case "effort":
-          cmp = effortRank[a.effort] - effortRank[b.effort];
-          break;
-        case "epic":
-          cmp = (a.epic || "").localeCompare(b.epic || "");
-          break;
-        case "updated":
-          cmp = a.updated.localeCompare(b.updated);
-          break;
-        default:
-          cmp = 0;
-      }
-      return sortAsc ? cmp : -cmp;
-    });
-    return list;
-  }, [activeTasks, sortKey, sortAsc]);
-
-  const toggleSort = (key: string) => {
-    if (sortKey === key) {
-      setSortAsc(!sortAsc);
-    } else {
-      setSortKey(key);
-      setSortAsc(true);
-    }
-  };
-
-  const SortHeader = ({ label, sortId }: { label: string; sortId: string }) => (
-    <TableHead
-      className="cursor-pointer select-none hover:text-foreground"
-      onClick={() => toggleSort(sortId)}
-    >
-      {label}
-      {sortKey === sortId && (
-        <span className="ml-1">{sortAsc ? "\u2191" : "\u2193"}</span>
-      )}
-    </TableHead>
-  );
+  const effortLabel =
+    task.effort === "xs"
+      ? "XS"
+      : task.effort === "xl"
+        ? "XL"
+        : task.effort.charAt(0).toUpperCase();
 
   return (
-    <>
-      {/* Desktop table */}
-      <div className="rounded-md border hidden md:block">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[80px]">ID</TableHead>
-              <SortHeader label="Title" sortId="title" />
-              <SortHeader label="Status" sortId="status" />
-              <SortHeader label="Priority" sortId="priority" />
-              <SortHeader label="Effort" sortId="effort" />
-              <SortHeader label="Epic" sortId="epic" />
-              <TableHead>Assignee</TableHead>
-              <SortHeader label="Updated" sortId="updated" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sorted.map((task) => (
-              <TableRow
-                key={task.id}
-                className="cursor-pointer"
-                onClick={() => onTaskClick(task.id)}
-              >
-                <TableCell className="font-mono text-xs text-muted-foreground">
-                  {task.id}
-                </TableCell>
-                <TableCell className="font-medium max-w-[300px] truncate">
-                  {task.title}
-                </TableCell>
-                <TableCell>
-                  <StatusBadge status={task.status} />
-                </TableCell>
-                <TableCell>
-                  <PriorityIndicator priority={task.priority} showLabel />
-                </TableCell>
-                <TableCell className="uppercase text-xs">
-                  {task.effort}
-                </TableCell>
-                <TableCell>
-                  {task.epic && (
-                    <span
-                      className="text-[10px] font-mono px-1.5 py-0.5 rounded"
-                      style={{
-                        backgroundColor:
-                          "color-mix(in oklch, var(--entity-epic) 15%, transparent)",
-                        color: "var(--entity-epic)",
-                      }}
-                    >
-                      {task.epic}
-                    </span>
-                  )}
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {task.assignee ? `@${task.assignee}` : ""}
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {task.updated}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        {sorted.length === 0 && (
-          <p className="text-center text-sm text-muted-foreground py-8">
-            No tasks match the current filters.
-          </p>
+    <div
+      ref={isOverlay ? undefined : setNodeRef}
+      style={isOverlay ? undefined : style}
+      {...(isOverlay ? {} : { ...attributes, ...listeners })}
+      className={`group/row rounded-md border bg-card px-3 py-2 cursor-pointer transition-colors hover:border-muted-foreground/30 ${
+        isOverlay ? "shadow-lg border-primary/50" : ""
+      }`}
+      onClick={onClick}
+    >
+      {/* Desktop layout */}
+      <div className="hidden md:grid grid-cols-[120px_1fr_80px_80px_100px_28px] gap-2 items-center">
+        <div className="flex items-center gap-2">
+          <PriorityIndicator priority={task.priority} />
+          <span className="font-mono text-xs text-muted-foreground">
+            {task.id}
+          </span>
+        </div>
+        <span className="text-sm font-medium truncate">{task.title}</span>
+        {task.effort ? (
+          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground uppercase w-fit">
+            {effortLabel}
+          </span>
+        ) : (
+          <span />
+        )}
+        {task.epic ? (
+          <span
+            className="text-[10px] font-mono px-1.5 py-0.5 rounded w-fit"
+            style={{
+              backgroundColor:
+                "color-mix(in oklch, var(--entity-epic) 15%, transparent)",
+              color: "var(--entity-epic)",
+            }}
+          >
+            {task.epic}
+          </span>
+        ) : (
+          <span />
+        )}
+        <span className="text-xs text-muted-foreground">{task.updated}</span>
+        {onPromote && !isOverlay ? (
+          <button
+            title="Move to Board"
+            className="size-6 flex items-center justify-center rounded opacity-0 group-hover/row:opacity-100 transition-opacity text-muted-foreground hover:text-primary hover:bg-primary/10"
+            onClick={(e) => { e.stopPropagation(); onPromote(); }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <ArrowUpRight className="size-3.5" />
+          </button>
+        ) : (
+          <span />
         )}
       </div>
 
-      {/* Mobile card layout */}
-      <div className="md:hidden space-y-2">
-        {sorted.map((task) => (
-          <Card
-            key={task.id}
-            className="cursor-pointer hover:border-muted-foreground/30 transition-colors"
-            onClick={() => onTaskClick(task.id)}
-          >
-            <CardContent className="p-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <PriorityIndicator priority={task.priority} />
-                <span className="font-mono text-xs text-muted-foreground">{task.id}</span>
-                <StatusBadge status={task.status} />
-              </div>
-              <p className="text-sm font-medium">{task.title}</p>
-              <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
-                {task.epic && (
-                  <span
-                    className="text-[10px] font-mono px-1.5 py-0.5 rounded"
-                    style={{
-                      backgroundColor: "color-mix(in oklch, var(--entity-epic) 15%, transparent)",
-                      color: "var(--entity-epic)",
-                    }}
-                  >
-                    {task.epic}
-                  </span>
-                )}
-                {task.assignee && <span>@{task.assignee}</span>}
-                <span>{task.updated}</span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        {sorted.length === 0 && (
-          <p className="text-center text-sm text-muted-foreground py-8">
-            No tasks match the current filters.
-          </p>
-        )}
+      {/* Mobile layout */}
+      <div className="md:hidden space-y-1">
+        <div className="flex items-center gap-2">
+          <PriorityIndicator priority={task.priority} />
+          <span className="font-mono text-xs text-muted-foreground">
+            {task.id}
+          </span>
+          <StatusBadge status={task.status} />
+          {onPromote && !isOverlay && (
+            <button
+              title="Move to Board"
+              className="ml-auto size-6 flex items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-primary/10"
+              onClick={(e) => { e.stopPropagation(); onPromote(); }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <ArrowUpRight className="size-3.5" />
+            </button>
+          )}
+        </div>
+        <p className="text-sm font-medium">{task.title}</p>
+        <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+          {task.effort && (
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground uppercase">
+              {effortLabel}
+            </span>
+          )}
+          {task.epic && (
+            <span
+              className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+              style={{
+                backgroundColor:
+                  "color-mix(in oklch, var(--entity-epic) 15%, transparent)",
+                color: "var(--entity-epic)",
+              }}
+            >
+              {task.epic}
+            </span>
+          )}
+          <span>{task.updated}</span>
+        </div>
       </div>
-    </>
+    </div>
+  );
+}
+
+// ── Promote Drop Zone ──────────────────────────────────────────────────────
+
+function PromoteDropZone() {
+  const { setNodeRef, isOver } = useDroppable({ id: "promote-to-board" });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`rounded-lg border-2 border-dashed p-2.5 text-center transition-colors ${
+        isOver
+          ? "border-primary bg-primary/5"
+          : "border-muted-foreground/20"
+      }`}
+    >
+      <p className="text-xs text-muted-foreground flex items-center justify-center gap-1.5">
+        <ArrowUpRight className="size-3.5" />
+        Drop to move to Board
+      </p>
+    </div>
+  );
+}
+
+// ── Sortable Header ────────────────────────────────────────────────────────
+
+function SortableHeader({
+  label,
+  sortId,
+  currentSort,
+  currentDir,
+  onToggle,
+}: {
+  label: string;
+  sortId: SortKey;
+  currentSort: SortKey;
+  currentDir: SortDir;
+  onToggle: (key: SortKey) => void;
+}) {
+  return (
+    <button
+      className="text-left cursor-pointer select-none hover:text-foreground transition-colors"
+      onClick={() => onToggle(sortId)}
+    >
+      {label}
+      {currentSort === sortId && (
+        <span className="ml-1">{currentDir === "asc" ? "\u2191" : "\u2193"}</span>
+      )}
+    </button>
   );
 }
 
@@ -750,13 +926,19 @@ function TableView({
 function BacklogSkeleton() {
   return (
     <div className="space-y-4">
-      <Skeleton className="h-8 w-32" />
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-8 w-32" />
+        <div className="flex gap-4">
+          <Skeleton className="h-6 w-14" />
+          <Skeleton className="h-6 w-14" />
+        </div>
+      </div>
       <div className="flex gap-2">
         <Skeleton className="h-8 w-[140px]" />
-        <Skeleton className="h-8 w-[160px]" />
+        <Skeleton className="h-8 w-[140px]" />
       </div>
       <div className="flex gap-4">
-        {Array.from({ length: 4 }).map((_, i) => (
+        {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="min-w-[280px] space-y-2">
             <Skeleton className="h-5 w-24" />
             {Array.from({ length: 3 }).map((_, j) => (

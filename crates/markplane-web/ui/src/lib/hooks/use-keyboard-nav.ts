@@ -9,11 +9,10 @@ type ChordMap = Record<string, string>;
 const CHORD_NAV: ChordMap = {
   d: "/dashboard",
   b: "/backlog",
-  e: "/epics",
   p: "/plans",
   n: "/notes",
-  g: "/graph",
   r: "/roadmap",
+  g: "/graph",
   s: "/search",
 };
 

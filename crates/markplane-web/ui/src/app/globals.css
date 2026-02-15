@@ -76,7 +76,7 @@
   --card-foreground: oklch(0.95 0.01 260);
   --popover: oklch(0.17 0.005 260);
   --popover-foreground: oklch(0.95 0.01 260);
-  --primary: oklch(0.55 0.27 285);
+  --primary: oklch(0.55 0.22 250);
   --primary-foreground: oklch(0.98 0 0);
   --secondary: oklch(0.21 0.005 260);
   --secondary-foreground: oklch(0.90 0.01 260);
@@ -87,20 +87,20 @@
   --destructive: oklch(0.55 0.22 25);
   --border: oklch(0.25 0.005 260);
   --input: oklch(0.25 0.01 260);
-  --ring: oklch(0.55 0.27 285);
+  --ring: oklch(0.55 0.22 250);
 
   /* Sidebar */
   --sidebar: oklch(0.15 0.005 260);
   --sidebar-foreground: oklch(0.95 0.01 260);
-  --sidebar-primary: oklch(0.55 0.27 285);
+  --sidebar-primary: oklch(0.55 0.22 250);
   --sidebar-primary-foreground: oklch(0.98 0 0);
   --sidebar-accent: oklch(0.21 0.01 260);
   --sidebar-accent-foreground: oklch(0.95 0.01 260);
   --sidebar-border: oklch(0.25 0.005 260);
-  --sidebar-ring: oklch(0.55 0.27 285);
+  --sidebar-ring: oklch(0.55 0.22 250);
 
   /* Charts */
-  --chart-1: oklch(0.55 0.27 285);
+  --chart-1: oklch(0.55 0.22 250);
   --chart-2: oklch(0.70 0.16 150);
   --chart-3: oklch(0.70 0.18 250);
   --chart-4: oklch(0.70 0.17 50);
@@ -109,7 +109,7 @@
   /* Status colors */
   --status-draft: oklch(0.45 0.01 260);
   --status-backlog: oklch(0.55 0.03 260);
-  --status-planned: oklch(0.65 0.18 285);
+  --status-planned: oklch(0.65 0.16 270);
   --status-in-progress: oklch(0.65 0.18 250);
   --status-done: oklch(0.65 0.17 155);
   --status-blocked: oklch(0.70 0.17 70);
@@ -137,7 +137,7 @@
   --card-foreground: oklch(0.15 0.01 260);
   --popover: oklch(1.0 0 0);
   --popover-foreground: oklch(0.15 0.01 260);
-  --primary: oklch(0.45 0.27 285);
+  --primary: oklch(0.45 0.22 250);
   --primary-foreground: oklch(0.98 0 0);
   --secondary: oklch(0.94 0.005 260);
   --secondary-foreground: oklch(0.30 0.01 260);
@@ -148,20 +148,20 @@
   --destructive: oklch(0.55 0.22 25);
   --border: oklch(0.88 0.005 260);
   --input: oklch(0.88 0.005 260);
-  --ring: oklch(0.45 0.27 285);
+  --ring: oklch(0.45 0.22 250);
 
   /* Sidebar */
   --sidebar: oklch(0.97 0.005 260);
   --sidebar-foreground: oklch(0.15 0.01 260);
-  --sidebar-primary: oklch(0.45 0.27 285);
+  --sidebar-primary: oklch(0.45 0.22 250);
   --sidebar-primary-foreground: oklch(0.98 0 0);
   --sidebar-accent: oklch(0.94 0.005 260);
   --sidebar-accent-foreground: oklch(0.20 0.01 260);
   --sidebar-border: oklch(0.88 0.005 260);
-  --sidebar-ring: oklch(0.45 0.27 285);
+  --sidebar-ring: oklch(0.45 0.22 250);
 
   /* Charts */
-  --chart-1: oklch(0.45 0.27 285);
+  --chart-1: oklch(0.45 0.22 250);
   --chart-2: oklch(0.50 0.18 150);
   --chart-3: oklch(0.50 0.20 250);
   --chart-4: oklch(0.55 0.20 50);
@@ -170,7 +170,7 @@
   /* Status colors (light) */
   --status-draft: oklch(0.65 0.01 260);
   --status-backlog: oklch(0.50 0.05 260);
-  --status-planned: oklch(0.50 0.20 285);
+  --status-planned: oklch(0.50 0.18 270);
   --status-in-progress: oklch(0.50 0.20 250);
   --status-done: oklch(0.50 0.18 155);
   --status-blocked: oklch(0.55 0.18 70);

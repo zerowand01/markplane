@@ -38,7 +38,7 @@ export const NOTE_STATUS_CONFIG: Record<string, { label: string; icon: string }>
 
 export const PREFIX_CONFIG: Record<string, { route: string; apiPath: string; color: string }> = {
   TASK: { route: "/backlog", apiPath: "tasks", color: "var(--entity-task)" },
-  EPIC: { route: "/epics", apiPath: "epics", color: "var(--entity-epic)" },
+  EPIC: { route: "/roadmap", apiPath: "epics", color: "var(--entity-epic)" },
   PLAN: { route: "/plans", apiPath: "plans", color: "var(--entity-plan)" },
   NOTE: { route: "/notes", apiPath: "notes", color: "var(--entity-note)" },
 };
@@ -46,10 +46,9 @@ export const PREFIX_CONFIG: Record<string, { route: string; apiPath: string; col
 export const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
   { href: "/backlog", label: "Backlog", icon: "CheckSquare" },
-  { href: "/epics", label: "Epics", icon: "Diamond" },
   { href: "/plans", label: "Plans", icon: "FileText" },
   { href: "/notes", label: "Notes", icon: "Lightbulb" },
-  { href: "/graph", label: "Dependencies", icon: "GitBranch" },
   { href: "/roadmap", label: "Roadmap", icon: "Map" },
+  { href: "/graph", label: "Dependencies", icon: "GitBranch" },
   { href: "/search", label: "Search", icon: "Search" },
 ] as const;

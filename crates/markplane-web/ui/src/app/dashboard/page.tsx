@@ -137,7 +137,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {data.active_epics.map((epic) => (
-              <Link key={epic.id} href={`/epics`}>
+              <Link key={epic.id} href="/roadmap">
                 <EpicProgress epic={epic} />
               </Link>
             ))}

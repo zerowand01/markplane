@@ -93,7 +93,7 @@ export function CommandPalette() {
               <CommandItem
                 key={epic.id}
                 value={`${epic.id} ${epic.title}`}
-                onSelect={() => navigate(`/epics?epic=${epic.id}`)}
+                onSelect={() => navigate(`/roadmap?epic=${epic.id}`)}
               >
                 <span
                   className="mr-2 font-mono text-xs"
@@ -167,9 +167,9 @@ export function CommandPalette() {
             Go to Backlog
             <span className="ml-auto text-xs text-muted-foreground">g b</span>
           </CommandItem>
-          <CommandItem onSelect={() => navigate("/epics")}>
-            Go to Epics
-            <span className="ml-auto text-xs text-muted-foreground">g e</span>
+          <CommandItem onSelect={() => navigate("/roadmap")}>
+            Go to Roadmap
+            <span className="ml-auto text-xs text-muted-foreground">g r</span>
           </CommandItem>
           <CommandItem onSelect={() => navigate("/plans")}>
             Go to Plans

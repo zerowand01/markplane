@@ -2,7 +2,7 @@ import Link from "next/link";
 
 const PREFIX_CONFIG: Record<string, { route: string; param: string; cssVar: string }> = {
   TASK: { route: "/backlog", param: "task", cssVar: "--entity-task" },
-  EPIC: { route: "/epics", param: "epic", cssVar: "--entity-epic" },
+  EPIC: { route: "/roadmap", param: "epic", cssVar: "--entity-epic" },
   PLAN: { route: "/plans", param: "plan", cssVar: "--entity-plan" },
   NOTE: { route: "/notes", param: "note", cssVar: "--entity-note" },
 };

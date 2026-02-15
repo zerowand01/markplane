@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   CheckSquare,
-  Diamond,
   FileText,
   Lightbulb,
   GitBranch,
@@ -32,7 +31,6 @@ import { Button } from "@/components/ui/button";
 const ICON_MAP = {
   LayoutDashboard,
   CheckSquare,
-  Diamond,
   FileText,
   Lightbulb,
   GitBranch,
@@ -42,15 +40,14 @@ const ICON_MAP = {
 
 const mainNav = [
   { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" as const },
+  { href: "/roadmap", label: "Roadmap", icon: "Map" as const },
   { href: "/backlog", label: "Backlog", icon: "CheckSquare" as const },
-  { href: "/epics", label: "Epics", icon: "Diamond" as const },
   { href: "/plans", label: "Plans", icon: "FileText" as const },
   { href: "/notes", label: "Notes", icon: "Lightbulb" as const },
 ];
 
 const viewsNav = [
   { href: "/graph", label: "Dependencies", icon: "GitBranch" as const },
-  { href: "/roadmap", label: "Roadmap", icon: "Map" as const },
   { href: "/search", label: "Search", icon: "Search" as const },
 ];
 
@@ -62,8 +59,8 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="px-4 py-3">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <span className="text-lg">✈</span>
-          <span className="text-base font-semibold tracking-tight">Markplane</span>
+          <span className="text-xl">✈</span>
+          <span className="text-lg font-semibold tracking-tight">Markplane</span>
         </Link>
       </SidebarHeader>
 
@@ -77,7 +74,7 @@ export function AppSidebar() {
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
                       <Link href={item.href}>
-                        <Icon className="size-4" />
+                        <Icon className="size-5" />
                         <span>{item.label}</span>
                       </Link>
                     </SidebarMenuButton>
@@ -98,7 +95,7 @@ export function AppSidebar() {
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
                       <Link href={item.href}>
-                        <Icon className="size-4" />
+                        <Icon className="size-5" />
                         <span>{item.label}</span>
                       </Link>
                     </SidebarMenuButton>
@@ -117,8 +114,8 @@ export function AppSidebar() {
           className="w-full justify-start gap-2"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
         >
-          <Sun className="size-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute size-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+          <Sun className="size-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+          <Moon className="absolute size-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           <span className="dark:hidden">Light</span>
           <span className="hidden dark:inline">Dark</span>
         </Button>
