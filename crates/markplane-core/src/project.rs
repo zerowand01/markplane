@@ -129,6 +129,16 @@ impl Project {
         self.root.join(prefix.directory())
     }
 
+    /// Compute a position key that appends to the end of a priority group.
+    fn append_position(&self, priority: &Priority) -> Result<String> {
+        let tasks = self.list_tasks(&crate::query::QueryFilter::default())?;
+        let count = tasks
+            .iter()
+            .filter(|t| &t.frontmatter.priority == priority)
+            .count();
+        Ok(crate::position::index_to_key(count))
+    }
+
     // ── CRUD Operations ───────────────────────────────────────────────────
 
     /// Create a new task.
@@ -146,6 +156,9 @@ impl Project {
         let today = Local::now().date_naive();
         let date_str = today.format("%Y-%m-%d").to_string();
 
+        // Compute position: append to end of the priority group
+        let position = self.append_position(&priority)?;
+
         let safe_title = sanitize_yaml_string(title);
         let tags_yaml = format_yaml_list(&tags);
         let epic_yaml = epic.as_deref().unwrap_or("null");
@@ -161,6 +174,7 @@ impl Project {
                 ("{EFFORT}", &effort.to_string()),
                 ("{TAGS}", &tags_yaml),
                 ("{EPIC}", epic_yaml),
+                ("{POSITION}", &position),
                 ("{DATE}", &date_str),
             ],
         );
@@ -183,6 +197,7 @@ impl Project {
             depends_on: vec![],
             blocks: vec![],
             assignee: None,
+            position: Some(position),
             created: today,
             updated: today,
         };

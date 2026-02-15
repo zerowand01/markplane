@@ -1,16 +1,18 @@
 ---
 id: TASK-024
-title: "Publish markplane-core to crates.io"
+title: Publish markplane-core to crates.io
 status: draft
 priority: low
 type: chore
 effort: small
-tags: ["release"]
+tags:
+- release
 epic: EPIC-006
 plan: null
 depends_on: []
 blocks: []
 assignee: null
+position: a0
 created: 2026-02-13
 updated: 2026-02-13
 ---

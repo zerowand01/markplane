@@ -27,6 +27,7 @@ plan: null
 depends_on: []
 blocks: []
 assignee: null
+position: {POSITION}
 created: {DATE}
 updated: {DATE}
 ---
@@ -366,11 +367,13 @@ mod tests {
                 ("{EFFORT}", "medium"),
                 ("{TAGS}", "[]"),
                 ("{EPIC}", "null"),
+                ("{POSITION}", "a0"),
                 ("{DATE}", "2026-02-09"),
             ],
         );
         assert!(result.contains("id: TASK-001"));
         assert!(result.contains("title: \"Test item\""));
+        assert!(result.contains("position: a0"));
         assert!(result.contains("# Test item"));
     }
 

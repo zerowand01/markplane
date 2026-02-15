@@ -20,6 +20,7 @@ export interface Task {
   depends_on: string[];
   blocks: string[];
   assignee: string | null;
+  position: string | null;
   created: string;
   updated: string;
   body: string;
@@ -103,6 +104,7 @@ export interface UpdateTaskRequest {
   epic?: string;
   plan?: string;
   assignee?: string;
+  position?: string;
   depends_on?: string[];
   blocks?: string[];
 }

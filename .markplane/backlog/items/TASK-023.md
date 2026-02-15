@@ -14,6 +14,7 @@ depends_on:
 - TASK-022
 blocks: []
 assignee: null
+position: a0
 created: 2026-02-13
 updated: 2026-02-13
 ---

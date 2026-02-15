@@ -12,6 +12,7 @@ plan: PLAN-001
 depends_on: []
 blocks: []
 assignee: null
+position: a0
 created: 2026-02-10
 updated: 2026-02-13
 ---

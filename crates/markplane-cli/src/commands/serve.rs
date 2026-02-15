@@ -38,6 +38,10 @@ struct AppState {
 
 pub async fn run(port: u16, open: bool, dev: bool) -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
+
+    // Ensure all tasks have position keys (handles migration from pre-position data)
+    project.normalize_positions()?;
+
     let (ws_tx, _) = broadcast::channel::<String>(256);
 
     let state = Arc::new(AppState {
@@ -340,6 +344,7 @@ struct TaskResponse {
     depends_on: Vec<String>,
     blocks: Vec<String>,
     assignee: Option<String>,
+    position: Option<String>,
     created: String,
     updated: String,
     body: String,
@@ -360,6 +365,7 @@ fn task_to_response(doc: &MarkplaneDocument<Task>) -> TaskResponse {
         depends_on: fm.depends_on.clone(),
         blocks: fm.blocks.clone(),
         assignee: fm.assignee.clone(),
+        position: fm.position.clone(),
         created: fm.created.to_string(),
         updated: fm.updated.to_string(),
         body: doc.body.clone(),
@@ -404,6 +410,7 @@ struct UpdateTaskRequest {
     epic: Option<String>,
     plan: Option<String>,
     assignee: Option<String>,
+    position: Option<String>,
     depends_on: Option<Vec<String>>,
     blocks: Option<Vec<String>>,
 }
@@ -821,6 +828,13 @@ async fn update_task(
             None
         } else {
             Some(assignee)
+        };
+    }
+    if let Some(position) = body.position {
+        doc.frontmatter.position = if position.is_empty() {
+            None
+        } else {
+            Some(position)
         };
     }
     if let Some(depends_on) = body.depends_on {

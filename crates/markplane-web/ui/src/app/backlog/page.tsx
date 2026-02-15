@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useCallback, useMemo } from "react";
+import { Suspense, useState, useCallback, useMemo, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   DndContext,
@@ -15,7 +15,9 @@ import {
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
+  defaultAnimateLayoutChanges,
 } from "@dnd-kit/sortable";
+import type { AnimateLayoutChanges } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useDroppable } from "@dnd-kit/core";
 import { useTasks } from "@/lib/hooks/use-tasks";
@@ -36,6 +38,7 @@ import {
 } from "@/components/ui/select";
 import { PageTransition } from "@/components/domain/page-transition";
 import { ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { generateKeyBetween } from "fractional-indexing";
 import type { Task, TaskStatus, Priority, Effort } from "@/lib/types";
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -67,8 +70,15 @@ const EFFORT_RANK: Record<Effort, number> = {
   xl: 4,
 };
 
-type SortKey = "title" | "effort" | "epic" | "updated";
-type SortDir = "asc" | "desc";
+type SortKey = "manual" | "title" | "effort" | "epic" | "updated";
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "manual", label: "Manual" },
+  { key: "updated", label: "Updated" },
+  { key: "title", label: "Title" },
+  { key: "effort", label: "Effort" },
+  { key: "epic", label: "Epic" },
+];
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 
@@ -521,8 +531,19 @@ function BacklogListView({
 }) {
   const updateTask = useUpdateTask();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>("updated");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [sortKey, setSortKey] = useState<SortKey>("manual");
+
+  // Optimistic local state — updated synchronously on drop so dnd-kit
+  // sees the new order before CSS transforms are removed.
+  const [pendingReorder, setPendingReorder] = useState<Task[] | null>(null);
+  const displayTasks = pendingReorder ?? tasks;
+
+  // Clear optimistic state when server data arrives
+  useEffect(() => {
+    setPendingReorder(null);
+  }, [tasks]);
+
+  const isManualSort = sortKey === "manual";
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -531,27 +552,40 @@ function BacklogListView({
   const sortTasks = useCallback(
     (list: Task[]) => {
       const sorted = [...list];
-      sorted.sort((a, b) => {
-        let cmp = 0;
-        switch (sortKey) {
-          case "title":
-            cmp = a.title.localeCompare(b.title);
-            break;
-          case "effort":
-            cmp = EFFORT_RANK[a.effort] - EFFORT_RANK[b.effort];
-            break;
-          case "epic":
-            cmp = (a.epic || "").localeCompare(b.epic || "");
-            break;
-          case "updated":
-            cmp = a.updated.localeCompare(b.updated);
-            break;
-        }
-        return sortDir === "asc" ? cmp : -cmp;
-      });
+      if (sortKey === "manual") {
+        // Sort by position (null last), then updated desc, then id
+        sorted.sort((a, b) => {
+          const pa = a.position;
+          const pb = b.position;
+          if (pa && pb) return pa < pb ? -1 : pa > pb ? 1 : 0;
+          if (pa && !pb) return -1;
+          if (!pa && pb) return 1;
+          const cmp = b.updated.localeCompare(a.updated);
+          return cmp !== 0 ? cmp : a.id.localeCompare(b.id);
+        });
+      } else {
+        sorted.sort((a, b) => {
+          let cmp = 0;
+          switch (sortKey) {
+            case "title":
+              cmp = a.title.localeCompare(b.title);
+              break;
+            case "effort":
+              cmp = EFFORT_RANK[a.effort] - EFFORT_RANK[b.effort];
+              break;
+            case "epic":
+              cmp = (a.epic || "").localeCompare(b.epic || "");
+              break;
+            case "updated":
+              cmp = b.updated.localeCompare(a.updated);
+              break;
+          }
+          return cmp;
+        });
+      }
       return sorted;
     },
-    [sortKey, sortDir]
+    [sortKey]
   );
 
   const tasksByPriority = useMemo(() => {
@@ -559,28 +593,17 @@ function BacklogListView({
     for (const group of PRIORITY_GROUPS) {
       map.set(group.priority, []);
     }
-    for (const task of tasks) {
+    for (const task of displayTasks) {
       const list = map.get(task.priority);
       if (list) list.push(task);
     }
-    // Sort within each group
-    for (const [priority, list] of map) {
-      map.set(priority, sortTasks(list));
+    for (const [, list] of map) {
+      const sorted = sortTasks(list);
+      list.length = 0;
+      list.push(...sorted);
     }
     return map;
-  }, [tasks, sortTasks]);
-
-  const toggleSort = useCallback(
-    (key: SortKey) => {
-      if (sortKey === key) {
-        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-      } else {
-        setSortKey(key);
-        setSortDir(key === "updated" ? "desc" : "asc");
-      }
-    },
-    [sortKey]
-  );
+  }, [displayTasks, sortTasks]);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const task = event.active.data.current?.task as Task | undefined;
@@ -609,15 +632,16 @@ function BacklogListView({
         return;
       }
 
+      const currentTask = displayTasks.find((t) => t.id === taskId);
+      if (!currentTask) return;
+
       // Determine target priority
       let targetPriority: Priority | null = null;
-      // Check if dropped on a priority group directly
       const group = PRIORITY_GROUPS.find((g) => g.priority === overId);
       if (group) {
         targetPriority = group.priority;
       } else {
-        // Dropped on a task — find that task's priority
-        const overTask = tasks.find((t) => t.id === overId);
+        const overTask = displayTasks.find((t) => t.id === overId);
         if (overTask) {
           targetPriority = overTask.priority;
         }
@@ -625,13 +649,54 @@ function BacklogListView({
 
       if (!targetPriority) return;
 
-      // Only update if priority actually changed
-      const currentTask = tasks.find((t) => t.id === taskId);
-      if (currentTask && currentTask.priority !== targetPriority) {
-        updateTask.mutate({ id: taskId, priority: targetPriority });
+      const priorityChanged = currentTask.priority !== targetPriority;
+
+      // Get the sorted task list for the target group
+      const targetGroup = tasksByPriority.get(targetPriority) || [];
+
+      // Compute new position (all tasks have positions via server initialization)
+      let newPosition: string | undefined;
+      if (isManualSort) {
+        if (group) {
+          // Dropped on empty group area — append to end
+          const last = targetGroup.filter((t) => t.id !== taskId).at(-1);
+          newPosition = generateKeyBetween(last?.position ?? null, null);
+        } else {
+          // Dropped on a specific task — insert at that task's position
+          const filtered = targetGroup.filter((t) => t.id !== taskId);
+          const insertAt = filtered.findIndex((t) => t.id === overId);
+          if (insertAt >= 0) {
+            const before = insertAt > 0 ? (filtered[insertAt - 1].position ?? null) : null;
+            const after = filtered[insertAt]?.position ?? null;
+            newPosition = generateKeyBetween(before, after);
+          }
+        }
+      }
+
+      // Only mutate if something changed
+      if (priorityChanged || newPosition) {
+        // Apply optimistic reorder synchronously — this is batched with
+        // setActiveTask(null) above so React renders both in one pass,
+        // before dnd-kit removes CSS transforms.
+        setPendingReorder(
+          displayTasks.map((t) =>
+            t.id === taskId
+              ? {
+                  ...t,
+                  ...(newPosition ? { position: newPosition } : {}),
+                  ...(priorityChanged ? { priority: targetPriority } : {}),
+                }
+              : t
+          )
+        );
+
+        const updates: { id: string; priority?: Priority; position?: string } = { id: taskId };
+        if (priorityChanged) updates.priority = targetPriority;
+        if (newPosition) updates.position = newPosition;
+        updateTask.mutate(updates);
       }
     },
-    [tasks, updateTask]
+    [displayTasks, tasksByPriority, updateTask, isManualSort]
   );
 
   return (
@@ -641,17 +706,23 @@ function BacklogListView({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      {/* Promote drop zone */}
-      <PromoteDropZone />
-
-      {/* Sort headers (desktop) */}
-      <div className="hidden md:grid grid-cols-[120px_1fr_80px_80px_100px_28px] gap-2 px-3 pb-1 mt-3 text-xs text-muted-foreground">
-        <div />
-        <SortableHeader label="Title" sortId="title" currentSort={sortKey} currentDir={sortDir} onToggle={toggleSort} />
-        <SortableHeader label="Effort" sortId="effort" currentSort={sortKey} currentDir={sortDir} onToggle={toggleSort} />
-        <SortableHeader label="Epic" sortId="epic" currentSort={sortKey} currentDir={sortDir} onToggle={toggleSort} />
-        <SortableHeader label="Updated" sortId="updated" currentSort={sortKey} currentDir={sortDir} onToggle={toggleSort} />
-        <div />
+      {/* Promote drop zone + sort toggle */}
+      <div className="flex items-center gap-3 mb-3">
+        <div className="flex-1">
+          <PromoteDropZone />
+        </div>
+        <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+          <SelectTrigger className="w-[120px] h-8 text-xs shrink-0">
+            <SelectValue placeholder="Sort" />
+          </SelectTrigger>
+          <SelectContent>
+            {SORT_OPTIONS.map((opt) => (
+              <SelectItem key={opt.key} value={opt.key}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Priority groups */}
@@ -738,6 +809,12 @@ function PriorityGroup({
 
 // ── Backlog Row ────────────────────────────────────────────────────────────
 
+// Don't animate the item that was just dropped — prevents the "slide back" effect
+const skipDropAnimation: AnimateLayoutChanges = (args) => {
+  if (args.wasDragging) return false;
+  return defaultAnimateLayoutChanges(args);
+};
+
 function BacklogRow({
   task,
   onClick,
@@ -756,7 +833,11 @@ function BacklogRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id, data: { task } });
+  } = useSortable({
+    id: task.id,
+    data: { task },
+    animateLayoutChanges: skipDropAnimation,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -782,24 +863,20 @@ function BacklogRow({
       onClick={onClick}
     >
       {/* Desktop layout */}
-      <div className="hidden md:grid grid-cols-[120px_1fr_80px_80px_100px_28px] gap-2 items-center">
-        <div className="flex items-center gap-2">
-          <PriorityIndicator priority={task.priority} />
-          <span className="font-mono text-xs text-muted-foreground">
-            {task.id}
-          </span>
-        </div>
-        <span className="text-sm font-medium truncate">{task.title}</span>
-        {task.effort ? (
-          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground uppercase w-fit">
+      <div className="hidden md:flex items-center gap-3">
+        <PriorityIndicator priority={task.priority} />
+        <span className="font-mono text-xs text-muted-foreground w-20 shrink-0">
+          {task.id}
+        </span>
+        <span className="text-sm font-medium truncate flex-1">{task.title}</span>
+        {task.effort && (
+          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground uppercase shrink-0">
             {effortLabel}
           </span>
-        ) : (
-          <span />
         )}
-        {task.epic ? (
+        {task.epic && (
           <span
-            className="text-[10px] font-mono px-1.5 py-0.5 rounded w-fit"
+            className="text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0"
             style={{
               backgroundColor:
                 "color-mix(in oklch, var(--entity-epic) 15%, transparent)",
@@ -808,22 +885,18 @@ function BacklogRow({
           >
             {task.epic}
           </span>
-        ) : (
-          <span />
         )}
-        <span className="text-xs text-muted-foreground">{task.updated}</span>
+        <span className="text-xs text-muted-foreground shrink-0">{task.updated}</span>
         {onPromote && !isOverlay ? (
           <button
             title="Move to Board"
-            className="size-6 flex items-center justify-center rounded opacity-0 group-hover/row:opacity-100 transition-opacity text-muted-foreground hover:text-primary hover:bg-primary/10"
+            className="size-6 flex items-center justify-center rounded opacity-0 group-hover/row:opacity-100 transition-opacity text-muted-foreground hover:text-primary hover:bg-primary/10 shrink-0"
             onClick={(e) => { e.stopPropagation(); onPromote(); }}
             onPointerDown={(e) => e.stopPropagation()}
           >
             <ArrowUpRight className="size-3.5" />
           </button>
-        ) : (
-          <span />
-        )}
+        ) : null}
       </div>
 
       {/* Mobile layout */}
@@ -890,34 +963,6 @@ function PromoteDropZone() {
         Drop to move to Board
       </p>
     </div>
-  );
-}
-
-// ── Sortable Header ────────────────────────────────────────────────────────
-
-function SortableHeader({
-  label,
-  sortId,
-  currentSort,
-  currentDir,
-  onToggle,
-}: {
-  label: string;
-  sortId: SortKey;
-  currentSort: SortKey;
-  currentDir: SortDir;
-  onToggle: (key: SortKey) => void;
-}) {
-  return (
-    <button
-      className="text-left cursor-pointer select-none hover:text-foreground transition-colors"
-      onClick={() => onToggle(sortId)}
-    >
-      {label}
-      {currentSort === sortId && (
-        <span className="ml-1">{currentDir === "asc" ? "\u2191" : "\u2193"}</span>
-      )}
-    </button>
   );
 }
 

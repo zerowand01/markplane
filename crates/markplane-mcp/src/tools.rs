@@ -127,6 +127,10 @@ pub fn list_tools() -> Value {
                         "assignee": {
                             "type": "string",
                             "description": "New assignee"
+                        },
+                        "position": {
+                            "type": "string",
+                            "description": "Position key for manual ordering within priority group"
                         }
                     },
                     "required": ["id"]
@@ -493,9 +497,10 @@ fn handle_update(project: &Project, args: &Value) -> Result<String, String> {
 
     let has_priority = args.get("priority").and_then(|v| v.as_str()).is_some();
     let has_assignee = args.get("assignee").is_some();
+    let has_position = args.get("position").is_some();
 
     // Only update additional fields if requested
-    if has_priority || has_assignee {
+    if has_priority || has_assignee || has_position {
         let (prefix, _) = parse_id(id).map_err(|e| e.to_string())?;
         match prefix {
             IdPrefix::Task => {
@@ -508,6 +513,9 @@ fn handle_update(project: &Project, args: &Value) -> Result<String, String> {
                 }
                 if let Some(assignee_val) = args.get("assignee") {
                     doc.frontmatter.assignee = assignee_val.as_str().map(|s| s.to_string());
+                }
+                if let Some(position_val) = args.get("position") {
+                    doc.frontmatter.position = position_val.as_str().map(|s| s.to_string());
                 }
                 doc.frontmatter.updated = Local::now().date_naive();
                 project.write_item(id, &doc).map_err(|e| e.to_string())?;

@@ -408,6 +408,8 @@ pub struct Task {
     pub blocks: Vec<String>,
     #[serde(default)]
     pub assignee: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<String>,
     pub created: NaiveDate,
     pub updated: NaiveDate,
 }

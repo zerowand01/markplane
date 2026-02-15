@@ -15,8 +15,9 @@ depends_on:
 blocks:
 - TASK-023
 assignee: null
+position: Zr
 created: 2026-02-13
-updated: 2026-02-13
+updated: 2026-02-15
 ---
 
 # Build GitHub Actions release workflow with embedded web UI

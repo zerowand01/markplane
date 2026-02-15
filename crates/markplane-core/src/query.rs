@@ -66,11 +66,21 @@ impl Project {
             true
         });
 
-        // Sort by priority (critical first), then by ID
+        // Sort by priority (critical first), then position, then updated (newest first), then ID
         items.sort_by(|a, b| {
             let pa = priority_rank(&a.frontmatter.priority);
             let pb = priority_rank(&b.frontmatter.priority);
-            pa.cmp(&pb).then_with(|| a.frontmatter.id.cmp(&b.frontmatter.id))
+            pa.cmp(&pb)
+                .then_with(|| {
+                    match (&a.frontmatter.position, &b.frontmatter.position) {
+                        (Some(ap), Some(bp)) => ap.cmp(bp),
+                        (Some(_), None) => std::cmp::Ordering::Less,
+                        (None, Some(_)) => std::cmp::Ordering::Greater,
+                        (None, None) => std::cmp::Ordering::Equal,
+                    }
+                })
+                .then_with(|| b.frontmatter.updated.cmp(&a.frontmatter.updated))
+                .then_with(|| a.frontmatter.id.cmp(&b.frontmatter.id))
         });
 
         Ok(items)

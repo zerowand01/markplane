@@ -1,16 +1,19 @@
 ---
 id: TASK-020
-title: "Sort items in generated INDEX.md sections"
+title: Sort items in generated INDEX.md sections
 status: draft
 priority: medium
 type: bug
 effort: small
-tags: ["sync", "index"]
+tags:
+- sync
+- index
 epic: null
 plan: null
 depends_on: []
 blocks: []
 assignee: null
+position: a1
 created: 2026-02-12
 updated: 2026-02-12
 ---
