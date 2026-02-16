@@ -449,7 +449,7 @@ function KanbanView({
 
       <DragOverlay>
         {activeTask ? (
-          <div className="w-[280px] opacity-90">
+          <div className="w-[300px] opacity-90">
             <TaskCard task={activeTask} />
           </div>
         ) : null}
@@ -485,9 +485,9 @@ function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`min-w-[280px] flex-shrink-0 rounded-lg p-2 transition-colors ${
+      className={`min-w-0 flex-1 rounded-lg p-2 transition-colors ${
         isOver ? "bg-accent/50" : ""
-      } md:w-auto w-full`}
+      }`}
     >
       <div className="flex items-center gap-2 mb-3 px-1">
         <h2 className="text-sm font-semibold">{label}</h2>

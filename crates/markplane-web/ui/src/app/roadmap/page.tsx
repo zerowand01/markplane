@@ -7,7 +7,6 @@ import { useTasks } from "@/lib/hooks/use-tasks";
 import { EpicDetailSheet } from "@/components/domain/epic-detail-sheet";
 import { TaskDetailSheet } from "@/components/domain/task-detail-sheet";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PriorityIndicator } from "@/components/domain/priority-indicator";
@@ -53,51 +52,52 @@ function NowCard({
   ).filter((g) => g.count > 0);
 
   return (
-    <Card className="cursor-pointer hover:border-ring transition-colors" onClick={onClick}>
-      <CardContent className="p-5 space-y-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-xs" style={{ color: "var(--entity-epic)" }}>
-              {epic.id}
-            </span>
-            <h3 className="text-sm font-semibold">{epic.title}</h3>
-          </div>
-          <PriorityIndicator priority={epic.priority} showLabel />
+    <div
+      className="rounded-lg border bg-card p-4 space-y-2 cursor-pointer hover:border-ring transition-colors"
+      onClick={onClick}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-sm" style={{ color: "var(--entity-epic)" }}>
+            {epic.id}
+          </span>
+          <h3 className="text-base font-semibold">{epic.title}</h3>
         </div>
+        <PriorityIndicator priority={epic.priority} showLabel />
+      </div>
 
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>
-              {epic.done_count}/{epic.task_count} tasks done
-            </span>
-            <span>{percent}%</span>
-          </div>
-          <Progress value={percent} className="h-2" />
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>
+            {epic.done_count}/{epic.task_count} tasks done
+          </span>
+          <span>{percent}%</span>
         </div>
+        <Progress value={percent} className="h-2" />
+      </div>
 
-        {statusGroups.length > 0 && (
-          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-            {statusGroups.map((group) => (
-              <span key={group.status} className="flex items-center gap-1">
-                <span
-                  className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: `var(--status-${group.status})` }}
-                />
-                {group.count} {group.label.toLowerCase()}
-              </span>
-            ))}
-          </div>
-        )}
+      {statusGroups.length > 0 && (
+        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+          {statusGroups.map((group) => (
+            <span key={group.status} className="flex items-center gap-1">
+              <span
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: `var(--status-${group.status})` }}
+              />
+              {group.count} {group.label.toLowerCase()}
+            </span>
+          ))}
+        </div>
+      )}
 
-        {(epic.started || epic.target) && (
-          <div className="text-xs text-muted-foreground">
-            {epic.started && <span>Started: {epic.started}</span>}
-            {epic.started && epic.target && <span> &middot; </span>}
-            {epic.target && <span>Target: {epic.target}</span>}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      {(epic.started || epic.target) && (
+        <div className="text-xs text-muted-foreground">
+          {epic.started && <span>Started: {epic.started}</span>}
+          {epic.started && epic.target && <span> &middot; </span>}
+          {epic.target && <span>Target: {epic.target}</span>}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -105,53 +105,55 @@ function NextCard({ epic, onClick }: { epic: Epic; onClick: () => void }) {
   const percent = Math.round(epic.progress * 100);
 
   return (
-    <Card className="cursor-pointer hover:border-ring transition-colors" onClick={onClick}>
-      <CardContent className="p-4 space-y-2">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-xs" style={{ color: "var(--entity-epic)" }}>
-              {epic.id}
-            </span>
-            <h3 className="text-sm font-semibold">{epic.title}</h3>
-          </div>
-          <PriorityIndicator priority={epic.priority} showLabel />
+    <div
+      className="rounded-lg border bg-card p-4 space-y-2 cursor-pointer hover:border-ring transition-colors"
+      onClick={onClick}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-sm" style={{ color: "var(--entity-epic)" }}>
+            {epic.id}
+          </span>
+          <h3 className="text-base font-semibold">{epic.title}</h3>
         </div>
+        <PriorityIndicator priority={epic.priority} showLabel />
+      </div>
 
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>
-              {epic.done_count}/{epic.task_count} tasks
-            </span>
-            <span>{percent}%</span>
-          </div>
-          <Progress value={percent} className="h-1.5" />
+      <div className="space-y-1">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>
+            {epic.done_count}/{epic.task_count} tasks
+          </span>
+          <span>{percent}%</span>
         </div>
+        <Progress value={percent} className="h-1.5" />
+      </div>
 
-        {epic.target && (
-          <div className="text-xs text-muted-foreground">Target: {epic.target}</div>
-        )}
-      </CardContent>
-    </Card>
+      {epic.target && (
+        <div className="text-xs text-muted-foreground">Target: {epic.target}</div>
+      )}
+    </div>
   );
 }
 
 function LaterCard({ epic, onClick }: { epic: Epic; onClick: () => void }) {
   return (
-    <Card className="cursor-pointer hover:border-ring transition-colors" onClick={onClick}>
-      <CardContent className="p-3 flex items-center gap-3">
-        <PriorityIndicator priority={epic.priority} />
-        <span
-          className="font-mono text-xs shrink-0"
-          style={{ color: "var(--entity-epic)" }}
-        >
-          {epic.id}
-        </span>
-        <span className="text-sm font-medium truncate flex-1">{epic.title}</span>
-        <span className="text-xs text-muted-foreground shrink-0">
-          {epic.task_count} tasks
-        </span>
-      </CardContent>
-    </Card>
+    <div
+      className="rounded-lg border bg-card p-3 flex items-center gap-3 cursor-pointer hover:border-ring transition-colors"
+      onClick={onClick}
+    >
+      <PriorityIndicator priority={epic.priority} />
+      <span
+        className="font-mono text-sm shrink-0"
+        style={{ color: "var(--entity-epic)" }}
+      >
+        {epic.id}
+      </span>
+      <span className="text-base font-medium truncate flex-1">{epic.title}</span>
+      <span className="text-xs text-muted-foreground shrink-0">
+        {epic.task_count} tasks
+      </span>
+    </div>
   );
 }
 

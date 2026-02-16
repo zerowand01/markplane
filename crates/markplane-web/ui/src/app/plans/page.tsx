@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { usePlans } from "@/lib/hooks/use-plans";
 import { PlanDetailSheet } from "@/components/domain/plan-detail-sheet";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { PLAN_STATUS_CONFIG } from "@/lib/constants";
 import { WikiLinkChip } from "@/components/domain/wiki-link-chip";
@@ -71,56 +71,54 @@ function PlansContent() {
                 </h2>
                 <div className="space-y-2">
                   {items.map((plan) => (
-                    <Card
+                    <div
                       key={plan.id}
-                      className="cursor-pointer hover:border-ring transition-colors"
+                      className="rounded-lg border bg-card p-4 cursor-pointer hover:border-ring transition-colors"
                       onClick={() => {
                         const params = new URLSearchParams(searchParams);
                         params.set("plan", plan.id);
                         router.push(`/plans?${params.toString()}`);
                       }}
                     >
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span
-                                className="font-mono text-xs"
-                                style={{ color: "var(--entity-plan)" }}
-                              >
-                                {plan.id}
-                              </span>
-                              <span
-                                className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded"
-                                style={{
-                                  backgroundColor: `color-mix(in oklch, var(--status-${plan.status}) 15%, transparent)`,
-                                  color: `var(--status-${plan.status})`,
-                                }}
-                              >
-                                {PLAN_STATUS_CONFIG[plan.status]?.icon}{" "}
-                                {PLAN_STATUS_CONFIG[plan.status]?.label}
-                              </span>
-                            </div>
-                            <h3 className="text-sm font-medium">
-                              {plan.title}
-                            </h3>
-                            {plan.implements.length > 0 && (
-                              <div className="flex items-center gap-1.5 mt-2">
-                                <span className="text-xs text-muted-foreground">
-                                  Implements:
-                                </span>
-                                {plan.implements.map((id) => (
-                                  <WikiLinkChip key={id} id={id} />
-                                ))}
-                              </div>
-                            )}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span
+                              className="font-mono text-sm"
+                              style={{ color: "var(--entity-plan)" }}
+                            >
+                              {plan.id}
+                            </span>
+                            <span
+                              className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded"
+                              style={{
+                                backgroundColor: `color-mix(in oklch, var(--status-${plan.status}) 15%, transparent)`,
+                                color: `var(--status-${plan.status})`,
+                              }}
+                            >
+                              {PLAN_STATUS_CONFIG[plan.status]?.icon}{" "}
+                              {PLAN_STATUS_CONFIG[plan.status]?.label}
+                            </span>
                           </div>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            {plan.updated}
-                          </span>
+                          <h3 className="text-base font-medium">
+                            {plan.title}
+                          </h3>
+                          {plan.implements.length > 0 && (
+                            <div className="flex items-center gap-1.5 mt-2">
+                              <span className="text-sm text-muted-foreground">
+                                Implements:
+                              </span>
+                              {plan.implements.map((id) => (
+                                <WikiLinkChip key={id} id={id} />
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      </CardContent>
-                    </Card>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {plan.updated}
+                        </span>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>

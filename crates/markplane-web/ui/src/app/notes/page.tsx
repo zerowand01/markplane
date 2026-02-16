@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useNotes } from "@/lib/hooks/use-notes";
 import { NoteDetailSheet } from "@/components/domain/note-detail-sheet";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { NOTE_STATUS_CONFIG } from "@/lib/constants";
 import { PageTransition } from "@/components/domain/page-transition";
@@ -69,61 +69,59 @@ function NotesContent() {
                 </h2>
                 <div className="space-y-2">
                   {items.map((note) => (
-                    <Card
+                    <div
                       key={note.id}
-                      className="cursor-pointer hover:border-ring transition-colors"
+                      className="rounded-lg border bg-card p-4 cursor-pointer hover:border-ring transition-colors"
                       onClick={() => {
                         const params = new URLSearchParams(searchParams);
                         params.set("note", note.id);
                         router.push(`/notes?${params.toString()}`);
                       }}
                     >
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span
-                                className="font-mono text-xs"
-                                style={{ color: "var(--entity-note)" }}
-                              >
-                                {note.id}
-                              </span>
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground uppercase">
-                                {note.type}
-                              </span>
-                              <span
-                                className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded"
-                                style={{
-                                  backgroundColor: `color-mix(in oklch, var(--status-${note.status}) 15%, transparent)`,
-                                  color: `var(--status-${note.status})`,
-                                }}
-                              >
-                                {NOTE_STATUS_CONFIG[note.status]?.icon}{" "}
-                                {NOTE_STATUS_CONFIG[note.status]?.label}
-                              </span>
-                            </div>
-                            <h3 className="text-sm font-medium">
-                              {note.title}
-                            </h3>
-                            {note.tags.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1.5">
-                                {note.tags.map((tag) => (
-                                  <span
-                                    key={tag}
-                                    className="text-[10px] text-muted-foreground"
-                                  >
-                                    #{tag}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span
+                              className="font-mono text-sm"
+                              style={{ color: "var(--entity-note)" }}
+                            >
+                              {note.id}
+                            </span>
+                            <span className="text-xs px-2 py-0.5 rounded bg-secondary text-secondary-foreground uppercase">
+                              {note.type}
+                            </span>
+                            <span
+                              className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded"
+                              style={{
+                                backgroundColor: `color-mix(in oklch, var(--status-${note.status}) 15%, transparent)`,
+                                color: `var(--status-${note.status})`,
+                              }}
+                            >
+                              {NOTE_STATUS_CONFIG[note.status]?.icon}{" "}
+                              {NOTE_STATUS_CONFIG[note.status]?.label}
+                            </span>
                           </div>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            {note.updated}
-                          </span>
+                          <h3 className="text-base font-medium">
+                            {note.title}
+                          </h3>
+                          {note.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {note.tags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="text-sm text-muted-foreground"
+                                >
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      </CardContent>
-                    </Card>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {note.updated}
+                        </span>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
