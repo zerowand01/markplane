@@ -34,7 +34,7 @@ export function PriorityIndicator({
         height="12"
         viewBox="0 0 14 12"
         fill="currentColor"
-        className={priority === "critical" ? "animate-pulse" : ""}
+        className={`text-current size-auto${priority === "critical" ? " animate-pulse" : ""}`}
       >
         {BARS.map((bar, i) => (
           <rect

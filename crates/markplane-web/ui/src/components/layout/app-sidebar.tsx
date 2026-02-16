@@ -20,7 +20,6 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -35,7 +34,6 @@ const ICON_MAP = {
   Lightbulb,
   GitBranch,
   Map,
-  Search,
 } as const;
 
 const mainNav = [
@@ -44,11 +42,7 @@ const mainNav = [
   { href: "/backlog", label: "Backlog", icon: "CheckSquare" as const },
   { href: "/plans", label: "Plans", icon: "FileText" as const },
   { href: "/notes", label: "Notes", icon: "Lightbulb" as const },
-];
-
-const viewsNav = [
   { href: "/graph", label: "Dependencies", icon: "GitBranch" as const },
-  { href: "/search", label: "Search", icon: "Search" as const },
 ];
 
 export function AppSidebar() {
@@ -58,10 +52,19 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="px-4 py-3">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <span className="text-xl">✈</span>
-          <span className="text-lg font-semibold tracking-tight">Markplane</span>
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <span className="text-xl">✈</span>
+            <span className="text-lg font-semibold tracking-tight">Markplane</span>
+          </Link>
+          <button
+            onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
+            className="size-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            title="Search (⌘K)"
+          >
+            <Search className="size-4" />
+          </button>
+        </div>
       </SidebarHeader>
 
       <SidebarContent>
@@ -69,27 +72,6 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {mainNav.map((item) => {
-                const Icon = ICON_MAP[item.icon];
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)} className="h-10 text-base">
-                      <Link href={item.href}>
-                        <Icon className="size-5" />
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Views</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {viewsNav.map((item) => {
                 const Icon = ICON_MAP[item.icon];
                 return (
                   <SidebarMenuItem key={item.href}>

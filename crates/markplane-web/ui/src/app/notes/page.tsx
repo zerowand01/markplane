@@ -90,7 +90,10 @@ function NotesContent() {
                                 color: `var(--status-${note.status})`,
                               }}
                             >
-                              {NOTE_STATUS_CONFIG[note.status]?.icon}{" "}
+                              {(() => {
+                                const Icon = NOTE_STATUS_CONFIG[note.status]?.icon;
+                                return Icon ? <Icon className="size-3 text-current" /> : null;
+                              })()}{" "}
                               {NOTE_STATUS_CONFIG[note.status]?.label}
                             </span>
                           </div>

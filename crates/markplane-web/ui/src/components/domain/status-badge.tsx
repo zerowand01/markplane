@@ -4,6 +4,7 @@ import type { TaskStatus, EpicStatus } from "@/lib/types";
 
 export function StatusBadge({ status }: { status: TaskStatus }) {
   const config = STATUS_CONFIG[status];
+  const Icon = config.icon;
   return (
     <Badge
       variant="outline"
@@ -13,7 +14,7 @@ export function StatusBadge({ status }: { status: TaskStatus }) {
         color: `var(--status-${status})`,
       }}
     >
-      <span>{config.icon}</span>
+      <Icon className="size-3.5 text-current" />
       {config.label}
     </Badge>
   );
@@ -21,6 +22,7 @@ export function StatusBadge({ status }: { status: TaskStatus }) {
 
 export function EpicStatusBadge({ status }: { status: EpicStatus }) {
   const config = EPIC_STATUS_CONFIG[status];
+  const Icon = config.icon;
   return (
     <Badge
       variant="outline"
@@ -30,7 +32,7 @@ export function EpicStatusBadge({ status }: { status: EpicStatus }) {
         color: `var(--status-${status})`,
       }}
     >
-      <span>{config.icon}</span>
+      <Icon className="size-3.5 text-current" />
       {config.label}
     </Badge>
   );

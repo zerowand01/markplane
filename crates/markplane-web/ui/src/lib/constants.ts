@@ -1,18 +1,30 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  Circle,
+  CircleDashed,
+  CircleDot,
+  LoaderCircle,
+  CircleCheck,
+  CircleX,
+  CirclePlay,
+  BadgeCheck,
+  Archive,
+} from "lucide-react";
 import type { TaskStatus, EpicStatus, Priority } from "./types";
 
-export const STATUS_CONFIG: Record<TaskStatus, { label: string; icon: string }> = {
-  draft: { label: "Draft", icon: "✎" },
-  backlog: { label: "Backlog", icon: "○" },
-  planned: { label: "Planned", icon: "◉" },
-  "in-progress": { label: "In Progress", icon: "◐" },
-  done: { label: "Done", icon: "✓" },
-  cancelled: { label: "Cancelled", icon: "—" },
+export const STATUS_CONFIG: Record<TaskStatus, { label: string; icon: LucideIcon }> = {
+  draft: { label: "Draft", icon: CircleDashed },
+  backlog: { label: "Backlog", icon: Circle },
+  planned: { label: "Planned", icon: CircleDot },
+  "in-progress": { label: "In Progress", icon: LoaderCircle },
+  done: { label: "Done", icon: CircleCheck },
+  cancelled: { label: "Cancelled", icon: CircleX },
 };
 
-export const EPIC_STATUS_CONFIG: Record<EpicStatus, { label: string; icon: string }> = {
-  planned: { label: "Planned", icon: "◉" },
-  active: { label: "Active", icon: "▶" },
-  done: { label: "Done", icon: "✓" },
+export const EPIC_STATUS_CONFIG: Record<EpicStatus, { label: string; icon: LucideIcon }> = {
+  planned: { label: "Planned", icon: CircleDot },
+  active: { label: "Active", icon: CirclePlay },
+  done: { label: "Done", icon: CircleCheck },
 };
 
 export const PRIORITY_CONFIG: Record<Priority, { label: string; icon: string }> = {
@@ -23,17 +35,17 @@ export const PRIORITY_CONFIG: Record<Priority, { label: string; icon: string }> 
   someday: { label: "Someday", icon: "◌" },
 };
 
-export const PLAN_STATUS_CONFIG: Record<string, { label: string; icon: string }> = {
-  draft: { label: "Draft", icon: "✎" },
-  approved: { label: "Approved", icon: "✓" },
-  "in-progress": { label: "In Progress", icon: "◐" },
-  done: { label: "Done", icon: "✓" },
+export const PLAN_STATUS_CONFIG: Record<string, { label: string; icon: LucideIcon }> = {
+  draft: { label: "Draft", icon: CircleDashed },
+  approved: { label: "Approved", icon: BadgeCheck },
+  "in-progress": { label: "In Progress", icon: LoaderCircle },
+  done: { label: "Done", icon: CircleCheck },
 };
 
-export const NOTE_STATUS_CONFIG: Record<string, { label: string; icon: string }> = {
-  draft: { label: "Draft", icon: "✎" },
-  active: { label: "Active", icon: "▶" },
-  archived: { label: "Archived", icon: "—" },
+export const NOTE_STATUS_CONFIG: Record<string, { label: string; icon: LucideIcon }> = {
+  draft: { label: "Draft", icon: CircleDashed },
+  active: { label: "Active", icon: CirclePlay },
+  archived: { label: "Archived", icon: Archive },
 };
 
 export const PREFIX_CONFIG: Record<string, { route: string; apiPath: string; color: string }> = {
@@ -50,5 +62,4 @@ export const NAV_ITEMS = [
   { href: "/notes", label: "Notes", icon: "Lightbulb" },
   { href: "/roadmap", label: "Roadmap", icon: "Map" },
   { href: "/graph", label: "Dependencies", icon: "GitBranch" },
-  { href: "/search", label: "Search", icon: "Search" },
 ] as const;

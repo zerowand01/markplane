@@ -104,12 +104,15 @@ export function TaskDetailSheet({
                             updateTask.mutate({ id: task.id, status: s })
                           }
                         >
-                          <span
-                            className="mr-2"
-                            style={{ color: `var(--status-${s})` }}
-                          >
-                            {STATUS_CONFIG[s].icon}
-                          </span>
+                          {(() => {
+                            const Icon = STATUS_CONFIG[s].icon;
+                            return (
+                              <Icon
+                                className="mr-2 size-4 text-current"
+                                style={{ color: `var(--status-${s})` }}
+                              />
+                            );
+                          })()}
                           {STATUS_CONFIG[s].label}
                         </DropdownMenuItem>
                       ))}

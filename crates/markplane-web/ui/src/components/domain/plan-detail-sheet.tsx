@@ -66,7 +66,10 @@ export function PlanDetailSheet({
                       color: `var(--status-${plan.status})`,
                     }}
                   >
-                    <span>{PLAN_STATUS_CONFIG[plan.status]?.icon}</span>
+                    {(() => {
+                      const Icon = PLAN_STATUS_CONFIG[plan.status]?.icon;
+                      return Icon ? <Icon className="size-3.5 text-current" /> : null;
+                    })()}
                     <span>{PLAN_STATUS_CONFIG[plan.status]?.label}</span>
                   </span>
                 </div>

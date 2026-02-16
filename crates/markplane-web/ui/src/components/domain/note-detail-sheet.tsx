@@ -69,7 +69,10 @@ export function NoteDetailSheet({
                       color: `var(--status-${note.status})`,
                     }}
                   >
-                    <span>{NOTE_STATUS_CONFIG[note.status]?.icon}</span>
+                    {(() => {
+                      const Icon = NOTE_STATUS_CONFIG[note.status]?.icon;
+                      return Icon ? <Icon className="size-3.5 text-current" /> : null;
+                    })()}
                     <span>{NOTE_STATUS_CONFIG[note.status]?.label}</span>
                   </span>
                 </div>

@@ -13,7 +13,6 @@ const CHORD_NAV: ChordMap = {
   n: "/notes",
   r: "/roadmap",
   g: "/graph",
-  s: "/search",
 };
 
 function isInputFocused(): boolean {

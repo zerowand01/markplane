@@ -89,7 +89,10 @@ function PlansContent() {
                                 color: `var(--status-${plan.status})`,
                               }}
                             >
-                              {PLAN_STATUS_CONFIG[plan.status]?.icon}{" "}
+                              {(() => {
+                                const Icon = PLAN_STATUS_CONFIG[plan.status]?.icon;
+                                return Icon ? <Icon className="size-3 text-current" /> : null;
+                              })()}{" "}
                               {PLAN_STATUS_CONFIG[plan.status]?.label}
                             </span>
                           </div>
