@@ -549,6 +549,7 @@ struct SummaryResponse {
     in_progress_tasks: Vec<TaskResponse>,
     blocked_tasks: Vec<TaskResponse>,
     recent_completions: Vec<TaskResponse>,
+    next_up_tasks: Vec<TaskResponse>,
     context_summary: Option<String>,
     /// ISO 8601 timestamp of when .context/summary.md was last modified
     context_last_synced: Option<String>,
@@ -626,6 +627,17 @@ async fn get_summary(
         .map(|t| task_to_response(t))
         .collect();
 
+    // Next up: top 5 planned/backlog tasks (already priority-sorted by list_tasks)
+    let next_up_tasks: Vec<_> = tasks
+        .iter()
+        .filter(|t| {
+            t.frontmatter.status == TaskStatus::Planned
+                || t.frontmatter.status == TaskStatus::Backlog
+        })
+        .take(5)
+        .map(|t| task_to_response(t))
+        .collect();
+
     // Read .context/summary.md if it exists
     let context_path = project.root().join(".context").join("summary.md");
     let context_summary = std::fs::read_to_string(&context_path).ok();
@@ -653,6 +665,7 @@ async fn get_summary(
         in_progress_tasks,
         blocked_tasks,
         recent_completions,
+        next_up_tasks,
         context_summary,
         context_last_synced,
     };

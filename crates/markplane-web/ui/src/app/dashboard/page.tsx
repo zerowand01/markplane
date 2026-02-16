@@ -1,11 +1,13 @@
 "use client";
 
+import { useState, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSummary } from "@/lib/hooks/use-summary";
-import { MetricsCard } from "@/components/domain/metrics-card";
 import { StatusBadge } from "@/components/domain/status-badge";
 import { PriorityIndicator } from "@/components/domain/priority-indicator";
 import { EpicProgress } from "@/components/domain/epic-progress";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MarkdownRenderer } from "@/components/domain/markdown-renderer";
+import { TaskDetailSheet } from "@/components/domain/task-detail-sheet";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -15,9 +17,44 @@ import { RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { PageTransition } from "@/components/domain/page-transition";
 
+function relativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 export default function DashboardPage() {
   const { data, isLoading, error, refetch } = useSummary();
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(
+    () => searchParams.get("task")
+  );
+
+  const openTask = useCallback(
+    (id: string) => {
+      setSelectedTaskId(id);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("task", id);
+      router.replace(`?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams]
+  );
+
+  const closeTask = useCallback(() => {
+    setSelectedTaskId(null);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("task");
+    const qs = params.toString();
+    router.replace(qs ? `?${qs}` : "/dashboard/", { scroll: false });
+  }, [router, searchParams]);
 
   const syncMutation = useMutation({
     mutationFn: () => postAction("/api/sync"),
@@ -51,103 +88,142 @@ export default function DashboardPage() {
 
   if (!data) return null;
 
-  const openCount =
-    data.counts.in_progress + data.counts.planned + data.counts.backlog + data.counts.draft;
-
   return (
     <PageTransition>
     <div className="p-4 md:p-6 space-y-6 max-w-[1200px]">
-      {/* Metric cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <MetricsCard label="Open Tasks" value={openCount} />
-        <MetricsCard label="In Progress" value={data.counts.in_progress} />
-        <MetricsCard
-          label="Blocked"
-          value={data.counts.blocked}
-          accent={data.counts.blocked > 0 ? "warning" : "default"}
-        />
-        <MetricsCard label="Done" value={data.counts.done} />
+      {/* Two-column layout: action stream (left) + strategic context (right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6">
+        {/* Left column — action stream, urgency-descending */}
+        <div className="space-y-6 min-w-0">
+          {/* Blocked items — top priority, only if any */}
+          {data.blocked_tasks.length > 0 && (
+            <section className="rounded-lg border border-l-2 border-l-status-blocked p-4">
+              <h2 className="text-sm font-semibold mb-3">Blocked Items</h2>
+              <div className="space-y-1">
+                {data.blocked_tasks.map((task) => (
+                  <button
+                    key={task.id}
+                    onClick={() => openTask(task.id)}
+                    className="flex items-center gap-3 rounded-md px-3 py-2 w-full text-left hover:bg-accent/50 transition-colors"
+                  >
+                    <span className="text-status-blocked text-sm">!</span>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {task.id}
+                    </span>
+                    <span className="text-sm flex-1 truncate">{task.title}</span>
+                    {task.depends_on.length > 0 && (
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        blocked by {task.depends_on.join(", ")}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Active work — always visible */}
+          <section className="rounded-lg border p-4">
+            <h2 className="text-sm font-semibold mb-3">Active Work</h2>
+            {data.in_progress_tasks.length > 0 ? (
+              <div className="space-y-1">
+                {data.in_progress_tasks.map((task) => (
+                  <button
+                    key={task.id}
+                    onClick={() => openTask(task.id)}
+                    className="flex items-center gap-3 rounded-md px-3 py-2 w-full text-left hover:bg-accent/50 transition-colors"
+                  >
+                    <PriorityIndicator priority={task.priority} />
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {task.id}
+                    </span>
+                    <span className="text-sm flex-1 truncate">{task.title}</span>
+                    <StatusBadge status={task.status} />
+                    {task.assignee && (
+                      <span className="text-xs text-muted-foreground">
+                        @{task.assignee}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground px-3 py-2">No tasks in progress</p>
+            )}
+          </section>
+
+          {/* Recent completions */}
+          {data.recent_completions.length > 0 && (
+            <section className="rounded-lg border p-4">
+              <h2 className="text-sm font-semibold mb-3">Recent Completions</h2>
+              <div className="space-y-1">
+                {data.recent_completions.map((task) => (
+                  <button
+                    key={task.id}
+                    onClick={() => openTask(task.id)}
+                    className="flex items-center gap-3 rounded-md px-3 py-2 w-full text-left hover:bg-accent/50 transition-colors"
+                  >
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {task.id}
+                    </span>
+                    <span className="text-sm flex-1 truncate text-muted-foreground line-through decoration-muted-foreground/40">{task.title}</span>
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {relativeTime(task.updated)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
+
+        {/* Right column — strategic context */}
+        <div className="space-y-6">
+          {/* Epic progress */}
+          {data.active_epics.length > 0 && (
+            <section className="rounded-lg border p-4">
+              <h2 className="text-sm font-semibold mb-3">Epic Progress</h2>
+              <div className="space-y-4">
+                {data.active_epics.map((epic) => (
+                  <Link key={epic.id} href="/roadmap">
+                    <EpicProgress epic={epic} />
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Up Next — always visible */}
+          <section className="rounded-lg border p-4">
+            <h2 className="text-sm font-semibold mb-3">Up Next</h2>
+            {data.next_up_tasks.length > 0 ? (
+              <div className="space-y-1">
+                {data.next_up_tasks.map((task) => (
+                  <button
+                    key={task.id}
+                    onClick={() => openTask(task.id)}
+                    className="flex items-center gap-3 rounded-md px-3 py-2 w-full text-left hover:bg-accent/50 transition-colors"
+                  >
+                    <PriorityIndicator priority={task.priority} />
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {task.id}
+                    </span>
+                    <span className="text-sm flex-1 truncate">{task.title}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground px-3 py-2">No planned tasks</p>
+            )}
+          </section>
+        </div>
       </div>
 
-      {/* Active work */}
-      {data.in_progress_tasks.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Active Work</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {data.in_progress_tasks.map((task) => (
-              <Link
-                key={task.id}
-                href={`/backlog`}
-                className="flex items-center gap-3 rounded-md px-3 py-2 hover:bg-accent/50 transition-colors"
-              >
-                <PriorityIndicator priority={task.priority} />
-                <span className="font-mono text-xs text-muted-foreground">
-                  {task.id}
-                </span>
-                <span className="text-sm flex-1 truncate">{task.title}</span>
-                <StatusBadge status={task.status} />
-                {task.assignee && (
-                  <span className="text-xs text-muted-foreground">
-                    @{task.assignee}
-                  </span>
-                )}
-              </Link>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Blocked items */}
-      {data.blocked_tasks.length > 0 && (
-        <Card className="border-l-2 border-l-status-blocked">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Blocked Items</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {data.blocked_tasks.map((task) => (
-              <div
-                key={task.id}
-                className="flex items-center gap-3 rounded-md px-3 py-2"
-              >
-                <span className="text-status-blocked">⚠</span>
-                <span className="font-mono text-xs text-muted-foreground">
-                  {task.id}
-                </span>
-                <span className="text-sm flex-1 truncate">{task.title}</span>
-                {task.depends_on.length > 0 && (
-                  <span className="text-xs text-muted-foreground">
-                    blocked by {task.depends_on.join(", ")}
-                  </span>
-                )}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Epic progress */}
-      {data.active_epics.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Epic Progress</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {data.active_epics.map((epic) => (
-              <Link key={epic.id} href="/roadmap">
-                <EpicProgress epic={epic} />
-              </Link>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* AI Context panel */}
-      <Card className="border-l-2 border-l-primary">
-        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+      {/* Full-width: AI Context panel */}
+      <section className="rounded-lg border border-l-2 border-l-primary p-4">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <CardTitle className="text-base font-semibold">AI Context</CardTitle>
+            <h2 className="text-sm font-semibold">AI Context</h2>
             <ContextFreshness lastSynced={data.context_last_synced} />
           </div>
           <Button
@@ -162,20 +238,26 @@ export default function DashboardPage() {
             />
             Sync Now
           </Button>
-        </CardHeader>
-        <CardContent>
-          {data.context_summary ? (
-            <pre className="text-xs font-mono text-muted-foreground whitespace-pre-wrap leading-relaxed">
-              {data.context_summary}
-            </pre>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No context summary available. Click &quot;Sync Now&quot; to generate.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+        </div>
+        {data.context_summary ? (
+          <div className="prose-sm">
+            <MarkdownRenderer content={data.context_summary} />
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No context summary available. Click &quot;Sync Now&quot; to generate.
+          </p>
+        )}
+      </section>
     </div>
+
+    <TaskDetailSheet
+      taskId={selectedTaskId}
+      open={!!selectedTaskId}
+      onOpenChange={(open) => {
+        if (!open) closeTask();
+      }}
+    />
     </PageTransition>
   );
 }
@@ -213,13 +295,17 @@ function ContextFreshness({ lastSynced }: { lastSynced: string | null }) {
 function DashboardSkeleton() {
   return (
     <div className="space-y-6 max-w-[1200px]">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-20" />
-        ))}
+      <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6">
+        <div className="space-y-6">
+          <Skeleton className="h-40" />
+          <Skeleton className="h-32" />
+        </div>
+        <div className="space-y-6">
+          <Skeleton className="h-32" />
+          <Skeleton className="h-40" />
+        </div>
       </div>
-      <Skeleton className="h-40" />
-      <Skeleton className="h-32" />
+      <Skeleton className="h-48" />
     </div>
   );
 }

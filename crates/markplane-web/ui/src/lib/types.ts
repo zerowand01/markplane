@@ -81,6 +81,7 @@ export interface ProjectSummary {
   in_progress_tasks: Task[];
   blocked_tasks: Task[];
   recent_completions: Task[];
+  next_up_tasks: Task[];
   context_summary: string | null;
   context_last_synced: string | null;
 }
