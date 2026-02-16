@@ -5,10 +5,10 @@ import { MarkdownRenderer } from "./markdown-renderer";
 import { WikiLinkChip } from "./wiki-link-chip";
 import {
   Sheet,
-  SheetContent,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { ResizableSheetContent } from "./resizable-sheet-content";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NOTE_STATUS_CONFIG } from "@/lib/constants";
@@ -26,7 +26,7 @@ export function NoteDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-[540px] overflow-y-auto">
+      <ResizableSheetContent>
         {isLoading || !note ? (
           <SheetHeader>
             <SheetTitle>
@@ -42,28 +42,28 @@ export function NoteDetailSheet({
             <SheetHeader>
               <div className="flex items-center gap-2">
                 <span
-                  className="font-mono text-xs"
+                  className="font-mono text-sm"
                   style={{ color: "var(--entity-note)" }}
                 >
                   {note.id}
                 </span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground uppercase">
+                <span className="text-xs px-2 py-0.5 rounded bg-secondary text-secondary-foreground uppercase">
                   {note.type}
                 </span>
               </div>
-              <SheetTitle className="text-left text-lg">
+              <SheetTitle className="text-left text-xl">
                 {note.title}
               </SheetTitle>
             </SheetHeader>
 
-            <div className="space-y-4 pt-4">
+            <div className="space-y-4 px-4 pb-6">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">
+                  <span className="text-sm text-muted-foreground block mb-1">
                     Status
                   </span>
                   <span
-                    className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded"
+                    className="inline-flex items-center gap-1 text-sm px-2 py-0.5 rounded"
                     style={{
                       backgroundColor: `color-mix(in oklch, var(--status-${note.status}) 15%, transparent)`,
                       color: `var(--status-${note.status})`,
@@ -77,14 +77,14 @@ export function NoteDetailSheet({
 
               {note.tags.length > 0 && (
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">
+                  <span className="text-sm text-muted-foreground block mb-1">
                     Tags
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {note.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="text-xs text-muted-foreground bg-secondary px-1.5 py-0.5 rounded"
+                        className="text-sm text-muted-foreground bg-secondary px-2 py-0.5 rounded"
                       >
                         #{tag}
                       </span>
@@ -95,7 +95,7 @@ export function NoteDetailSheet({
 
               {note.related.length > 0 && (
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">
+                  <span className="text-sm text-muted-foreground block mb-1">
                     Related
                   </span>
                   <div className="flex flex-wrap gap-1.5">
@@ -106,7 +106,7 @@ export function NoteDetailSheet({
                 </div>
               )}
 
-              <div className="flex gap-4 text-xs text-muted-foreground">
+              <div className="flex gap-4 text-sm text-muted-foreground">
                 <span>Created {note.created}</span>
                 <span>Updated {note.updated}</span>
               </div>
@@ -123,7 +123,7 @@ export function NoteDetailSheet({
             </div>
           </>
         )}
-      </SheetContent>
+      </ResizableSheetContent>
     </Sheet>
   );
 }

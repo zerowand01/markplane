@@ -26,14 +26,11 @@ function processWikiLinks(text: string): ReactNode[] {
 }
 
 export function MarkdownRenderer({ content }: { content: string }) {
-  // Pre-process: split on wiki-links and render them as chips
-  // For text nodes within markdown, inject WikiLinkChip components
   return (
-    <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:text-foreground prose-p:text-foreground/90 prose-a:text-primary prose-strong:text-foreground prose-code:text-foreground prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-pre:bg-muted prose-pre:border prose-blockquote:border-primary/30">
+    <div className="prose dark:prose-invert max-w-none prose-headings:text-foreground prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-p:text-foreground/90 prose-a:text-primary prose-strong:text-foreground prose-code:text-foreground prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-muted prose-pre:border prose-blockquote:border-primary/30 prose-li:marker:text-muted-foreground">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          // Process wiki-links in text content
           p: ({ children, ...props }) => (
             <p {...props}>{processChildren(children)}</p>
           ),

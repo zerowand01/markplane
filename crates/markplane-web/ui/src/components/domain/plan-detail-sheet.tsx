@@ -5,10 +5,10 @@ import { MarkdownRenderer } from "./markdown-renderer";
 import { WikiLinkChip } from "./wiki-link-chip";
 import {
   Sheet,
-  SheetContent,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { ResizableSheetContent } from "./resizable-sheet-content";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PLAN_STATUS_CONFIG } from "@/lib/constants";
@@ -26,7 +26,7 @@ export function PlanDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-[540px] overflow-y-auto">
+      <ResizableSheetContent>
         {isLoading || !plan ? (
           <SheetHeader>
             <SheetTitle>
@@ -42,25 +42,25 @@ export function PlanDetailSheet({
             <SheetHeader>
               <div className="flex items-center gap-2">
                 <span
-                  className="font-mono text-xs"
+                  className="font-mono text-sm"
                   style={{ color: "var(--entity-plan)" }}
                 >
                   {plan.id}
                 </span>
               </div>
-              <SheetTitle className="text-left text-lg">
+              <SheetTitle className="text-left text-xl">
                 {plan.title}
               </SheetTitle>
             </SheetHeader>
 
-            <div className="space-y-4 pt-4">
+            <div className="space-y-4 px-4 pb-6">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">
+                  <span className="text-sm text-muted-foreground block mb-1">
                     Status
                   </span>
                   <span
-                    className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded"
+                    className="inline-flex items-center gap-1 text-sm px-2 py-0.5 rounded"
                     style={{
                       backgroundColor: `color-mix(in oklch, var(--status-${plan.status}) 15%, transparent)`,
                       color: `var(--status-${plan.status})`,
@@ -73,7 +73,7 @@ export function PlanDetailSheet({
 
                 {plan.epic && (
                   <div>
-                    <span className="text-xs text-muted-foreground block mb-1">
+                    <span className="text-sm text-muted-foreground block mb-1">
                       Epic
                     </span>
                     <WikiLinkChip id={plan.epic} />
@@ -83,7 +83,7 @@ export function PlanDetailSheet({
 
               {plan.implements.length > 0 && (
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">
+                  <span className="text-sm text-muted-foreground block mb-1">
                     Implements
                   </span>
                   <div className="flex flex-wrap gap-1.5">
@@ -94,7 +94,7 @@ export function PlanDetailSheet({
                 </div>
               )}
 
-              <div className="flex gap-4 text-xs text-muted-foreground">
+              <div className="flex gap-4 text-sm text-muted-foreground">
                 <span>Created {plan.created}</span>
                 <span>Updated {plan.updated}</span>
               </div>
@@ -111,7 +111,7 @@ export function PlanDetailSheet({
             </div>
           </>
         )}
-      </SheetContent>
+      </ResizableSheetContent>
     </Sheet>
   );
 }

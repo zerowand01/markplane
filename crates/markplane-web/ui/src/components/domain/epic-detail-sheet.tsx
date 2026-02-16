@@ -9,10 +9,10 @@ import { PriorityIndicator } from "./priority-indicator";
 import { MarkdownRenderer } from "./markdown-renderer";
 import {
   Sheet,
-  SheetContent,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { ResizableSheetContent } from "./resizable-sheet-content";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -42,7 +42,7 @@ export function EpicDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-[600px] overflow-y-auto">
+      <ResizableSheetContent>
         {isLoading || !epic ? (
           <SheetHeader>
             <SheetTitle>
@@ -59,33 +59,33 @@ export function EpicDetailSheet({
             <SheetHeader>
               <div className="flex items-center gap-2">
                 <span
-                  className="font-mono text-xs"
+                  className="font-mono text-sm"
                   style={{ color: "var(--entity-epic)" }}
                 >
                   {epic.id}
                 </span>
                 <EpicStatusBadge status={epic.status} />
               </div>
-              <SheetTitle className="text-left text-lg">
+              <SheetTitle className="text-left text-xl">
                 {epic.title}
               </SheetTitle>
             </SheetHeader>
 
-            <div className="space-y-4 pt-4">
+            <div className="space-y-4 px-4 pb-6">
               {/* Progress */}
               <EpicProgress epic={epic} />
 
               {/* Metadata */}
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">
+                  <span className="text-sm text-muted-foreground block mb-1">
                     Priority
                   </span>
                   <PriorityIndicator priority={epic.priority} showLabel />
                 </div>
                 {epic.started && (
                   <div>
-                    <span className="text-xs text-muted-foreground block mb-1">
+                    <span className="text-sm text-muted-foreground block mb-1">
                       Started
                     </span>
                     <span className="text-sm">{epic.started}</span>
@@ -93,7 +93,7 @@ export function EpicDetailSheet({
                 )}
                 {epic.target && (
                   <div>
-                    <span className="text-xs text-muted-foreground block mb-1">
+                    <span className="text-sm text-muted-foreground block mb-1">
                       Target
                     </span>
                     <span className="text-sm">{epic.target}</span>
@@ -104,14 +104,14 @@ export function EpicDetailSheet({
               {/* Tags */}
               {epic.tags.length > 0 && (
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">
+                  <span className="text-sm text-muted-foreground block mb-1">
                     Tags
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {epic.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="text-xs text-muted-foreground bg-secondary px-1.5 py-0.5 rounded"
+                        className="text-sm text-muted-foreground bg-secondary px-2 py-0.5 rounded"
                       >
                         #{tag}
                       </span>
@@ -123,10 +123,10 @@ export function EpicDetailSheet({
               {/* Status breakdown */}
               {Object.keys(epic.status_breakdown).length > 0 && (
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">
+                  <span className="text-sm text-muted-foreground block mb-1">
                     Status Breakdown
                   </span>
-                  <div className="flex gap-3 text-xs">
+                  <div className="flex gap-3 text-sm">
                     {Object.entries(epic.status_breakdown).map(
                       ([status, count]) => (
                         <span
@@ -210,7 +210,7 @@ export function EpicDetailSheet({
             </div>
           </>
         )}
-      </SheetContent>
+      </ResizableSheetContent>
     </Sheet>
   );
 }

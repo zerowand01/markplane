@@ -7,10 +7,10 @@ import { PriorityIndicator } from "./priority-indicator";
 import { MarkdownRenderer } from "./markdown-renderer";
 import {
   Sheet,
-  SheetContent,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { ResizableSheetContent } from "./resizable-sheet-content";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,7 +52,7 @@ export function TaskDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-[540px] overflow-y-auto">
+      <ResizableSheetContent>
         {isLoading || !task ? (
           <SheetHeader>
             <SheetTitle>
@@ -69,27 +69,27 @@ export function TaskDetailSheet({
             <SheetHeader>
               <div className="flex items-center gap-2">
                 <span
-                  className="font-mono text-xs"
+                  className="font-mono text-sm"
                   style={{ color: "var(--entity-task)" }}
                 >
                   {task.id}
                 </span>
                 {task.type && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground uppercase">
+                  <span className="text-xs px-2 py-0.5 rounded bg-secondary text-secondary-foreground uppercase">
                     {task.type}
                   </span>
                 )}
               </div>
-              <SheetTitle className="text-left text-lg">
+              <SheetTitle className="text-left text-xl">
                 {task.title}
               </SheetTitle>
             </SheetHeader>
 
-            <div className="space-y-4 pt-4">
+            <div className="space-y-4 px-4 pb-6">
               {/* Metadata grid */}
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">
+                  <span className="text-sm text-muted-foreground block mb-1">
                     Status
                   </span>
                   <DropdownMenu>
@@ -118,7 +118,7 @@ export function TaskDetailSheet({
                 </div>
 
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">
+                  <span className="text-sm text-muted-foreground block mb-1">
                     Priority
                   </span>
                   <DropdownMenu>
@@ -145,10 +145,10 @@ export function TaskDetailSheet({
 
                 {task.effort && (
                   <div>
-                    <span className="text-xs text-muted-foreground block mb-1">
+                    <span className="text-sm text-muted-foreground block mb-1">
                       Effort
                     </span>
-                    <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground uppercase">
+                    <span className="text-sm font-medium px-2 py-0.5 rounded bg-secondary text-secondary-foreground uppercase">
                       {task.effort}
                     </span>
                   </div>
@@ -156,11 +156,11 @@ export function TaskDetailSheet({
 
                 {task.epic && (
                   <div>
-                    <span className="text-xs text-muted-foreground block mb-1">
+                    <span className="text-sm text-muted-foreground block mb-1">
                       Epic
                     </span>
                     <span
-                      className="text-xs font-mono px-1.5 py-0.5 rounded"
+                      className="text-sm font-mono px-2 py-0.5 rounded"
                       style={{
                         backgroundColor:
                           "color-mix(in oklch, var(--entity-epic) 15%, transparent)",
@@ -174,11 +174,11 @@ export function TaskDetailSheet({
 
                 {task.plan && (
                   <div>
-                    <span className="text-xs text-muted-foreground block mb-1">
+                    <span className="text-sm text-muted-foreground block mb-1">
                       Plan
                     </span>
                     <span
-                      className="text-xs font-mono px-1.5 py-0.5 rounded"
+                      className="text-sm font-mono px-2 py-0.5 rounded"
                       style={{
                         backgroundColor:
                           "color-mix(in oklch, var(--entity-plan) 15%, transparent)",
@@ -192,7 +192,7 @@ export function TaskDetailSheet({
 
                 {task.assignee && (
                   <div>
-                    <span className="text-xs text-muted-foreground block mb-1">
+                    <span className="text-sm text-muted-foreground block mb-1">
                       Assignee
                     </span>
                     <span className="text-sm">@{task.assignee}</span>
@@ -203,14 +203,14 @@ export function TaskDetailSheet({
               {/* Tags */}
               {task.tags.length > 0 && (
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">
+                  <span className="text-sm text-muted-foreground block mb-1">
                     Tags
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {task.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="text-xs text-muted-foreground bg-secondary px-1.5 py-0.5 rounded"
+                        className="text-sm text-muted-foreground bg-secondary px-2 py-0.5 rounded"
                       >
                         #{tag}
                       </span>
@@ -224,14 +224,14 @@ export function TaskDetailSheet({
                 <div className="space-y-2">
                   {task.depends_on.length > 0 && (
                     <div>
-                      <span className="text-xs text-muted-foreground block mb-1">
+                      <span className="text-sm text-muted-foreground block mb-1">
                         Depends on
                       </span>
                       <div className="flex flex-wrap gap-1.5">
                         {task.depends_on.map((dep) => (
                           <span
                             key={dep}
-                            className="text-xs font-mono text-muted-foreground bg-secondary px-1.5 py-0.5 rounded"
+                            className="text-sm font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded"
                           >
                             {dep}
                           </span>
@@ -241,14 +241,14 @@ export function TaskDetailSheet({
                   )}
                   {task.blocks.length > 0 && (
                     <div>
-                      <span className="text-xs text-muted-foreground block mb-1">
+                      <span className="text-sm text-muted-foreground block mb-1">
                         Blocks
                       </span>
                       <div className="flex flex-wrap gap-1.5">
                         {task.blocks.map((b) => (
                           <span
                             key={b}
-                            className="text-xs font-mono text-muted-foreground bg-secondary px-1.5 py-0.5 rounded"
+                            className="text-sm font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded"
                           >
                             {b}
                           </span>
@@ -260,7 +260,7 @@ export function TaskDetailSheet({
               )}
 
               {/* Dates */}
-              <div className="flex gap-4 text-xs text-muted-foreground">
+              <div className="flex gap-4 text-sm text-muted-foreground">
                 <span>Created {task.created}</span>
                 <span>Updated {task.updated}</span>
               </div>
@@ -278,7 +278,7 @@ export function TaskDetailSheet({
             </div>
           </>
         )}
-      </SheetContent>
+      </ResizableSheetContent>
     </Sheet>
   );
 }

@@ -72,7 +72,7 @@ export function AppSidebar() {
                 const Icon = ICON_MAP[item.icon];
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
+                    <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)} className="h-10 text-base">
                       <Link href={item.href}>
                         <Icon className="size-5" />
                         <span>{item.label}</span>
@@ -93,7 +93,7 @@ export function AppSidebar() {
                 const Icon = ICON_MAP[item.icon];
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
+                    <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)} className="h-10 text-base">
                       <Link href={item.href}>
                         <Icon className="size-5" />
                         <span>{item.label}</span>
