@@ -41,13 +41,6 @@ function NotesContent() {
   return (
     <PageTransition>
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Notes</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {notes.length} research notes, ideas & decisions
-        </p>
-      </div>
-
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -147,16 +140,18 @@ function NotesContent() {
 
 export default function NotesPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-20 w-full" />
-          ))}
-        </div>
-      }
-    >
-      <NotesContent />
-    </Suspense>
+    <div className="p-4 md:p-6">
+      <Suspense
+        fallback={
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full" />
+            ))}
+          </div>
+        }
+      >
+        <NotesContent />
+      </Suspense>
+    </div>
   );
 }

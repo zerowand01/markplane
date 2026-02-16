@@ -31,12 +31,12 @@ export default function DashboardPage() {
   });
 
   if (isLoading) {
-    return <DashboardSkeleton />;
+    return <div className="p-4 md:p-6"><DashboardSkeleton /></div>;
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+      <div className="p-4 md:p-6 flex flex-col items-center justify-center min-h-[400px] gap-4">
         <p className="text-muted-foreground">Failed to load dashboard data.</p>
         <p className="text-sm text-destructive">{error.message}</p>
         <p className="text-xs text-muted-foreground">
@@ -56,9 +56,7 @@ export default function DashboardPage() {
 
   return (
     <PageTransition>
-    <div className="space-y-6 max-w-[1200px]">
-      <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-
+    <div className="p-4 md:p-6 space-y-6 max-w-[1200px]">
       {/* Metric cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <MetricsCard label="Open Tasks" value={openCount} />
@@ -215,7 +213,6 @@ function ContextFreshness({ lastSynced }: { lastSynced: string | null }) {
 function DashboardSkeleton() {
   return (
     <div className="space-y-6 max-w-[1200px]">
-      <Skeleton className="h-8 w-40" />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} className="h-20" />

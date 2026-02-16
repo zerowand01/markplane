@@ -150,7 +150,7 @@ export default function GraphView({ graphData, focusId }: { graphData: GraphData
   }, []);
 
   return (
-    <div className="h-[calc(100vh-120px)] w-full border rounded-lg overflow-hidden bg-background">
+    <div className="h-screen w-full overflow-hidden bg-background">
       <ReactFlow
         nodes={nodes}
         edges={edges}

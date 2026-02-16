@@ -84,9 +84,11 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 
 export default function BacklogPage() {
   return (
-    <Suspense fallback={<BacklogSkeleton />}>
-      <BacklogContent />
-    </Suspense>
+    <div className="p-4 md:p-6">
+      <Suspense fallback={<BacklogSkeleton />}>
+        <BacklogContent />
+      </Suspense>
+    </div>
   );
 }
 

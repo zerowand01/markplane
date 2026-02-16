@@ -43,13 +43,6 @@ function PlansContent() {
   return (
     <PageTransition>
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Plans</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {plans.length} implementation plans
-        </p>
-      </div>
-
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -144,16 +137,18 @@ function PlansContent() {
 
 export default function PlansPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-20 w-full" />
-          ))}
-        </div>
-      }
-    >
-      <PlansContent />
-    </Suspense>
+    <div className="p-4 md:p-6">
+      <Suspense
+        fallback={
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full" />
+            ))}
+          </div>
+        }
+      >
+        <PlansContent />
+      </Suspense>
+    </div>
   );
 }

@@ -12,7 +12,7 @@ import { EmptyState } from "@/components/domain/empty-state";
 
 const GraphView = dynamic(() => import("@/components/domain/graph-view"), {
   ssr: false,
-  loading: () => <Skeleton className="h-[calc(100vh-120px)] w-full" />,
+  loading: () => <Skeleton className="h-screen w-full" />,
 });
 
 function GraphContent() {
@@ -36,20 +36,14 @@ function GraphContent() {
   return (
     <PageTransition>
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold">Dependencies</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Interactive dependency graph of all project items
-          {focusId && (
-            <span>
-              {" "}&middot; Focused on <code className="text-xs">{focusId}</code>
-            </span>
-          )}
+      {focusId && (
+        <p className="text-sm text-muted-foreground">
+          Focused on <code className="text-xs font-mono">{focusId}</code>
         </p>
-      </div>
+      )}
 
       {isLoading || !graphData ? (
-        <Skeleton className="h-[calc(100vh-120px)] w-full" />
+        <Skeleton className="h-screen w-full" />
       ) : graphData.nodes.length === 0 ? (
         <EmptyState
           title="No dependencies mapped"

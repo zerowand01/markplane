@@ -211,13 +211,6 @@ function RoadmapContent() {
   return (
     <PageTransition>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">Roadmap</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Now / Next / Later &mdash; strategic epic timeline
-          </p>
-        </div>
-
         {epicsLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -234,6 +227,7 @@ function RoadmapContent() {
             description='Create strategic epics with markplane add "title" --type epic'
           />
         ) : (
+          <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Now lane */}
             <div className="space-y-3">
@@ -287,52 +281,52 @@ function RoadmapContent() {
               <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                 Later ({later.length})
               </h2>
-              {later.length === 0 && done.length === 0 ? (
+              {later.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-8 text-center">
                   <p className="text-sm text-muted-foreground">
                     No lower-priority planned epics
                   </p>
                 </div>
               ) : (
-                <>
-                  {later.length > 0 && (
-                    <div className="space-y-3">
-                      {later.map((epic) => (
-                        <LaterCard
-                          key={epic.id}
-                          epic={epic}
-                          onClick={() => openEpic(epic.id)}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Done section (collapsed by default) */}
-                  {done.length > 0 && (
-                    <div className="pt-2">
-                      <button
-                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                        onClick={() => setShowDone(!showDone)}
-                      >
-                        {showDone ? "\u2212" : "+"} Completed ({done.length})
-                      </button>
-                      {showDone && (
-                        <div className="space-y-3 mt-3">
-                          {done.map((epic) => (
-                            <LaterCard
-                              key={epic.id}
-                              epic={epic}
-                              onClick={() => openEpic(epic.id)}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </>
+                <div className="space-y-3">
+                  {later.map((epic) => (
+                    <LaterCard
+                      key={epic.id}
+                      epic={epic}
+                      onClick={() => openEpic(epic.id)}
+                    />
+                  ))}
+                </div>
               )}
             </div>
           </div>
+
+          {/* Completed section */}
+          {done.length > 0 && (
+            <div>
+              <button
+                className="flex items-center gap-2 hover:text-foreground transition-colors"
+                onClick={() => setShowDone(!showDone)}
+              >
+                <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                  Completed ({done.length})
+                </h2>
+                <span className="text-xs text-muted-foreground">{showDone ? "\u25BC" : "\u25B6"}</span>
+              </button>
+              {showDone && (
+                <div className="space-y-2 mt-3">
+                  {done.map((epic) => (
+                    <LaterCard
+                      key={epic.id}
+                      epic={epic}
+                      onClick={() => openEpic(epic.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          </>
         )}
 
         <EpicDetailSheet
@@ -362,22 +356,23 @@ function RoadmapContent() {
 
 export default function RoadmapPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="space-y-4">
-          <Skeleton className="h-8 w-32" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="space-y-3">
-                <Skeleton className="h-5 w-24" />
-                <Skeleton className="h-32 w-full" />
-              </div>
-            ))}
+    <div className="p-4 md:p-6">
+      <Suspense
+        fallback={
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="space-y-3">
+                  <Skeleton className="h-5 w-24" />
+                  <Skeleton className="h-32 w-full" />
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      }
-    >
-      <RoadmapContent />
-    </Suspense>
+        }
+      >
+        <RoadmapContent />
+      </Suspense>
+    </div>
   );
 }
