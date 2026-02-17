@@ -7,6 +7,7 @@ import { CommandPaletteWrapper } from "@/components/layout/command-palette-wrapp
 import { ErrorBoundary } from "@/components/domain/error-boundary";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
+import { MarkplaneLogo } from "@/components/ui/markplane-logo";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,7 +40,8 @@ export default function RootLayout({
             <SidebarInset>
               <header className="md:hidden flex items-center gap-2 px-4 py-3 border-b">
                 <SidebarTrigger />
-                <span className="text-sm font-semibold">Markplane</span>
+                <MarkplaneLogo className="size-4 text-primary" />
+                <span className="text-sm font-semibold font-mono">Markplane</span>
               </header>
               <main className="flex-1">
                 <ErrorBoundary>{children}</ErrorBoundary>

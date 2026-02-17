@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <rect width="400" height="400" fill="#0f172a" rx="12"/>
+
+  <g transform="translate(200, 200)">
+    <!-- Two horizontal bars of the hash -->
+    <line x1="-70" y1="-25" x2="70" y2="-25" stroke="#38bdf8" stroke-width="16" stroke-linecap="round"/>
+    <line x1="-70" y1="25" x2="70" y2="25" stroke="#38bdf8" stroke-width="16" stroke-linecap="round"/>
+
+    <!-- Left vertical — full even curve sweeping right -->
+    <path d="M -60,85 Q 10,0 -60,-85"
+          fill="none" stroke="#38bdf8" stroke-width="16" stroke-linecap="round"/>
+
+    <!-- Right vertical — full even curve sweeping right -->
+    <path d="M -10,85 Q 60,0 -10,-85"
+          fill="none" stroke="#38bdf8" stroke-width="16" stroke-linecap="round"/>
+  </g>
+</svg>

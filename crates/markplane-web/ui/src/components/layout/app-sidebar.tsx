@@ -26,6 +26,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { MarkplaneLogo } from "@/components/ui/markplane-logo";
 
 const ICON_MAP = {
   LayoutDashboard,
@@ -54,8 +55,8 @@ export function AppSidebar() {
       <SidebarHeader className="px-4 py-3">
         <div className="flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <span className="text-xl">✈</span>
-            <span className="text-lg font-semibold tracking-tight">Markplane</span>
+            <MarkplaneLogo className="size-6 text-primary" />
+            <span className="text-lg font-semibold tracking-tight font-mono">Markplane</span>
           </Link>
           <button
             onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
