@@ -550,9 +550,11 @@ function Legend({
 export default function GraphView({
   graphData,
   focusId,
+  onNodeClick: onNodeClickProp,
 }: {
   graphData: GraphData;
   focusId?: string;
+  onNodeClick?: (nodeId: string) => void;
 }) {
   const [activeLayers, setActiveLayers] = useState<Set<string>>(DEFAULT_LAYERS);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
@@ -639,12 +641,10 @@ export default function GraphView({
   }, [focusId, layoutedNodes]);
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-    const prefix = node.id.split("-")[0];
-    const config = PREFIX_CONFIG[prefix];
-    if (config) {
-      window.location.href = `${config.route}?${node.data.entityType}=${node.id}`;
+    if (onNodeClickProp) {
+      onNodeClickProp(node.id);
     }
-  }, []);
+  }, [onNodeClickProp]);
 
   return (
     <div className="h-screen w-full overflow-hidden bg-background flex flex-col">

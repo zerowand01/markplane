@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { Suspense, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSummary } from "@/lib/hooks/use-summary";
 import { StatusBadge } from "@/components/domain/status-badge";
@@ -28,7 +28,7 @@ function relativeTime(dateStr: string): string {
   return `${days}d ago`;
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { data, isLoading, error, refetch } = useSummary();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -307,5 +307,13 @@ function DashboardSkeleton() {
       </div>
       <Skeleton className="h-48" />
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div className="p-4 md:p-6"><DashboardSkeleton /></div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }
