@@ -5,9 +5,9 @@ import { Providers } from "@/components/providers";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { CommandPaletteWrapper } from "@/components/layout/command-palette-wrapper";
 import { ErrorBoundary } from "@/components/domain/error-boundary";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { MobileHeader } from "@/components/layout/mobile-header";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
-import { MarkplaneLogo } from "@/components/ui/markplane-logo";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,11 +38,7 @@ export default function RootLayout({
           <SidebarProvider>
             <AppSidebar />
             <SidebarInset>
-              <header className="md:hidden flex items-center gap-2 px-4 py-3 border-b">
-                <SidebarTrigger />
-                <MarkplaneLogo className="size-4 text-primary" />
-                <span className="text-sm font-semibold font-mono">Markplane</span>
-              </header>
+              <MobileHeader />
               <main className="flex-1">
                 <ErrorBoundary>{children}</ErrorBoundary>
               </main>

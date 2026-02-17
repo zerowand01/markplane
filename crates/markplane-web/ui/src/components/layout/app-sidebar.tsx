@@ -9,6 +9,7 @@ import {
   Lightbulb,
   GitBranch,
   Map,
+  PanelLeft,
   Search,
   Sun,
   Moon,
@@ -22,10 +23,13 @@ import {
   SidebarGroupContent,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
+  SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
 import { MarkplaneLogo } from "@/components/ui/markplane-logo";
 
 const ICON_MAP = {
@@ -49,26 +53,39 @@ const mainNav = [
 export function AppSidebar() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
+  const { isMobile, toggleSidebar } = useSidebar();
 
   return (
-    <Sidebar>
-      <SidebarHeader className="px-4 py-3">
-        <div className="flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <MarkplaneLogo className="size-6 text-primary" />
-            <span className="text-lg font-semibold tracking-tight font-mono">Markplane</span>
-          </Link>
-          <button
-            onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
-            className="size-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-            title="Search (⌘K)"
-          >
-            <Search className="size-4" />
-          </button>
-        </div>
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="p-2 pt-3">
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-2 overflow-hidden rounded-md p-1"
+        >
+          <MarkplaneLogo className="size-6 text-primary shrink-0" />
+          <span className="text-lg font-semibold tracking-tight font-mono whitespace-nowrap">Markplane</span>
+        </Link>
       </SidebarHeader>
 
       <SidebarContent>
+        <SidebarGroup className="pb-0">
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  tooltip="Search (⌘K)"
+                  onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
+                  className="text-base"
+                >
+                  <Search className="size-5" />
+                  <span>Search</span>
+                </SidebarMenuButton>
+                <SidebarMenuBadge className="text-muted-foreground/60 text-xs">⌘K</SidebarMenuBadge>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarSeparator />
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -76,7 +93,7 @@ export function AppSidebar() {
                 const Icon = ICON_MAP[item.icon];
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)} className="h-10 text-base">
+                    <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)} tooltip={item.label} className="text-base">
                       <Link href={item.href}>
                         <Icon className="size-5" />
                         <span>{item.label}</span>
@@ -90,19 +107,28 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="px-3 pb-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start gap-2"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-        >
-          <Sun className="size-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute size-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-          <span className="dark:hidden">Light</span>
-          <span className="hidden dark:inline">Dark</span>
-        </Button>
+      <SidebarFooter className="p-2">
+        <div className="flex items-center justify-between group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-1">
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="size-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            title="Toggle theme"
+          >
+            <Sun className="size-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute size-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+          </button>
+          {!isMobile && (
+            <button
+              onClick={toggleSidebar}
+              className="size-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              title="Toggle sidebar (⌘B)"
+            >
+              <PanelLeft className="size-4" />
+            </button>
+          )}
+        </div>
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   );
 }

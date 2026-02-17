@@ -128,7 +128,7 @@
   /* Entity type colors */
   --entity-task: oklch(0.65 0.18 250);
   --entity-epic: oklch(0.65 0.14 180);
-  --entity-plan: oklch(0.70 0.16 310);
+  --entity-plan: oklch(0.65 0.18 38);
   --entity-note: oklch(0.75 0.15 85);
 
   /* React Flow overrides */
@@ -215,7 +215,7 @@
   /* Entity type colors (light) */
   --entity-task: oklch(0.50 0.20 250);
   --entity-epic: oklch(0.45 0.14 180);
-  --entity-plan: oklch(0.50 0.18 310);
+  --entity-plan: oklch(0.50 0.19 38);
   --entity-note: oklch(0.55 0.16 85);
 }
 
