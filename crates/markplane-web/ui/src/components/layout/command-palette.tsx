@@ -316,7 +316,7 @@ export function CommandPalette() {
                 </span>
               </CommandItem>
               <CommandItem onSelect={() => navigate("/graph")}>
-                Go to Dependencies
+                Go to Graph
                 <span className="ml-auto text-xs text-muted-foreground">
                   g g
                 </span>

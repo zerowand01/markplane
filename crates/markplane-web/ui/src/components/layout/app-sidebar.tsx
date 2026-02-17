@@ -42,7 +42,7 @@ const mainNav = [
   { href: "/backlog", label: "Backlog", icon: "CheckSquare" as const },
   { href: "/plans", label: "Plans", icon: "FileText" as const },
   { href: "/notes", label: "Notes", icon: "Lightbulb" as const },
-  { href: "/graph", label: "Dependencies", icon: "GitBranch" as const },
+  { href: "/graph", label: "Graph", icon: "GitBranch" as const },
 ];
 
 export function AppSidebar() {

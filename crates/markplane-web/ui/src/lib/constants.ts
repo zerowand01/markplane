@@ -61,5 +61,5 @@ export const NAV_ITEMS = [
   { href: "/plans", label: "Plans", icon: "FileText" },
   { href: "/notes", label: "Notes", icon: "Lightbulb" },
   { href: "/roadmap", label: "Roadmap", icon: "Map" },
-  { href: "/graph", label: "Dependencies", icon: "GitBranch" },
+  { href: "/graph", label: "Graph", icon: "GitBranch" },
 ] as const;

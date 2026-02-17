@@ -1233,6 +1233,8 @@ struct GraphNodeResponse {
     status: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     priority: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    tags: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -1288,6 +1290,7 @@ fn build_graph(
                 title: fm.title.clone(),
                 status: fm.status.to_string(),
                 priority: Some(fm.priority.to_string()),
+                tags: fm.tags.clone(),
             },
         );
         for dep in &fm.depends_on {
@@ -1325,6 +1328,7 @@ fn build_graph(
                 title: fm.title.clone(),
                 status: fm.status.to_string(),
                 priority: Some(fm.priority.to_string()),
+                tags: fm.tags.clone(),
             },
         );
         for dep in &fm.depends_on {
@@ -1348,6 +1352,7 @@ fn build_graph(
                 title: fm.title.clone(),
                 status: fm.status.to_string(),
                 priority: None,
+                tags: vec![],
             },
         );
         for imp in &fm.implements {
@@ -1378,6 +1383,7 @@ fn build_graph(
                 title: fm.title.clone(),
                 status: fm.status.to_string(),
                 priority: None,
+                tags: vec![],
             },
         );
         for rel in &fm.related {

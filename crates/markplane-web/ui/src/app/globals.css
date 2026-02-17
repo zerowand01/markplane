@@ -130,6 +130,31 @@
   --entity-epic: oklch(0.65 0.14 180);
   --entity-plan: oklch(0.70 0.16 170);
   --entity-note: oklch(0.75 0.15 85);
+
+  /* React Flow overrides */
+  --xy-background-color: var(--background);
+  --xy-node-color: var(--foreground);
+  --xy-node-background-color: var(--card);
+  --xy-node-border: 1px solid var(--border);
+  --xy-node-border-radius: 0.5rem;
+  --xy-node-boxshadow-hover: 0 0 0 1px var(--primary);
+  --xy-node-boxshadow-selected: 0 0 0 1.5px var(--primary);
+  --xy-edge-stroke-selected: var(--primary);
+  --xy-handle-background-color: transparent;
+  --xy-handle-border-color: transparent;
+  --xy-controls-button-background-color: var(--card);
+  --xy-controls-button-background-color-hover: var(--accent);
+  --xy-controls-button-color: var(--muted-foreground);
+  --xy-controls-button-color-hover: var(--foreground);
+  --xy-controls-button-border-color: var(--border);
+  --xy-controls-box-shadow: none;
+  --xy-minimap-background-color: var(--card);
+  --xy-minimap-mask-background-color: color-mix(in oklch, var(--background) 70%, transparent);
+  --xy-minimap-node-background-color: var(--accent);
+  --xy-minimap-node-stroke-color: var(--border);
+  --xy-edge-label-background-color: var(--card);
+  --xy-edge-label-color: var(--muted-foreground);
+  --xy-background-pattern-dots-color: var(--border);
 }
 
 /* Light theme */

@@ -46,8 +46,8 @@ function GraphContent() {
         <Skeleton className="h-screen w-full" />
       ) : graphData.nodes.length === 0 ? (
         <EmptyState
-          title="No dependencies mapped"
-          description="Add depends_on or blocks fields to task frontmatter to see the dependency graph"
+          title="No relationships found"
+          description="Add depends_on, blocks, or epic fields to task frontmatter to see the graph"
         />
       ) : (
         <GraphView graphData={graphData} focusId={focusId} />

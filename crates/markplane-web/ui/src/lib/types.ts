@@ -125,6 +125,7 @@ export interface GraphNode {
   title: string;
   status: string;
   priority?: string;
+  tags?: string[];
 }
 
 export interface GraphEdge {
