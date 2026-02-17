@@ -126,81 +126,6 @@ function buildEpicMembers(edges: GraphData["edges"]): Record<string, Set<string>
   return map;
 }
 
-// --- Critical path ---
-
-function findCriticalPath(allEdges: GraphData["edges"], doneNodes: Set<string>): Set<string> {
-  const seen = new Set<string>();
-  const depEdges: Array<{ source: string; target: string }> = [];
-
-  for (const e of allEdges) {
-    if (e.relation !== "blocks" && e.relation !== "depends_on") continue;
-    if (doneNodes.has(e.source) || doneNodes.has(e.target)) continue;
-    const key = `${e.source}->${e.target}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    depEdges.push({ source: e.source, target: e.target });
-  }
-
-  if (depEdges.length === 0) return new Set();
-
-  const adj: Record<string, string[]> = {};
-  const allNodes = new Set<string>();
-  const inDegree: Record<string, number> = {};
-
-  for (const e of depEdges) {
-    allNodes.add(e.source);
-    allNodes.add(e.target);
-    if (!adj[e.source]) adj[e.source] = [];
-    adj[e.source].push(e.target);
-    inDegree[e.target] = (inDegree[e.target] ?? 0) + 1;
-  }
-  for (const node of allNodes) {
-    if (!(node in inDegree)) inDegree[node] = 0;
-  }
-
-  const queue: string[] = [];
-  const dist: Record<string, number> = {};
-  const prev: Record<string, string | null> = {};
-
-  for (const node of allNodes) {
-    dist[node] = 0;
-    prev[node] = null;
-    if (inDegree[node] === 0) queue.push(node);
-  }
-
-  while (queue.length > 0) {
-    const node = queue.shift()!;
-    for (const next of adj[node] ?? []) {
-      if (dist[node] + 1 > dist[next]) {
-        dist[next] = dist[node] + 1;
-        prev[next] = node;
-      }
-      inDegree[next]--;
-      if (inDegree[next] === 0) queue.push(next);
-    }
-  }
-
-  let maxNode = "";
-  let maxDist = 0;
-  for (const [node, d] of Object.entries(dist)) {
-    if (d > maxDist) {
-      maxDist = d;
-      maxNode = node;
-    }
-  }
-
-  if (maxDist === 0) return new Set();
-
-  const path = new Set<string>();
-  let current: string | null = maxNode;
-  while (current) {
-    path.add(current);
-    current = prev[current];
-  }
-
-  return path;
-}
-
 // --- Filters ---
 
 interface Filters {
@@ -240,15 +165,12 @@ function computeAllowedNodes(
 
 function buildNodeData(
   node: GraphNode,
-  criticalPath: Set<string>,
-  showCritical: boolean,
   sourcePosition: Position,
   targetPosition: Position,
 ) {
   const prefix = node.id.split("-")[0];
   const entityColor = PREFIX_CONFIG[prefix]?.color ?? "var(--entity-task)";
   const isDone = node.status === "done" || node.status === "cancelled";
-  const isCritical = showCritical && criticalPath.has(node.id);
 
   return {
     id: node.id,
@@ -258,7 +180,6 @@ function buildNodeData(
     entityColor,
     statusColor: statusToColor(node.status),
     isDone: isDone ? "true" : "",
-    isCritical: isCritical ? "true" : "",
     sourcePosition,
     targetPosition,
   };
@@ -268,7 +189,6 @@ async function buildLayout(
   graphData: GraphData,
   activeLayers: Set<string>,
   allowedNodes: Set<string>,
-  criticalPath: Set<string>,
   direction: LayoutDirection,
   prevPositions: Map<string, { x: number; y: number }>,
 ): Promise<{ nodes: Node[]; edges: Edge[] }> {
@@ -321,8 +241,6 @@ async function buildLayout(
   // Determine handle positions
   const sourcePosition = direction === "LR" ? Position.Right : Position.Bottom;
   const targetPosition = direction === "LR" ? Position.Left : Position.Top;
-
-  const showCritical = activeLayers.has("dependencies");
 
   // --- Build ELK graph ---
   type ElkChild = {
@@ -496,7 +414,7 @@ async function buildLayout(
         nodes.push({
           id: innerChild.id,
           position: { x: innerChild.x ?? 0, y: innerChild.y ?? 0 },
-          data: buildNodeData(childNode, criticalPath, showCritical, sourcePosition, targetPosition),
+          data: buildNodeData(childNode, sourcePosition, targetPosition),
           type: "itemNode",
           parentId: elkChild.id,
           extent: "parent" as const,
@@ -510,7 +428,7 @@ async function buildLayout(
       nodes.push({
         id: elkChild.id,
         position: { x: elkChild.x ?? 0, y: elkChild.y ?? 0 },
-        data: buildNodeData(node, criticalPath, showCritical, sourcePosition, targetPosition),
+        data: buildNodeData(node, sourcePosition, targetPosition),
         type: "itemNode",
         style: { width: NODE_WIDTH, height: NODE_HEIGHT },
       });
@@ -546,9 +464,6 @@ function ItemNode({ data }: { data: Record<string, string | Position> }) {
         borderTopColor: data.entityColor as string,
         borderTopWidth: 3,
         opacity: data.isDone ? 0.4 : 1,
-        boxShadow: data.isCritical
-          ? "0 0 0 1.5px var(--priority-high), 0 0 12px color-mix(in oklch, var(--priority-high) 30%, transparent)"
-          : undefined,
       }}
     >
       <Handle type="target" position={targetPos} />
@@ -560,11 +475,6 @@ function ItemNode({ data }: { data: Record<string, string | Position> }) {
           className="w-2 h-2 rounded-full"
           style={{ backgroundColor: data.statusColor as string }}
         />
-        {data.isCritical && (
-          <span className="ml-auto text-[9px] font-medium" style={{ color: "var(--priority-high)" }}>
-            critical path
-          </span>
-        )}
       </div>
       <p className="text-xs font-medium line-clamp-2 leading-tight">
         {data.label as string}
@@ -781,12 +691,10 @@ function GraphFilters({
 function Legend({
   activeLayers,
   edgeCounts,
-  criticalPathSize,
   useCompound,
 }: {
   activeLayers: Set<string>;
   edgeCounts: Record<string, number>;
-  criticalPathSize: number;
   useCompound: boolean;
 }) {
   const visibleRelations = LAYERS
@@ -844,20 +752,6 @@ function Legend({
           <span className="text-[10px] text-muted-foreground">Epic grouping</span>
         </div>
       )}
-      {activeLayers.has("dependencies") && criticalPathSize > 0 && (
-        <div className="flex items-center gap-2 pt-0.5 border-t border-border/50">
-          <span
-            className="w-3 h-3 rounded shrink-0 border"
-            style={{
-              borderColor: "var(--priority-high)",
-              boxShadow: "0 0 6px color-mix(in oklch, var(--priority-high) 40%, transparent)",
-            }}
-          />
-          <span className="text-[10px] text-muted-foreground">
-            Critical path ({criticalPathSize})
-          </span>
-        </div>
-      )}
     </div>
   );
 }
@@ -885,7 +779,6 @@ function GraphCanvas({
   layoutTrigger,
   activeLayers,
   edgeCounts,
-  criticalPathSize,
   useCompound,
 }: {
   nodes: Node[];
@@ -897,7 +790,6 @@ function GraphCanvas({
   layoutTrigger: number;
   activeLayers: Set<string>;
   edgeCounts: Record<string, number>;
-  criticalPathSize: number;
   useCompound: boolean;
 }) {
   const { fitView, setCenter } = useReactFlow();
@@ -944,7 +836,6 @@ function GraphCanvas({
           <Legend
             activeLayers={activeLayers}
             edgeCounts={edgeCounts}
-            criticalPathSize={criticalPathSize}
             useCompound={useCompound}
           />
         </Panel>
@@ -1015,17 +906,9 @@ export default function GraphView({
     [graphData, allowedNodes],
   );
 
-  const doneNodes = useMemo(() => {
-    const set = new Set<string>();
-    for (const n of graphData.nodes) {
-      if (n.status === "done" || n.status === "cancelled") set.add(n.id);
-    }
-    return set;
-  }, [graphData]);
-
-  const criticalPath = useMemo(
-    () => findCriticalPath(graphData.edges, doneNodes),
-    [graphData, doneNodes],
+  const hasCompletedItems = useMemo(
+    () => graphData.nodes.some((n) => n.status === "done" || n.status === "cancelled"),
+    [graphData],
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -1039,7 +922,7 @@ export default function GraphView({
     const version = ++layoutVersionRef.current;
     setIsLayouting(true);
 
-    buildLayout(graphData, activeLayers, allowedNodes, criticalPath, direction, prevPositionsRef.current)
+    buildLayout(graphData, activeLayers, allowedNodes, direction, prevPositionsRef.current)
       .then((result) => {
         if (version !== layoutVersionRef.current) return;
 
@@ -1058,7 +941,7 @@ export default function GraphView({
         if (version !== layoutVersionRef.current) return;
         setIsLayouting(false);
       });
-  }, [graphData, activeLayers, allowedNodes, criticalPath, direction, setNodes, setEdges]);
+  }, [graphData, activeLayers, allowedNodes, direction, setNodes, setEdges]);
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     if (onNodeClickProp) {
@@ -1075,7 +958,7 @@ export default function GraphView({
           edgeCounts={edgeCounts}
           showCompleted={filters.showCompleted}
           onToggleCompleted={() => updateFilters({ showCompleted: !filters.showCompleted })}
-          hasCompletedItems={doneNodes.size > 0}
+          hasCompletedItems={hasCompletedItems}
         />
         <div className="flex items-center gap-1.5">
           <DirectionSelector direction={direction} onChange={setDirection} isLayouting={isLayouting} />
@@ -1101,7 +984,6 @@ export default function GraphView({
             layoutTrigger={layoutTrigger}
             activeLayers={activeLayers}
             edgeCounts={edgeCounts}
-            criticalPathSize={criticalPath.size}
             useCompound={useCompound}
           />
         </ReactFlowProvider>
