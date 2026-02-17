@@ -6,7 +6,6 @@ import {
   ReactFlowProvider,
   Background,
   Controls,
-  MiniMap,
   Panel,
   Handle,
   Position,
@@ -27,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { GraphData } from "@/lib/types";
+import type { GraphData, GraphNode } from "@/lib/types";
 import { LoaderCircle } from "lucide-react";
 
 // --- Constants ---
@@ -35,17 +34,17 @@ import { LoaderCircle } from "lucide-react";
 const NODE_WIDTH = 180;
 const NODE_HEIGHT = 80;
 
+const PRIORITY_WEIGHT: Record<string, number> = {
+  critical: 10,
+  high: 8,
+  medium: 5,
+  low: 2,
+  someday: 1,
+};
+
 // --- Layout types ---
 
-type LayoutAlgorithm = "layered" | "force";
 type LayoutDirection = "TB" | "LR";
-
-interface LayoutConfig {
-  algorithm: LayoutAlgorithm;
-  direction: LayoutDirection;
-}
-
-const DEFAULT_LAYOUT: LayoutConfig = { algorithm: "layered", direction: "TB" };
 
 const elk = new ELK();
 
@@ -239,23 +238,58 @@ function computeAllowedNodes(
 
 // --- Layout ---
 
+function buildNodeData(
+  node: GraphNode,
+  criticalPath: Set<string>,
+  showCritical: boolean,
+  sourcePosition: Position,
+  targetPosition: Position,
+) {
+  const prefix = node.id.split("-")[0];
+  const entityColor = PREFIX_CONFIG[prefix]?.color ?? "var(--entity-task)";
+  const isDone = node.status === "done" || node.status === "cancelled";
+  const isCritical = showCritical && criticalPath.has(node.id);
+
+  return {
+    id: node.id,
+    label: node.title,
+    entityType: node.type,
+    status: node.status,
+    entityColor,
+    statusColor: statusToColor(node.status),
+    isDone: isDone ? "true" : "",
+    isCritical: isCritical ? "true" : "",
+    sourcePosition,
+    targetPosition,
+  };
+}
+
 async function buildLayout(
   graphData: GraphData,
   activeLayers: Set<string>,
   allowedNodes: Set<string>,
   criticalPath: Set<string>,
-  layoutConfig: LayoutConfig,
+  direction: LayoutDirection,
+  prevPositions: Map<string, { x: number; y: number }>,
 ): Promise<{ nodes: Node[]; edges: Edge[] }> {
-  // Filter edges: active layer + both endpoints allowed
-  const filteredEdges = graphData.edges.filter(
+  const useCompound = activeLayers.has("epics");
+
+  // Edges for visibility (all active layers, including epic)
+  const visibilityEdges = graphData.edges.filter(
     (e) =>
       activeLayers.has(RELATION_TO_LAYER[e.relation]) &&
       allowedNodes.has(e.source) &&
       allowedNodes.has(e.target),
   );
 
+  // Edges for rendering (suppress epic edges when compound grouping is active)
+  const renderEdges = useCompound
+    ? visibilityEdges.filter((e) => e.relation !== "epic")
+    : visibilityEdges;
+
+  // Visible IDs from ALL visibility edges
   const visibleIds = new Set<string>();
-  for (const e of filteredEdges) {
+  for (const e of visibilityEdges) {
     visibleIds.add(e.source);
     visibleIds.add(e.target);
   }
@@ -263,83 +297,234 @@ async function buildLayout(
   const filteredNodes = graphData.nodes.filter((n) => visibleIds.has(n.id));
   if (filteredNodes.length === 0) return { nodes: [], edges: [] };
 
-  // Build ELK layout options based on config
-  const layoutOptions: Record<string, string> =
-    layoutConfig.algorithm === "layered"
-      ? {
-          "elk.algorithm": "layered",
-          "elk.direction": layoutConfig.direction === "TB" ? "DOWN" : "RIGHT",
-          "elk.spacing.nodeNode": "60",
-          "elk.layered.spacing.nodeNodeBetweenLayers": "80",
-          "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
-        }
-      : {
-          "elk.algorithm": "stress",
-          "elk.stress.desiredEdgeLength": "150",
-          "elk.spacing.nodeNode": "60",
+  // Node lookup
+  const nodeMap = new Map<string, GraphNode>();
+  for (const n of filteredNodes) nodeMap.set(n.id, n);
+
+  // Build layout options
+  const elkDirection = direction === "TB" ? "DOWN" : "RIGHT";
+  const hasPrev = prevPositions.size > 0;
+
+  const layoutOptions: Record<string, string> = {
+    "elk.algorithm": "layered",
+    "elk.direction": elkDirection,
+    "elk.spacing.nodeNode": "60",
+    "elk.layered.spacing.nodeNodeBetweenLayers": "80",
+    "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
+    "elk.edgeRouting": "ORTHOGONAL",
+  };
+  // Incremental: semi-interactive crossing minimization preserves ordering from previous positions
+  if (hasPrev) {
+    layoutOptions["elk.layered.crossingMinimization.semiInteractive"] = "true";
+  }
+
+  // Determine handle positions
+  const sourcePosition = direction === "LR" ? Position.Right : Position.Bottom;
+  const targetPosition = direction === "LR" ? Position.Left : Position.Top;
+
+  const showCritical = activeLayers.has("dependencies");
+
+  // --- Build ELK graph ---
+  type ElkChild = {
+    id: string;
+    width?: number;
+    height?: number;
+    x?: number;
+    y?: number;
+    layoutOptions?: Record<string, string>;
+    children?: ElkChild[];
+    edges?: { id: string; sources: string[]; targets: string[] }[];
+  };
+
+  let elkChildren: ElkChild[];
+  let elkRootEdges: { id: string; sources: string[]; targets: string[] }[];
+  // Track which nodes are children of a compound group (for React Flow parentId)
+  const parentMap = new Map<string, string>();
+
+  if (useCompound) {
+    // Build epic membership: epicId -> set of member task IDs (visible only)
+    const epicChildIds = new Map<string, string[]>();
+    for (const e of visibilityEdges) {
+      if (e.relation !== "epic") continue;
+      // e.source = epic, e.target = member task
+      if (!epicChildIds.has(e.source)) epicChildIds.set(e.source, []);
+      epicChildIds.get(e.source)!.push(e.target);
+    }
+
+    // Only create compound nodes for epics with visible children
+    const compoundEpics = new Set<string>();
+    for (const [epicId, children] of epicChildIds) {
+      if (children.length > 0 && nodeMap.has(epicId)) {
+        compoundEpics.add(epicId);
+        for (const childId of children) parentMap.set(childId, epicId);
+      }
+    }
+
+    // Build children array
+    elkChildren = [];
+
+    // Compound epic containers
+    for (const epicId of compoundEpics) {
+      const memberIds = epicChildIds.get(epicId)!;
+      const innerChildren: ElkChild[] = memberIds.map((id) => {
+        const prev = prevPositions.get(id);
+        return {
+          id,
+          width: NODE_WIDTH,
+          height: NODE_HEIGHT,
+          ...(prev ? { x: prev.x, y: prev.y } : {}),
+          // Priority-based ordering for layered
+          ...(nodeMap.get(id)?.priority
+            ? { layoutOptions: { "elk.priority": String(PRIORITY_WEIGHT[nodeMap.get(id)!.priority!] ?? 5) } }
+            : {}),
         };
+      });
+
+      // Collect edges internal to this compound node
+      const innerEdges: { id: string; sources: string[]; targets: string[] }[] = [];
+      const memberSet = new Set(memberIds);
+      for (let i = 0; i < renderEdges.length; i++) {
+        const e = renderEdges[i];
+        if (memberSet.has(e.source) && memberSet.has(e.target)) {
+          innerEdges.push({ id: `e-${i}`, sources: [e.source], targets: [e.target] });
+        }
+      }
+
+      elkChildren.push({
+        id: epicId,
+        layoutOptions: {
+          "elk.padding": "[top=36,left=12,right=12,bottom=12]",
+          "elk.algorithm": "layered",
+          "elk.direction": elkDirection,
+          "elk.spacing.nodeNode": "40",
+          "elk.layered.spacing.nodeNodeBetweenLayers": "60",
+          "elk.edgeRouting": "ORTHOGONAL",
+        },
+        children: innerChildren,
+        edges: innerEdges,
+      });
+    }
+
+    // Non-compound nodes (tasks without epic, epics without children, plans, notes)
+    for (const node of filteredNodes) {
+      if (compoundEpics.has(node.id)) continue; // already a compound container
+      if (parentMap.has(node.id)) continue; // child of a compound
+      const prev = prevPositions.get(node.id);
+      elkChildren.push({
+        id: node.id,
+        width: NODE_WIDTH,
+        height: NODE_HEIGHT,
+        ...(prev ? { x: prev.x, y: prev.y } : {}),
+        ...(node.priority
+          ? { layoutOptions: { "elk.priority": String(PRIORITY_WEIGHT[node.priority] ?? 5) } }
+          : {}),
+      });
+    }
+
+    // Root-level edges: any edge where source and target are NOT both in the same compound
+    const usedInner = new Set<number>();
+    for (const epicId of compoundEpics) {
+      const memberSet = new Set(epicChildIds.get(epicId)!);
+      for (let i = 0; i < renderEdges.length; i++) {
+        if (memberSet.has(renderEdges[i].source) && memberSet.has(renderEdges[i].target)) {
+          usedInner.add(i);
+        }
+      }
+    }
+    elkRootEdges = [];
+    for (let i = 0; i < renderEdges.length; i++) {
+      if (usedInner.has(i)) continue;
+      elkRootEdges.push({ id: `e-${i}`, sources: [renderEdges[i].source], targets: [renderEdges[i].target] });
+    }
+  } else {
+    // Flat layout (no compound grouping)
+    elkChildren = filteredNodes.map((node) => {
+      const prev = prevPositions.get(node.id);
+      return {
+        id: node.id,
+        width: NODE_WIDTH,
+        height: NODE_HEIGHT,
+        ...(prev ? { x: prev.x, y: prev.y } : {}),
+        // Priority-based ordering for layered
+        ...(node.priority
+          ? { layoutOptions: { "elk.priority": String(PRIORITY_WEIGHT[node.priority] ?? 5) } }
+          : {}),
+      };
+    });
+
+    elkRootEdges = renderEdges.map((edge, i) => ({
+      id: `e-${i}`,
+      sources: [edge.source],
+      targets: [edge.target],
+    }));
+  }
 
   const elkGraph = {
     id: "root",
     layoutOptions,
-    children: filteredNodes.map((node) => ({
-      id: node.id,
-      width: NODE_WIDTH,
-      height: NODE_HEIGHT,
-    })),
-    edges: filteredEdges.map((edge, i) => ({
-      id: `e-${i}`,
-      sources: [edge.source],
-      targets: [edge.target],
-    })),
+    children: elkChildren,
+    edges: elkRootEdges,
   };
 
   const elkResult = await elk.layout(elkGraph);
 
-  const showCritical = activeLayers.has("dependencies");
+  // --- Extract React Flow nodes ---
+  const nodes: Node[] = [];
 
-  // Determine handle positions based on direction
-  const sourcePosition = layoutConfig.algorithm === "layered" && layoutConfig.direction === "LR"
-    ? Position.Right
-    : Position.Bottom;
-  const targetPosition = layoutConfig.algorithm === "layered" && layoutConfig.direction === "LR"
-    ? Position.Left
-    : Position.Top;
+  for (const elkChild of elkResult.children ?? []) {
+    if (elkChild.children && elkChild.children.length > 0) {
+      // Compound epic container
+      const epicNode = nodeMap.get(elkChild.id);
+      nodes.push({
+        id: elkChild.id,
+        position: { x: elkChild.x ?? 0, y: elkChild.y ?? 0 },
+        data: {
+          id: elkChild.id,
+          label: epicNode?.title ?? elkChild.id,
+          entityColor: PREFIX_CONFIG["EPIC"]?.color ?? "var(--entity-epic)",
+          sourcePosition,
+          targetPosition,
+        },
+        type: "epicGroup",
+        style: { width: elkChild.width, height: elkChild.height },
+      });
 
-  const nodes: Node[] = filteredNodes.map((node) => {
-    const elkNode = elkResult.children?.find((n) => n.id === node.id);
-    const prefix = node.id.split("-")[0];
-    const entityColor = PREFIX_CONFIG[prefix]?.color ?? "var(--entity-task)";
-    const isDone = node.status === "done" || node.status === "cancelled";
-    const isCritical = showCritical && criticalPath.has(node.id);
+      // Children inside the compound
+      for (const innerChild of elkChild.children) {
+        const childNode = nodeMap.get(innerChild.id);
+        if (!childNode) continue;
+        nodes.push({
+          id: innerChild.id,
+          position: { x: innerChild.x ?? 0, y: innerChild.y ?? 0 },
+          data: buildNodeData(childNode, criticalPath, showCritical, sourcePosition, targetPosition),
+          type: "itemNode",
+          parentId: elkChild.id,
+          extent: "parent" as const,
+          style: { width: NODE_WIDTH, height: NODE_HEIGHT },
+        });
+      }
+    } else {
+      // Regular flat node
+      const node = nodeMap.get(elkChild.id);
+      if (!node) continue;
+      nodes.push({
+        id: elkChild.id,
+        position: { x: elkChild.x ?? 0, y: elkChild.y ?? 0 },
+        data: buildNodeData(node, criticalPath, showCritical, sourcePosition, targetPosition),
+        type: "itemNode",
+        style: { width: NODE_WIDTH, height: NODE_HEIGHT },
+      });
+    }
+  }
 
-    return {
-      id: node.id,
-      position: { x: elkNode?.x ?? 0, y: elkNode?.y ?? 0 },
-      data: {
-        id: node.id,
-        label: node.title,
-        entityType: node.type,
-        status: node.status,
-        entityColor,
-        statusColor: statusToColor(node.status),
-        isDone: isDone ? "true" : "",
-        isCritical: isCritical ? "true" : "",
-        sourcePosition,
-        targetPosition,
-      },
-      type: "itemNode",
-      style: { width: NODE_WIDTH, height: NODE_HEIGHT },
-    };
-  });
-
-  const edges: Edge[] = filteredEdges.map((edge, i) => {
+  // --- Extract React Flow edges ---
+  const edges: Edge[] = renderEdges.map((edge, i) => {
     const style = EDGE_STYLE[edge.relation] ?? { stroke: "var(--border)", strokeWidth: 1 };
     return {
       id: `e-${i}`,
       source: edge.source,
       target: edge.target,
-      type: "default",
+      type: "smoothstep",
       animated: edge.relation === "blocks",
       style,
     };
@@ -389,15 +574,44 @@ function ItemNode({ data }: { data: Record<string, string | Position> }) {
   );
 }
 
-const nodeTypes = { itemNode: ItemNode };
+function EpicGroupNode({ data }: { data: Record<string, string | Position> }) {
+  const sourcePos = (data.sourcePosition as Position) ?? Position.Bottom;
+  const targetPos = (data.targetPosition as Position) ?? Position.Top;
 
-function LayoutSelector({
-  layout,
+  return (
+    <div
+      className="rounded-xl border border-dashed"
+      style={{
+        borderColor: data.entityColor as string,
+        backgroundColor: "color-mix(in oklch, var(--card) 60%, transparent)",
+        width: "100%",
+        height: "100%",
+      }}
+    >
+      {/* Invisible handles for cross-group edges */}
+      <Handle type="target" position={targetPos} className="!opacity-0" />
+      <div className="px-3 py-2 flex items-center gap-1.5 overflow-hidden">
+        <span className="font-mono text-[10px] font-semibold shrink-0 whitespace-nowrap" style={{ color: data.entityColor as string }}>
+          {data.id as string}
+        </span>
+        <span className="text-[11px] font-medium text-muted-foreground truncate">
+          {data.label as string}
+        </span>
+      </div>
+      <Handle type="source" position={sourcePos} className="!opacity-0" />
+    </div>
+  );
+}
+
+const nodeTypes = { itemNode: ItemNode, epicGroup: EpicGroupNode };
+
+function DirectionSelector({
+  direction,
   onChange,
   isLayouting,
 }: {
-  layout: LayoutConfig;
-  onChange: (l: Partial<LayoutConfig>) => void;
+  direction: LayoutDirection;
+  onChange: (d: LayoutDirection) => void;
   isLayouting: boolean;
 }) {
   return (
@@ -405,32 +619,15 @@ function LayoutSelector({
       {isLayouting && (
         <LoaderCircle className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
       )}
-      <Select
-        value={layout.algorithm}
-        onValueChange={(v) => onChange({ algorithm: v as LayoutAlgorithm })}
-      >
-        <SelectTrigger className="w-[130px] h-7 text-xs">
+      <Select value={direction} onValueChange={(v) => onChange(v as LayoutDirection)}>
+        <SelectTrigger className="w-[110px] h-7 text-xs">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="layered">Hierarchical</SelectItem>
-          <SelectItem value="force">Force</SelectItem>
+          <SelectItem value="TB">Top-down</SelectItem>
+          <SelectItem value="LR">Left-right</SelectItem>
         </SelectContent>
       </Select>
-      {layout.algorithm === "layered" && (
-        <Select
-          value={layout.direction}
-          onValueChange={(v) => onChange({ direction: v as LayoutDirection })}
-        >
-          <SelectTrigger className="w-[110px] h-7 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="TB">Top-down</SelectItem>
-            <SelectItem value="LR">Left-right</SelectItem>
-          </SelectContent>
-        </Select>
-      )}
     </div>
   );
 }
@@ -585,20 +782,24 @@ function Legend({
   activeLayers,
   edgeCounts,
   criticalPathSize,
+  useCompound,
 }: {
   activeLayers: Set<string>;
   edgeCounts: Record<string, number>;
   criticalPathSize: number;
+  useCompound: boolean;
 }) {
   const visibleRelations = LAYERS
     .filter((l) => activeLayers.has(l.id))
     .flatMap((l) => [...l.relations])
     .filter((rel) => {
+      // When compound grouping is active, epic edges are visual (no line in legend)
+      if (useCompound && rel === "epic") return false;
       const layer = RELATION_TO_LAYER[rel];
       return (edgeCounts[layer] ?? 0) > 0;
     });
 
-  if (visibleRelations.length === 0) return null;
+  if (visibleRelations.length === 0 && !(useCompound && activeLayers.has("epics"))) return null;
 
   return (
     <div className="bg-card/90 backdrop-blur-sm border border-border rounded-lg px-3 py-2 flex flex-col gap-1.5">
@@ -634,6 +835,15 @@ function Legend({
           </div>
         );
       })}
+      {useCompound && activeLayers.has("epics") && (
+        <div className="flex items-center gap-2">
+          <span
+            className="w-5 h-3 rounded border border-dashed shrink-0"
+            style={{ borderColor: "var(--entity-epic)" }}
+          />
+          <span className="text-[10px] text-muted-foreground">Epic grouping</span>
+        </div>
+      )}
       {activeLayers.has("dependencies") && criticalPathSize > 0 && (
         <div className="flex items-center gap-2 pt-0.5 border-t border-border/50">
           <span
@@ -652,6 +862,17 @@ function Legend({
   );
 }
 
+// --- Animated node transitions ---
+
+const TRANSITION_CSS = `
+.react-flow__node {
+  transition: transform 300ms ease;
+}
+.react-flow__node.dragging {
+  transition: none;
+}
+`;
+
 // --- Inner canvas (needs useReactFlow) ---
 
 function GraphCanvas({
@@ -665,6 +886,7 @@ function GraphCanvas({
   activeLayers,
   edgeCounts,
   criticalPathSize,
+  useCompound,
 }: {
   nodes: Node[];
   edges: Edge[];
@@ -676,6 +898,7 @@ function GraphCanvas({
   activeLayers: Set<string>;
   edgeCounts: Record<string, number>;
   criticalPathSize: number;
+  useCompound: boolean;
 }) {
   const { fitView, setCenter } = useReactFlow();
 
@@ -702,30 +925,33 @@ function GraphCanvas({
   }, [layoutTrigger, focusId, nodes, fitView, setCenter]);
 
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onNodeClick={onNodeClick}
-      nodeTypes={nodeTypes}
-      fitView
-      minZoom={0.3}
-      maxZoom={2}
-      colorMode="dark"
-      proOptions={{ hideAttribution: true }}
-    >
-      <Panel position="top-right">
-        <Legend
-          activeLayers={activeLayers}
-          edgeCounts={edgeCounts}
-          criticalPathSize={criticalPathSize}
-        />
-      </Panel>
-      <Background gap={20} size={1} />
-      <Controls showInteractive={false} position="bottom-right" />
-      <MiniMap nodeStrokeWidth={3} pannable zoomable position="bottom-left" />
-    </ReactFlow>
+    <>
+      <style dangerouslySetInnerHTML={{ __html: TRANSITION_CSS }} />
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onNodeClick={onNodeClick}
+        nodeTypes={nodeTypes}
+        fitView
+        minZoom={0.3}
+        maxZoom={2}
+        colorMode="dark"
+        proOptions={{ hideAttribution: true }}
+      >
+        <Panel position="bottom-right">
+          <Legend
+            activeLayers={activeLayers}
+            edgeCounts={edgeCounts}
+            criticalPathSize={criticalPathSize}
+            useCompound={useCompound}
+          />
+        </Panel>
+        <Background gap={20} size={1} />
+        <Controls showInteractive={false} position="bottom-left" />
+      </ReactFlow>
+    </>
   );
 }
 
@@ -742,16 +968,14 @@ export default function GraphView({
 }) {
   const [activeLayers, setActiveLayers] = useState<Set<string>>(DEFAULT_LAYERS);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
-  const [layout, setLayout] = useState<LayoutConfig>(DEFAULT_LAYOUT);
+  const [direction, setDirection] = useState<LayoutDirection>("TB");
   const [isLayouting, setIsLayouting] = useState(false);
   const [layoutTrigger, setLayoutTrigger] = useState(0);
 
+  const useCompound = activeLayers.has("epics");
+
   const updateFilters = useCallback((partial: Partial<Filters>) => {
     setFilters((prev) => ({ ...prev, ...partial }));
-  }, []);
-
-  const updateLayout = useCallback((partial: Partial<LayoutConfig>) => {
-    setLayout((prev) => ({ ...prev, ...partial }));
   }, []);
 
   const toggleLayer = useCallback((id: string) => {
@@ -807,17 +1031,25 @@ export default function GraphView({
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
-  // Ref to track the latest layout version and discard stale results
+  // Track layout version and previous positions for incremental layout
   const layoutVersionRef = useRef(0);
+  const prevPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
 
   useEffect(() => {
     const version = ++layoutVersionRef.current;
     setIsLayouting(true);
 
-    buildLayout(graphData, activeLayers, allowedNodes, criticalPath, layout)
+    buildLayout(graphData, activeLayers, allowedNodes, criticalPath, direction, prevPositionsRef.current)
       .then((result) => {
-        // Discard if a newer layout was triggered
         if (version !== layoutVersionRef.current) return;
+
+        // Store positions for next incremental layout
+        const posMap = new Map<string, { x: number; y: number }>();
+        for (const node of result.nodes) {
+          posMap.set(node.id, node.position);
+        }
+        prevPositionsRef.current = posMap;
+
         setNodes(result.nodes);
         setEdges(result.edges);
         setLayoutTrigger((prev) => prev + 1);
@@ -826,7 +1058,7 @@ export default function GraphView({
         if (version !== layoutVersionRef.current) return;
         setIsLayouting(false);
       });
-  }, [graphData, activeLayers, allowedNodes, criticalPath, layout, setNodes, setEdges]);
+  }, [graphData, activeLayers, allowedNodes, criticalPath, direction, setNodes, setEdges]);
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     if (onNodeClickProp) {
@@ -837,24 +1069,24 @@ export default function GraphView({
   return (
     <div className="h-screen w-full overflow-hidden bg-background flex flex-col">
       <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-background shrink-0">
+        <LayerToggles
+          activeLayers={activeLayers}
+          onToggle={toggleLayer}
+          edgeCounts={edgeCounts}
+          showCompleted={filters.showCompleted}
+          onToggleCompleted={() => updateFilters({ showCompleted: !filters.showCompleted })}
+          hasCompletedItems={doneNodes.size > 0}
+        />
         <div className="flex items-center gap-1.5">
-          <LayoutSelector layout={layout} onChange={updateLayout} isLayouting={isLayouting} />
+          <DirectionSelector direction={direction} onChange={setDirection} isLayouting={isLayouting} />
           <div className="w-px h-5 bg-border mx-1" />
-          <LayerToggles
-            activeLayers={activeLayers}
-            onToggle={toggleLayer}
-            edgeCounts={edgeCounts}
-            showCompleted={filters.showCompleted}
-            onToggleCompleted={() => updateFilters({ showCompleted: !filters.showCompleted })}
-            hasCompletedItems={doneNodes.size > 0}
+          <GraphFilters
+            filters={filters}
+            onChange={updateFilters}
+            epicOptions={epicOptions}
+            tagOptions={tagOptions}
           />
         </div>
-        <GraphFilters
-          filters={filters}
-          onChange={updateFilters}
-          epicOptions={epicOptions}
-          tagOptions={tagOptions}
-        />
       </div>
       <div className="flex-1 relative">
         <LayoutLoadingOverlay isLayouting={isLayouting} />
@@ -870,6 +1102,7 @@ export default function GraphView({
             activeLayers={activeLayers}
             edgeCounts={edgeCounts}
             criticalPathSize={criticalPath.size}
+            useCompound={useCompound}
           />
         </ReactFlowProvider>
       </div>
