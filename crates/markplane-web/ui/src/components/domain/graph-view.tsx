@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
+  ReactFlowProvider,
   Background,
   Controls,
   MiniMap,
@@ -11,10 +12,11 @@ import {
   Position,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   type Node,
   type Edge,
 } from "@xyflow/react";
-import dagre from "@dagrejs/dagre";
+import ELK from "elkjs/lib/elk.bundled.js";
 import "@xyflow/react/dist/style.css";
 
 import { PREFIX_CONFIG } from "@/lib/constants";
@@ -26,11 +28,26 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { GraphData } from "@/lib/types";
+import { LoaderCircle } from "lucide-react";
 
 // --- Constants ---
 
 const NODE_WIDTH = 180;
 const NODE_HEIGHT = 80;
+
+// --- Layout types ---
+
+type LayoutAlgorithm = "layered" | "force";
+type LayoutDirection = "TB" | "LR";
+
+interface LayoutConfig {
+  algorithm: LayoutAlgorithm;
+  direction: LayoutDirection;
+}
+
+const DEFAULT_LAYOUT: LayoutConfig = { algorithm: "layered", direction: "TB" };
+
+const elk = new ELK();
 
 // --- Layer system ---
 
@@ -222,12 +239,13 @@ function computeAllowedNodes(
 
 // --- Layout ---
 
-function buildLayout(
+async function buildLayout(
   graphData: GraphData,
   activeLayers: Set<string>,
   allowedNodes: Set<string>,
   criticalPath: Set<string>,
-): { nodes: Node[]; edges: Edge[] } {
+  layoutConfig: LayoutConfig,
+): Promise<{ nodes: Node[]; edges: Edge[] }> {
   // Filter edges: active layer + both endpoints allowed
   const filteredEdges = graphData.edges.filter(
     (e) =>
@@ -245,24 +263,51 @@ function buildLayout(
   const filteredNodes = graphData.nodes.filter((n) => visibleIds.has(n.id));
   if (filteredNodes.length === 0) return { nodes: [], edges: [] };
 
-  // Dagre layout
-  const g = new dagre.graphlib.Graph();
-  g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: "TB", nodesep: 60, ranksep: 80 });
+  // Build ELK layout options based on config
+  const layoutOptions: Record<string, string> =
+    layoutConfig.algorithm === "layered"
+      ? {
+          "elk.algorithm": "layered",
+          "elk.direction": layoutConfig.direction === "TB" ? "DOWN" : "RIGHT",
+          "elk.spacing.nodeNode": "60",
+          "elk.layered.spacing.nodeNodeBetweenLayers": "80",
+          "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
+        }
+      : {
+          "elk.algorithm": "stress",
+          "elk.stress.desiredEdgeLength": "150",
+          "elk.spacing.nodeNode": "60",
+        };
 
-  for (const node of filteredNodes) {
-    g.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
-  }
-  for (const edge of filteredEdges) {
-    g.setEdge(edge.source, edge.target);
-  }
+  const elkGraph = {
+    id: "root",
+    layoutOptions,
+    children: filteredNodes.map((node) => ({
+      id: node.id,
+      width: NODE_WIDTH,
+      height: NODE_HEIGHT,
+    })),
+    edges: filteredEdges.map((edge, i) => ({
+      id: `e-${i}`,
+      sources: [edge.source],
+      targets: [edge.target],
+    })),
+  };
 
-  dagre.layout(g);
+  const elkResult = await elk.layout(elkGraph);
 
   const showCritical = activeLayers.has("dependencies");
 
+  // Determine handle positions based on direction
+  const sourcePosition = layoutConfig.algorithm === "layered" && layoutConfig.direction === "LR"
+    ? Position.Right
+    : Position.Bottom;
+  const targetPosition = layoutConfig.algorithm === "layered" && layoutConfig.direction === "LR"
+    ? Position.Left
+    : Position.Top;
+
   const nodes: Node[] = filteredNodes.map((node) => {
-    const pos = g.node(node.id);
+    const elkNode = elkResult.children?.find((n) => n.id === node.id);
     const prefix = node.id.split("-")[0];
     const entityColor = PREFIX_CONFIG[prefix]?.color ?? "var(--entity-task)";
     const isDone = node.status === "done" || node.status === "cancelled";
@@ -270,7 +315,7 @@ function buildLayout(
 
     return {
       id: node.id,
-      position: { x: pos.x - NODE_WIDTH / 2, y: pos.y - NODE_HEIGHT / 2 },
+      position: { x: elkNode?.x ?? 0, y: elkNode?.y ?? 0 },
       data: {
         id: node.id,
         label: node.title,
@@ -280,6 +325,8 @@ function buildLayout(
         statusColor: statusToColor(node.status),
         isDone: isDone ? "true" : "",
         isCritical: isCritical ? "true" : "",
+        sourcePosition,
+        targetPosition,
       },
       type: "itemNode",
       style: { width: NODE_WIDTH, height: NODE_HEIGHT },
@@ -303,12 +350,15 @@ function buildLayout(
 
 // --- Components ---
 
-function ItemNode({ data }: { data: Record<string, string> }) {
+function ItemNode({ data }: { data: Record<string, string | Position> }) {
+  const sourcePos = (data.sourcePosition as Position) ?? Position.Bottom;
+  const targetPos = (data.targetPosition as Position) ?? Position.Top;
+
   return (
     <div
       className="bg-card border rounded-lg p-3 shadow-sm"
       style={{
-        borderTopColor: data.entityColor,
+        borderTopColor: data.entityColor as string,
         borderTopWidth: 3,
         opacity: data.isDone ? 0.4 : 1,
         boxShadow: data.isCritical
@@ -316,14 +366,14 @@ function ItemNode({ data }: { data: Record<string, string> }) {
           : undefined,
       }}
     >
-      <Handle type="target" position={Position.Top} />
+      <Handle type="target" position={targetPos} />
       <div className="flex items-center gap-1.5 mb-1">
-        <span className="font-mono text-[10px]" style={{ color: data.entityColor }}>
-          {data.id}
+        <span className="font-mono text-[10px]" style={{ color: data.entityColor as string }}>
+          {data.id as string}
         </span>
         <span
           className="w-2 h-2 rounded-full"
-          style={{ backgroundColor: data.statusColor }}
+          style={{ backgroundColor: data.statusColor as string }}
         />
         {data.isCritical && (
           <span className="ml-auto text-[9px] font-medium" style={{ color: "var(--priority-high)" }}>
@@ -332,14 +382,71 @@ function ItemNode({ data }: { data: Record<string, string> }) {
         )}
       </div>
       <p className="text-xs font-medium line-clamp-2 leading-tight">
-        {data.label}
+        {data.label as string}
       </p>
-      <Handle type="source" position={Position.Bottom} />
+      <Handle type="source" position={sourcePos} />
     </div>
   );
 }
 
 const nodeTypes = { itemNode: ItemNode };
+
+function LayoutSelector({
+  layout,
+  onChange,
+  isLayouting,
+}: {
+  layout: LayoutConfig;
+  onChange: (l: Partial<LayoutConfig>) => void;
+  isLayouting: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {isLayouting && (
+        <LoaderCircle className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+      )}
+      <Select
+        value={layout.algorithm}
+        onValueChange={(v) => onChange({ algorithm: v as LayoutAlgorithm })}
+      >
+        <SelectTrigger className="w-[130px] h-7 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="layered">Hierarchical</SelectItem>
+          <SelectItem value="force">Force</SelectItem>
+        </SelectContent>
+      </Select>
+      {layout.algorithm === "layered" && (
+        <Select
+          value={layout.direction}
+          onValueChange={(v) => onChange({ direction: v as LayoutDirection })}
+        >
+          <SelectTrigger className="w-[110px] h-7 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="TB">Top-down</SelectItem>
+            <SelectItem value="LR">Left-right</SelectItem>
+          </SelectContent>
+        </Select>
+      )}
+    </div>
+  );
+}
+
+function LayoutLoadingOverlay({ isLayouting }: { isLayouting: boolean }) {
+  if (!isLayouting) return null;
+
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+      <div className="flex items-center gap-2 bg-card/90 backdrop-blur-sm border border-border rounded-lg px-3 py-2 shadow-sm">
+        <LoaderCircle className="w-4 h-4 animate-spin text-muted-foreground" />
+        <span className="text-xs text-muted-foreground">Computing layout…</span>
+      </div>
+    </div>
+  );
+}
 
 function LayerToggles({
   activeLayers,
@@ -545,6 +652,83 @@ function Legend({
   );
 }
 
+// --- Inner canvas (needs useReactFlow) ---
+
+function GraphCanvas({
+  nodes,
+  edges,
+  onNodesChange,
+  onEdgesChange,
+  onNodeClick,
+  focusId,
+  layoutTrigger,
+  activeLayers,
+  edgeCounts,
+  criticalPathSize,
+}: {
+  nodes: Node[];
+  edges: Edge[];
+  onNodesChange: ReturnType<typeof useNodesState>[2];
+  onEdgesChange: ReturnType<typeof useEdgesState>[2];
+  onNodeClick: (event: React.MouseEvent, node: Node) => void;
+  focusId?: string;
+  layoutTrigger: number;
+  activeLayers: Set<string>;
+  edgeCounts: Record<string, number>;
+  criticalPathSize: number;
+}) {
+  const { fitView, setCenter } = useReactFlow();
+
+  useEffect(() => {
+    if (layoutTrigger === 0) return;
+
+    // Small delay to let React Flow render the new positions
+    const timer = setTimeout(() => {
+      if (focusId) {
+        const focusNode = nodes.find((n) => n.id === focusId);
+        if (focusNode) {
+          setCenter(
+            focusNode.position.x + NODE_WIDTH / 2,
+            focusNode.position.y + NODE_HEIGHT / 2,
+            { zoom: 1.2, duration: 300 },
+          );
+          return;
+        }
+      }
+      fitView({ duration: 300, padding: 0.1 });
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [layoutTrigger, focusId, nodes, fitView, setCenter]);
+
+  return (
+    <ReactFlow
+      nodes={nodes}
+      edges={edges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      onNodeClick={onNodeClick}
+      nodeTypes={nodeTypes}
+      fitView
+      minZoom={0.3}
+      maxZoom={2}
+      colorMode="dark"
+      proOptions={{ hideAttribution: true }}
+    >
+      <Panel position="top-right">
+        <Legend
+          activeLayers={activeLayers}
+          edgeCounts={edgeCounts}
+          criticalPathSize={criticalPathSize}
+        />
+      </Panel>
+      <Background gap={20} size={1} />
+      <Controls showInteractive={false} position="bottom-right" />
+      <MiniMap nodeStrokeWidth={3} pannable zoomable position="bottom-left" />
+    </ReactFlow>
+  );
+}
+
 // --- Main ---
 
 export default function GraphView({
@@ -558,9 +742,16 @@ export default function GraphView({
 }) {
   const [activeLayers, setActiveLayers] = useState<Set<string>>(DEFAULT_LAYERS);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [layout, setLayout] = useState<LayoutConfig>(DEFAULT_LAYOUT);
+  const [isLayouting, setIsLayouting] = useState(false);
+  const [layoutTrigger, setLayoutTrigger] = useState(0);
 
   const updateFilters = useCallback((partial: Partial<Filters>) => {
     setFilters((prev) => ({ ...prev, ...partial }));
+  }, []);
+
+  const updateLayout = useCallback((partial: Partial<LayoutConfig>) => {
+    setLayout((prev) => ({ ...prev, ...partial }));
   }, []);
 
   const toggleLayer = useCallback((id: string) => {
@@ -613,32 +804,29 @@ export default function GraphView({
     [graphData, doneNodes],
   );
 
-  const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(
-    () => buildLayout(graphData, activeLayers, allowedNodes, criticalPath),
-    [graphData, activeLayers, allowedNodes, criticalPath],
-  );
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(layoutedNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(layoutedEdges);
+  // Ref to track the latest layout version and discard stale results
+  const layoutVersionRef = useRef(0);
 
   useEffect(() => {
-    setNodes(layoutedNodes);
-    setEdges(layoutedEdges);
-  }, [layoutedNodes, layoutedEdges, setNodes, setEdges]);
+    const version = ++layoutVersionRef.current;
+    setIsLayouting(true);
 
-  const defaultViewport = useMemo(() => {
-    if (focusId) {
-      const focusNode = layoutedNodes.find((n) => n.id === focusId);
-      if (focusNode) {
-        return {
-          x: -focusNode.position.x + 400,
-          y: -focusNode.position.y + 200,
-          zoom: 1.2,
-        };
-      }
-    }
-    return { x: 100, y: 50, zoom: 0.8 };
-  }, [focusId, layoutedNodes]);
+    buildLayout(graphData, activeLayers, allowedNodes, criticalPath, layout)
+      .then((result) => {
+        // Discard if a newer layout was triggered
+        if (version !== layoutVersionRef.current) return;
+        setNodes(result.nodes);
+        setEdges(result.edges);
+        setLayoutTrigger((prev) => prev + 1);
+      })
+      .finally(() => {
+        if (version !== layoutVersionRef.current) return;
+        setIsLayouting(false);
+      });
+  }, [graphData, activeLayers, allowedNodes, criticalPath, layout, setNodes, setEdges]);
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     if (onNodeClickProp) {
@@ -649,14 +837,18 @@ export default function GraphView({
   return (
     <div className="h-screen w-full overflow-hidden bg-background flex flex-col">
       <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-background shrink-0">
-        <LayerToggles
-          activeLayers={activeLayers}
-          onToggle={toggleLayer}
-          edgeCounts={edgeCounts}
-          showCompleted={filters.showCompleted}
-          onToggleCompleted={() => updateFilters({ showCompleted: !filters.showCompleted })}
-          hasCompletedItems={doneNodes.size > 0}
-        />
+        <div className="flex items-center gap-1.5">
+          <LayoutSelector layout={layout} onChange={updateLayout} isLayouting={isLayouting} />
+          <div className="w-px h-5 bg-border mx-1" />
+          <LayerToggles
+            activeLayers={activeLayers}
+            onToggle={toggleLayer}
+            edgeCounts={edgeCounts}
+            showCompleted={filters.showCompleted}
+            onToggleCompleted={() => updateFilters({ showCompleted: !filters.showCompleted })}
+            hasCompletedItems={doneNodes.size > 0}
+          />
+        </div>
         <GraphFilters
           filters={filters}
           onChange={updateFilters}
@@ -665,31 +857,21 @@ export default function GraphView({
         />
       </div>
       <div className="flex-1 relative">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onNodeClick={onNodeClick}
-          nodeTypes={nodeTypes}
-          defaultViewport={defaultViewport}
-          fitView={!focusId}
-          minZoom={0.3}
-          maxZoom={2}
-          colorMode="dark"
-          proOptions={{ hideAttribution: true }}
-        >
-          <Panel position="top-right">
-            <Legend
-              activeLayers={activeLayers}
-              edgeCounts={edgeCounts}
-              criticalPathSize={criticalPath.size}
-            />
-          </Panel>
-          <Background gap={20} size={1} />
-          <Controls showInteractive={false} position="bottom-right" />
-          <MiniMap nodeStrokeWidth={3} pannable zoomable position="bottom-left" />
-        </ReactFlow>
+        <LayoutLoadingOverlay isLayouting={isLayouting} />
+        <ReactFlowProvider>
+          <GraphCanvas
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onNodeClick={onNodeClick}
+            focusId={focusId}
+            layoutTrigger={layoutTrigger}
+            activeLayers={activeLayers}
+            edgeCounts={edgeCounts}
+            criticalPathSize={criticalPath.size}
+          />
+        </ReactFlowProvider>
       </div>
     </div>
   );
