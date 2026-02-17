@@ -6,6 +6,7 @@ import {
   ReactFlowProvider,
   Background,
   Controls,
+  ControlButton,
   Panel,
   Handle,
   Position,
@@ -20,14 +21,14 @@ import "@xyflow/react/dist/style.css";
 
 import { PREFIX_CONFIG } from "@/lib/constants";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { GraphData, GraphNode } from "@/lib/types";
-import { LoaderCircle } from "lucide-react";
+import { ChevronDown, LoaderCircle } from "lucide-react";
 
 // --- Constants ---
 
@@ -48,23 +49,35 @@ type LayoutDirection = "TB" | "LR";
 
 const elk = new ELK();
 
-// --- Layer system ---
+// --- Toggle system ---
+// Dependencies (blocks/depends_on) are always shown — they're the point of the graph.
+// Toggles control entity type visibility: epics, plans, notes.
 
 const LAYERS = [
-  { id: "dependencies", label: "Dependencies", color: "var(--status-in-progress)", relations: ["blocks", "depends_on"] },
   { id: "epics", label: "Epics", color: "var(--entity-epic)", relations: ["epic"] },
   { id: "plans", label: "Plans", color: "var(--entity-plan)", relations: ["implements"] },
-  { id: "related", label: "Related", color: "var(--entity-note)", relations: ["related"] },
+  { id: "notes", label: "Notes", color: "var(--entity-note)", relations: ["related"] },
 ] as const;
 
-const DEFAULT_LAYERS = new Set(["dependencies", "epics"]);
+const DEFAULT_LAYERS = new Set(["epics"]);
 
-const RELATION_TO_LAYER: Record<string, string> = {};
-for (const layer of LAYERS) {
-  for (const rel of layer.relations) {
-    RELATION_TO_LAYER[rel] = layer.id;
-  }
-}
+// Maps relation types to layer IDs (including dependencies for edge counting)
+const RELATION_TO_LAYER: Record<string, string> = {
+  blocks: "dependencies",
+  depends_on: "dependencies",
+  epic: "epics",
+  implements: "plans",
+  related: "notes",
+};
+
+// Maps entity ID prefixes to their controlling layer
+const PREFIX_TO_LAYER: Record<string, string> = {
+  EPIC: "epics",
+  PLAN: "plans",
+  NOTE: "notes",
+};
+
+const DEPENDENCY_RELATIONS = new Set(["blocks", "depends_on"]);
 
 const EDGE_STYLE: Record<string, { stroke: string; strokeWidth: number; strokeDasharray?: string }> = {
   blocks: { stroke: "var(--status-blocked)", strokeWidth: 2 },
@@ -130,16 +143,16 @@ function buildEpicMembers(edges: GraphData["edges"]): Record<string, Set<string>
 
 interface Filters {
   showCompleted: boolean;
-  epic: string;
-  priority: string;
-  tag: string;
+  priorities: Set<string>;
+  epics: Set<string>;
+  tags: Set<string>;
 }
 
 const DEFAULT_FILTERS: Filters = {
   showCompleted: false,
-  epic: "all",
-  priority: "all",
-  tag: "all",
+  priorities: new Set(),
+  epics: new Set(),
+  tags: new Set(),
 };
 
 function computeAllowedNodes(
@@ -150,11 +163,15 @@ function computeAllowedNodes(
   const allowed = new Set<string>();
   for (const n of graphData.nodes) {
     if (!filters.showCompleted && (n.status === "done" || n.status === "cancelled")) continue;
-    if (filters.priority !== "all" && n.priority && n.priority !== filters.priority) continue;
-    if (filters.tag !== "all" && (!n.tags || !n.tags.includes(filters.tag))) continue;
-    if (filters.epic !== "all") {
-      const members = epicMembers[filters.epic];
-      if (n.id !== filters.epic && (!members || !members.has(n.id))) continue;
+    if (filters.priorities.size > 0 && n.priority && !filters.priorities.has(n.priority)) continue;
+    if (filters.tags.size > 0 && (!n.tags || !n.tags.some((t) => filters.tags.has(t)))) continue;
+    if (filters.epics.size > 0) {
+      let inEpic = false;
+      for (const epicId of filters.epics) {
+        const members = epicMembers[epicId];
+        if (n.id === epicId || (members && members.has(n.id))) { inEpic = true; break; }
+      }
+      if (!inEpic) continue;
     }
     allowed.add(n.id);
   }
@@ -194,27 +211,41 @@ async function buildLayout(
 ): Promise<{ nodes: Node[]; edges: Edge[] }> {
   const useCompound = activeLayers.has("epics");
 
-  // Edges for visibility (all active layers, including epic)
-  const visibilityEdges = graphData.edges.filter(
-    (e) =>
-      activeLayers.has(RELATION_TO_LAYER[e.relation]) &&
-      allowedNodes.has(e.source) &&
-      allowedNodes.has(e.target),
-  );
+  // Entity type gate: a node is type-allowed if its prefix has no controlling layer or that layer is active
+  const isTypeAllowed = (id: string) => {
+    const prefix = id.split("-")[0];
+    const layer = PREFIX_TO_LAYER[prefix];
+    return !layer || activeLayers.has(layer);
+  };
+
+  // Dependencies always visible; entity layer edges visible when their layer is active
+  const visibilityEdges = graphData.edges.filter((e) => {
+    if (!allowedNodes.has(e.source) || !allowedNodes.has(e.target)) return false;
+    if (!isTypeAllowed(e.source) || !isTypeAllowed(e.target)) return false;
+    if (DEPENDENCY_RELATIONS.has(e.relation)) return true;
+    const layer = RELATION_TO_LAYER[e.relation];
+    return layer ? activeLayers.has(layer) : false;
+  });
 
   // Edges for rendering (suppress epic edges when compound grouping is active)
   const renderEdges = useCompound
     ? visibilityEdges.filter((e) => e.relation !== "epic")
     : visibilityEdges;
 
-  // Visible IDs from ALL visibility edges
-  const visibleIds = new Set<string>();
+  // Tasks always visible (if they pass filters); other types visible via edges
+  const edgeConnected = new Set<string>();
   for (const e of visibilityEdges) {
-    visibleIds.add(e.source);
-    visibleIds.add(e.target);
+    edgeConnected.add(e.source);
+    edgeConnected.add(e.target);
   }
 
-  const filteredNodes = graphData.nodes.filter((n) => visibleIds.has(n.id));
+  const filteredNodes = graphData.nodes.filter((n) => {
+    if (!allowedNodes.has(n.id)) return false;
+    if (!isTypeAllowed(n.id)) return false;
+    // Tasks are always shown; other entity types need an edge to appear
+    const prefix = n.id.split("-")[0];
+    return !PREFIX_TO_LAYER[prefix] || edgeConnected.has(n.id);
+  });
   if (filteredNodes.length === 0) return { nodes: [], edges: [] };
 
   // Node lookup
@@ -451,6 +482,15 @@ async function buildLayout(
   return { nodes, edges };
 }
 
+// --- Shared toolbar styles ---
+
+const TOOLBAR_BTN_ACTIVE = "bg-card border border-border text-foreground shadow-sm";
+const TOOLBAR_BTN_INACTIVE = "text-muted-foreground/50 hover:text-muted-foreground";
+
+function toolbarBtnClass(active: boolean) {
+  return `flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${active ? TOOLBAR_BTN_ACTIVE : TOOLBAR_BTN_INACTIVE}`;
+}
+
 // --- Components ---
 
 function ItemNode({ data }: { data: Record<string, string | Position> }) {
@@ -515,6 +555,8 @@ function EpicGroupNode({ data }: { data: Record<string, string | Position> }) {
 
 const nodeTypes = { itemNode: ItemNode, epicGroup: EpicGroupNode };
 
+const DIRECTION_LABELS: Record<LayoutDirection, string> = { TB: "Top-down", LR: "Left-right" };
+
 function DirectionSelector({
   direction,
   onChange,
@@ -529,15 +571,23 @@ function DirectionSelector({
       {isLayouting && (
         <LoaderCircle className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
       )}
-      <Select value={direction} onValueChange={(v) => onChange(v as LayoutDirection)}>
-        <SelectTrigger className="w-[110px] h-7 text-xs">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="TB">Top-down</SelectItem>
-          <SelectItem value="LR">Left-right</SelectItem>
-        </SelectContent>
-      </Select>
+      <DropdownMenu>
+        <DropdownMenuTrigger className={toolbarBtnClass(true)}>
+          {DIRECTION_LABELS[direction]}
+          <ChevronDown className="w-3 h-3 opacity-50" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {(Object.entries(DIRECTION_LABELS) as [LayoutDirection, string][]).map(([value, label]) => (
+            <DropdownMenuItem
+              key={value}
+              onClick={() => onChange(value)}
+              className={`text-xs ${direction === value ? "font-semibold" : ""}`}
+            >
+              {label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
@@ -575,11 +625,7 @@ function LayerToggles({
       {hasCompletedItems && (
         <button
           onClick={onToggleCompleted}
-          className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
-            showCompleted
-              ? "bg-card border border-border text-foreground shadow-sm"
-              : "text-muted-foreground/50 hover:text-muted-foreground"
-          }`}
+          className={toolbarBtnClass(showCompleted)}
         >
           {showCompleted ? "Hide completed" : "Show completed"}
         </button>
@@ -591,11 +637,7 @@ function LayerToggles({
           <button
             key={layer.id}
             onClick={() => onToggle(layer.id)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
-              isActive
-                ? "bg-card border border-border text-foreground shadow-sm"
-                : "text-muted-foreground/50 hover:text-muted-foreground"
-            }`}
+            className={toolbarBtnClass(isActive)}
           >
             <span
               className="w-2 h-2 rounded-full shrink-0"
@@ -615,6 +657,51 @@ function LayerToggles({
   );
 }
 
+function toggleInSet(set: Set<string>, value: string): Set<string> {
+  const next = new Set(set);
+  if (next.has(value)) next.delete(value);
+  else next.add(value);
+  return next;
+}
+
+function MultiSelectFilter({
+  label,
+  selected,
+  options,
+  onChange,
+}: {
+  label: string;
+  selected: Set<string>;
+  options: string[];
+  onChange: (next: Set<string>) => void;
+}) {
+  const count = selected.size;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger className={toolbarBtnClass(count > 0)}>
+        {label}
+        {count > 0 && <span className="text-[10px] text-muted-foreground">({count})</span>}
+        <ChevronDown className="w-3 h-3 opacity-50" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-[140px]">
+        {options.map((opt) => (
+          <DropdownMenuCheckboxItem
+            key={opt}
+            checked={selected.has(opt)}
+            onCheckedChange={() => onChange(toggleInSet(selected, opt))}
+            onSelect={(e) => e.preventDefault()}
+            className="text-xs capitalize"
+          >
+            {opt}
+          </DropdownMenuCheckboxItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+const PRIORITY_OPTIONS = ["critical", "high", "medium", "low", "someday"];
+
 function GraphFilters({
   filters,
   onChange,
@@ -626,59 +713,38 @@ function GraphFilters({
   epicOptions: string[];
   tagOptions: string[];
 }) {
-  const hasFilters = filters.epic !== "all" || filters.priority !== "all" || filters.tag !== "all";
+  const hasFilters = filters.priorities.size > 0 || filters.epics.size > 0 || filters.tags.size > 0;
 
   return (
     <div className="flex items-center gap-1.5">
-      <Select value={filters.priority} onValueChange={(v) => onChange({ priority: v })}>
-        <SelectTrigger className="w-[120px] h-7 text-xs">
-          <SelectValue placeholder="Priority" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All priorities</SelectItem>
-          <SelectItem value="critical">Critical</SelectItem>
-          <SelectItem value="high">High</SelectItem>
-          <SelectItem value="medium">Medium</SelectItem>
-          <SelectItem value="low">Low</SelectItem>
-          <SelectItem value="someday">Someday</SelectItem>
-        </SelectContent>
-      </Select>
+      <MultiSelectFilter
+        label="Priority"
+        selected={filters.priorities}
+        options={PRIORITY_OPTIONS}
+        onChange={(priorities) => onChange({ priorities })}
+      />
 
       {epicOptions.length > 0 && (
-        <Select value={filters.epic} onValueChange={(v) => onChange({ epic: v })}>
-          <SelectTrigger className="w-[120px] h-7 text-xs">
-            <SelectValue placeholder="Epic" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All epics</SelectItem>
-            {epicOptions.map((e) => (
-              <SelectItem key={e} value={e}>
-                {e}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MultiSelectFilter
+          label="Epic"
+          selected={filters.epics}
+          options={epicOptions}
+          onChange={(epics) => onChange({ epics })}
+        />
       )}
 
       {tagOptions.length > 0 && (
-        <Select value={filters.tag} onValueChange={(v) => onChange({ tag: v })}>
-          <SelectTrigger className="w-[120px] h-7 text-xs">
-            <SelectValue placeholder="Tag" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All tags</SelectItem>
-            {tagOptions.map((t) => (
-              <SelectItem key={t} value={t}>
-                {t}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MultiSelectFilter
+          label="Tag"
+          selected={filters.tags}
+          options={tagOptions}
+          onChange={(tags) => onChange({ tags })}
+        />
       )}
 
       {hasFilters && (
         <button
-          onClick={() => onChange(DEFAULT_FILTERS)}
+          onClick={() => onChange({ priorities: new Set(), epics: new Set(), tags: new Set() })}
           className="px-2 py-1 rounded-md text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
         >
           Clear
@@ -697,15 +763,20 @@ function Legend({
   edgeCounts: Record<string, number>;
   useCompound: boolean;
 }) {
-  const visibleRelations = LAYERS
+  // Dependencies are always shown when edges exist
+  const depRelations = (edgeCounts["dependencies"] ?? 0) > 0 ? ["blocks", "depends_on"] : [];
+
+  // Entity layer relations shown when their layer is active
+  const layerRelations = LAYERS
     .filter((l) => activeLayers.has(l.id))
     .flatMap((l) => [...l.relations])
     .filter((rel) => {
-      // When compound grouping is active, epic edges are visual (no line in legend)
       if (useCompound && rel === "epic") return false;
       const layer = RELATION_TO_LAYER[rel];
       return (edgeCounts[layer] ?? 0) > 0;
     });
+
+  const visibleRelations = [...depRelations, ...layerRelations];
 
   if (visibleRelations.length === 0 && !(useCompound && activeLayers.has("epics"))) return null;
 
@@ -775,6 +846,7 @@ function GraphCanvas({
   onNodesChange,
   onEdgesChange,
   onNodeClick,
+  onResetLayout,
   focusId,
   layoutTrigger,
   activeLayers,
@@ -786,6 +858,7 @@ function GraphCanvas({
   onNodesChange: ReturnType<typeof useNodesState>[2];
   onEdgesChange: ReturnType<typeof useEdgesState>[2];
   onNodeClick: (event: React.MouseEvent, node: Node) => void;
+  onResetLayout: () => void;
   focusId?: string;
   layoutTrigger: number;
   activeLayers: Set<string>;
@@ -793,6 +866,8 @@ function GraphCanvas({
   useCompound: boolean;
 }) {
   const { fitView, setCenter } = useReactFlow();
+  const nodesRef = useRef(nodes);
+  nodesRef.current = nodes;
 
   useEffect(() => {
     if (layoutTrigger === 0) return;
@@ -800,7 +875,7 @@ function GraphCanvas({
     // Small delay to let React Flow render the new positions
     const timer = setTimeout(() => {
       if (focusId) {
-        const focusNode = nodes.find((n) => n.id === focusId);
+        const focusNode = nodesRef.current.find((n) => n.id === focusId);
         if (focusNode) {
           setCenter(
             focusNode.position.x + NODE_WIDTH / 2,
@@ -814,7 +889,8 @@ function GraphCanvas({
     }, 50);
 
     return () => clearTimeout(timer);
-  }, [layoutTrigger, focusId, nodes, fitView, setCenter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layoutTrigger, focusId]);
 
   return (
     <>
@@ -840,7 +916,16 @@ function GraphCanvas({
           />
         </Panel>
         <Background gap={20} size={1} />
-        <Controls showInteractive={false} position="bottom-left" />
+        <Controls showInteractive={false} position="bottom-left">
+          <ControlButton onClick={onResetLayout} title="Reset layout">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+            </svg>
+          </ControlButton>
+        </Controls>
       </ReactFlow>
     </>
   );
@@ -917,6 +1002,12 @@ export default function GraphView({
   // Track layout version and previous positions for incremental layout
   const layoutVersionRef = useRef(0);
   const prevPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+  const [layoutKey, setLayoutKey] = useState(0);
+
+  const resetLayout = useCallback(() => {
+    prevPositionsRef.current = new Map();
+    setLayoutKey((prev) => prev + 1);
+  }, []);
 
   useEffect(() => {
     const version = ++layoutVersionRef.current;
@@ -941,7 +1032,7 @@ export default function GraphView({
         if (version !== layoutVersionRef.current) return;
         setIsLayouting(false);
       });
-  }, [graphData, activeLayers, allowedNodes, direction, setNodes, setEdges]);
+  }, [graphData, activeLayers, allowedNodes, direction, layoutKey, setNodes, setEdges]);
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     if (onNodeClickProp) {
@@ -980,6 +1071,7 @@ export default function GraphView({
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onNodeClick={onNodeClick}
+            onResetLayout={resetLayout}
             focusId={focusId}
             layoutTrigger={layoutTrigger}
             activeLayers={activeLayers}

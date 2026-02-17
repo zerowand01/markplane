@@ -1422,16 +1422,6 @@ fn build_graph(
         nodes_map.retain(|id, _| reachable.contains(id));
     }
 
-    // Only include nodes that have at least one edge (unless focused)
-    if focus_id.is_none() {
-        let mut connected: HashSet<String> = HashSet::new();
-        for edge in &edges {
-            connected.insert(edge.source.clone());
-            connected.insert(edge.target.clone());
-        }
-        nodes_map.retain(|id, _| connected.contains(id));
-    }
-
     let nodes: Vec<GraphNodeResponse> = nodes_map.into_values().collect();
     Ok(GraphResponse { nodes, edges })
 }
