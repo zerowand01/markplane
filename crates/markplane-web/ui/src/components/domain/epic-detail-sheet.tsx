@@ -1,6 +1,7 @@
 "use client";
 
 import { useEpic } from "@/lib/hooks/use-epics";
+import { useUpdateEpic } from "@/lib/hooks/use-mutations";
 import { useTasks } from "@/lib/hooks/use-tasks";
 import { EpicStatusBadge } from "./status-badge";
 import { EpicProgress } from "./epic-progress";
@@ -13,6 +14,12 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ResizableSheetContent } from "./resizable-sheet-content";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -23,6 +30,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { EPIC_STATUS_CONFIG } from "@/lib/constants";
+import type { EpicStatus, Priority } from "@/lib/types";
+
+const ALL_EPIC_STATUSES: EpicStatus[] = ["planned", "active", "done"];
+const ALL_PRIORITIES: Priority[] = ["critical", "high", "medium", "low", "someday"];
 
 export function EpicDetailSheet({
   epicId,
@@ -36,6 +48,7 @@ export function EpicDetailSheet({
   onTaskClick?: (id: string) => void;
 }) {
   const { data: epic, isLoading } = useEpic(epicId || "");
+  const updateEpic = useUpdateEpic();
   const { data: allTasks } = useTasks();
 
   const linkedTasks = allTasks?.filter((t) => t.epic === epicId) || [];
@@ -64,7 +77,6 @@ export function EpicDetailSheet({
                 >
                   {epic.id}
                 </span>
-                <EpicStatusBadge status={epic.status} />
               </div>
               <SheetTitle className="text-left text-xl">
                 {epic.title}
@@ -79,10 +91,62 @@ export function EpicDetailSheet({
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <span className="text-sm text-muted-foreground block mb-1">
+                    Status
+                  </span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="cursor-pointer">
+                      <EpicStatusBadge status={epic.status} />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {ALL_EPIC_STATUSES.map((s) => (
+                        <DropdownMenuItem
+                          key={s}
+                          onClick={() =>
+                            updateEpic.mutate({ id: epic.id, status: s })
+                          }
+                        >
+                          {(() => {
+                            const Icon = EPIC_STATUS_CONFIG[s].icon;
+                            return (
+                              <Icon
+                                className="mr-2 size-4 text-current"
+                                style={{ color: `var(--status-${s})` }}
+                              />
+                            );
+                          })()}
+                          {EPIC_STATUS_CONFIG[s].label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                <div>
+                  <span className="text-sm text-muted-foreground block mb-1">
                     Priority
                   </span>
-                  <PriorityIndicator priority={epic.priority} showLabel />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="cursor-pointer">
+                      <PriorityIndicator
+                        priority={epic.priority}
+                        showLabel
+                      />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {ALL_PRIORITIES.map((p) => (
+                        <DropdownMenuItem
+                          key={p}
+                          onClick={() =>
+                            updateEpic.mutate({ id: epic.id, priority: p })
+                          }
+                        >
+                          <PriorityIndicator priority={p} showLabel />
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
+
                 {epic.started && (
                   <div>
                     <span className="text-sm text-muted-foreground block mb-1">

@@ -66,11 +66,11 @@ pub async fn run(port: u16, open: bool, dev: bool) -> anyhow::Result<()> {
             get(get_task).patch(update_task).delete(delete_task),
         )
         .route("/api/epics", get(get_epics))
-        .route("/api/epics/{id}", get(get_epic))
+        .route("/api/epics/{id}", get(get_epic).patch(update_epic))
         .route("/api/plans", get(get_plans))
-        .route("/api/plans/{id}", get(get_plan))
+        .route("/api/plans/{id}", get(get_plan).patch(update_plan))
         .route("/api/notes", get(get_notes))
-        .route("/api/notes/{id}", get(get_note))
+        .route("/api/notes/{id}", get(get_note).patch(update_note))
         .route("/api/sync", post(post_sync))
         .route("/api/search", get(get_search))
         .route("/api/graph", get(get_graph_all))
@@ -479,6 +479,12 @@ fn epic_to_response(
     }
 }
 
+#[derive(Deserialize)]
+struct UpdateEpicRequest {
+    status: Option<String>,
+    priority: Option<String>,
+}
+
 // ── Plan API types ────────────────────────────────────────────────────────
 
 #[derive(Serialize)]
@@ -505,6 +511,11 @@ fn plan_to_response(doc: &MarkplaneDocument<Plan>) -> PlanResponse {
         updated: fm.updated.to_string(),
         body: doc.body.clone(),
     }
+}
+
+#[derive(Deserialize)]
+struct UpdatePlanRequest {
+    status: Option<String>,
 }
 
 // ── Note API types ────────────────────────────────────────────────────────
@@ -536,6 +547,11 @@ fn note_to_response(doc: &MarkplaneDocument<Note>) -> NoteResponse {
         updated: fm.updated.to_string(),
         body: doc.body.clone(),
     }
+}
+
+#[derive(Deserialize)]
+struct UpdateNoteRequest {
+    status: Option<String>,
 }
 
 // ── Summary API types ─────────────────────────────────────────────────────
@@ -1014,6 +1030,115 @@ async fn get_note(
     }))
 }
 
+async fn update_epic(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(body): Json<UpdateEpicRequest>,
+) -> Result<Json<ApiResponse<EpicResponse>>, (StatusCode, Json<ApiError>)> {
+    parse_id(&id)
+        .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
+
+    let mut doc: MarkplaneDocument<Epic> = state
+        .project
+        .read_item(&id)
+        .map_err(|e| error_response(StatusCode::NOT_FOUND, "not_found", &e.to_string()))?;
+
+    if let Some(status) = &body.status {
+        doc.frontmatter.status = status
+            .parse()
+            .map_err(|e: markplane_core::MarkplaneError| {
+                error_response(StatusCode::BAD_REQUEST, "invalid_status", &e.to_string())
+            })?;
+    }
+    if let Some(priority) = &body.priority {
+        doc.frontmatter.priority = priority
+            .parse()
+            .map_err(|e: markplane_core::MarkplaneError| {
+                error_response(StatusCode::BAD_REQUEST, "invalid_priority", &e.to_string())
+            })?;
+    }
+
+    state
+        .project
+        .write_item(&id, &doc)
+        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "write_error", &e.to_string()))?;
+
+    let tasks = state
+        .project
+        .list_tasks(&QueryFilter::default())
+        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+
+    Ok(Json(ApiResponse {
+        data: epic_to_response(&doc, &tasks),
+    }))
+}
+
+async fn update_plan(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(body): Json<UpdatePlanRequest>,
+) -> Result<Json<ApiResponse<PlanResponse>>, (StatusCode, Json<ApiError>)> {
+    parse_id(&id)
+        .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
+
+    let mut doc: MarkplaneDocument<Plan> = state
+        .project
+        .read_item(&id)
+        .map_err(|e| error_response(StatusCode::NOT_FOUND, "not_found", &e.to_string()))?;
+
+    if let Some(status) = &body.status {
+        doc.frontmatter.status = status
+            .parse()
+            .map_err(|e: markplane_core::MarkplaneError| {
+                error_response(StatusCode::BAD_REQUEST, "invalid_status", &e.to_string())
+            })?;
+    }
+
+    doc.frontmatter.updated = chrono::Local::now().date_naive();
+
+    state
+        .project
+        .write_item(&id, &doc)
+        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "write_error", &e.to_string()))?;
+
+    Ok(Json(ApiResponse {
+        data: plan_to_response(&doc),
+    }))
+}
+
+async fn update_note(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(body): Json<UpdateNoteRequest>,
+) -> Result<Json<ApiResponse<NoteResponse>>, (StatusCode, Json<ApiError>)> {
+    parse_id(&id)
+        .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
+
+    let mut doc: MarkplaneDocument<Note> = state
+        .project
+        .read_item(&id)
+        .map_err(|e| error_response(StatusCode::NOT_FOUND, "not_found", &e.to_string()))?;
+
+    if let Some(status) = &body.status {
+        doc.frontmatter.status = status
+            .parse()
+            .map_err(|e: markplane_core::MarkplaneError| {
+                error_response(StatusCode::BAD_REQUEST, "invalid_status", &e.to_string())
+            })?;
+    }
+
+    doc.frontmatter.updated = chrono::Local::now().date_naive();
+
+    state
+        .project
+        .write_item(&id, &doc)
+        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "write_error", &e.to_string()))?;
+
+    Ok(Json(ApiResponse {
+        data: note_to_response(&doc),
+    }))
+}
+
 async fn post_sync(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<ApiResponse<SyncResponse>>, (StatusCode, Json<ApiError>)> {
@@ -1079,12 +1204,13 @@ async fn get_search(
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
     for doc in &tasks {
         let fm = &doc.frontmatter;
-        let title_lower = fm.title.to_lowercase();
-        let body_lower = doc.body.to_lowercase();
-        let title_match = title_lower.contains(&query);
-        let body_match = body_lower.contains(&query);
-        if title_match || body_match {
-            let score = if title_match { 2.0 } else { 1.0 };
+        let id_match = fm.id.to_lowercase().contains(&query);
+        let title_match = fm.title.to_lowercase().contains(&query);
+        let tag_match = fm.tags.iter().any(|t| t.to_lowercase().contains(&query));
+        let assignee_match = fm.assignee.as_ref().is_some_and(|a| a.to_lowercase().contains(&query));
+        let body_match = doc.body.to_lowercase().contains(&query);
+        if id_match || title_match || tag_match || assignee_match || body_match {
+            let score = if id_match { 3.0 } else if title_match { 2.0 } else if tag_match || assignee_match { 1.5 } else { 1.0 };
             let snippet = extract_snippet(&doc.body, &query);
             results.push(SearchResultResponse {
                 id: fm.id.clone(),
@@ -1105,12 +1231,12 @@ async fn get_search(
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
     for doc in &epics {
         let fm = &doc.frontmatter;
-        let title_lower = fm.title.to_lowercase();
-        let body_lower = doc.body.to_lowercase();
-        let title_match = title_lower.contains(&query);
-        let body_match = body_lower.contains(&query);
-        if title_match || body_match {
-            let score = if title_match { 2.0 } else { 1.0 };
+        let id_match = fm.id.to_lowercase().contains(&query);
+        let title_match = fm.title.to_lowercase().contains(&query);
+        let tag_match = fm.tags.iter().any(|t| t.to_lowercase().contains(&query));
+        let body_match = doc.body.to_lowercase().contains(&query);
+        if id_match || title_match || tag_match || body_match {
+            let score = if id_match { 3.0 } else if title_match { 2.0 } else if tag_match { 1.5 } else { 1.0 };
             let snippet = extract_snippet(&doc.body, &query);
             results.push(SearchResultResponse {
                 id: fm.id.clone(),
@@ -1131,12 +1257,11 @@ async fn get_search(
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
     for doc in &plans {
         let fm = &doc.frontmatter;
-        let title_lower = fm.title.to_lowercase();
-        let body_lower = doc.body.to_lowercase();
-        let title_match = title_lower.contains(&query);
-        let body_match = body_lower.contains(&query);
-        if title_match || body_match {
-            let score = if title_match { 2.0 } else { 1.0 };
+        let id_match = fm.id.to_lowercase().contains(&query);
+        let title_match = fm.title.to_lowercase().contains(&query);
+        let body_match = doc.body.to_lowercase().contains(&query);
+        if id_match || title_match || body_match {
+            let score = if id_match { 3.0 } else if title_match { 2.0 } else { 1.0 };
             let snippet = extract_snippet(&doc.body, &query);
             results.push(SearchResultResponse {
                 id: fm.id.clone(),
@@ -1157,12 +1282,12 @@ async fn get_search(
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
     for doc in &notes {
         let fm = &doc.frontmatter;
-        let title_lower = fm.title.to_lowercase();
-        let body_lower = doc.body.to_lowercase();
-        let title_match = title_lower.contains(&query);
-        let body_match = body_lower.contains(&query);
-        if title_match || body_match {
-            let score = if title_match { 2.0 } else { 1.0 };
+        let id_match = fm.id.to_lowercase().contains(&query);
+        let title_match = fm.title.to_lowercase().contains(&query);
+        let tag_match = fm.tags.iter().any(|t| t.to_lowercase().contains(&query));
+        let body_match = doc.body.to_lowercase().contains(&query);
+        if id_match || title_match || tag_match || body_match {
+            let score = if id_match { 3.0 } else if title_match { 2.0 } else if tag_match { 1.5 } else { 1.0 };
             let snippet = extract_snippet(&doc.body, &query);
             results.push(SearchResultResponse {
                 id: fm.id.clone(),

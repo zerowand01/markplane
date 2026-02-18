@@ -111,7 +111,7 @@
   /* Status colors */
   --status-draft: oklch(0.55 0.01 260);
   --status-backlog: oklch(0.58 0.04 250);
-  --status-planned: oklch(0.55 0.18 290);
+  --status-planned: oklch(0.58 0.18 275);
   --status-in-progress: oklch(0.65 0.19 250);
   --status-done: oklch(0.65 0.18 155);
   --status-blocked: oklch(0.72 0.17 70);
@@ -198,7 +198,7 @@
   /* Status colors (dark) */
   --status-draft: oklch(0.60 0.01 260);
   --status-backlog: oklch(0.55 0.05 250);
-  --status-planned: oklch(0.55 0.18 290);
+  --status-planned: oklch(0.55 0.18 275);
   --status-in-progress: oklch(0.55 0.20 250);
   --status-done: oklch(0.55 0.18 155);
   --status-blocked: oklch(0.60 0.18 70);

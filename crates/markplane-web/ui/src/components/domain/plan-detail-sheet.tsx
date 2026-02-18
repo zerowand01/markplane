@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlan } from "@/lib/hooks/use-plans";
+import { useUpdatePlan } from "@/lib/hooks/use-mutations";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { WikiLinkChip } from "./wiki-link-chip";
 import {
@@ -9,9 +10,18 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ResizableSheetContent } from "./resizable-sheet-content";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PLAN_STATUS_CONFIG } from "@/lib/constants";
+import type { PlanStatus } from "@/lib/types";
+
+const ALL_PLAN_STATUSES: PlanStatus[] = ["draft", "approved", "in-progress", "done"];
 
 export function PlanDetailSheet({
   planId,
@@ -23,6 +33,7 @@ export function PlanDetailSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const { data: plan, isLoading } = usePlan(planId || "");
+  const updatePlan = useUpdatePlan();
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -59,19 +70,44 @@ export function PlanDetailSheet({
                   <span className="text-sm text-muted-foreground block mb-1">
                     Status
                   </span>
-                  <span
-                    className="inline-flex items-center gap-1 text-sm px-2 py-0.5 rounded"
-                    style={{
-                      backgroundColor: `color-mix(in oklch, var(--status-${plan.status}) 15%, transparent)`,
-                      color: `var(--status-${plan.status})`,
-                    }}
-                  >
-                    {(() => {
-                      const Icon = PLAN_STATUS_CONFIG[plan.status]?.icon;
-                      return Icon ? <Icon className="size-3.5 text-current" /> : null;
-                    })()}
-                    <span>{PLAN_STATUS_CONFIG[plan.status]?.label}</span>
-                  </span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="cursor-pointer">
+                      <span
+                        className="inline-flex items-center gap-1 text-sm px-2 py-0.5 rounded"
+                        style={{
+                          backgroundColor: `color-mix(in oklch, var(--status-${plan.status}) 15%, transparent)`,
+                          color: `var(--status-${plan.status})`,
+                        }}
+                      >
+                        {(() => {
+                          const Icon = PLAN_STATUS_CONFIG[plan.status]?.icon;
+                          return Icon ? <Icon className="size-3.5 text-current" /> : null;
+                        })()}
+                        <span>{PLAN_STATUS_CONFIG[plan.status]?.label}</span>
+                      </span>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {ALL_PLAN_STATUSES.map((s) => (
+                        <DropdownMenuItem
+                          key={s}
+                          onClick={() =>
+                            updatePlan.mutate({ id: plan.id, status: s })
+                          }
+                        >
+                          {(() => {
+                            const Icon = PLAN_STATUS_CONFIG[s]?.icon;
+                            return Icon ? (
+                              <Icon
+                                className="mr-2 size-4 text-current"
+                                style={{ color: `var(--status-${s})` }}
+                              />
+                            ) : null;
+                          })()}
+                          {PLAN_STATUS_CONFIG[s]?.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
 
                 {plan.epic && (

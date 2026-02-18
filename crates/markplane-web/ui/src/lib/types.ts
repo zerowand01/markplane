@@ -110,6 +110,19 @@ export interface UpdateTaskRequest {
   blocks?: string[];
 }
 
+export interface UpdateEpicRequest {
+  status?: EpicStatus;
+  priority?: Priority;
+}
+
+export interface UpdatePlanRequest {
+  status?: PlanStatus;
+}
+
+export interface UpdateNoteRequest {
+  status?: NoteStatus;
+}
+
 export interface ApiResponse<T> {
   data: T;
 }

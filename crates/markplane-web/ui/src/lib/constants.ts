@@ -7,7 +7,7 @@ import {
   CircleCheck,
   CircleX,
   CirclePlay,
-  BadgeCheck,
+  ThumbsUp,
   Archive,
 } from "lucide-react";
 import type { TaskStatus, EpicStatus, Priority } from "./types";
@@ -37,7 +37,7 @@ export const PRIORITY_CONFIG: Record<Priority, { label: string; icon: string }> 
 
 export const PLAN_STATUS_CONFIG: Record<string, { label: string; icon: LucideIcon }> = {
   draft: { label: "Draft", icon: CircleDashed },
-  approved: { label: "Approved", icon: BadgeCheck },
+  approved: { label: "Approved", icon: ThumbsUp },
   "in-progress": { label: "In Progress", icon: LoaderCircle },
   done: { label: "Done", icon: CircleCheck },
 };

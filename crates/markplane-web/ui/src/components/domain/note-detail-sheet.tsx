@@ -1,6 +1,7 @@
 "use client";
 
 import { useNote } from "@/lib/hooks/use-notes";
+import { useUpdateNote } from "@/lib/hooks/use-mutations";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { WikiLinkChip } from "./wiki-link-chip";
 import {
@@ -9,9 +10,18 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ResizableSheetContent } from "./resizable-sheet-content";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NOTE_STATUS_CONFIG } from "@/lib/constants";
+import type { NoteStatus } from "@/lib/types";
+
+const ALL_NOTE_STATUSES: NoteStatus[] = ["draft", "active", "archived"];
 
 export function NoteDetailSheet({
   noteId,
@@ -23,6 +33,7 @@ export function NoteDetailSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const { data: note, isLoading } = useNote(noteId || "");
+  const updateNote = useUpdateNote();
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -62,19 +73,44 @@ export function NoteDetailSheet({
                   <span className="text-sm text-muted-foreground block mb-1">
                     Status
                   </span>
-                  <span
-                    className="inline-flex items-center gap-1 text-sm px-2 py-0.5 rounded"
-                    style={{
-                      backgroundColor: `color-mix(in oklch, var(--status-${note.status}) 15%, transparent)`,
-                      color: `var(--status-${note.status})`,
-                    }}
-                  >
-                    {(() => {
-                      const Icon = NOTE_STATUS_CONFIG[note.status]?.icon;
-                      return Icon ? <Icon className="size-3.5 text-current" /> : null;
-                    })()}
-                    <span>{NOTE_STATUS_CONFIG[note.status]?.label}</span>
-                  </span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="cursor-pointer">
+                      <span
+                        className="inline-flex items-center gap-1 text-sm px-2 py-0.5 rounded"
+                        style={{
+                          backgroundColor: `color-mix(in oklch, var(--status-${note.status}) 15%, transparent)`,
+                          color: `var(--status-${note.status})`,
+                        }}
+                      >
+                        {(() => {
+                          const Icon = NOTE_STATUS_CONFIG[note.status]?.icon;
+                          return Icon ? <Icon className="size-3.5 text-current" /> : null;
+                        })()}
+                        <span>{NOTE_STATUS_CONFIG[note.status]?.label}</span>
+                      </span>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {ALL_NOTE_STATUSES.map((s) => (
+                        <DropdownMenuItem
+                          key={s}
+                          onClick={() =>
+                            updateNote.mutate({ id: note.id, status: s })
+                          }
+                        >
+                          {(() => {
+                            const Icon = NOTE_STATUS_CONFIG[s]?.icon;
+                            return Icon ? (
+                              <Icon
+                                className="mr-2 size-4 text-current"
+                                style={{ color: `var(--status-${s})` }}
+                              />
+                            ) : null;
+                          })()}
+                          {NOTE_STATUS_CONFIG[s]?.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
 
