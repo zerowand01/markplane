@@ -12,7 +12,7 @@
 
 ## Planned (0)
 
-## Backlog (11)
+## Backlog (12)
 
 | ID | Title | Epic | Priority | Effort |
 |----|-------|------|----------|--------|
@@ -20,6 +20,7 @@
 | [TASK-009](items/TASK-009.md) | Implement configurable workflows for statuses, priorities, and effort sizes | [EPIC-003](../roadmap/items/EPIC-003.md) | medium | large |
 | [TASK-011](items/TASK-011.md) | Implement rich context bundles for individual items | [EPIC-004](../roadmap/items/EPIC-004.md) | medium | medium |
 | [TASK-012](items/TASK-012.md) | Add domain-focused context generation | [EPIC-004](../roadmap/items/EPIC-004.md) | medium | medium |
+| [TASK-026](items/TASK-026.md) | Extend link command to support cross-type entity linking | — | medium | medium |
 | [TASK-008](items/TASK-008.md) | Swap serde_yaml to serde_yaml_ng | [EPIC-002](../roadmap/items/EPIC-002.md) | low | small |
 | [TASK-010](items/TASK-010.md) | Add Sprint/Iteration entity type | [EPIC-003](../roadmap/items/EPIC-003.md) | low | large |
 | [TASK-013](items/TASK-013.md) | Add clipboard context output | [EPIC-004](../roadmap/items/EPIC-004.md) | low | xs |
@@ -28,24 +29,19 @@
 | [TASK-016](items/TASK-016.md) | Add SSE transport for MCP server | [EPIC-005](../roadmap/items/EPIC-005.md) | low | medium |
 | [TASK-018](items/TASK-018.md) | Implement plugin system for external integrations | [EPIC-005](../roadmap/items/EPIC-005.md) | someday | xl |
 
-## Drafts (3)
+## Drafts (4)
 
 | ID | Title | Epic | Priority | Effort |
 |----|-------|------|----------|--------|
 | [TASK-021](items/TASK-021.md) | Set up GitHub Actions CI pipeline | [EPIC-006](../roadmap/items/EPIC-006.md) | high | medium |
+| [TASK-025](items/TASK-025.md) | Web UI - Detail sheet editing for frontmatter fields and markdown body | [EPIC-002](../roadmap/items/EPIC-002.md) | high | xl |
 | [TASK-020](items/TASK-020.md) | Sort items in generated INDEX.md sections | — | medium | small |
 | [TASK-024](items/TASK-024.md) | Publish markplane-core to crates.io | [EPIC-006](../roadmap/items/EPIC-006.md) | low | small |
 
-## Recently Done (8)
+## Recently Done (2)
 
 | ID | Title | Epic | Completed |
 |----|-------|------|-----------|
 | [TASK-019](items/TASK-019.md) | Remove markplane_write MCP tool and update instructions to prefer direct file editing | — | 2026-02-12 |
-| [TASK-001](items/TASK-001.md) | Add instructions field to MCP initialize response | [EPIC-001](../roadmap/items/EPIC-001.md) | 2026-02-11 |
-| [TASK-002](items/TASK-002.md) | Add missing PLAN and NOTE resource templates to MCP | [EPIC-001](../roadmap/items/EPIC-001.md) | 2026-02-11 |
-| [TASK-003](items/TASK-003.md) | Update MCP protocol version to 2025-11-25 | [EPIC-001](../roadmap/items/EPIC-001.md) | 2026-02-11 |
-| [TASK-004](items/TASK-004.md) | Add serverInfo.description to MCP initialize response | [EPIC-001](../roadmap/items/EPIC-001.md) | 2026-02-11 |
-| [TASK-005](items/TASK-005.md) | Add markplane_write MCP tool for updating markdown body content | [EPIC-001](../roadmap/items/EPIC-001.md) | 2026-02-11 |
-| [TASK-006](items/TASK-006.md) | Document create-then-edit workflow in MCP instructions | [EPIC-001](../roadmap/items/EPIC-001.md) | 2026-02-11 |
 | [TASK-017](items/TASK-017.md) | Build web UI with React and Tailwind | [EPIC-005](../roadmap/items/EPIC-005.md) | 2026-02-13 |
 

@@ -39,32 +39,30 @@ export function TagEditor({ tags, onSave }: TagEditorProps) {
   };
 
   return (
-    <div>
-      <span className="text-sm text-muted-foreground block mb-1">Tags</span>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-          >
-            {tags.length > 0 ? (
-              <span className="flex flex-wrap gap-1.5">
-                {tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="text-sm text-muted-foreground bg-secondary px-2 py-0.5 rounded"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </span>
-            ) : (
-              <span className="text-sm text-muted-foreground italic">
-                Add tags...
-              </span>
-            )}
-          </button>
-        </PopoverTrigger>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+        >
+          {tags.length > 0 ? (
+            <span className="flex flex-wrap gap-1.5">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="text-sm text-muted-foreground bg-secondary px-2 py-0.5 rounded"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </span>
+          ) : (
+            <span className="text-sm text-muted-foreground italic">
+              None
+            </span>
+          )}
+        </button>
+      </PopoverTrigger>
         <PopoverContent className="w-64 p-3" align="start">
           <div className="space-y-2">
             {tags.length > 0 && (
@@ -105,7 +103,6 @@ export function TagEditor({ tags, onSave }: TagEditorProps) {
             </div>
           </div>
         </PopoverContent>
-      </Popover>
-    </div>
+    </Popover>
   );
 }

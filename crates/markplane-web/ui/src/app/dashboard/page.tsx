@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useCallback } from "react";
+import { Suspense, useState, useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSummary } from "@/lib/hooks/use-summary";
 import { StatusBadge } from "@/components/domain/status-badge";
@@ -37,6 +37,11 @@ function DashboardContent() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(
     () => searchParams.get("task")
   );
+
+  // Sync selectedTaskId when URL changes (e.g. WikiLinkChip navigation)
+  useEffect(() => {
+    setSelectedTaskId(searchParams.get("task"));
+  }, [searchParams]);
 
   const openTask = useCallback(
     (id: string) => {

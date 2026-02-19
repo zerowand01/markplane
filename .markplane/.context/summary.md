@@ -7,12 +7,6 @@
 
 ## Recent Completions (last 7 days)
 - TASK-019: Remove markplane_write MCP tool and update instructions to prefer direct file editing (done 2026-02-12)
-- TASK-001: Add instructions field to MCP initialize response (done 2026-02-11)
-- TASK-002: Add missing PLAN and NOTE resource templates to MCP (done 2026-02-11)
-- TASK-003: Update MCP protocol version to 2025-11-25 (done 2026-02-11)
-- TASK-004: Add serverInfo.description to MCP initialize response (done 2026-02-11)
-- TASK-005: Add markplane_write MCP tool for updating markdown body content (done 2026-02-11)
-- TASK-006: Document create-then-edit workflow in MCP instructions (done 2026-02-11)
 - TASK-017: Build web UI with React and Tailwind (done 2026-02-13)
 
 ## Priority Queue (next up)
@@ -20,11 +14,11 @@
 2. TASK-009: Implement configurable workflows for statuses, priorities, and effort sizes (medium, backlog)
 3. TASK-011: Implement rich context bundles for individual items (medium, backlog)
 4. TASK-012: Add domain-focused context generation (medium, backlog)
-5. TASK-008: Swap serde_yaml to serde_yaml_ng (low, backlog)
+5. TASK-026: Extend link command to support cross-type entity linking (medium, backlog)
 
 ## Key Metrics
-- Backlog: 16 items (0 critical, 2 high, 6 medium, 7 low)
-- Last sync: 2026-02-15
+- Backlog: 18 items (0 critical, 3 high, 7 medium, 7 low)
+- Last sync: 2026-02-19
 
 ## Key Documentation
 - ai-integration

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useEpic } from "@/lib/hooks/use-epics";
 import { useUpdateEpic } from "@/lib/hooks/use-mutations";
 import { useTasks } from "@/lib/hooks/use-tasks";
-import { EpicStatusBadge } from "./status-badge";
 import { EpicProgress } from "./epic-progress";
 import { StatusBadge } from "./status-badge";
 import { PriorityIndicator } from "./priority-indicator";
@@ -12,6 +11,7 @@ import { MarkdownRenderer } from "./markdown-renderer";
 import { MarkdownEditor } from "./markdown-editor";
 import { InlineEdit } from "./inline-edit";
 import { TagEditor } from "./tag-editor";
+import { FieldRow } from "./field-row";
 import {
   Sheet,
   SheetHeader,
@@ -104,17 +104,23 @@ export function EpicDetailSheet({
 
             <div className="space-y-4 px-4 pb-6">
               {/* Progress */}
-              <EpicProgress epic={epic} />
+              <EpicProgress epic={epic} showHeader={false} />
 
               {/* Metadata */}
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-4">
-                  <span className="text-muted-foreground w-20 shrink-0">
-                    Status
-                  </span>
+              <div className="space-y-0.5 text-sm">
+                <FieldRow label="Status" editable>
                   <DropdownMenu>
                     <DropdownMenuTrigger className="cursor-pointer">
-                      <EpicStatusBadge status={epic.status} />
+                      <span
+                        className="inline-flex items-center gap-1.5"
+                        style={{ color: `var(--status-${epic.status})` }}
+                      >
+                        {(() => {
+                          const Icon = EPIC_STATUS_CONFIG[epic.status].icon;
+                          return <Icon className="size-3.5 text-current" />;
+                        })()}
+                        <span className="text-sm">{EPIC_STATUS_CONFIG[epic.status].label}</span>
+                      </span>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                       {ALL_EPIC_STATUSES.map((s) => (
@@ -138,12 +144,9 @@ export function EpicDetailSheet({
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </div>
+                </FieldRow>
 
-                <div className="flex items-center gap-4">
-                  <span className="text-muted-foreground w-20 shrink-0">
-                    Priority
-                  </span>
+                <FieldRow label="Priority" editable>
                   <DropdownMenu>
                     <DropdownMenuTrigger className="cursor-pointer">
                       <PriorityIndicator
@@ -164,12 +167,9 @@ export function EpicDetailSheet({
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </div>
+                </FieldRow>
 
-                <div className="flex items-center gap-4">
-                  <span className="text-muted-foreground w-20 shrink-0">
-                    Started
-                  </span>
+                <FieldRow label="Started" editable>
                   <DateEditor
                     value={epic.started}
                     onSave={(started) =>
@@ -177,12 +177,9 @@ export function EpicDetailSheet({
                     }
                     placeholder="Not started"
                   />
-                </div>
+                </FieldRow>
 
-                <div className="flex items-center gap-4">
-                  <span className="text-muted-foreground w-20 shrink-0">
-                    Target
-                  </span>
+                <FieldRow label="Target" editable>
                   <DateEditor
                     value={epic.target}
                     onSave={(target) =>
@@ -190,16 +187,17 @@ export function EpicDetailSheet({
                     }
                     placeholder="No target"
                   />
-                </div>
-              </div>
+                </FieldRow>
 
-              {/* Tags */}
-              <TagEditor
-                tags={epic.tags}
-                onSave={(tags) =>
-                  updateEpic.mutate({ id: epic.id, tags })
-                }
-              />
+                <FieldRow label="Tags" editable>
+                  <TagEditor
+                    tags={epic.tags}
+                    onSave={(tags) =>
+                      updateEpic.mutate({ id: epic.id, tags })
+                    }
+                  />
+                </FieldRow>
+              </div>
 
               {/* Status breakdown */}
               {Object.keys(epic.status_breakdown).length > 0 && (

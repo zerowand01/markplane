@@ -109,6 +109,11 @@ function BacklogContent() {
     searchParams.get("task")
   );
 
+  // Sync selectedTaskId when URL changes (e.g. WikiLinkChip navigation)
+  useEffect(() => {
+    setSelectedTaskId(searchParams.get("task"));
+  }, [searchParams]);
+
   const { data: tasks, isLoading, error, refetch } = useTasks();
   const { data: epics } = useEpics();
 

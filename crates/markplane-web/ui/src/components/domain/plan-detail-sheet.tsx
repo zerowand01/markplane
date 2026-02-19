@@ -7,6 +7,7 @@ import { MarkdownRenderer } from "./markdown-renderer";
 import { MarkdownEditor } from "./markdown-editor";
 import { WikiLinkChip } from "./wiki-link-chip";
 import { InlineEdit } from "./inline-edit";
+import { FieldRow, EmptyValue } from "./field-row";
 import {
   Sheet,
   SheetHeader,
@@ -77,25 +78,19 @@ export function PlanDetailSheet({
             </SheetHeader>
 
             <div className="space-y-4 px-4 pb-6">
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-4">
-                  <span className="text-muted-foreground w-20 shrink-0">
-                    Status
-                  </span>
+              <div className="space-y-0.5 text-sm">
+                <FieldRow label="Status" editable>
                   <DropdownMenu>
                     <DropdownMenuTrigger className="cursor-pointer">
                       <span
-                        className="inline-flex items-center gap-1 text-sm px-2 py-0.5 rounded"
-                        style={{
-                          backgroundColor: `color-mix(in oklch, var(--status-${plan.status}) 15%, transparent)`,
-                          color: `var(--status-${plan.status})`,
-                        }}
+                        className="inline-flex items-center gap-1.5"
+                        style={{ color: `var(--status-${plan.status})` }}
                       >
                         {(() => {
                           const Icon = PLAN_STATUS_CONFIG[plan.status]?.icon;
                           return Icon ? <Icon className="size-3.5 text-current" /> : null;
                         })()}
-                        <span>{PLAN_STATUS_CONFIG[plan.status]?.label}</span>
+                        <span className="text-sm">{PLAN_STATUS_CONFIG[plan.status]?.label}</span>
                       </span>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
@@ -120,34 +115,35 @@ export function PlanDetailSheet({
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </div>
+                </FieldRow>
 
-                {plan.epic && (
-                  <div className="flex items-center gap-4">
-                    <span className="text-muted-foreground w-20 shrink-0">
-                      Epic
-                    </span>
+                <FieldRow label="Epic">
+                  {plan.epic ? (
                     <WikiLinkChip id={plan.epic} />
-                  </div>
-                )}
-              </div>
+                  ) : (
+                    <EmptyValue>No epic</EmptyValue>
+                  )}
+                </FieldRow>
 
-              {plan.implements.length > 0 && (
-                <div>
-                  <span className="text-sm text-muted-foreground block mb-1">
-                    Implements
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {plan.implements.map((id) => (
-                      <WikiLinkChip key={id} id={id} />
-                    ))}
-                  </div>
-                </div>
-              )}
+                <FieldRow label="Implements">
+                  {plan.implements.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {plan.implements.map((id) => (
+                        <WikiLinkChip key={id} id={id} />
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptyValue />
+                  )}
+                </FieldRow>
 
-              <div className="flex gap-4 text-sm text-muted-foreground">
-                <span>Created {plan.created}</span>
-                <span>Updated {plan.updated}</span>
+                <FieldRow label="Created">
+                  <span className="text-muted-foreground">{plan.created}</span>
+                </FieldRow>
+
+                <FieldRow label="Updated">
+                  <span className="text-muted-foreground">{plan.updated}</span>
+                </FieldRow>
               </div>
 
               <Separator />

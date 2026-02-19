@@ -1,16 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { useTask } from "@/lib/hooks/use-tasks";
+import { useTask, useTasks } from "@/lib/hooks/use-tasks";
 import { useEpics } from "@/lib/hooks/use-epics";
 import { useUpdateTask } from "@/lib/hooks/use-mutations";
-import { StatusBadge } from "./status-badge";
 import { PriorityIndicator } from "./priority-indicator";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { MarkdownEditor } from "./markdown-editor";
 import { InlineEdit } from "./inline-edit";
 import { TagEditor } from "./tag-editor";
 import { EntityCombobox } from "./entity-combobox";
+import { EntityRefEditor } from "./entity-ref-editor";
+import { WikiLinkChip } from "./wiki-link-chip";
+import { FieldRow, EmptyValue } from "./field-row";
 import {
   Sheet,
   SheetHeader,
@@ -75,9 +77,14 @@ export function TaskDetailSheet({
   });
   const updateTask = useUpdateTask();
   const { data: epics } = useEpics();
+  const { data: allTasks } = useTasks();
 
   const epicOptions =
     epics?.map((e) => ({ id: e.id, title: e.title })) ?? [];
+  const taskOptions =
+    allTasks
+      ?.filter((t) => t.id !== taskId)
+      .map((t) => ({ id: t.id, title: t.title })) ?? [];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -103,25 +110,6 @@ export function TaskDetailSheet({
                 >
                   {task.id}
                 </span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger className="cursor-pointer">
-                    <span className="text-xs px-2 py-0.5 rounded bg-secondary text-secondary-foreground uppercase">
-                      {task.type}
-                    </span>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    {ALL_TYPES.map((t) => (
-                      <DropdownMenuItem
-                        key={t}
-                        onClick={() =>
-                          updateTask.mutate({ id: task.id, type: t })
-                        }
-                      >
-                        <span className="uppercase text-xs">{t}</span>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
               </div>
               <SheetTitle className="text-left text-xl">
                 <InlineEdit
@@ -135,12 +123,20 @@ export function TaskDetailSheet({
 
             <div className="space-y-4 px-4 pb-6">
               {/* Metadata */}
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-4">
-                  <span className="text-muted-foreground w-20 shrink-0">Status</span>
+              <div className="space-y-0.5 text-sm">
+                <FieldRow label="Status" editable>
                   <DropdownMenu>
                     <DropdownMenuTrigger className="cursor-pointer">
-                      <StatusBadge status={task.status} />
+                      <span
+                        className="inline-flex items-center gap-1.5"
+                        style={{ color: `var(--status-${task.status})` }}
+                      >
+                        {(() => {
+                          const Icon = STATUS_CONFIG[task.status].icon;
+                          return <Icon className="size-3.5 text-current" />;
+                        })()}
+                        <span className="text-sm">{STATUS_CONFIG[task.status].label}</span>
+                      </span>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                       {ALL_STATUSES.map((s) => (
@@ -164,10 +160,9 @@ export function TaskDetailSheet({
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </div>
+                </FieldRow>
 
-                <div className="flex items-center gap-4">
-                  <span className="text-muted-foreground w-20 shrink-0">Priority</span>
+                <FieldRow label="Priority" editable>
                   <DropdownMenu>
                     <DropdownMenuTrigger className="cursor-pointer">
                       <PriorityIndicator
@@ -188,15 +183,32 @@ export function TaskDetailSheet({
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </div>
+                </FieldRow>
 
-                <div className="flex items-center gap-4">
-                  <span className="text-muted-foreground w-20 shrink-0">Effort</span>
+                <FieldRow label="Type" editable>
                   <DropdownMenu>
                     <DropdownMenuTrigger className="cursor-pointer">
-                      <span className="text-sm font-medium px-2 py-0.5 rounded bg-secondary text-secondary-foreground uppercase">
-                        {task.effort}
-                      </span>
+                      <span className="text-sm uppercase">{task.type}</span>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {ALL_TYPES.map((t) => (
+                        <DropdownMenuItem
+                          key={t}
+                          onClick={() =>
+                            updateTask.mutate({ id: task.id, type: t })
+                          }
+                        >
+                          <span className="uppercase text-xs">{t}</span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </FieldRow>
+
+                <FieldRow label="Effort" editable>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="cursor-pointer">
+                      <span className="text-sm uppercase">{task.effort}</span>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                       {ALL_EFFORTS.map((e) => (
@@ -211,10 +223,9 @@ export function TaskDetailSheet({
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </div>
+                </FieldRow>
 
-                <div className="flex items-center gap-4">
-                  <span className="text-muted-foreground w-20 shrink-0">Epic</span>
+                <FieldRow label="Epic" editable>
                   <EntityCombobox
                     value={task.epic}
                     options={epicOptions}
@@ -223,89 +234,81 @@ export function TaskDetailSheet({
                     }
                     placeholder="No epic"
                     emptyLabel="No epic"
-                    entityColor="var(--entity-epic)"
+                    linkValue
                   />
-                </div>
+                </FieldRow>
 
-                {task.plan && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Plan</span>
-                    <span
-                      className="text-sm font-mono px-2 py-0.5 rounded"
-                      style={{
-                        backgroundColor:
-                          "color-mix(in oklch, var(--entity-plan) 15%, transparent)",
-                        color: "var(--entity-plan)",
-                      }}
-                    >
-                      {task.plan}
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-4">
-                  <span className="text-muted-foreground w-20 shrink-0">Assignee</span>
+                <FieldRow label="Assignee" editable>
                   <AssigneeEditor
                     value={task.assignee}
                     onSave={(assignee) =>
                       updateTask.mutate({ id: task.id, assignee })
                     }
                   />
-                </div>
-              </div>
+                </FieldRow>
 
-              {/* Tags */}
-              <TagEditor
-                tags={task.tags}
-                onSave={(tags) =>
-                  updateTask.mutate({ id: task.id, tags })
-                }
-              />
+                <FieldRow label="Tags" editable>
+                  <TagEditor
+                    tags={task.tags}
+                    onSave={(tags) =>
+                      updateTask.mutate({ id: task.id, tags })
+                    }
+                  />
+                </FieldRow>
 
-              {/* Dependencies */}
-              {(task.depends_on.length > 0 || task.blocks.length > 0) && (
-                <div className="space-y-2">
-                  {task.depends_on.length > 0 && (
-                    <div>
-                      <span className="text-sm text-muted-foreground block mb-1">
-                        Depends on
-                      </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {task.depends_on.map((dep) => (
-                          <span
-                            key={dep}
-                            className="text-sm font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded"
-                          >
-                            {dep}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+                <FieldRow label="Plan">
+                  {task.plan ? (
+                    <WikiLinkChip id={task.plan} />
+                  ) : (
+                    <EmptyValue>No plan</EmptyValue>
                   )}
-                  {task.blocks.length > 0 && (
-                    <div>
-                      <span className="text-sm text-muted-foreground block mb-1">
-                        Blocks
-                      </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {task.blocks.map((b) => (
-                          <span
-                            key={b}
-                            className="text-sm font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded"
-                          >
-                            {b}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                </FieldRow>
 
-              {/* Dates */}
-              <div className="flex gap-4 text-sm text-muted-foreground">
-                <span>Created {task.created}</span>
-                <span>Updated {task.updated}</span>
+                <FieldRow label="Depends on" editable>
+                  <EntityRefEditor
+                    ids={task.depends_on}
+                    options={taskOptions}
+                    onAdd={(id) =>
+                      updateTask.mutate({
+                        id: task.id,
+                        depends_on: [...task.depends_on, id],
+                      })
+                    }
+                    onRemove={(id) =>
+                      updateTask.mutate({
+                        id: task.id,
+                        depends_on: task.depends_on.filter((d) => d !== id),
+                      })
+                    }
+                  />
+                </FieldRow>
+
+                <FieldRow label="Blocks" editable>
+                  <EntityRefEditor
+                    ids={task.blocks}
+                    options={taskOptions}
+                    onAdd={(id) =>
+                      updateTask.mutate({
+                        id: task.id,
+                        blocks: [...task.blocks, id],
+                      })
+                    }
+                    onRemove={(id) =>
+                      updateTask.mutate({
+                        id: task.id,
+                        blocks: task.blocks.filter((b) => b !== id),
+                      })
+                    }
+                  />
+                </FieldRow>
+
+                <FieldRow label="Created">
+                  <span className="text-muted-foreground">{task.created}</span>
+                </FieldRow>
+
+                <FieldRow label="Updated">
+                  <span className="text-muted-foreground">{task.updated}</span>
+                </FieldRow>
               </div>
 
               <Separator />

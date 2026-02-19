@@ -8,6 +8,7 @@ import { MarkdownEditor } from "./markdown-editor";
 import { WikiLinkChip } from "./wiki-link-chip";
 import { InlineEdit } from "./inline-edit";
 import { TagEditor } from "./tag-editor";
+import { FieldRow, EmptyValue } from "./field-row";
 import {
   Sheet,
   SheetHeader,
@@ -66,9 +67,6 @@ export function NoteDetailSheet({
                 >
                   {note.id}
                 </span>
-                <span className="text-xs px-2 py-0.5 rounded bg-secondary text-secondary-foreground uppercase">
-                  {note.type}
-                </span>
               </div>
               <SheetTitle className="text-left text-xl">
                 <InlineEdit
@@ -81,25 +79,19 @@ export function NoteDetailSheet({
             </SheetHeader>
 
             <div className="space-y-4 px-4 pb-6">
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-4">
-                  <span className="text-muted-foreground w-20 shrink-0">
-                    Status
-                  </span>
+              <div className="space-y-0.5 text-sm">
+                <FieldRow label="Status" editable>
                   <DropdownMenu>
                     <DropdownMenuTrigger className="cursor-pointer">
                       <span
-                        className="inline-flex items-center gap-1 text-sm px-2 py-0.5 rounded"
-                        style={{
-                          backgroundColor: `color-mix(in oklch, var(--status-${note.status}) 15%, transparent)`,
-                          color: `var(--status-${note.status})`,
-                        }}
+                        className="inline-flex items-center gap-1.5"
+                        style={{ color: `var(--status-${note.status})` }}
                       >
                         {(() => {
                           const Icon = NOTE_STATUS_CONFIG[note.status]?.icon;
                           return Icon ? <Icon className="size-3.5 text-current" /> : null;
                         })()}
-                        <span>{NOTE_STATUS_CONFIG[note.status]?.label}</span>
+                        <span className="text-sm">{NOTE_STATUS_CONFIG[note.status]?.label}</span>
                       </span>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
@@ -124,33 +116,40 @@ export function NoteDetailSheet({
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </div>
-              </div>
+                </FieldRow>
 
-              {/* Tags */}
-              <TagEditor
-                tags={note.tags}
-                onSave={(tags) =>
-                  updateNote.mutate({ id: note.id, tags })
-                }
-              />
+                <FieldRow label="Type">
+                  <span className="text-sm uppercase">{note.type}</span>
+                </FieldRow>
 
-              {note.related.length > 0 && (
-                <div>
-                  <span className="text-sm text-muted-foreground block mb-1">
-                    Related
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {note.related.map((id) => (
-                      <WikiLinkChip key={id} id={id} />
-                    ))}
-                  </div>
-                </div>
-              )}
+                <FieldRow label="Tags" editable>
+                  <TagEditor
+                    tags={note.tags}
+                    onSave={(tags) =>
+                      updateNote.mutate({ id: note.id, tags })
+                    }
+                  />
+                </FieldRow>
 
-              <div className="flex gap-4 text-sm text-muted-foreground">
-                <span>Created {note.created}</span>
-                <span>Updated {note.updated}</span>
+                <FieldRow label="Related">
+                  {note.related.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {note.related.map((id) => (
+                        <WikiLinkChip key={id} id={id} />
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptyValue />
+                  )}
+                </FieldRow>
+
+                <FieldRow label="Created">
+                  <span className="text-muted-foreground">{note.created}</span>
+                </FieldRow>
+
+                <FieldRow label="Updated">
+                  <span className="text-muted-foreground">{note.updated}</span>
+                </FieldRow>
               </div>
 
               <Separator />
