@@ -70,6 +70,8 @@ const EFFORT_RANK: Record<Effort, number> = {
   xl: 4,
 };
 
+type StatusFilter = "all" | "draft" | "backlog";
+
 type SortKey = "manual" | "title" | "effort" | "epic" | "updated";
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
@@ -101,6 +103,7 @@ function BacklogContent() {
   const normalizedView: ViewMode = viewParam === "backlog" ? "backlog" : "board";
   const [view, setView] = useState<ViewMode>(normalizedView);
   const [filterPriority, setFilterPriority] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<StatusFilter>("all");
   const [filterEpic, setFilterEpic] = useState<string>("all");
   const [filterAssignee, setFilterAssignee] = useState<string>("all");
   const [filterTag, setFilterTag] = useState<string>("all");
@@ -122,6 +125,8 @@ function BacklogContent() {
     const viewStatuses = view === "board" ? BOARD_STATUSES : BACKLOG_STATUSES;
     return tasks.filter((t) => {
       if (!viewStatuses.includes(t.status)) return false;
+      if (view === "backlog" && filterStatus !== "all" && t.status !== filterStatus)
+        return false;
       if (filterPriority !== "all" && t.priority !== filterPriority)
         return false;
       if (filterEpic !== "all" && t.epic !== filterEpic) return false;
@@ -130,7 +135,7 @@ function BacklogContent() {
       if (filterTag !== "all" && !t.tags.includes(filterTag)) return false;
       return true;
     });
-  }, [tasks, view, filterPriority, filterEpic, filterAssignee, filterTag]);
+  }, [tasks, view, filterPriority, filterStatus, filterEpic, filterAssignee, filterTag]);
 
   const openTask = useCallback(
     (id: string) => {
@@ -232,6 +237,19 @@ function BacklogContent() {
             </SelectContent>
           </Select>
 
+          {view === "backlog" && (
+            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as StatusFilter)}>
+              <SelectTrigger className="w-[130px] h-7 text-xs">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="backlog">Backlog only</SelectItem>
+                <SelectItem value="draft">Drafts only</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+
           {epicOptions.length > 0 && (
             <Select value={filterEpic} onValueChange={setFilterEpic}>
               <SelectTrigger className="w-[130px] h-7 text-xs">
@@ -302,6 +320,7 @@ function BacklogContent() {
 
         {/* Clear filters */}
         {(filterPriority !== "all" ||
+          filterStatus !== "all" ||
           filterEpic !== "all" ||
           filterAssignee !== "all" ||
           filterTag !== "all") && (
@@ -311,6 +330,7 @@ function BacklogContent() {
             className="text-xs h-7"
             onClick={() => {
               setFilterPriority("all");
+              setFilterStatus("all");
               setFilterEpic("all");
               setFilterAssignee("all");
               setFilterTag("all");
@@ -859,14 +879,18 @@ function BacklogRow({
         ? "XL"
         : task.effort.charAt(0).toUpperCase();
 
+  const isDraft = task.status === "draft";
+
   return (
     <div
       ref={isOverlay ? undefined : setNodeRef}
       style={isOverlay ? undefined : style}
       {...(isOverlay ? {} : { ...attributes, ...listeners })}
-      className={`group/row rounded-md border bg-card px-3 py-2 cursor-pointer transition-colors hover:border-muted-foreground/30 ${
-        isOverlay ? "shadow-lg border-primary/50" : ""
-      }`}
+      className={`group/row rounded-md border px-3 py-2 cursor-pointer transition-colors hover:border-muted-foreground/30 ${
+        isDraft
+          ? "bg-amber-50 border-amber-200/60 dark:bg-amber-950/30 dark:border-amber-800/40"
+          : "bg-card"
+      } ${isOverlay ? "shadow-lg border-primary/50" : ""}`}
       onClick={onClick}
     >
       {/* Desktop layout */}
@@ -875,6 +899,7 @@ function BacklogRow({
         <span className="font-mono text-sm text-muted-foreground w-20 shrink-0">
           {task.id}
         </span>
+        {isDraft && <StatusBadge status="draft" />}
         <span className="text-base font-medium truncate flex-1">{task.title}</span>
         {task.epic && (
           <span
@@ -889,7 +914,7 @@ function BacklogRow({
           </span>
         )}
         {task.effort && (
-          <span className="text-sm font-medium px-2 py-0.5 rounded bg-secondary text-secondary-foreground uppercase shrink-0">
+          <span className="text-sm font-medium w-8 text-center py-0.5 rounded bg-secondary text-secondary-foreground uppercase shrink-0">
             {effortLabel}
           </span>
         )}
