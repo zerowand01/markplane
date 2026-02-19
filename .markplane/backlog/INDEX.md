@@ -12,15 +12,16 @@
 
 ## Planned (0)
 
-## Backlog (12)
+## Backlog (13)
 
 | ID | Title | Epic | Priority | Effort |
 |----|-------|------|----------|--------|
+| [TASK-026](items/TASK-026.md) | Extend link command to support cross-type entity linking | — | high | medium |
 | [TASK-007](items/TASK-007.md) | Add markplane edit command to open items in editor | [EPIC-002](../roadmap/items/EPIC-002.md) | medium | small |
 | [TASK-009](items/TASK-009.md) | Implement configurable workflows for statuses, priorities, and effort sizes | [EPIC-003](../roadmap/items/EPIC-003.md) | medium | large |
 | [TASK-011](items/TASK-011.md) | Implement rich context bundles for individual items | [EPIC-004](../roadmap/items/EPIC-004.md) | medium | medium |
 | [TASK-012](items/TASK-012.md) | Add domain-focused context generation | [EPIC-004](../roadmap/items/EPIC-004.md) | medium | medium |
-| [TASK-026](items/TASK-026.md) | Extend link command to support cross-type entity linking | — | medium | medium |
+| [TASK-027](items/TASK-027.md) | Add concurrency safety for long-running MCP sessions | — | medium | large |
 | [TASK-008](items/TASK-008.md) | Swap serde_yaml to serde_yaml_ng | [EPIC-002](../roadmap/items/EPIC-002.md) | low | small |
 | [TASK-010](items/TASK-010.md) | Add Sprint/Iteration entity type | [EPIC-003](../roadmap/items/EPIC-003.md) | low | large |
 | [TASK-013](items/TASK-013.md) | Add clipboard context output | [EPIC-004](../roadmap/items/EPIC-004.md) | low | xs |

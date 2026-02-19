@@ -6,13 +6,13 @@
 | Module | Path | Purpose | Active Items |
 |--------|------|---------|-------------|
 | Roadmap | [roadmap/](roadmap/INDEX.md) | Strategic phases & epics | 5 active epics |
-| Backlog | [backlog/](backlog/INDEX.md) | All work items | 18 open items |
+| Backlog | [backlog/](backlog/INDEX.md) | All work items | 19 open items |
 | Plans | [plans/](plans/INDEX.md) | Implementation details | 0 active plans |
 | Notes | [notes/](notes/INDEX.md) | Research & ideas | 0 active notes |
 | AI Context | [.context/](.context/summary.md) | Generated summaries | Auto-updated |
 
 ## System Info
-- ID counter: EPIC-006, TASK-026, PLAN-001, NOTE-000
+- ID counter: EPIC-006, TASK-027, PLAN-001, NOTE-000
 - Last sync: 2026-02-19
 - Config: [config.yaml](config.yaml)
 

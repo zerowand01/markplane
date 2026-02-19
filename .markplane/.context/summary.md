@@ -10,14 +10,14 @@
 - TASK-017: Build web UI with React and Tailwind (done 2026-02-13)
 
 ## Priority Queue (next up)
-1. TASK-007: Add markplane edit command to open items in editor (medium, backlog)
-2. TASK-009: Implement configurable workflows for statuses, priorities, and effort sizes (medium, backlog)
-3. TASK-011: Implement rich context bundles for individual items (medium, backlog)
-4. TASK-012: Add domain-focused context generation (medium, backlog)
-5. TASK-026: Extend link command to support cross-type entity linking (medium, backlog)
+1. TASK-026: Extend link command to support cross-type entity linking (high, backlog)
+2. TASK-007: Add markplane edit command to open items in editor (medium, backlog)
+3. TASK-009: Implement configurable workflows for statuses, priorities, and effort sizes (medium, backlog)
+4. TASK-011: Implement rich context bundles for individual items (medium, backlog)
+5. TASK-012: Add domain-focused context generation (medium, backlog)
 
 ## Key Metrics
-- Backlog: 18 items (0 critical, 3 high, 7 medium, 7 low)
+- Backlog: 19 items (0 critical, 4 high, 7 medium, 7 low)
 - Last sync: 2026-02-19
 
 ## Key Documentation

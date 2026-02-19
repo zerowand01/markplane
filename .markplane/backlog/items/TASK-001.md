@@ -14,7 +14,7 @@ depends_on: []
 blocks:
 - TASK-006
 assignee: null
-position: a3
+position: a4
 created: 2026-02-10
 updated: 2026-02-11
 ---

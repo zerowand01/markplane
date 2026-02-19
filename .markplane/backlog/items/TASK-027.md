@@ -14,6 +14,7 @@ plan: null
 depends_on: []
 blocks: []
 assignee: null
+position: a7
 created: 2026-02-19
 updated: 2026-02-19
 ---
