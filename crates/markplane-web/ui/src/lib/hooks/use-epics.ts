@@ -6,16 +6,16 @@ import type { Epic } from "@/lib/types";
 
 export function useEpics() {
   return useQuery({
-    queryKey: ["epics"],
+    queryKey: ["epics", "list"],
     queryFn: () => fetchList<Epic>("/api/epics"),
     select: (result) => result.data,
   });
 }
 
-export function useEpic(id: string) {
+export function useEpic(id: string, options?: { enabled?: boolean }) {
   return useQuery<Epic>({
-    queryKey: ["epics", id],
+    queryKey: ["epics", "detail", id],
     queryFn: () => fetcher<Epic>(`/api/epics/${id}`),
-    enabled: !!id,
+    enabled: !!id && (options?.enabled ?? true),
   });
 }

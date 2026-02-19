@@ -413,6 +413,7 @@ struct UpdateTaskRequest {
     position: Option<String>,
     depends_on: Option<Vec<String>>,
     blocks: Option<Vec<String>>,
+    body: Option<String>,
 }
 
 // ── Epic API types ────────────────────────────────────────────────────────
@@ -481,8 +482,14 @@ fn epic_to_response(
 
 #[derive(Deserialize)]
 struct UpdateEpicRequest {
+    title: Option<String>,
     status: Option<String>,
     priority: Option<String>,
+    #[serde(default)]
+    tags: Option<Vec<String>>,
+    started: Option<String>,
+    target: Option<String>,
+    body: Option<String>,
 }
 
 // ── Plan API types ────────────────────────────────────────────────────────
@@ -515,7 +522,9 @@ fn plan_to_response(doc: &MarkplaneDocument<Plan>) -> PlanResponse {
 
 #[derive(Deserialize)]
 struct UpdatePlanRequest {
+    title: Option<String>,
     status: Option<String>,
+    body: Option<String>,
 }
 
 // ── Note API types ────────────────────────────────────────────────────────
@@ -551,7 +560,11 @@ fn note_to_response(doc: &MarkplaneDocument<Note>) -> NoteResponse {
 
 #[derive(Deserialize)]
 struct UpdateNoteRequest {
+    title: Option<String>,
     status: Option<String>,
+    #[serde(default)]
+    tags: Option<Vec<String>>,
+    body: Option<String>,
 }
 
 // ── Summary API types ─────────────────────────────────────────────────────
@@ -872,6 +885,9 @@ async fn update_task(
     if let Some(blocks) = body.blocks {
         doc.frontmatter.blocks = blocks;
     }
+    if let Some(new_body) = body.body {
+        doc.body = new_body;
+    }
 
     doc.frontmatter.updated = chrono::Local::now().date_naive();
 
@@ -1043,6 +1059,9 @@ async fn update_epic(
         .read_item(&id)
         .map_err(|e| error_response(StatusCode::NOT_FOUND, "not_found", &e.to_string()))?;
 
+    if let Some(title) = body.title {
+        doc.frontmatter.title = title;
+    }
     if let Some(status) = &body.status {
         doc.frontmatter.status = status
             .parse()
@@ -1056,6 +1075,32 @@ async fn update_epic(
             .map_err(|e: markplane_core::MarkplaneError| {
                 error_response(StatusCode::BAD_REQUEST, "invalid_priority", &e.to_string())
             })?;
+    }
+    if let Some(tags) = body.tags {
+        doc.frontmatter.tags = tags;
+    }
+    if let Some(started) = body.started {
+        doc.frontmatter.started = if started.is_empty() {
+            None
+        } else {
+            Some(
+                chrono::NaiveDate::parse_from_str(&started, "%Y-%m-%d")
+                    .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_date", "Invalid date format, expected YYYY-MM-DD"))?,
+            )
+        };
+    }
+    if let Some(target) = body.target {
+        doc.frontmatter.target = if target.is_empty() {
+            None
+        } else {
+            Some(
+                chrono::NaiveDate::parse_from_str(&target, "%Y-%m-%d")
+                    .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_date", "Invalid date format, expected YYYY-MM-DD"))?,
+            )
+        };
+    }
+    if let Some(new_body) = body.body {
+        doc.body = new_body;
     }
 
     state
@@ -1086,12 +1131,18 @@ async fn update_plan(
         .read_item(&id)
         .map_err(|e| error_response(StatusCode::NOT_FOUND, "not_found", &e.to_string()))?;
 
+    if let Some(title) = body.title {
+        doc.frontmatter.title = title;
+    }
     if let Some(status) = &body.status {
         doc.frontmatter.status = status
             .parse()
             .map_err(|e: markplane_core::MarkplaneError| {
                 error_response(StatusCode::BAD_REQUEST, "invalid_status", &e.to_string())
             })?;
+    }
+    if let Some(new_body) = body.body {
+        doc.body = new_body;
     }
 
     doc.frontmatter.updated = chrono::Local::now().date_naive();
@@ -1119,12 +1170,21 @@ async fn update_note(
         .read_item(&id)
         .map_err(|e| error_response(StatusCode::NOT_FOUND, "not_found", &e.to_string()))?;
 
+    if let Some(title) = body.title {
+        doc.frontmatter.title = title;
+    }
     if let Some(status) = &body.status {
         doc.frontmatter.status = status
             .parse()
             .map_err(|e: markplane_core::MarkplaneError| {
                 error_response(StatusCode::BAD_REQUEST, "invalid_status", &e.to_string())
             })?;
+    }
+    if let Some(tags) = body.tags {
+        doc.frontmatter.tags = tags;
+    }
+    if let Some(new_body) = body.body {
+        doc.body = new_body;
     }
 
     doc.frontmatter.updated = chrono::Local::now().date_naive();

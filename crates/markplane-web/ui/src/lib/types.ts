@@ -108,19 +108,30 @@ export interface UpdateTaskRequest {
   position?: string;
   depends_on?: string[];
   blocks?: string[];
+  body?: string;
 }
 
 export interface UpdateEpicRequest {
+  title?: string;
   status?: EpicStatus;
   priority?: Priority;
+  tags?: string[];
+  started?: string;
+  target?: string;
+  body?: string;
 }
 
 export interface UpdatePlanRequest {
+  title?: string;
   status?: PlanStatus;
+  body?: string;
 }
 
 export interface UpdateNoteRequest {
+  title?: string;
   status?: NoteStatus;
+  tags?: string[];
+  body?: string;
 }
 
 export interface ApiResponse<T> {

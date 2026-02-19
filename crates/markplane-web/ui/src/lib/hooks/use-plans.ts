@@ -6,16 +6,16 @@ import type { Plan } from "@/lib/types";
 
 export function usePlans() {
   return useQuery({
-    queryKey: ["plans"],
+    queryKey: ["plans", "list"],
     queryFn: () => fetchList<Plan>("/api/plans"),
     select: (result) => result.data,
   });
 }
 
-export function usePlan(id: string) {
+export function usePlan(id: string, options?: { enabled?: boolean }) {
   return useQuery<Plan>({
-    queryKey: ["plans", id],
+    queryKey: ["plans", "detail", id],
     queryFn: () => fetcher<Plan>(`/api/plans/${id}`),
-    enabled: !!id,
+    enabled: !!id && (options?.enabled ?? true),
   });
 }

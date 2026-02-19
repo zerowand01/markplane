@@ -11,8 +11,10 @@ export function useWebSocket() {
 
   useEffect(() => {
     function connect() {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+      const url =
+        process.env.NEXT_PUBLIC_WS_URL ??
+        `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws`;
+      const ws = new WebSocket(url);
       wsRef.current = ws;
 
       ws.onopen = () => {

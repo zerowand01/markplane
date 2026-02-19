@@ -3,10 +3,10 @@ project:
   name: Markplane
   description: AI-native, markdown-first project management system
 counters:
-  NOTE: 0
-  TASK: 24
-  PLAN: 1
   EPIC: 6
+  TASK: 25
+  PLAN: 1
+  NOTE: 0
 context:
   token_budget: 1000
   recent_days: 7

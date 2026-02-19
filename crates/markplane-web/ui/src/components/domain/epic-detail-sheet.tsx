@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useEpic } from "@/lib/hooks/use-epics";
 import { useUpdateEpic } from "@/lib/hooks/use-mutations";
 import { useTasks } from "@/lib/hooks/use-tasks";
@@ -8,6 +9,9 @@ import { EpicProgress } from "./epic-progress";
 import { StatusBadge } from "./status-badge";
 import { PriorityIndicator } from "./priority-indicator";
 import { MarkdownRenderer } from "./markdown-renderer";
+import { MarkdownEditor } from "./markdown-editor";
+import { InlineEdit } from "./inline-edit";
+import { TagEditor } from "./tag-editor";
 import {
   Sheet,
   SheetHeader,
@@ -20,8 +24,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Pencil } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -47,7 +58,10 @@ export function EpicDetailSheet({
   onOpenChange: (open: boolean) => void;
   onTaskClick?: (id: string) => void;
 }) {
-  const { data: epic, isLoading } = useEpic(epicId || "");
+  const [isEditingBody, setIsEditingBody] = useState(false);
+  const { data: epic, isLoading } = useEpic(epicId || "", {
+    enabled: !isEditingBody,
+  });
   const updateEpic = useUpdateEpic();
   const { data: allTasks } = useTasks();
 
@@ -79,7 +93,12 @@ export function EpicDetailSheet({
                 </span>
               </div>
               <SheetTitle className="text-left text-xl">
-                {epic.title}
+                <InlineEdit
+                  value={epic.title}
+                  onSave={(title) =>
+                    updateEpic.mutate({ id: epic.id, title })
+                  }
+                />
               </SheetTitle>
             </SheetHeader>
 
@@ -88,9 +107,9 @@ export function EpicDetailSheet({
               <EpicProgress epic={epic} />
 
               {/* Metadata */}
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-sm text-muted-foreground block mb-1">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-4">
+                  <span className="text-muted-foreground w-20 shrink-0">
                     Status
                   </span>
                   <DropdownMenu>
@@ -121,8 +140,8 @@ export function EpicDetailSheet({
                   </DropdownMenu>
                 </div>
 
-                <div>
-                  <span className="text-sm text-muted-foreground block mb-1">
+                <div className="flex items-center gap-4">
+                  <span className="text-muted-foreground w-20 shrink-0">
                     Priority
                   </span>
                   <DropdownMenu>
@@ -147,42 +166,40 @@ export function EpicDetailSheet({
                   </DropdownMenu>
                 </div>
 
-                {epic.started && (
-                  <div>
-                    <span className="text-sm text-muted-foreground block mb-1">
-                      Started
-                    </span>
-                    <span className="text-sm">{epic.started}</span>
-                  </div>
-                )}
-                {epic.target && (
-                  <div>
-                    <span className="text-sm text-muted-foreground block mb-1">
-                      Target
-                    </span>
-                    <span className="text-sm">{epic.target}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-4">
+                  <span className="text-muted-foreground w-20 shrink-0">
+                    Started
+                  </span>
+                  <DateEditor
+                    value={epic.started}
+                    onSave={(started) =>
+                      updateEpic.mutate({ id: epic.id, started })
+                    }
+                    placeholder="Not started"
+                  />
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <span className="text-muted-foreground w-20 shrink-0">
+                    Target
+                  </span>
+                  <DateEditor
+                    value={epic.target}
+                    onSave={(target) =>
+                      updateEpic.mutate({ id: epic.id, target })
+                    }
+                    placeholder="No target"
+                  />
+                </div>
               </div>
 
               {/* Tags */}
-              {epic.tags.length > 0 && (
-                <div>
-                  <span className="text-sm text-muted-foreground block mb-1">
-                    Tags
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {epic.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-sm text-muted-foreground bg-secondary px-2 py-0.5 rounded"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <TagEditor
+                tags={epic.tags}
+                onSave={(tags) =>
+                  updateEpic.mutate({ id: epic.id, tags })
+                }
+              />
 
               {/* Status breakdown */}
               {Object.keys(epic.status_breakdown).length > 0 && (
@@ -214,12 +231,37 @@ export function EpicDetailSheet({
               <Separator />
 
               {/* Body markdown */}
-              {epic.body.trim() ? (
-                <MarkdownRenderer content={epic.body} />
+              {isEditingBody ? (
+                <MarkdownEditor
+                  content={epic.body}
+                  onSave={(body) => {
+                    updateEpic.mutate({ id: epic.id, body });
+                    setIsEditingBody(false);
+                  }}
+                  onCancel={() => setIsEditingBody(false)}
+                  isLoading={updateEpic.isPending}
+                />
               ) : (
-                <p className="text-sm text-muted-foreground italic">
-                  No description.
-                </p>
+                <div className="group relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingBody(true)}
+                    className="sticky top-11 float-right ml-2 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-accent transition-opacity cursor-pointer z-10"
+                  >
+                    <Pencil className="size-4 text-primary/50 group-hover:text-primary" />
+                  </button>
+                  {epic.body.trim() ? (
+                    <MarkdownRenderer content={epic.body} />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingBody(true)}
+                      className="text-sm text-muted-foreground italic hover:text-foreground cursor-pointer"
+                    >
+                      Click to add description...
+                    </button>
+                  )}
+                </div>
               )}
 
               {/* Linked tasks table */}
@@ -276,5 +318,48 @@ export function EpicDetailSheet({
         )}
       </ResizableSheetContent>
     </Sheet>
+  );
+}
+
+function DateEditor({
+  value,
+  onSave,
+  placeholder = "Not set",
+}: {
+  value: string | null;
+  onSave: (value: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger className="cursor-pointer text-left">
+        {value ? (
+          <span className="text-sm">{value}</span>
+        ) : (
+          <span className="text-sm text-muted-foreground italic">
+            {placeholder}
+          </span>
+        )}
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-3" align="start">
+        <div className="space-y-2">
+          <Input
+            type="date"
+            defaultValue={value ?? ""}
+            onChange={(e) => onSave(e.target.value)}
+            className="h-8 text-sm"
+          />
+          {value && (
+            <button
+              type="button"
+              onClick={() => onSave("")}
+              className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              Clear date
+            </button>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

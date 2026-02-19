@@ -1,9 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useNote } from "@/lib/hooks/use-notes";
 import { useUpdateNote } from "@/lib/hooks/use-mutations";
 import { MarkdownRenderer } from "./markdown-renderer";
+import { MarkdownEditor } from "./markdown-editor";
 import { WikiLinkChip } from "./wiki-link-chip";
+import { InlineEdit } from "./inline-edit";
+import { TagEditor } from "./tag-editor";
 import {
   Sheet,
   SheetHeader,
@@ -18,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Pencil } from "lucide-react";
 import { NOTE_STATUS_CONFIG } from "@/lib/constants";
 import type { NoteStatus } from "@/lib/types";
 
@@ -32,7 +37,10 @@ export function NoteDetailSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { data: note, isLoading } = useNote(noteId || "");
+  const [isEditingBody, setIsEditingBody] = useState(false);
+  const { data: note, isLoading } = useNote(noteId || "", {
+    enabled: !isEditingBody,
+  });
   const updateNote = useUpdateNote();
 
   return (
@@ -63,14 +71,19 @@ export function NoteDetailSheet({
                 </span>
               </div>
               <SheetTitle className="text-left text-xl">
-                {note.title}
+                <InlineEdit
+                  value={note.title}
+                  onSave={(title) =>
+                    updateNote.mutate({ id: note.id, title })
+                  }
+                />
               </SheetTitle>
             </SheetHeader>
 
             <div className="space-y-4 px-4 pb-6">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-sm text-muted-foreground block mb-1">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-4">
+                  <span className="text-muted-foreground w-20 shrink-0">
                     Status
                   </span>
                   <DropdownMenu>
@@ -114,23 +127,13 @@ export function NoteDetailSheet({
                 </div>
               </div>
 
-              {note.tags.length > 0 && (
-                <div>
-                  <span className="text-sm text-muted-foreground block mb-1">
-                    Tags
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {note.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-sm text-muted-foreground bg-secondary px-2 py-0.5 rounded"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Tags */}
+              <TagEditor
+                tags={note.tags}
+                onSave={(tags) =>
+                  updateNote.mutate({ id: note.id, tags })
+                }
+              />
 
               {note.related.length > 0 && (
                 <div>
@@ -152,12 +155,37 @@ export function NoteDetailSheet({
 
               <Separator />
 
-              {note.body.trim() ? (
-                <MarkdownRenderer content={note.body} />
+              {isEditingBody ? (
+                <MarkdownEditor
+                  content={note.body}
+                  onSave={(body) => {
+                    updateNote.mutate({ id: note.id, body });
+                    setIsEditingBody(false);
+                  }}
+                  onCancel={() => setIsEditingBody(false)}
+                  isLoading={updateNote.isPending}
+                />
               ) : (
-                <p className="text-sm text-muted-foreground italic">
-                  No content.
-                </p>
+                <div className="group relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingBody(true)}
+                    className="sticky top-11 float-right ml-2 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-accent transition-opacity cursor-pointer z-10"
+                  >
+                    <Pencil className="size-4 text-primary/50 group-hover:text-primary" />
+                  </button>
+                  {note.body.trim() ? (
+                    <MarkdownRenderer content={note.body} />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingBody(true)}
+                      className="text-sm text-muted-foreground italic hover:text-foreground cursor-pointer"
+                    >
+                      Click to add content...
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </>

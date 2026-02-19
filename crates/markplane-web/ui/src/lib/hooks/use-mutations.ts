@@ -19,11 +19,11 @@ export function useUpdateTask() {
       const previousQueries = queryClient.getQueriesData<{
         data: Task[];
         total: number;
-      }>({ queryKey: ["tasks"] });
+      }>({ queryKey: ["tasks", "list"] });
 
       // Optimistically update every cached task list that contains this task
       queryClient.setQueriesData<{ data: Task[]; total: number }>(
-        { queryKey: ["tasks"] },
+        { queryKey: ["tasks", "list"] },
         (old) => {
           if (!old) return old;
           return {
@@ -36,9 +36,9 @@ export function useUpdateTask() {
       );
 
       // Also update the single-task cache if present
-      const previousTask = queryClient.getQueryData<Task>(["tasks", id]);
+      const previousTask = queryClient.getQueryData<Task>(["tasks", "detail", id]);
       if (previousTask) {
-        queryClient.setQueryData<Task>(["tasks", id], {
+        queryClient.setQueryData<Task>(["tasks", "detail", id], {
           ...previousTask,
           ...updates,
         });
@@ -51,7 +51,21 @@ export function useUpdateTask() {
         ? "Status"
         : variables.priority
           ? "Priority"
-          : "Task";
+          : variables.effort
+            ? "Effort"
+            : variables.type
+              ? "Type"
+              : variables.title
+                ? "Title"
+                : variables.tags
+                  ? "Tags"
+                  : variables.epic !== undefined
+                    ? "Epic"
+                    : variables.assignee !== undefined
+                      ? "Assignee"
+                      : variables.body !== undefined
+                        ? "Content"
+                        : "Task";
       toast.success(`${field} updated`);
     },
     onError: (err, _vars, context) => {
@@ -64,7 +78,7 @@ export function useUpdateTask() {
       }
       // Rollback single-task cache
       if (context?.previousTask) {
-        queryClient.setQueryData(["tasks", context.id], context.previousTask);
+        queryClient.setQueryData(["tasks", "detail", context.id], context.previousTask);
       }
     },
     onSettled: () => {
@@ -100,20 +114,59 @@ export function useUpdateEpic() {
       patchJson<Epic>(`/api/epics/${id}`, body),
     onMutate: async ({ id, ...updates }) => {
       await queryClient.cancelQueries({ queryKey: ["epics"] });
-      const previousEpic = queryClient.getQueryData<Epic>(["epics", id]);
+
+      // Update list caches
+      const previousQueries = queryClient.getQueriesData<{
+        data: Epic[];
+        total: number;
+      }>({ queryKey: ["epics", "list"] });
+      queryClient.setQueriesData<{ data: Epic[]; total: number }>(
+        { queryKey: ["epics", "list"] },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            data: old.data.map((e) =>
+              e.id === id ? { ...e, ...updates } : e
+            ),
+          };
+        }
+      );
+
+      // Update single-item cache
+      const previousEpic = queryClient.getQueryData<Epic>(["epics", "detail", id]);
       if (previousEpic) {
-        queryClient.setQueryData<Epic>(["epics", id], { ...previousEpic, ...updates });
+        queryClient.setQueryData<Epic>(["epics", "detail", id], { ...previousEpic, ...updates });
       }
-      return { previousEpic, id };
+      return { previousQueries, previousEpic, id };
     },
     onSuccess: (_data, variables) => {
-      const field = variables.status ? "Status" : variables.priority ? "Priority" : "Epic";
+      const field = variables.status
+        ? "Status"
+        : variables.priority
+          ? "Priority"
+          : variables.title
+            ? "Title"
+            : variables.tags
+              ? "Tags"
+              : variables.started !== undefined
+                ? "Start date"
+                : variables.target !== undefined
+                  ? "Target date"
+                  : variables.body !== undefined
+                    ? "Content"
+                    : "Epic";
       toast.success(`${field} updated`);
     },
     onError: (err, _vars, context) => {
       toast.error("Failed to update epic", { description: err.message });
+      if (context?.previousQueries) {
+        for (const [key, data] of context.previousQueries) {
+          queryClient.setQueryData(key, data);
+        }
+      }
       if (context?.previousEpic) {
-        queryClient.setQueryData(["epics", context.id], context.previousEpic);
+        queryClient.setQueryData(["epics", "detail", context.id], context.previousEpic);
       }
     },
     onSettled: () => {
@@ -131,19 +184,26 @@ export function useUpdatePlan() {
       patchJson<Plan>(`/api/plans/${id}`, body),
     onMutate: async ({ id, ...updates }) => {
       await queryClient.cancelQueries({ queryKey: ["plans"] });
-      const previousPlan = queryClient.getQueryData<Plan>(["plans", id]);
+      const previousPlan = queryClient.getQueryData<Plan>(["plans", "detail", id]);
       if (previousPlan) {
-        queryClient.setQueryData<Plan>(["plans", id], { ...previousPlan, ...updates });
+        queryClient.setQueryData<Plan>(["plans", "detail", id], { ...previousPlan, ...updates });
       }
       return { previousPlan, id };
     },
-    onSuccess: () => {
-      toast.success("Status updated");
+    onSuccess: (_data, variables) => {
+      const field = variables.status
+        ? "Status"
+        : variables.title
+          ? "Title"
+          : variables.body !== undefined
+            ? "Content"
+            : "Plan";
+      toast.success(`${field} updated`);
     },
     onError: (err, _vars, context) => {
       toast.error("Failed to update plan", { description: err.message });
       if (context?.previousPlan) {
-        queryClient.setQueryData(["plans", context.id], context.previousPlan);
+        queryClient.setQueryData(["plans", "detail", context.id], context.previousPlan);
       }
     },
     onSettled: () => {
@@ -160,19 +220,28 @@ export function useUpdateNote() {
       patchJson<Note>(`/api/notes/${id}`, body),
     onMutate: async ({ id, ...updates }) => {
       await queryClient.cancelQueries({ queryKey: ["notes"] });
-      const previousNote = queryClient.getQueryData<Note>(["notes", id]);
+      const previousNote = queryClient.getQueryData<Note>(["notes", "detail", id]);
       if (previousNote) {
-        queryClient.setQueryData<Note>(["notes", id], { ...previousNote, ...updates });
+        queryClient.setQueryData<Note>(["notes", "detail", id], { ...previousNote, ...updates });
       }
       return { previousNote, id };
     },
-    onSuccess: () => {
-      toast.success("Status updated");
+    onSuccess: (_data, variables) => {
+      const field = variables.status
+        ? "Status"
+        : variables.title
+          ? "Title"
+          : variables.tags
+            ? "Tags"
+            : variables.body !== undefined
+              ? "Content"
+              : "Note";
+      toast.success(`${field} updated`);
     },
     onError: (err, _vars, context) => {
       toast.error("Failed to update note", { description: err.message });
       if (context?.previousNote) {
-        queryClient.setQueryData(["notes", context.id], context.previousNote);
+        queryClient.setQueryData(["notes", "detail", context.id], context.previousNote);
       }
     },
     onSettled: () => {

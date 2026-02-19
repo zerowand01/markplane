@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { usePlan } from "@/lib/hooks/use-plans";
 import { useUpdatePlan } from "@/lib/hooks/use-mutations";
 import { MarkdownRenderer } from "./markdown-renderer";
+import { MarkdownEditor } from "./markdown-editor";
 import { WikiLinkChip } from "./wiki-link-chip";
+import { InlineEdit } from "./inline-edit";
 import {
   Sheet,
   SheetHeader,
@@ -18,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Pencil } from "lucide-react";
 import { PLAN_STATUS_CONFIG } from "@/lib/constants";
 import type { PlanStatus } from "@/lib/types";
 
@@ -32,7 +36,10 @@ export function PlanDetailSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { data: plan, isLoading } = usePlan(planId || "");
+  const [isEditingBody, setIsEditingBody] = useState(false);
+  const { data: plan, isLoading } = usePlan(planId || "", {
+    enabled: !isEditingBody,
+  });
   const updatePlan = useUpdatePlan();
 
   return (
@@ -60,14 +67,19 @@ export function PlanDetailSheet({
                 </span>
               </div>
               <SheetTitle className="text-left text-xl">
-                {plan.title}
+                <InlineEdit
+                  value={plan.title}
+                  onSave={(title) =>
+                    updatePlan.mutate({ id: plan.id, title })
+                  }
+                />
               </SheetTitle>
             </SheetHeader>
 
             <div className="space-y-4 px-4 pb-6">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-sm text-muted-foreground block mb-1">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-4">
+                  <span className="text-muted-foreground w-20 shrink-0">
                     Status
                   </span>
                   <DropdownMenu>
@@ -111,8 +123,8 @@ export function PlanDetailSheet({
                 </div>
 
                 {plan.epic && (
-                  <div>
-                    <span className="text-sm text-muted-foreground block mb-1">
+                  <div className="flex items-center gap-4">
+                    <span className="text-muted-foreground w-20 shrink-0">
                       Epic
                     </span>
                     <WikiLinkChip id={plan.epic} />
@@ -140,12 +152,37 @@ export function PlanDetailSheet({
 
               <Separator />
 
-              {plan.body.trim() ? (
-                <MarkdownRenderer content={plan.body} />
+              {isEditingBody ? (
+                <MarkdownEditor
+                  content={plan.body}
+                  onSave={(body) => {
+                    updatePlan.mutate({ id: plan.id, body });
+                    setIsEditingBody(false);
+                  }}
+                  onCancel={() => setIsEditingBody(false)}
+                  isLoading={updatePlan.isPending}
+                />
               ) : (
-                <p className="text-sm text-muted-foreground italic">
-                  No content.
-                </p>
+                <div className="group relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingBody(true)}
+                    className="sticky top-11 float-right ml-2 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-accent transition-opacity cursor-pointer z-10"
+                  >
+                    <Pencil className="size-4 text-primary/50 group-hover:text-primary" />
+                  </button>
+                  {plan.body.trim() ? (
+                    <MarkdownRenderer content={plan.body} />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingBody(true)}
+                      className="text-sm text-muted-foreground italic hover:text-foreground cursor-pointer"
+                    >
+                      Click to add content...
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </>

@@ -36,11 +36,10 @@ pub fn parse_frontmatter_raw(content: &str) -> Result<(String, String)> {
     let yaml = &after_opening[..closing_pos];
     let remainder = &after_opening[closing_pos + FRONTMATTER_DELIMITER.len()..];
 
-    // The body is everything after the closing delimiter line
-    let body = remainder
-        .strip_prefix('\n')
-        .unwrap_or(remainder)
-        .to_string();
+    // The body is everything after the closing delimiter line.
+    // Strip the line break after `---` and the conventional blank line separator.
+    let body = remainder.strip_prefix('\n').unwrap_or(remainder);
+    let body = body.strip_prefix('\n').unwrap_or(body).to_string();
 
     Ok((yaml.to_string(), body))
 }
@@ -65,6 +64,7 @@ pub fn write_frontmatter<T: Serialize>(doc: &MarkplaneDocument<T>) -> Result<Str
     }
     output.push_str(FRONTMATTER_DELIMITER);
     output.push('\n');
+    output.push('\n'); // conventional blank line between frontmatter and body
     if !doc.body.is_empty() {
         output.push_str(&doc.body);
         if !doc.body.ends_with('\n') {

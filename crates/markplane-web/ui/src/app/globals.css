@@ -237,3 +237,63 @@
 .prose .task-list-item::marker {
   content: none;
 }
+
+/*
+ * Tighter list spacing for prose content (read-only and editor).
+ *
+ * The Tailwind typography plugin defaults to 0.5em li margins and 1.25em p
+ * margins, which is too loose for project management content. TipTap also
+ * wraps all text in <p> nodes (unlike react-markdown), so p margins inside
+ * list items must be reset to prevent double-spacing in the editor.
+ */
+.prose li {
+  margin-top: 0.125em;
+  margin-bottom: 0.125em;
+}
+
+.prose li > p {
+  margin: 0;
+}
+
+/* Nested lists inside list items — match the tight li spacing and increase
+   indentation from the typography default (1.625em) to match TipTap's visual
+   indentation where the checkbox + flex wrapper creates a wider offset. */
+.prose li > ul,
+.prose li > ol {
+  margin-top: 0.125em;
+  margin-bottom: 0.125em;
+  padding-inline-start: 2em;
+}
+
+/* TipTap task lists — nodeView renders <li data-checked> inside <ul data-type="taskList"> */
+ul[data-type="taskList"] {
+  list-style: none;
+  padding: 0;
+}
+
+ul[data-type="taskList"] > li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.375em;
+  padding: 0;
+}
+
+ul[data-type="taskList"] > li > label {
+  flex: none;
+  user-select: none;
+}
+
+ul[data-type="taskList"] > li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Task item content: <li><label/><div><p>text</p><ul>...</ul></div></li> */
+ul[data-type="taskList"] > li > div > p {
+  margin: 0;
+}
+
+ul[data-type="taskList"] > li > div > :is(ul, ol) {
+  margin-top: 0.125em;
+  margin-bottom: 0.125em;
+}

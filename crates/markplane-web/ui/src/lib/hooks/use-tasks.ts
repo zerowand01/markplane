@@ -22,16 +22,16 @@ export function useTasks(filter?: TaskFilter) {
 
   const query = params.toString();
   return useQuery({
-    queryKey: ["tasks", filter],
+    queryKey: ["tasks", "list", filter],
     queryFn: () => fetchList<Task>(`/api/tasks${query ? `?${query}` : ""}`),
     select: (result) => result.data,
   });
 }
 
-export function useTask(id: string) {
+export function useTask(id: string, options?: { enabled?: boolean }) {
   return useQuery<Task>({
-    queryKey: ["tasks", id],
+    queryKey: ["tasks", "detail", id],
     queryFn: () => fetcher<Task>(`/api/tasks/${id}`),
-    enabled: !!id,
+    enabled: !!id && (options?.enabled ?? true),
   });
 }
