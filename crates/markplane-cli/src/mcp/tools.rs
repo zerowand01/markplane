@@ -9,7 +9,7 @@ use markplane_core::{
 };
 use serde_json::{json, Value};
 
-use crate::protocol::{JsonRpcResponse, INTERNAL_ERROR, INVALID_PARAMS};
+use super::protocol::{JsonRpcResponse, INTERNAL_ERROR, INVALID_PARAMS};
 
 /// Return the list of available tools with their JSON Schema input descriptions.
 pub fn list_tools() -> Value {

@@ -4,7 +4,7 @@ use std::fs;
 use markplane_core::{TaskStatus, Project, QueryFilter, parse_id, IdPrefix};
 use serde_json::{json, Value};
 
-use crate::protocol::{JsonRpcResponse, INTERNAL_ERROR, INVALID_PARAMS};
+use super::protocol::{JsonRpcResponse, INTERNAL_ERROR, INVALID_PARAMS};
 
 /// Return the list of available resources.
 pub fn list_resources() -> Value {

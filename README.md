@@ -27,8 +27,7 @@ cargo install markplane
 > ```bash
 > git clone https://github.com/your-org/markplane.git
 > cd markplane
-> cargo install --path crates/markplane-cli    # CLI (markplane command)
-> cargo install --path crates/markplane-mcp    # MCP server (for AI tool integration)
+> cargo install --path crates/markplane-cli
 > ```
 
 To include the web UI (`markplane serve`), build the frontend first, then install with `embed-ui`:
@@ -128,7 +127,7 @@ Markplane includes an MCP server for AI tool integration.
 **Claude Code** (recommended — uses the `claude mcp add` command):
 
 ```bash
-claude mcp add --transport stdio markplane -- markplane-mcp
+claude mcp add --transport stdio markplane -- markplane mcp
 ```
 
 **Project-wide** (shared with your team via `.mcp.json` at repo root):
@@ -137,8 +136,8 @@ claude mcp add --transport stdio markplane -- markplane-mcp
 {
   "mcpServers": {
     "markplane": {
-      "command": "markplane-mcp",
-      "args": []
+      "command": "markplane",
+      "args": ["mcp"]
     }
   }
 }

@@ -902,21 +902,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "markplane-mcp"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "assert_cmd",
- "chrono",
- "markplane-core",
- "predicates",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror",
-]
-
-[[package]]
 name = "matchit"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"

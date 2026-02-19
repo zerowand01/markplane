@@ -4,16 +4,16 @@ MCP (Model Context Protocol) is the standard protocol for connecting AI coding t
 
 ## Installation
 
-The MCP server is a separate binary from the CLI. Install it with:
+The MCP server is built into the `markplane` CLI as the `mcp` subcommand. Install it with:
 
 ```bash
-cargo install --path crates/markplane-mcp
+cargo install --path crates/markplane-cli
 ```
 
-This puts `markplane-mcp` in your Cargo bin directory (typically `~/.cargo/bin/`). Verify it's available:
+This puts `markplane` in your Cargo bin directory (typically `~/.cargo/bin/`). Verify it's available:
 
 ```bash
-markplane-mcp --help
+markplane mcp --help
 ```
 
 ## Configuration
@@ -34,13 +34,13 @@ The recommended approach is the `claude mcp add` command:
 
 ```bash
 # Local scope (default) — just for you, this project
-claude mcp add --transport stdio markplane -- markplane-mcp
+claude mcp add --transport stdio markplane -- markplane mcp
 
 # Point at a different repo's .markplane/ (rare — only if it's not in your working directory)
-claude mcp add --transport stdio markplane -- markplane-mcp --project /path/to/repo
+claude mcp add --transport stdio markplane -- markplane mcp --project /path/to/repo
 
 # User scope — available across all your projects
-claude mcp add --transport stdio --scope user markplane -- markplane-mcp
+claude mcp add --transport stdio --scope user markplane -- markplane mcp
 ```
 
 Manage servers with:
@@ -61,8 +61,8 @@ To share the MCP server with your team, add a `.mcp.json` file at the repo root 
 {
   "mcpServers": {
     "markplane": {
-      "command": "markplane-mcp",
-      "args": [],
+      "command": "markplane",
+      "args": ["mcp"],
       "env": {}
     }
   }
@@ -72,7 +72,7 @@ To share the MCP server with your team, add a `.mcp.json` file at the repo root 
 Or create it via the CLI:
 
 ```bash
-claude mcp add --transport stdio --scope project markplane -- markplane-mcp
+claude mcp add --transport stdio --scope project markplane -- markplane mcp
 ```
 
 Claude Code prompts for approval before using project-scoped servers. To reset approval choices: `claude mcp reset-project-choices`.
@@ -87,15 +87,15 @@ Add to `.cursor/mcp.json` in your project root:
 {
   "mcpServers": {
     "markplane": {
-      "command": "markplane-mcp",
-      "args": [],
+      "command": "markplane",
+      "args": ["mcp"],
       "env": {}
     }
   }
 }
 ```
 
-To specify an explicit project path, add `"--project", "/path/to/repo"` to the `args` array.
+To specify an explicit project path, add `"--project", "/path/to/repo"` to the `args` array (after `"mcp"`).
 
 ## How It Works
 
@@ -341,15 +341,19 @@ The server recognizes the `notifications/initialized` and `initialized` methods 
 
 ## Architecture
 
-The MCP server wraps the same `markplane-core` library used by the CLI:
+The MCP server is integrated into the `markplane` CLI binary as the `mcp` subcommand, sharing the same `markplane-core` library used by all other commands:
 
 ```
-CLI binary ──> Core Library (Rust) <── MCP Server (stdio / HTTP planned)
-                     |
-              .markplane/ (markdown files)
+markplane CLI binary
+  ├── CLI subcommands (add, ls, sync, ...)
+  └── MCP server (markplane mcp)
+              │
+       markplane-core (lib)
+              │
+       .markplane/ (markdown files)
 ```
 
-Both the CLI and MCP server share identical file parsing, YAML handling, cross-reference validation, and context generation logic.
+A single binary means core library changes are always in sync — no risk of version divergence between CLI and MCP server.
 
 ### Transport roadmap
 

@@ -3,26 +3,27 @@
 ## System Overview
 
 ```
-┌─────────────────┐     ┌─────────────────┐
-│  markplane CLI   │     │  markplane-mcp   │
-│  (clap, colored, │     │  (JSON-RPC 2.0,  │
-│   tabled, anyhow)│     │   stdio, serde)  │
-└────────┬─────────┘     └────────┬─────────┘
-         │                        │
-         └───────────┬────────────┘
-                     │
-              ┌──────▼──────┐
-              │markplane-core│
-              │  (lib crate) │
-              └──────┬───────┘
-                     │
-              ┌──────▼──────┐
-              │ .markplane/  │
-              │ (filesystem) │
-              └──────────────┘
+┌──────────────────────────────────┐
+│        markplane CLI binary       │
+│  (clap, colored, tabled, anyhow)  │
+│                                   │
+│  ├── CLI subcommands              │
+│  └── MCP server (markplane mcp)   │
+│       (JSON-RPC 2.0, stdio)       │
+└────────────────┬──────────────────┘
+                 │
+          ┌──────▼──────┐
+          │markplane-core│
+          │  (lib crate) │
+          └──────┬───────┘
+                 │
+          ┌──────▼──────┐
+          │ .markplane/  │
+          │ (filesystem) │
+          └──────────────┘
 ```
 
-Both the CLI and MCP server are thin wrappers around `markplane-core`. All business logic — data models, CRUD, querying, sync, reference validation, context generation — lives in the core library.
+Both the CLI commands and MCP server are thin wrappers around `markplane-core`. All business logic — data models, CRUD, querying, sync, reference validation, context generation — lives in the core library.
 
 ## Crate Responsibilities
 
@@ -46,21 +47,17 @@ The core library contains all domain logic. It exposes a `Project` struct that r
 
 ### markplane-cli (binary: `markplane`)
 
-The CLI crate provides the user-facing terminal interface.
+The CLI crate provides the user-facing terminal interface and the integrated MCP server.
 
 - **Argument parsing**: `clap` with derive macros
-- **Commands**: 22 subcommands — `init`, `add`, `show`, `ls`, `status`, `sync`, `start`, `done`, `promote`, `plan`, `epic`, `note`, `assign`, `link`, `tag`, `check`, `stale`, `archive`, `context`, `metrics`, `graph`, `claude-md`, `dashboard`
+- **Commands**: 23 subcommands — `init`, `add`, `show`, `ls`, `status`, `sync`, `start`, `done`, `promote`, `plan`, `epic`, `note`, `assign`, `link`, `tag`, `check`, `stale`, `archive`, `context`, `metrics`, `graph`, `claude-md`, `dashboard`, `serve`, `mcp`
 - **Formatting**: `commands/formatting.rs` — shared helpers for truncation, status/priority colorization (via `colored`), table output (via `tabled`)
+- **MCP module** (`src/mcp/`): The `markplane mcp` subcommand runs the MCP server enabling AI tools (Claude, Cursor, etc.) to interact with the project
+  - **Protocol**: JSON-RPC 2.0 over stdio (one JSON object per line)
+  - **Tools**: 15 tools — `markplane_summary`, `markplane_context`, `markplane_query`, `markplane_show`, `markplane_graph`, `markplane_add`, `markplane_update`, `markplane_start`, `markplane_done`, `markplane_promote`, `markplane_plan`, `markplane_link`, `markplane_sync`, `markplane_check`, `markplane_stale`
+  - **Resources**: 3 static resources (`markplane://summary`, `markplane://active-work`, `markplane://blocked`) + 4 dynamic templates (`markplane://task/{id}`, `markplane://epic/{id}`, `markplane://plan/{id}`, `markplane://note/{id}`)
+  - **Error handling**: Tool handlers return `Result<String, String>`; errors map to JSON-RPC error codes
 - **Error handling**: `anyhow::Result` at the top level
-
-### markplane-mcp (binary: `markplane-mcp`)
-
-The MCP server enables AI tools (Claude, Cursor, etc.) to interact with the project.
-
-- **Protocol**: JSON-RPC 2.0 over stdio (one JSON object per line)
-- **Tools**: 15 tools — `markplane_summary`, `markplane_context`, `markplane_query`, `markplane_show`, `markplane_graph`, `markplane_add`, `markplane_update`, `markplane_start`, `markplane_done`, `markplane_promote`, `markplane_plan`, `markplane_link`, `markplane_sync`, `markplane_check`, `markplane_stale`
-- **Resources**: 3 static resources (`markplane://summary`, `markplane://active-work`, `markplane://blocked`) + 4 dynamic templates (`markplane://task/{id}`, `markplane://epic/{id}`, `markplane://plan/{id}`, `markplane://note/{id}`)
-- **Error handling**: Tool handlers return `Result<String, String>`; errors map to JSON-RPC error codes
 
 ## Data Model
 
@@ -172,15 +169,15 @@ CLI: markplane check --orphans
 ## Error Handling Architecture
 
 ```
-markplane-core                    markplane-cli           markplane-mcp
-┌──────────────────┐
-│  MarkplaneError  │              anyhow::Result          Result<String, String>
-│  ├─ Io(io::Error)│─────────?───────────┐
-│  ├─ Yaml(..)     │                     │                ┌──────────────────┐
-│  ├─ NotFound(..) │                     ▼                │  JSON-RPC Error  │
-│  ├─ InvalidId    │              Display for user ──►    │  code + message  │
-│  ├─ InvalidTrans │              colored output          └──────────────────┘
-│  ├─ InvalidStatus│
+markplane-core                    markplane-cli
+┌──────────────────┐              ┌───────────────────────────────────┐
+│  MarkplaneError  │              │ CLI commands:                     │
+│  ├─ Io(io::Error)│─────?──────► │   anyhow::Result → colored output│
+│  ├─ Yaml(..)     │              │                                   │
+│  ├─ NotFound(..) │              │ MCP server (markplane mcp):       │
+│  ├─ InvalidId    │─────?──────► │   Result<String, String>          │
+│  ├─ InvalidTrans │              │   → JSON-RPC Error (code+message) │
+│  ├─ InvalidStatus│              └───────────────────────────────────┘
 │  ├─ DuplicateId  │
 │  ├─ BrokenRef    │
 │  ├─ NotInit      │
@@ -189,7 +186,7 @@ markplane-core                    markplane-cli           markplane-mcp
 └──────────────────┘
 ```
 
-Core errors are typed and specific. The CLI converts them to user-friendly messages via `anyhow`. The MCP server converts them to JSON-RPC error responses with standard error codes.
+Core errors are typed and specific. CLI commands convert them to user-friendly messages via `anyhow`. The MCP module converts them to JSON-RPC error responses with standard error codes.
 
 ## Security Model
 

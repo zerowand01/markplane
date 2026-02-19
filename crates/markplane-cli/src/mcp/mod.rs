@@ -1,6 +1,6 @@
-mod protocol;
-mod resources;
-mod tools;
+pub mod protocol;
+pub mod resources;
+pub mod tools;
 
 use std::io::{self, BufRead, Write};
 use std::path::PathBuf;
@@ -10,17 +10,11 @@ use serde_json::{json, Value};
 
 use protocol::{JsonRpcRequest, JsonRpcResponse, INVALID_REQUEST, METHOD_NOT_FOUND, PARSE_ERROR};
 
-fn main() {
+/// Run the MCP server over stdin/stdout.
+pub fn run(project_path: Option<PathBuf>) -> anyhow::Result<()> {
     eprintln!("markplane-mcp: starting server");
 
-    let project_path = parse_project_arg();
-    let project = match resolve_project(project_path) {
-        Ok(p) => p,
-        Err(e) => {
-            eprintln!("markplane-mcp: failed to open project: {}", e);
-            std::process::exit(1);
-        }
-    };
+    let project = resolve_project(project_path)?;
 
     const MAX_LINE_LENGTH: usize = 1_048_576; // 1 MB
 
@@ -92,22 +86,10 @@ fn main() {
     }
 
     eprintln!("markplane-mcp: server shutting down");
+    Ok(())
 }
 
-fn parse_project_arg() -> Option<PathBuf> {
-    let args: Vec<String> = std::env::args().collect();
-    let mut i = 1;
-    while i < args.len() {
-        if args[i] == "--project"
-            && i + 1 < args.len() {
-                return Some(PathBuf::from(&args[i + 1]));
-            }
-        i += 1;
-    }
-    None
-}
-
-fn resolve_project(path: Option<PathBuf>) -> Result<Project, String> {
+fn resolve_project(path: Option<PathBuf>) -> anyhow::Result<Project> {
     match path {
         Some(p) => {
             let markplane_dir = if p.ends_with(".markplane") {
@@ -116,14 +98,14 @@ fn resolve_project(path: Option<PathBuf>) -> Result<Project, String> {
                 p.join(".markplane")
             };
             if !markplane_dir.is_dir() {
-                return Err(format!(
+                anyhow::bail!(
                     "No .markplane/ directory found at {}",
                     markplane_dir.display()
-                ));
+                );
             }
             Ok(Project::new(markplane_dir))
         }
-        None => Project::from_current_dir().map_err(|e| e.to_string()),
+        None => Project::from_current_dir().map_err(|e| e.into()),
     }
 }
 

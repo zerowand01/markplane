@@ -23,7 +23,9 @@ mod graph;
 mod claude_md;
 mod dashboard;
 mod serve;
+mod mcp;
 
+use std::path::PathBuf;
 use clap::Subcommand;
 
 #[derive(Subcommand)]
@@ -248,6 +250,13 @@ pub enum Commands {
         #[arg(long)]
         dev: bool,
     },
+
+    /// Run the MCP (Model Context Protocol) server over stdio
+    Mcp {
+        /// Path to the project directory (defaults to current directory)
+        #[arg(long)]
+        project: Option<PathBuf>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -308,6 +317,7 @@ pub fn execute(cmd: Commands) -> anyhow::Result<()> {
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(serve::run(port, open, dev))
         }
+        Commands::Mcp { project } => mcp::run(project),
     }
 }
 

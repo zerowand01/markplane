@@ -3,7 +3,9 @@ use serde_json::{json, Value};
 use tempfile::TempDir;
 
 fn mcp_cmd() -> Command {
-    assert_cmd::cargo::cargo_bin_cmd!("markplane-mcp")
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("markplane");
+    cmd.arg("mcp");
+    cmd
 }
 
 /// Initialize a markplane project in a tempdir and return the tempdir.
@@ -22,7 +24,7 @@ fn send_request(tmp: &TempDir, request: &Value) -> Value {
         .arg(tmp.path().to_str().unwrap())
         .write_stdin(input)
         .output()
-        .expect("failed to run markplane-mcp");
+        .expect("failed to run markplane mcp");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     // The response is on the first non-empty line
@@ -48,7 +50,7 @@ fn send_requests(tmp: &TempDir, requests: &[Value]) -> Vec<Value> {
         .arg(tmp.path().to_str().unwrap())
         .write_stdin(input)
         .output()
-        .expect("failed to run markplane-mcp");
+        .expect("failed to run markplane mcp");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     stdout
@@ -1283,4 +1285,3 @@ fn test_resource_note_wrong_prefix() {
         .unwrap()
         .contains("Expected NOTE-"));
 }
-

@@ -418,6 +418,36 @@ Displays:
 
 ---
 
+## mcp
+
+Run the MCP (Model Context Protocol) server over stdio.
+
+```
+markplane mcp [OPTIONS]
+```
+
+**Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--project <PATH>` | Current directory | Path to the project directory containing `.markplane/` |
+
+Starts a JSON-RPC 2.0 server that reads requests from stdin and writes responses to stdout. Diagnostic messages go to stderr. This is intended to be launched by AI coding tools (Claude Code, Cursor, etc.) — not run interactively.
+
+See the [MCP Setup Guide](mcp-setup.md) for configuration details including tool and resource catalogs.
+
+**Example:**
+
+```bash
+# Smoke test
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | markplane mcp
+
+# Configure for Claude Code
+claude mcp add --transport stdio markplane -- markplane mcp
+```
+
+---
+
 ## note
 
 Create a new note.

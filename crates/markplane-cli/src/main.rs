@@ -1,4 +1,5 @@
 mod commands;
+mod mcp;
 
 use clap::Parser;
 

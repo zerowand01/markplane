@@ -471,7 +471,7 @@ Add the output to your project's `CLAUDE.md` so AI assistants know where to find
 
 ### MCP server
 
-For deeper AI integration, the `markplane-mcp` binary provides an MCP server with typed tools for reading and managing project data. See the [MCP setup guide](mcp-setup.md) for configuration details.
+For deeper AI integration, the `markplane mcp` subcommand runs an MCP server with typed tools for reading and managing project data. See the [MCP setup guide](mcp-setup.md) for configuration details.
 
 ## Next Steps
 

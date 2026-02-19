@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/markplane-core", "crates/markplane-cli", "crates/markplane-mcp"]
+members = ["crates/markplane-core", "crates/markplane-cli"]
 resolver = "2"
 
 [workspace.package]

@@ -24,15 +24,14 @@ cargo build --workspace
 
 ## Workspace Structure
 
-Markplane is a Cargo workspace with three crates:
+Markplane is a Cargo workspace with two crates:
 
 | Crate | Type | Binary | Role |
 |-------|------|--------|------|
 | `markplane-core` | Library | — | Data models, CRUD, sync, references, context generation |
-| `markplane-cli` | Binary | `markplane` | CLI interface built with clap, user-facing commands |
-| `markplane-mcp` | Binary | `markplane-mcp` | MCP server (JSON-RPC 2.0 over stdio) for AI tool integrations |
+| `markplane-cli` | Binary | `markplane` | CLI interface (clap), MCP server (`markplane mcp` subcommand), web UI server |
 
-Both binaries depend on `markplane-core` for all business logic. The CLI adds terminal formatting and user interaction; the MCP server adds protocol handling and JSON serialization.
+The CLI binary depends on `markplane-core` for all business logic. It provides terminal commands, an integrated MCP server (JSON-RPC 2.0 over stdio), and a web UI server.
 
 ## Running Tests
 
@@ -41,14 +40,13 @@ Both binaries depend on `markplane-core` for all business logic. The CLI adds te
 cargo test --workspace
 
 # By crate
-cargo test -p markplane-core     # 121 unit tests
-cargo test -p markplane-cli      # 51 integration tests
-cargo test -p markplane-mcp      # 35 integration tests
+cargo test -p markplane-core     # 145 unit tests
+cargo test -p markplane-cli      # 51 CLI + 39 MCP integration tests
 ```
 
-Total: **207 tests** across the workspace.
+Total: **235 tests** across the workspace.
 
-Integration tests in `markplane-cli` and `markplane-mcp` use `assert_cmd` with the `cargo_bin_cmd!()` macro (not the deprecated `Command::cargo_bin()`).
+Integration tests use `assert_cmd` with the `cargo_bin_cmd!()` macro (not the deprecated `Command::cargo_bin()`). MCP integration tests live in `crates/markplane-cli/tests/mcp_integration.rs`.
 
 ## Linting
 
@@ -64,9 +62,7 @@ Each crate uses a different error strategy appropriate to its role:
 
 - **`markplane-core`**: Uses `thiserror` to define `MarkplaneError` — a typed enum with variants like `Io`, `Yaml`, `NotFound`, `InvalidId`, `InvalidTransition`, `InvalidStatus`, `DuplicateId`, `BrokenReference`, `NotInitialized`, `Config`, and `Frontmatter`. Functions return `markplane_core::Result<T>`.
 
-- **`markplane-cli`**: Uses `anyhow::Result` for top-level error handling. Core errors propagate naturally through `?` since `MarkplaneError` implements `std::error::Error`.
-
-- **`markplane-mcp`**: Tool handlers return `Result<String, String>`. Errors are mapped to JSON-RPC error responses with appropriate error codes (`PARSE_ERROR`, `INVALID_REQUEST`, `METHOD_NOT_FOUND`, `INVALID_PARAMS`, `INTERNAL_ERROR`).
+- **`markplane-cli`**: Uses `anyhow::Result` for top-level error handling. Core errors propagate naturally through `?` since `MarkplaneError` implements `std::error::Error`. The MCP module (`src/mcp/`) uses `Result<String, String>` for tool handlers, mapping errors to JSON-RPC error responses with appropriate error codes (`PARSE_ERROR`, `INVALID_REQUEST`, `METHOD_NOT_FOUND`, `INVALID_PARAMS`, `INTERNAL_ERROR`).
 
 ## Code Style
 
@@ -92,10 +88,10 @@ Each crate uses a different error strategy appropriate to its role:
 
 ## Adding a New MCP Tool
 
-1. Add the tool schema to `list_tools()` in `crates/markplane-mcp/src/tools.rs`.
+1. Add the tool schema to `list_tools()` in `crates/markplane-cli/src/mcp/tools.rs`.
 2. Add the match arm in `call_tool()`.
 3. Implement the handler function returning `Result<String, String>`.
-4. Write integration tests that send JSON-RPC requests to the binary.
+4. Write integration tests in `crates/markplane-cli/tests/mcp_integration.rs` that send JSON-RPC requests to the binary.
 
 ## Commit Guidelines
 

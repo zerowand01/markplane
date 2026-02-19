@@ -8,16 +8,17 @@ Markplane is an AI-native, markdown-first project management system. "Mark" (mar
 
 **Status**: Design phase. The complete specification lives in `docs/ai-native-pm-system-design.md`. No source code has been written yet.
 
-**Planned tech stack**: Rust CLI binary + MCP server wrapping a shared core library. Optional React + Tailwind web UI.
+**Planned tech stack**: Rust CLI binary with integrated MCP server (`markplane mcp` subcommand) wrapping a shared core library. Optional React + Tailwind web UI.
 
 ## Architecture
 
 The system is structured around a `.markplane/` directory that lives inside any repository:
 
 ```
-CLI binary ──→ Core Library (Rust) ←── MCP Server (stdio/SSE)
-                     │
-              .markplane/ (markdown files)
+CLI binary (markplane) ──→ Core Library (Rust)
+  ├── CLI subcommands           │
+  └── MCP server (markplane mcp)│
+                          .markplane/ (markdown files)
 ```
 
 ### Key architectural concepts
@@ -76,7 +77,7 @@ markplane plan TASK-042                # Create linked implementation plan
 
 ### MCP server
 
-The MCP server exposes typed tools (`markplane_summary`, `markplane_query`, `markplane_show`, `markplane_add`, `markplane_update`, `markplane_start`, `markplane_done`, `markplane_sync`, etc.) providing structured API access for AI coding tools. Configured via `~/.claude/mcp.json` or `.cursor/mcp.json`.
+The MCP server is integrated into the CLI as `markplane mcp`. It exposes typed tools (`markplane_summary`, `markplane_query`, `markplane_show`, `markplane_add`, `markplane_update`, `markplane_start`, `markplane_done`, `markplane_sync`, etc.) providing structured API access for AI coding tools over JSON-RPC stdio. Configured via `~/.claude/mcp.json` or `.cursor/mcp.json`.
 
 ## File Conventions
 
