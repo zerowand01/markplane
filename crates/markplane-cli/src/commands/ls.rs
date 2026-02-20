@@ -56,6 +56,7 @@ struct NoteRow {
     status: String,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn run(
     kind: Option<LsKind>,
     status: Option<String>,
@@ -64,17 +65,19 @@ pub fn run(
     tags: Option<String>,
     assignee: Option<String>,
     item_type: Option<String>,
+    archived: bool,
 ) -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
 
     match kind {
-        Some(LsKind::Epics) => list_epics(&project),
-        Some(LsKind::Plans) => list_plans(&project),
-        Some(LsKind::Notes) => list_notes(&project),
-        None => list_tasks(&project, status, priority, epic, tags, assignee, item_type),
+        Some(LsKind::Epics) => list_epics(&project, archived),
+        Some(LsKind::Plans) => list_plans(&project, archived),
+        Some(LsKind::Notes) => list_notes(&project, archived),
+        None => list_tasks(&project, status, priority, epic, tags, assignee, item_type, archived),
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn list_tasks(
     project: &Project,
     status: Option<String>,
@@ -83,6 +86,7 @@ fn list_tasks(
     tags: Option<String>,
     assignee: Option<String>,
     item_type: Option<String>,
+    archived: bool,
 ) -> anyhow::Result<()> {
     let filter = QueryFilter {
         status: status.map(|s| parse_comma_list(&s)),
@@ -91,6 +95,7 @@ fn list_tasks(
         tags: tags.map(|s| parse_comma_list(&s)),
         assignee,
         item_type: item_type.map(|s| parse_comma_list(&s)),
+        archived,
     };
 
     let items = project.list_tasks(&filter)?;
@@ -120,8 +125,8 @@ fn list_tasks(
     Ok(())
 }
 
-fn list_epics(project: &Project) -> anyhow::Result<()> {
-    let items = project.list_epics()?;
+fn list_epics(project: &Project, archived: bool) -> anyhow::Result<()> {
+    let items = project.list_epics_filtered(archived)?;
 
     if items.is_empty() {
         println!("No epics found.");
@@ -146,8 +151,8 @@ fn list_epics(project: &Project) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn list_plans(project: &Project) -> anyhow::Result<()> {
-    let items = project.list_plans()?;
+fn list_plans(project: &Project, archived: bool) -> anyhow::Result<()> {
+    let items = project.list_plans_filtered(archived)?;
 
     if items.is_empty() {
         println!("No plans found.");
@@ -176,8 +181,8 @@ fn list_plans(project: &Project) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn list_notes(project: &Project) -> anyhow::Result<()> {
-    let items = project.list_notes()?;
+fn list_notes(project: &Project, archived: bool) -> anyhow::Result<()> {
+    let items = project.list_notes_filtered(archived)?;
 
     if items.is_empty() {
         println!("No notes found.");

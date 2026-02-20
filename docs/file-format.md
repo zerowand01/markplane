@@ -233,9 +233,6 @@ context:
   token_budget: 1000      # Target token budget for summary
   recent_days: 7          # Days to consider "recent" for completions
   auto_generate: true     # Auto-regenerate context on sync
-archive:
-  auto_archive_after_days: 30   # Days after done before auto-archive
-  keep_cancelled: true          # Keep cancelled items (vs. archive them)
 documentation_paths:            # Paths to project docs (relative to repo root)
   - docs                        # Scanned for *.md files; linked in INDEX and .context/
 ```

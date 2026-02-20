@@ -49,30 +49,70 @@ markplane add "Implement dark mode" --type feature --priority high --effort larg
 
 ## archive
 
-Move done/cancelled items to archive subdirectories.
+Move items to archive subdirectories. Works with all entity types (tasks, epics, plans, notes).
 
 ```
-markplane archive [OPTIONS]
+markplane archive [ID] [OPTIONS]
 ```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `<ID>` | Item ID to archive (e.g. `TASK-042`, `EPIC-001`) |
 
 **Options:**
 
 | Option | Default | Description |
 |--------|---------|-------------|
+| `--all-done` | `false` | Archive all completed items across all types |
 | `--dry-run` | `false` | Preview what would be archived without making changes |
 
-Items are eligible for archiving when their status is `done` (or `cancelled` if `keep_cancelled` is `false` in config) and they haven't been updated within the `auto_archive_after_days` threshold (default: 30 days).
+When archiving a single item, provide the ID. When using `--all-done`, all done/cancelled tasks, done epics, done plans, and archived-status notes are moved to their respective `archive/` subdirectories.
+
+Archived items retain their status (no "archived" status) and remain resolvable via `[[ID]]` cross-references and `markplane show`.
 
 **Example:**
 
 ```bash
-markplane archive --dry-run
+# Archive a single item
+markplane archive TASK-001
+# ✓ Archived TASK-001
+
+# Preview batch archive
+markplane archive --all-done --dry-run
 # → Would archive 2 item(s):
 #   TASK-001 Implement login page (done)
 #   TASK-005 Remove deprecated API (done)
 
-markplane archive
+# Batch archive all completed items
+markplane archive --all-done
 # ✓ Archived 2 item(s).
+```
+
+---
+
+## unarchive
+
+Restore an archived item back to active items.
+
+```
+markplane unarchive <ID>
+```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `<ID>` | Item ID to restore (e.g. `TASK-042`) |
+
+Moves the item from `archive/` back to `items/`. Works with all entity types.
+
+**Example:**
+
+```bash
+markplane unarchive TASK-001
+# ✓ Restored TASK-001
 ```
 
 ---
@@ -387,6 +427,7 @@ markplane ls [KIND] [OPTIONS]
 | `--tags <VALUES>` | Filter by tags (comma-separated, items must have at least one) |
 | `--assignee <USER>` | Filter by assignee |
 | `--type <VALUES>` | Filter by item type (comma-separated) |
+| `--archived` | Show archived items instead of active ones |
 
 **Examples:**
 
@@ -398,6 +439,8 @@ markplane ls --epic EPIC-001
 markplane ls epics
 markplane ls plans
 markplane ls notes
+markplane ls --archived             # Archived tasks
+markplane ls epics --archived       # Archived epics
 ```
 
 ---

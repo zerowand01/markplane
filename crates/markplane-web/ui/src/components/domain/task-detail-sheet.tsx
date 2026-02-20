@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTask, useTasks } from "@/lib/hooks/use-tasks";
 import { useEpics } from "@/lib/hooks/use-epics";
-import { useUpdateTask } from "@/lib/hooks/use-mutations";
+import { useUpdateTask, useArchiveItem } from "@/lib/hooks/use-mutations";
 import { PriorityIndicator } from "./priority-indicator";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { MarkdownEditor } from "./markdown-editor";
@@ -31,10 +31,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { STATUS_CONFIG } from "@/lib/constants";
-import { Pencil } from "lucide-react";
+import { Pencil, Archive } from "lucide-react";
 import type { TaskStatus, Priority, Effort, ItemType } from "@/lib/types";
 
 const ALL_STATUSES: TaskStatus[] = [
@@ -76,6 +77,7 @@ export function TaskDetailSheet({
     enabled: !isEditingBody,
   });
   const updateTask = useUpdateTask();
+  const archiveItem = useArchiveItem();
   const { data: epics } = useEpics();
   const { data: allTasks } = useTasks();
 
@@ -110,6 +112,22 @@ export function TaskDetailSheet({
                 >
                   {task.id}
                 </span>
+                <div className="flex-1" />
+                {(task.status === "done" || task.status === "cancelled") && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 gap-1 text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      archiveItem.mutate(task.id);
+                      onOpenChange(false);
+                    }}
+                    disabled={archiveItem.isPending}
+                  >
+                    <Archive className="size-3.5" />
+                    <span className="text-xs">Archive</span>
+                  </Button>
+                )}
               </div>
               <SheetTitle className="text-left text-xl">
                 <InlineEdit

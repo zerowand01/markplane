@@ -375,10 +375,23 @@ The default threshold is 30 days.
 
 ## 14. Archive Completed Work
 
-Move done items to archive subdirectories. Preview first with `--dry-run`:
+Move completed items to archive subdirectories. You can archive a single item or batch-archive all completed items:
 
 ```bash
-markplane archive --dry-run
+# Archive a single item
+markplane archive TASK-001
+```
+
+Output:
+
+```
+✓ Archived TASK-001
+```
+
+For batch operations, preview first with `--dry-run`:
+
+```bash
+markplane archive --all-done --dry-run
 ```
 
 Output:
@@ -394,12 +407,20 @@ Run without --dry-run to archive.
 Then archive for real:
 
 ```bash
-markplane archive
+markplane archive --all-done
 ```
 
-Items are moved to `{directory}/archive/` — they're preserved, not deleted, and can still be found by `markplane show`.
+Items are moved to `{directory}/archive/` — they're preserved, not deleted, and can still be found by `markplane show`. To restore an archived item:
 
-The archive threshold is configured in `.markplane/config.yaml` (default: 30 days after completion).
+```bash
+markplane unarchive TASK-001
+```
+
+To list archived items:
+
+```bash
+markplane ls --archived
+```
 
 ## 15. View the Dashboard
 

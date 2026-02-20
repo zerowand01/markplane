@@ -19,3 +19,11 @@ export function useNote(id: string, options?: { enabled?: boolean }) {
     enabled: !!id && (options?.enabled ?? true),
   });
 }
+
+export function useArchivedNotes() {
+  return useQuery({
+    queryKey: ["archived", "notes"],
+    queryFn: () => fetchList<Note>("/api/notes?archived=true"),
+    select: (result) => result.data,
+  });
+}

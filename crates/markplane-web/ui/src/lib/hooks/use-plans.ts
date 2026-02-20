@@ -19,3 +19,11 @@ export function usePlan(id: string, options?: { enabled?: boolean }) {
     enabled: !!id && (options?.enabled ?? true),
   });
 }
+
+export function useArchivedPlans() {
+  return useQuery({
+    queryKey: ["archived", "plans"],
+    queryFn: () => fetchList<Plan>("/api/plans?archived=true"),
+    select: (result) => result.data,
+  });
+}

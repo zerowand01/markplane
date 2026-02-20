@@ -441,6 +441,32 @@ impl Project {
         Ok(())
     }
 
+    /// Move an item from the archive/ subdirectory back to items/.
+    pub fn unarchive_item(&self, id: &str) -> Result<()> {
+        let (prefix, _) = parse_id(id)?;
+        let source = self.item_path(id)?;
+
+        // Only unarchive if currently in archive
+        if !source.to_string_lossy().contains("/archive/") {
+            return Err(MarkplaneError::Config(format!(
+                "Item {} is not archived",
+                id
+            )));
+        }
+
+        let items_dir = self.item_dir(&prefix).join("items");
+        fs::create_dir_all(&items_dir)?;
+        let items_path = items_dir.join(format!("{}.md", id));
+        fs::rename(&source, &items_path)?;
+        Ok(())
+    }
+
+    /// Check whether an item is currently archived.
+    pub fn is_archived(&self, id: &str) -> Result<bool> {
+        let path = self.item_path(id)?;
+        Ok(path.to_string_lossy().contains("/archive/"))
+    }
+
     // ── Documentation ────────────────────────────────────────────────────
 
     /// List documentation files from configured `documentation_paths`.
@@ -1197,5 +1223,87 @@ mod tests {
 
         let docs = project.list_documentation_files().unwrap();
         assert!(docs.is_empty());
+    }
+
+    // ── unarchive_item ──────────────────────────────────────────────────
+
+    #[test]
+    fn test_unarchive_item() {
+        let (_tmp, project) = setup_project();
+        project
+            .create_task("To archive", ItemType::Chore, Priority::Low, Effort::Xs, None, vec![])
+            .unwrap();
+
+        project.archive_item("TASK-001").unwrap();
+        assert!(project.is_archived("TASK-001").unwrap());
+
+        project.unarchive_item("TASK-001").unwrap();
+        assert!(!project.is_archived("TASK-001").unwrap());
+
+        // Should still be readable
+        let doc: MarkplaneDocument<Task> = project.read_item("TASK-001").unwrap();
+        assert_eq!(doc.frontmatter.title, "To archive");
+    }
+
+    #[test]
+    fn test_unarchive_not_archived_errors() {
+        let (_tmp, project) = setup_project();
+        project
+            .create_task("Active item", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+
+        let result = project.unarchive_item("TASK-001");
+        assert!(result.is_err());
+    }
+
+    // ── is_archived ─────────────────────────────────────────────────────
+
+    #[test]
+    fn test_is_archived() {
+        let (_tmp, project) = setup_project();
+        project
+            .create_task("Test", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+
+        assert!(!project.is_archived("TASK-001").unwrap());
+        project.archive_item("TASK-001").unwrap();
+        assert!(project.is_archived("TASK-001").unwrap());
+    }
+
+    // ── Config backward compatibility ──────────────────────────────────
+
+    #[test]
+    fn test_config_without_archive_section() {
+        let (_tmp, project) = setup_project();
+        // Config written by init has no archive section
+        let config = project.load_config().unwrap();
+        assert!(config.archive.is_none());
+
+        // Save and reload — archive should still be None
+        project.save_config(&config).unwrap();
+        let reloaded = project.load_config().unwrap();
+        assert!(reloaded.archive.is_none());
+    }
+
+    #[test]
+    fn test_config_with_legacy_archive_section() {
+        let (_tmp, project) = setup_project();
+        // Simulate a legacy config.yaml with archive section
+        let config_path = project.root().join("config.yaml");
+        let yaml = fs::read_to_string(&config_path).unwrap();
+        let yaml_with_archive = format!(
+            "{}\narchive:\n  auto_archive_after_days: 30\n  keep_cancelled: true\n",
+            yaml
+        );
+        fs::write(&config_path, &yaml_with_archive).unwrap();
+
+        // Should parse without error
+        let config = project.load_config().unwrap();
+        assert!(config.archive.is_some());
+
+        // Save should drop archive section
+        project.save_config(&config).unwrap();
+        let reloaded = project.load_config().unwrap();
+        assert!(reloaded.archive.is_none());
     }
 }

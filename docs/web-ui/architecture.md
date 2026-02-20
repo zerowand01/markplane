@@ -251,7 +251,7 @@ The Rust HTTP server exposes a REST API that mirrors `markplane-core` operations
 | `POST` | `/api/tasks` | Create task | `create_task(...)` |
 | `PATCH` | `/api/tasks/:id` | Update task fields | `update_status()`, `write_item()` |
 | `PATCH` | `/api/tasks/:id/status` | Update status only | `update_status(id, status)` |
-| `DELETE` | `/api/tasks/:id` | Archive task | `archive_item(id)` |
+| `DELETE` | `/api/tasks/:id` | Archive task (deprecated) | `archive_item(id)` |
 
 **Query parameters for `GET /api/tasks`:**
 - `status` — comma-separated: `in-progress,planned`
@@ -279,6 +279,15 @@ The Rust HTTP server exposes a REST API that mirrors `markplane-core` operations
 | `GET` | `/api/plans/:id` | Get plan detail |
 | `GET` | `/api/notes` | List notes |
 | `GET` | `/api/notes/:id` | Get note detail |
+
+#### Archive
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/items/:id/archive` | Archive any item (task, epic, plan, note) |
+| `POST` | `/api/items/:id/unarchive` | Restore an archived item |
+
+All list endpoints (`GET /api/tasks`, `/api/epics`, `/api/plans`, `/api/notes`) accept an `?archived=true` query parameter to return archived items instead of active ones.
 
 #### Project-Level
 
@@ -498,6 +507,7 @@ export function useWebSocket() {
 | `/notes/[id]` | Note Detail | Note content |
 | `/graph` | Dependency Graph | Full project graph (React Flow) |
 | `/graph?focus=[id]` | Focused Graph | Graph centered on a specific item |
+| `/archive` | Archive | Archived items with restore action |
 | `/search` | Search | Full-text search with faceted filters |
 
 ### URL Design

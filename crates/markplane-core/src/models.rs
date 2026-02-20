@@ -466,7 +466,11 @@ pub struct Config {
     pub project: ProjectInfo,
     pub counters: HashMap<String, u32>,
     pub context: ContextConfig,
-    pub archive: ArchiveConfig,
+    /// Deprecated: archive is now an explicit operation, not time-based.
+    /// This field is kept for backward compatibility with existing config files
+    /// but silently dropped on next write.
+    #[serde(default, skip_serializing)]
+    pub archive: Option<ArchiveConfig>,
     #[serde(default)]
     pub documentation_paths: Vec<String>,
 }
@@ -510,10 +514,7 @@ impl Default for Config {
                 recent_days: 7,
                 auto_generate: true,
             },
-            archive: ArchiveConfig {
-                auto_archive_after_days: 30,
-                keep_cancelled: true,
-            },
+            archive: None,
             documentation_paths: Vec::new(),
         }
     }
@@ -662,7 +663,7 @@ updated: 2026-02-09
         assert_eq!(config.version, 1);
         assert_eq!(config.counters.get("TASK"), Some(&0));
         assert_eq!(config.context.token_budget, 1000);
-        assert!(config.archive.keep_cancelled);
+        assert!(config.archive.is_none());
     }
 
     #[test]

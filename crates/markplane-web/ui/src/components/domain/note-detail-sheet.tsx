@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useNote } from "@/lib/hooks/use-notes";
-import { useUpdateNote } from "@/lib/hooks/use-mutations";
+import { useUpdateNote, useArchiveItem } from "@/lib/hooks/use-mutations";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { MarkdownEditor } from "./markdown-editor";
 import { WikiLinkChip } from "./wiki-link-chip";
@@ -23,7 +23,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Pencil } from "lucide-react";
+import { Pencil, Archive } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { NOTE_STATUS_CONFIG } from "@/lib/constants";
 import type { NoteStatus } from "@/lib/types";
 
@@ -43,6 +44,7 @@ export function NoteDetailSheet({
     enabled: !isEditingBody,
   });
   const updateNote = useUpdateNote();
+  const archiveItem = useArchiveItem();
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -67,6 +69,22 @@ export function NoteDetailSheet({
                 >
                   {note.id}
                 </span>
+                <div className="flex-1" />
+                {note.status === "archived" && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 gap-1 text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      archiveItem.mutate(note.id);
+                      onOpenChange(false);
+                    }}
+                    disabled={archiveItem.isPending}
+                  >
+                    <Archive className="size-3.5" />
+                    <span className="text-xs">Archive</span>
+                  </Button>
+                )}
               </div>
               <SheetTitle className="text-left text-xl">
                 <InlineEdit

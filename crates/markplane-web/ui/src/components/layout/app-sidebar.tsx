@@ -9,6 +9,7 @@ import {
   Lightbulb,
   GitBranch,
   Map,
+  Archive,
   PanelLeft,
   Search,
   Sun,
@@ -39,6 +40,7 @@ const ICON_MAP = {
   Lightbulb,
   GitBranch,
   Map,
+  Archive,
 } as const;
 
 const mainNav = [
@@ -48,6 +50,7 @@ const mainNav = [
   { href: "/plans", label: "Plans", icon: "FileText" as const },
   { href: "/notes", label: "Notes", icon: "Lightbulb" as const },
   { href: "/graph", label: "Graph", icon: "GitBranch" as const },
+  { href: "/archive", label: "Archive", icon: "Archive" as const },
 ];
 
 export function AppSidebar() {

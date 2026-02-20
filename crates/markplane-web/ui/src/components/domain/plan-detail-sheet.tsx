@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { usePlan } from "@/lib/hooks/use-plans";
-import { useUpdatePlan } from "@/lib/hooks/use-mutations";
+import { useUpdatePlan, useArchiveItem } from "@/lib/hooks/use-mutations";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { MarkdownEditor } from "./markdown-editor";
 import { WikiLinkChip } from "./wiki-link-chip";
@@ -22,7 +22,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Pencil } from "lucide-react";
+import { Pencil, Archive } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { PLAN_STATUS_CONFIG } from "@/lib/constants";
 import type { PlanStatus } from "@/lib/types";
 
@@ -42,6 +43,7 @@ export function PlanDetailSheet({
     enabled: !isEditingBody,
   });
   const updatePlan = useUpdatePlan();
+  const archiveItem = useArchiveItem();
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -66,6 +68,22 @@ export function PlanDetailSheet({
                 >
                   {plan.id}
                 </span>
+                <div className="flex-1" />
+                {plan.status === "done" && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 gap-1 text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      archiveItem.mutate(plan.id);
+                      onOpenChange(false);
+                    }}
+                    disabled={archiveItem.isPending}
+                  >
+                    <Archive className="size-3.5" />
+                    <span className="text-xs">Archive</span>
+                  </Button>
+                )}
               </div>
               <SheetTitle className="text-left text-xl">
                 <InlineEdit

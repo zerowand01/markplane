@@ -1084,6 +1084,7 @@ All "go to" shortcuts use the `g` prefix, pressed sequentially (not simultaneous
 | `g` then `p` | Go to Plans |
 | `g` then `n` | Go to Notes |
 | `g` then `g` | Go to Dependency Graph |
+| `g` then `a` | Go to Archive |
 | `g` then `s` | Go to Search |
 
 ### Item Actions (when viewing an item)

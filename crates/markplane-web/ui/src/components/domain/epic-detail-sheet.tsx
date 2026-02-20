@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useEpic } from "@/lib/hooks/use-epics";
-import { useUpdateEpic } from "@/lib/hooks/use-mutations";
+import { useUpdateEpic, useArchiveItem } from "@/lib/hooks/use-mutations";
 import { useTasks } from "@/lib/hooks/use-tasks";
 import { EpicProgress } from "./epic-progress";
 import { StatusBadge } from "./status-badge";
@@ -32,7 +32,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Pencil } from "lucide-react";
+import { Pencil, Archive } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -63,6 +64,7 @@ export function EpicDetailSheet({
     enabled: !isEditingBody,
   });
   const updateEpic = useUpdateEpic();
+  const archiveItem = useArchiveItem();
   const { data: allTasks } = useTasks();
 
   const linkedTasks = allTasks?.filter((t) => t.epic === epicId) || [];
@@ -91,6 +93,22 @@ export function EpicDetailSheet({
                 >
                   {epic.id}
                 </span>
+                <div className="flex-1" />
+                {epic.status === "done" && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 gap-1 text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      archiveItem.mutate(epic.id);
+                      onOpenChange(false);
+                    }}
+                    disabled={archiveItem.isPending}
+                  >
+                    <Archive className="size-3.5" />
+                    <span className="text-xs">Archive</span>
+                  </Button>
+                )}
               </div>
               <SheetTitle className="text-left text-xl">
                 <InlineEdit

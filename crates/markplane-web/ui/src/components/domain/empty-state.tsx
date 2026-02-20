@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Plane } from "lucide-react";
+import { Inbox } from "lucide-react";
 
 export function EmptyState({
   title,
@@ -13,7 +13,7 @@ export function EmptyState({
   return (
     <Card className="border-dashed">
       <CardContent className="flex flex-col items-center justify-center gap-3 py-12">
-        <Plane className="size-8 text-muted-foreground/40" />
+        <Inbox className="size-8 text-muted-foreground/40" />
         <div className="text-center space-y-1">
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
           {description && (

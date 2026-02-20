@@ -30,19 +30,19 @@
 | [TASK-016](items/TASK-016.md) | Add SSE transport for MCP server | [EPIC-005](../roadmap/items/EPIC-005.md) | low | medium |
 | [TASK-018](items/TASK-018.md) | Implement plugin system for external integrations | [EPIC-005](../roadmap/items/EPIC-005.md) | someday | xl |
 
-## Drafts (4)
+## Drafts (3)
 
 | ID | Title | Epic | Priority | Effort |
 |----|-------|------|----------|--------|
 | [TASK-021](items/TASK-021.md) | Set up GitHub Actions CI pipeline | [EPIC-006](../roadmap/items/EPIC-006.md) | high | medium |
-| [TASK-025](items/TASK-025.md) | Web UI - Detail sheet editing for frontmatter fields and markdown body | [EPIC-002](../roadmap/items/EPIC-002.md) | high | xl |
 | [TASK-020](items/TASK-020.md) | Sort items in generated INDEX.md sections | — | medium | small |
 | [TASK-024](items/TASK-024.md) | Publish markplane-core to crates.io | [EPIC-006](../roadmap/items/EPIC-006.md) | low | small |
 
-## Recently Done (2)
+## Recently Done (3)
 
 | ID | Title | Epic | Completed |
 |----|-------|------|-----------|
 | [TASK-019](items/TASK-019.md) | Remove markplane_write MCP tool and update instructions to prefer direct file editing | — | 2026-02-12 |
+| [TASK-025](items/TASK-025.md) | Web UI - Detail sheet editing for frontmatter fields and markdown body | [EPIC-002](../roadmap/items/EPIC-002.md) | 2026-02-19 |
 | [TASK-017](items/TASK-017.md) | Build web UI with React and Tailwind | [EPIC-005](../roadmap/items/EPIC-005.md) | 2026-02-13 |
 

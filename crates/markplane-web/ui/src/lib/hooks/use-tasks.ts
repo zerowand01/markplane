@@ -35,3 +35,11 @@ export function useTask(id: string, options?: { enabled?: boolean }) {
     enabled: !!id && (options?.enabled ?? true),
   });
 }
+
+export function useArchivedTasks() {
+  return useQuery({
+    queryKey: ["archived", "tasks"],
+    queryFn: () => fetchList<Task>("/api/tasks?archived=true"),
+    select: (result) => result.data,
+  });
+}

@@ -7,13 +7,13 @@
 - In Progress: 0
 - Planned: 0
 - Backlog: 13
-- Draft: 6
-- Done: 8
+- Draft: 5
+- Done: 9
 - Cancelled: 0
 
 ## Priority Distribution (open items)
 - Critical: 0
-- High: 4
+- High: 3
 - Medium: 7
 - Low: 7
 - Someday: 1
@@ -21,7 +21,7 @@
 ## Epic Progress
 - [[EPIC-001]] MCP Protocol Improvements: 6/6 (100%) — done
 - [[EPIC-006]] Release & Distribution: 0/4 (0%) — planned
-- [[EPIC-002]] Developer Experience: 0/3 (0%) — planned
+- [[EPIC-002]] Developer Experience: 1/3 (33%) — planned
 - [[EPIC-003]] Core Architecture: 0/2 (0%) — planned
 - [[EPIC-004]] Context and AI Integration: 0/3 (0%) — planned
 - [[EPIC-005]] Platform and Ecosystem: 1/5 (20%) — planned

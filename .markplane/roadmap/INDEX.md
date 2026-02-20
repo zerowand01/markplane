@@ -12,11 +12,11 @@
 | [TASK-023](../backlog/items/TASK-023.md) | Create Homebrew tap for markplane | draft | medium | medium |
 | [TASK-024](../backlog/items/TASK-024.md) | Publish markplane-core to crates.io | draft | low | small |
 
-### [EPIC-002](items/EPIC-002.md) Developer Experience (0/3, 0%)
+### [EPIC-002](items/EPIC-002.md) Developer Experience (1/3, 33%)
 
 | ID | Title | Status | Priority | Effort |
 |----|-------|--------|----------|--------|
-| [TASK-025](../backlog/items/TASK-025.md) | Web UI - Detail sheet editing for frontmatter fields and markdown body | draft | high | xl |
+| [TASK-025](../backlog/items/TASK-025.md) | Web UI - Detail sheet editing for frontmatter fields and markdown body | done | high | xl |
 | [TASK-007](../backlog/items/TASK-007.md) | Add markplane edit command to open items in editor | backlog | medium | small |
 | [TASK-008](../backlog/items/TASK-008.md) | Swap serde_yaml to serde_yaml_ng | backlog | low | small |
 

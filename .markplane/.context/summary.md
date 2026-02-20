@@ -7,6 +7,7 @@
 
 ## Recent Completions (last 7 days)
 - TASK-019: Remove markplane_write MCP tool and update instructions to prefer direct file editing (done 2026-02-12)
+- TASK-025: Web UI - Detail sheet editing for frontmatter fields and markdown body (done 2026-02-19)
 - TASK-017: Build web UI with React and Tailwind (done 2026-02-13)
 
 ## Priority Queue (next up)
@@ -17,7 +18,7 @@
 5. TASK-012: Add domain-focused context generation (medium, backlog)
 
 ## Key Metrics
-- Backlog: 19 items (0 critical, 4 high, 7 medium, 7 low)
+- Backlog: 18 items (0 critical, 3 high, 7 medium, 7 low)
 - Last sync: 2026-02-19
 
 ## Key Documentation

@@ -109,7 +109,7 @@ The server inherits its working directory from the AI tool that launches it (e.g
 
 ## Tool Catalog
 
-The server exposes 15 tools via the `tools/list` method.
+The server exposes 17 tools via the `tools/list` method.
 
 ### Context & Navigation
 
@@ -122,7 +122,7 @@ The server exposes 15 tools via the `tools/list` method.
 
 | Tool | Description | Required Params | Optional Params |
 |------|-------------|-----------------|-----------------|
-| `markplane_query` | Query tasks with optional filters. Returns matching items. | *(none)* | `status` (string[]): filter by status; `priority` (string[]): filter by priority; `epic` (string): filter by epic ID; `tags` (string[]): filter by tags; `assignee` (string): filter by assignee |
+| `markplane_query` | Query tasks with optional filters. Returns matching items. | *(none)* | `status` (string[]): filter by status; `priority` (string[]): filter by priority; `epic` (string): filter by epic ID; `tags` (string[]): filter by tags; `assignee` (string): filter by assignee; `archived` (boolean): show archived items instead of active |
 | `markplane_show` | Get full details of any item by ID. Returns frontmatter and body. | `id` (string) | *(none)* |
 | `markplane_graph` | Build a reference graph showing how items relate to each other. | `id` (string) | `depth` (number): max traversal depth, default 2 |
 
@@ -142,6 +142,13 @@ The server exposes 15 tools via the `tools/list` method.
 | `markplane_promote` | Promote a note to a task. | `note_id` (string) | `priority` (string): default medium; `effort` (string): default medium |
 | `markplane_plan` | Create an implementation plan linked to a task. | `task_id` (string) | `title` (string): defaults to "Implementation plan for {item title}" |
 | `markplane_link` | Link two items with a blocks/depends_on relationship. | `from` (string), `to` (string), `relation` (string): `blocks` or `depends_on` | *(none)* |
+
+### Archive
+
+| Tool | Description | Required Params | Optional Params |
+|------|-------------|-----------------|-----------------|
+| `markplane_archive` | Move an item to the archive. | `id` (string) | *(none)* |
+| `markplane_unarchive` | Restore an archived item back to active items. | `id` (string) | *(none)* |
 
 ### Maintenance
 

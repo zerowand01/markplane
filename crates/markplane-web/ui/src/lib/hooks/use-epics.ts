@@ -19,3 +19,11 @@ export function useEpic(id: string, options?: { enabled?: boolean }) {
     enabled: !!id && (options?.enabled ?? true),
   });
 }
+
+export function useArchivedEpics() {
+  return useQuery({
+    queryKey: ["archived", "epics"],
+    queryFn: () => fetchList<Epic>("/api/epics?archived=true"),
+    select: (result) => result.data,
+  });
+}

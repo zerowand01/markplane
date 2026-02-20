@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { patchJson, postJson, deleteAction } from "@/lib/api";
+import { patchJson, postJson, postAction } from "@/lib/api";
 import { toast } from "sonner";
 import type { Task, Epic, Plan, Note, CreateTaskRequest, UpdateTaskRequest, UpdateEpicRequest, UpdatePlanRequest, UpdateNoteRequest } from "@/lib/types";
 
@@ -250,18 +250,42 @@ export function useUpdateNote() {
   });
 }
 
-export function useDeleteTask() {
+export function useArchiveItem() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => deleteAction<Task>(`/api/tasks/${id}`),
+    mutationFn: (id: string) => postAction<{ id: string; status: string }>(`/api/items/${id}/archive`),
     onSuccess: (data) => {
-      toast.success("Task archived", { description: `${data.id}: ${data.title}` });
+      toast.success("Archived", { description: data.id });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["epics"] });
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.invalidateQueries({ queryKey: ["notes"] });
+      queryClient.invalidateQueries({ queryKey: ["archived"] });
       queryClient.invalidateQueries({ queryKey: ["summary"] });
     },
     onError: (err) => {
-      toast.error("Failed to archive task", { description: err.message });
+      toast.error("Failed to archive", { description: err.message });
+    },
+  });
+}
+
+export function useUnarchiveItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => postAction<{ id: string; status: string }>(`/api/items/${id}/unarchive`),
+    onSuccess: (data) => {
+      toast.success("Restored from archive", { description: data.id });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["epics"] });
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.invalidateQueries({ queryKey: ["notes"] });
+      queryClient.invalidateQueries({ queryKey: ["archived"] });
+      queryClient.invalidateQueries({ queryKey: ["summary"] });
+    },
+    onError: (err) => {
+      toast.error("Failed to restore", { description: err.message });
     },
   });
 }

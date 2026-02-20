@@ -23,6 +23,7 @@ markplane serve --port 8080  # Custom port
 | Plans | `/plans` | Implementation plans with detail view |
 | Notes | `/notes` | Research notes, ideas, and decisions |
 | Graph | `/graph` | Interactive dependency graph |
+| Archive | `/archive` | Archived items with restore action |
 | Search | `/search` | Full-text search across all items |
 
 ## Views
@@ -88,6 +89,7 @@ All changes are detected via filesystem watching and pushed to the browser over 
 | `g` then `p` | Go to Plans |
 | `g` then `n` | Go to Notes |
 | `g` then `g` | Go to Graph |
+| `g` then `a` | Go to Archive |
 | `g` then `s` | Go to Search |
 
 ### Global
@@ -164,7 +166,7 @@ Browser (Next.js static export)
 ```
 
 - **Frontend**: Next.js 16 with Tailwind v4 and shadcn/ui, statically exported
-- **Backend**: axum HTTP server with 16 REST endpoints + WebSocket
+- **Backend**: axum HTTP server with 18 REST endpoints + WebSocket
 - **State management**: TanStack Query for server state, URL params for view state
 - **File watching**: `notify` crate with 100ms debouncing via `notify-debouncer-mini`
 
@@ -185,7 +187,7 @@ Error:             { "error": { "code": string, "message": string } }
 | GET | `/api/tasks/:id` | Task detail with markdown body |
 | POST | `/api/tasks` | Create task |
 | PATCH | `/api/tasks/:id` | Update task fields |
-| DELETE | `/api/tasks/:id` | Archive task |
+| DELETE | `/api/tasks/:id` | Archive task (deprecated, use POST below) |
 | GET | `/api/epics` | List epics with progress and status breakdown |
 | GET | `/api/epics/:id` | Epic detail with linked tasks |
 | GET | `/api/plans` | List plans |
@@ -196,6 +198,10 @@ Error:             { "error": { "code": string, "message": string } }
 | GET | `/api/search?q=...` | Full-text search |
 | GET | `/api/graph` | Full dependency graph |
 | GET | `/api/graph/:id` | Focused graph (2-hop neighborhood) |
+| POST | `/api/items/:id/archive` | Archive any item (task, epic, plan, note) |
+| POST | `/api/items/:id/unarchive` | Restore an archived item |
+
+All list endpoints (`/api/tasks`, `/api/epics`, `/api/plans`, `/api/notes`) accept an `?archived=true` query parameter to return archived items instead of active ones.
 
 ### WebSocket Events
 

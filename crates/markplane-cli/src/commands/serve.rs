@@ -71,6 +71,8 @@ pub async fn run(port: u16, open: bool, dev: bool) -> anyhow::Result<()> {
         .route("/api/plans/{id}", get(get_plan).patch(update_plan))
         .route("/api/notes", get(get_notes))
         .route("/api/notes/{id}", get(get_note).patch(update_note))
+        .route("/api/items/{id}/archive", post(post_archive_item))
+        .route("/api/items/{id}/unarchive", post(post_unarchive_item))
         .route("/api/sync", post(post_sync))
         .route("/api/search", get(get_search))
         .route("/api/graph", get(get_graph_all))
@@ -711,6 +713,8 @@ struct TaskQueryParams {
     assignee: Option<String>,
     #[serde(rename = "type")]
     item_type: Option<String>,
+    #[serde(default)]
+    archived: bool,
 }
 
 async fn get_tasks(
@@ -724,6 +728,7 @@ async fn get_tasks(
         tags: params.tags.map(|s| super::parse_comma_list(&s)),
         assignee: params.assignee,
         item_type: params.item_type.map(|s| super::parse_comma_list(&s)),
+        archived: params.archived,
     };
 
     let tasks = state
@@ -935,12 +940,67 @@ async fn delete_task(
     Ok(Json(ApiResponse { data: response }))
 }
 
+// ── Archive / Unarchive ──────────────────────────────────────────────────
+
+#[derive(Serialize)]
+struct ArchiveResponse {
+    success: bool,
+    id: String,
+}
+
+async fn post_archive_item(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> Result<Json<ApiResponse<ArchiveResponse>>, (StatusCode, Json<ApiError>)> {
+    parse_id(&id)
+        .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
+
+    state
+        .project
+        .archive_item(&id)
+        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "archive_error", &e.to_string()))?;
+
+    Ok(Json(ApiResponse {
+        data: ArchiveResponse {
+            success: true,
+            id,
+        },
+    }))
+}
+
+async fn post_unarchive_item(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> Result<Json<ApiResponse<ArchiveResponse>>, (StatusCode, Json<ApiError>)> {
+    parse_id(&id)
+        .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
+
+    state
+        .project
+        .unarchive_item(&id)
+        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "unarchive_error", &e.to_string()))?;
+
+    Ok(Json(ApiResponse {
+        data: ArchiveResponse {
+            success: true,
+            id,
+        },
+    }))
+}
+
+#[derive(Deserialize)]
+struct ArchivedQueryParam {
+    #[serde(default)]
+    archived: bool,
+}
+
 async fn get_epics(
     State(state): State<Arc<AppState>>,
+    Query(params): Query<ArchivedQueryParam>,
 ) -> Result<Json<ApiListResponse<EpicResponse>>, (StatusCode, Json<ApiError>)> {
     let epics = state
         .project
-        .list_epics()
+        .list_epics_filtered(params.archived)
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
     let tasks = state
         .project
@@ -980,10 +1040,11 @@ async fn get_epic(
 
 async fn get_plans(
     State(state): State<Arc<AppState>>,
+    Query(params): Query<ArchivedQueryParam>,
 ) -> Result<Json<ApiListResponse<PlanResponse>>, (StatusCode, Json<ApiError>)> {
     let plans = state
         .project
-        .list_plans()
+        .list_plans_filtered(params.archived)
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
 
     let total = plans.len();
@@ -1014,10 +1075,11 @@ async fn get_plan(
 
 async fn get_notes(
     State(state): State<Arc<AppState>>,
+    Query(params): Query<ArchivedQueryParam>,
 ) -> Result<Json<ApiListResponse<NoteResponse>>, (StatusCode, Json<ApiError>)> {
     let notes = state
         .project
-        .list_notes()
+        .list_notes_filtered(params.archived)
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
 
     let total = notes.len();

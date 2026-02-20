@@ -52,6 +52,10 @@ pub fn list_tools() -> Value {
                         "assignee": {
                             "type": "string",
                             "description": "Filter by assignee"
+                        },
+                        "archived": {
+                            "type": "boolean",
+                            "description": "If true, query archived items instead of active ones"
                         }
                     },
                     "required": []
@@ -294,6 +298,34 @@ pub fn list_tools() -> Value {
                     },
                     "required": []
                 }
+            },
+            {
+                "name": "markplane_archive",
+                "description": "Archive an item (move from items/ to archive/). Works for any entity type.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "type": "string",
+                            "description": "Item ID to archive (e.g. TASK-042, EPIC-001)"
+                        }
+                    },
+                    "required": ["id"]
+                }
+            },
+            {
+                "name": "markplane_unarchive",
+                "description": "Restore an archived item (move from archive/ back to items/).",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "type": "string",
+                            "description": "Item ID to restore (e.g. TASK-042, EPIC-001)"
+                        }
+                    },
+                    "required": ["id"]
+                }
             }
         ]
     })
@@ -317,6 +349,8 @@ pub fn call_tool(id: Value, project: &Project, name: &str, args: Value) -> JsonR
         "markplane_link" => handle_link(project, &args),
         "markplane_check" => handle_check(project),
         "markplane_stale" => handle_stale(project, &args),
+        "markplane_archive" => handle_archive(project, &args),
+        "markplane_unarchive" => handle_unarchive(project, &args),
         _ => {
             return JsonRpcResponse::error(
                 id,
@@ -404,6 +438,10 @@ fn handle_query(project: &Project, args: &Value) -> Result<String, String> {
             .and_then(|v| v.as_str())
             .map(|s| s.to_string()),
         item_type: None,
+        archived: args
+            .get("archived")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false),
     };
 
     let items = project
@@ -943,4 +981,30 @@ fn handle_stale(project: &Project, args: &Value) -> Result<String, String> {
         ));
     }
     Ok(output)
+}
+
+fn handle_archive(project: &Project, args: &Value) -> Result<String, String> {
+    let id = args
+        .get("id")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "Missing required parameter: id".to_string())?;
+
+    project
+        .archive_item(id)
+        .map_err(|e| e.to_string())?;
+
+    Ok(format!("{{\"success\":true,\"archived\":\"{}\"}}", id))
+}
+
+fn handle_unarchive(project: &Project, args: &Value) -> Result<String, String> {
+    let id = args
+        .get("id")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "Missing required parameter: id".to_string())?;
+
+    project
+        .unarchive_item(id)
+        .map_err(|e| e.to_string())?;
+
+    Ok(format!("{{\"success\":true,\"restored\":\"{}\"}}", id))
 }

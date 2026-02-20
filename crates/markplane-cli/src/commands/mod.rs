@@ -16,6 +16,7 @@ mod tag;
 mod check;
 mod stale;
 mod archive;
+mod unarchive;
 mod context;
 mod formatting;
 mod metrics;
@@ -91,6 +92,9 @@ pub enum Commands {
         /// Filter by item type (comma-separated)
         #[arg(long)]
         r#type: Option<String>,
+        /// List archived items instead of active ones
+        #[arg(long)]
+        archived: bool,
     },
 
     /// Update the status of an item
@@ -203,11 +207,22 @@ pub enum Commands {
         days: u32,
     },
 
-    /// Move done/cancelled items to archive directories
+    /// Archive an item or all completed items
     Archive {
-        /// Preview what would be archived without making changes
+        /// Item ID to archive (e.g. TASK-042)
+        id: Option<String>,
+        /// Archive all completed items across all types
+        #[arg(long)]
+        all_done: bool,
+        /// Preview what would be archived
         #[arg(long)]
         dry_run: bool,
+    },
+
+    /// Restore an archived item back to active
+    Unarchive {
+        /// Item ID to restore (e.g. TASK-042)
+        id: String,
     },
 
     /// Regenerate .context/ files
@@ -289,7 +304,8 @@ pub fn execute(cmd: Commands) -> anyhow::Result<()> {
             tags,
             assignee,
             r#type,
-        } => ls::run(kind, status, priority, epic, tags, assignee, r#type),
+            archived,
+        } => ls::run(kind, status, priority, epic, tags, assignee, r#type, archived),
         Commands::Status { id, new_status } => status::run(id, new_status),
         Commands::Sync => sync::run(),
         Commands::Start { id, user } => start::run(id, user),
@@ -307,7 +323,8 @@ pub fn execute(cmd: Commands) -> anyhow::Result<()> {
         Commands::Tag { id, tags } => tag::run(id, tags),
         Commands::Check { orphans } => check::run(orphans),
         Commands::Stale { days } => stale::run(days),
-        Commands::Archive { dry_run } => archive::run(dry_run),
+        Commands::Archive { id, all_done, dry_run } => archive::run(id, all_done, dry_run),
+        Commands::Unarchive { id } => unarchive::run(id),
         Commands::Context { item, focus } => context::run(item, focus),
         Commands::Metrics => metrics::run(),
         Commands::Graph { id, depth } => graph::run(id, depth),

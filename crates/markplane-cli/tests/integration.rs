@@ -807,12 +807,13 @@ fn test_archive_nothing_to_archive() {
         .assert()
         .success();
 
+    // --all-done with only draft items should report nothing
     cmd()
         .current_dir(tmp.path())
-        .arg("archive")
+        .args(["archive", "--all-done"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("No items eligible"));
+        .stdout(predicate::str::contains("No completed items"));
 }
 
 #[test]
@@ -829,22 +830,9 @@ fn test_archive_dry_run() {
         .assert()
         .success();
 
-    // Backdate to make archivable
-    let item_path = tmp.path().join(".markplane/backlog/items/TASK-001.md");
-    let content = std::fs::read_to_string(&item_path).unwrap();
-    let today = chrono::Local::now()
-        .date_naive()
-        .format("%Y-%m-%d")
-        .to_string();
-    let content = content.replace(
-        &format!("updated: {}", today),
-        "updated: 2020-01-01",
-    );
-    std::fs::write(&item_path, content).unwrap();
-
     cmd()
         .current_dir(tmp.path())
-        .args(["archive", "--dry-run"])
+        .args(["archive", "--all-done", "--dry-run"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Would archive"))
@@ -868,22 +856,10 @@ fn test_archive_actual() {
         .assert()
         .success();
 
-    // Backdate
-    let item_path = tmp.path().join(".markplane/backlog/items/TASK-001.md");
-    let content = std::fs::read_to_string(&item_path).unwrap();
-    let today = chrono::Local::now()
-        .date_naive()
-        .format("%Y-%m-%d")
-        .to_string();
-    let content = content.replace(
-        &format!("updated: {}", today),
-        "updated: 2020-01-01",
-    );
-    std::fs::write(&item_path, content).unwrap();
-
+    // Single-item archive by ID
     cmd()
         .current_dir(tmp.path())
-        .arg("archive")
+        .args(["archive", "TASK-001"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Archived TASK-001"));
@@ -910,29 +886,89 @@ fn test_archive_keep_cancelled() {
         .assert()
         .success();
 
-    // Backdate
-    let item_path = tmp.path().join(".markplane/backlog/items/TASK-001.md");
-    let content = std::fs::read_to_string(&item_path).unwrap();
-    let today = chrono::Local::now()
-        .date_naive()
-        .format("%Y-%m-%d")
-        .to_string();
-    let content = content.replace(
-        &format!("updated: {}", today),
-        "updated: 2020-01-01",
-    );
-    std::fs::write(&item_path, content).unwrap();
-
-    // Default config has keep_cancelled: true, so cancelled items should NOT be archived
+    // --all-done now archives cancelled tasks too
     cmd()
         .current_dir(tmp.path())
-        .arg("archive")
+        .args(["archive", "--all-done"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("No items eligible"));
+        .stdout(predicate::str::contains("Archived"));
 
-    // File should still be in active dir
+    // File should be in archive dir
+    assert!(tmp
+        .path()
+        .join(".markplane/backlog/archive/TASK-001.md")
+        .is_file());
+}
+
+#[test]
+fn test_unarchive() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["add", "To archive and restore"])
+        .assert()
+        .success();
+
+    // Archive it
+    cmd()
+        .current_dir(tmp.path())
+        .args(["archive", "TASK-001"])
+        .assert()
+        .success();
+
+    assert!(tmp.path().join(".markplane/backlog/archive/TASK-001.md").is_file());
+
+    // Unarchive it
+    cmd()
+        .current_dir(tmp.path())
+        .args(["unarchive", "TASK-001"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Restored TASK-001"));
+
     assert!(tmp.path().join(".markplane/backlog/items/TASK-001.md").is_file());
+    assert!(!tmp.path().join(".markplane/backlog/archive/TASK-001.md").is_file());
+}
+
+#[test]
+fn test_ls_archived() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Active item"])
+        .assert()
+        .success();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Archived item"])
+        .assert()
+        .success();
+
+    // Archive TASK-002
+    cmd()
+        .current_dir(tmp.path())
+        .args(["archive", "TASK-002"])
+        .assert()
+        .success();
+
+    // Normal ls should only show active
+    cmd()
+        .current_dir(tmp.path())
+        .arg("ls")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("TASK-001"))
+        .stdout(predicate::str::contains("TASK-002").not());
+
+    // ls --archived should only show archived
+    cmd()
+        .current_dir(tmp.path())
+        .args(["ls", "--archived"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("TASK-002"))
+        .stdout(predicate::str::contains("TASK-001").not());
 }
 
 // ── Graph ─────────────────────────────────────────────────────────────────

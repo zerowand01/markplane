@@ -1,31 +1,67 @@
-use chrono::Local;
 use colored::Colorize;
-use markplane_core::{TaskStatus, Project, QueryFilter};
+use markplane_core::{
+    EpicStatus, NoteStatus, PlanStatus, Project, QueryFilter, TaskStatus,
+};
 
-pub fn run(dry_run: bool) -> anyhow::Result<()> {
+pub fn run(id: Option<String>, all_done: bool, dry_run: bool) -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
-    let config = project.load_config()?;
-    let today = Local::now().date_naive();
-    let cutoff = today - chrono::Duration::days(config.archive.auto_archive_after_days as i64);
 
-    let items = project.list_tasks(&QueryFilter::default())?;
+    if let Some(id) = id {
+        // Single-item archive
+        if dry_run {
+            println!("{} Would archive: {}", "→".cyan(), id);
+        } else {
+            project.archive_item(&id)?;
+            println!("{} Archived {}", "✓".green(), id);
+        }
+        return Ok(());
+    }
 
-    let archivable: Vec<_> = items
-        .iter()
-        .filter(|doc| {
-            let fm = &doc.frontmatter;
-            let is_done = fm.status == TaskStatus::Done;
-            let is_cancelled = fm.status == TaskStatus::Cancelled && !config.archive.keep_cancelled;
-            (is_done || is_cancelled) && fm.updated <= cutoff
-        })
-        .collect();
+    if !all_done {
+        anyhow::bail!("Provide an item ID or use --all-done to archive all completed items");
+    }
 
-    if archivable.is_empty() {
-        println!(
-            "{} No items eligible for archiving (done/cancelled for {}+ days).",
-            "✓".green(),
-            config.archive.auto_archive_after_days
-        );
+    // Batch archive all done/cancelled items across all entity types
+    let mut to_archive: Vec<(String, String)> = Vec::new(); // (id, description)
+
+    // Tasks: done or cancelled
+    let tasks = project.list_tasks(&QueryFilter::default())?;
+    for doc in &tasks {
+        let fm = &doc.frontmatter;
+        if fm.status == TaskStatus::Done || fm.status == TaskStatus::Cancelled {
+            to_archive.push((fm.id.clone(), format!("{} ({})", fm.title, fm.status)));
+        }
+    }
+
+    // Epics: done
+    let epics = project.list_epics()?;
+    for doc in &epics {
+        let fm = &doc.frontmatter;
+        if fm.status == EpicStatus::Done {
+            to_archive.push((fm.id.clone(), format!("{} ({})", fm.title, fm.status)));
+        }
+    }
+
+    // Plans: done
+    let plans = project.list_plans()?;
+    for doc in &plans {
+        let fm = &doc.frontmatter;
+        if fm.status == PlanStatus::Done {
+            to_archive.push((fm.id.clone(), format!("{} ({})", fm.title, fm.status)));
+        }
+    }
+
+    // Notes: archived status
+    let notes = project.list_notes()?;
+    for doc in &notes {
+        let fm = &doc.frontmatter;
+        if fm.status == NoteStatus::Archived {
+            to_archive.push((fm.id.clone(), format!("{} ({})", fm.title, fm.status)));
+        }
+    }
+
+    if to_archive.is_empty() {
+        println!("{} No completed items to archive.", "✓".green());
         return Ok(());
     }
 
@@ -33,18 +69,17 @@ pub fn run(dry_run: bool) -> anyhow::Result<()> {
         println!(
             "{} Would archive {} item(s):\n",
             "→".cyan(),
-            archivable.len()
+            to_archive.len()
         );
-        for doc in &archivable {
-            let fm = &doc.frontmatter;
-            println!("  {} {} ({})", fm.id, fm.title, fm.status);
+        for (id, desc) in &to_archive {
+            println!("  {} {}", id, desc);
         }
         println!("\nRun without --dry-run to archive.");
     } else {
-        let count = archivable.len();
-        for doc in &archivable {
-            project.archive_item(&doc.frontmatter.id)?;
-            println!("  {} Archived {}", "✓".green(), doc.frontmatter.id);
+        let count = to_archive.len();
+        for (id, _) in &to_archive {
+            project.archive_item(id)?;
+            println!("  {} Archived {}", "✓".green(), id);
         }
         println!(
             "\n{} Archived {} item(s).",

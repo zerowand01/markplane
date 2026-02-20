@@ -5,6 +5,18 @@ use crate::frontmatter::parse_frontmatter;
 use crate::models::*;
 use crate::project::Project;
 
+/// Controls which directories are scanned for items.
+#[derive(Debug, Clone, Copy, Default)]
+pub enum ScanScope {
+    /// Scan items/ only (current default behavior).
+    #[default]
+    Active,
+    /// Scan archive/ only.
+    Archived,
+    /// Scan both items/ and archive/.
+    All,
+}
+
 /// Filter criteria for querying items.
 #[derive(Debug, Default)]
 pub struct QueryFilter {
@@ -14,6 +26,8 @@ pub struct QueryFilter {
     pub tags: Option<Vec<String>>,
     pub assignee: Option<String>,
     pub item_type: Option<Vec<String>>,
+    /// If true, query archived items instead of active ones.
+    pub archived: bool,
 }
 
 impl Project {
@@ -24,7 +38,8 @@ impl Project {
         filter: &QueryFilter,
     ) -> Result<Vec<MarkplaneDocument<Task>>> {
         let dir = self.item_dir(&IdPrefix::Task);
-        let mut items = scan_directory::<Task>(&dir)?;
+        let scope = if filter.archived { ScanScope::Archived } else { ScanScope::Active };
+        let mut items = scan_directory::<Task>(&dir, scope)?;
 
         items.retain(|doc| {
             let fm = &doc.frontmatter;
@@ -86,10 +101,11 @@ impl Project {
         Ok(items)
     }
 
-    /// List all epics.
-    pub fn list_epics(&self) -> Result<Vec<MarkplaneDocument<Epic>>> {
+    /// List all epics. Pass `archived: true` to list archived epics only.
+    pub fn list_epics_filtered(&self, archived: bool) -> Result<Vec<MarkplaneDocument<Epic>>> {
         let dir = self.item_dir(&IdPrefix::Epic);
-        let mut items = scan_directory::<Epic>(&dir)?;
+        let scope = if archived { ScanScope::Archived } else { ScanScope::Active };
+        let mut items = scan_directory::<Epic>(&dir, scope)?;
         items.sort_by(|a, b| {
             let pa = priority_rank(&a.frontmatter.priority);
             let pb = priority_rank(&b.frontmatter.priority);
@@ -98,36 +114,48 @@ impl Project {
         Ok(items)
     }
 
-    /// List all plans.
-    pub fn list_plans(&self) -> Result<Vec<MarkplaneDocument<Plan>>> {
+    /// List all active epics (convenience wrapper).
+    pub fn list_epics(&self) -> Result<Vec<MarkplaneDocument<Epic>>> {
+        self.list_epics_filtered(false)
+    }
+
+    /// List all plans. Pass `archived: true` to list archived plans only.
+    pub fn list_plans_filtered(&self, archived: bool) -> Result<Vec<MarkplaneDocument<Plan>>> {
         let dir = self.item_dir(&IdPrefix::Plan);
-        let mut items = scan_directory::<Plan>(&dir)?;
+        let scope = if archived { ScanScope::Archived } else { ScanScope::Active };
+        let mut items = scan_directory::<Plan>(&dir, scope)?;
         items.sort_by(|a, b| a.frontmatter.id.cmp(&b.frontmatter.id));
         Ok(items)
     }
 
-    /// List all notes.
-    pub fn list_notes(&self) -> Result<Vec<MarkplaneDocument<Note>>> {
+    /// List all active plans (convenience wrapper).
+    pub fn list_plans(&self) -> Result<Vec<MarkplaneDocument<Plan>>> {
+        self.list_plans_filtered(false)
+    }
+
+    /// List all notes. Pass `archived: true` to list archived notes only.
+    pub fn list_notes_filtered(&self, archived: bool) -> Result<Vec<MarkplaneDocument<Note>>> {
         let dir = self.item_dir(&IdPrefix::Note);
-        let mut items = scan_directory::<Note>(&dir)?;
+        let scope = if archived { ScanScope::Archived } else { ScanScope::Active };
+        let mut items = scan_directory::<Note>(&dir, scope)?;
         items.sort_by(|a, b| a.frontmatter.id.cmp(&b.frontmatter.id));
         Ok(items)
+    }
+
+    /// List all active notes (convenience wrapper).
+    pub fn list_notes(&self) -> Result<Vec<MarkplaneDocument<Note>>> {
+        self.list_notes_filtered(false)
     }
 }
 
-/// Scan a directory for `.md` files, parse each one, and return the parsed documents.
-/// Prefers items/ subdirectory if it exists, falls back to flat layout.
+/// Scan a single directory for `.md` files, parse each one, and append to `results`.
 /// Skips INDEX.md, ideas.md, decisions.md, and any files that fail to parse.
-fn scan_directory<T: serde::de::DeserializeOwned>(
-    dir: &std::path::Path,
-) -> Result<Vec<MarkplaneDocument<T>>> {
-    let mut results = Vec::new();
-
-    let items_dir = dir.join("items");
-    let scan_dir = if items_dir.is_dir() { &items_dir } else { dir };
-
+fn scan_dir_entries<T: serde::de::DeserializeOwned>(
+    scan_dir: &std::path::Path,
+    results: &mut Vec<MarkplaneDocument<T>>,
+) {
     if !scan_dir.exists() {
-        return Ok(results);
+        return;
     }
 
     let pattern = scan_dir.join("*.md").to_string_lossy().to_string();
@@ -145,6 +173,34 @@ fn scan_directory<T: serde::de::DeserializeOwned>(
         match parse_frontmatter::<T>(&content) {
             Ok(doc) => results.push(doc),
             Err(_) => continue,
+        }
+    }
+}
+
+/// Scan a directory for `.md` files based on the given scope.
+/// `Active` scans items/ (or flat layout), `Archived` scans archive/, `All` scans both.
+fn scan_directory<T: serde::de::DeserializeOwned>(
+    dir: &std::path::Path,
+    scope: ScanScope,
+) -> Result<Vec<MarkplaneDocument<T>>> {
+    let mut results = Vec::new();
+
+    let items_dir = dir.join("items");
+    let archive_dir = dir.join("archive");
+    let has_items_dir = items_dir.is_dir();
+
+    match scope {
+        ScanScope::Active => {
+            let scan_dir = if has_items_dir { &items_dir } else { dir };
+            scan_dir_entries(scan_dir, &mut results);
+        }
+        ScanScope::Archived => {
+            scan_dir_entries(&archive_dir, &mut results);
+        }
+        ScanScope::All => {
+            let scan_dir = if has_items_dir { &items_dir } else { dir };
+            scan_dir_entries(scan_dir, &mut results);
+            scan_dir_entries(&archive_dir, &mut results);
         }
     }
 
@@ -371,5 +427,127 @@ mod tests {
 
         let notes = project.list_notes().unwrap();
         assert_eq!(notes.len(), 2);
+    }
+
+    // ── Archive scan scope tests ─────────────────────────────────────────
+
+    #[test]
+    fn test_scan_directory_active_only() {
+        let (_tmp, project) = setup_project();
+
+        project
+            .create_task("Active task", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+        project
+            .create_task("To archive", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+
+        // Archive one task
+        project.archive_item("TASK-002").unwrap();
+
+        // Default (active) should return only active items
+        let items = project.list_tasks(&QueryFilter::default()).unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].frontmatter.id, "TASK-001");
+    }
+
+    #[test]
+    fn test_scan_directory_archived_only() {
+        let (_tmp, project) = setup_project();
+
+        project
+            .create_task("Active task", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+        project
+            .create_task("To archive", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+
+        project.archive_item("TASK-002").unwrap();
+
+        let filter = QueryFilter {
+            archived: true,
+            ..Default::default()
+        };
+        let items = project.list_tasks(&filter).unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].frontmatter.id, "TASK-002");
+    }
+
+    #[test]
+    fn test_list_tasks_archived_filter() {
+        let (_tmp, project) = setup_project();
+
+        project
+            .create_task("Active", ItemType::Feature, Priority::High, Effort::Small, None, vec![])
+            .unwrap();
+        project
+            .create_task("Archived", ItemType::Bug, Priority::Low, Effort::Medium, None, vec![])
+            .unwrap();
+        project
+            .create_task("Also archived", ItemType::Chore, Priority::Medium, Effort::Xs, None, vec![])
+            .unwrap();
+
+        project.archive_item("TASK-002").unwrap();
+        project.archive_item("TASK-003").unwrap();
+
+        // Active: only TASK-001
+        let active = project.list_tasks(&QueryFilter::default()).unwrap();
+        assert_eq!(active.len(), 1);
+
+        // Archived: TASK-002 and TASK-003
+        let archived = project.list_tasks(&QueryFilter { archived: true, ..Default::default() }).unwrap();
+        assert_eq!(archived.len(), 2);
+    }
+
+    #[test]
+    fn test_list_epics_archived() {
+        let (_tmp, project) = setup_project();
+
+        project.create_epic("Active epic", Priority::High).unwrap();
+        project.create_epic("Done epic", Priority::Medium).unwrap();
+
+        project.archive_item("EPIC-002").unwrap();
+
+        let active = project.list_epics().unwrap();
+        assert_eq!(active.len(), 1);
+        assert_eq!(active[0].frontmatter.id, "EPIC-001");
+
+        let archived = project.list_epics_filtered(true).unwrap();
+        assert_eq!(archived.len(), 1);
+        assert_eq!(archived[0].frontmatter.id, "EPIC-002");
+    }
+
+    #[test]
+    fn test_list_plans_archived() {
+        let (_tmp, project) = setup_project();
+
+        project.create_plan("Active plan", vec![], None).unwrap();
+        project.create_plan("Done plan", vec![], None).unwrap();
+
+        project.archive_item("PLAN-002").unwrap();
+
+        let active = project.list_plans().unwrap();
+        assert_eq!(active.len(), 1);
+
+        let archived = project.list_plans_filtered(true).unwrap();
+        assert_eq!(archived.len(), 1);
+        assert_eq!(archived[0].frontmatter.id, "PLAN-002");
+    }
+
+    #[test]
+    fn test_list_notes_archived() {
+        let (_tmp, project) = setup_project();
+
+        project.create_note("Active note", NoteType::Research, vec![]).unwrap();
+        project.create_note("Done note", NoteType::Idea, vec![]).unwrap();
+
+        project.archive_item("NOTE-002").unwrap();
+
+        let active = project.list_notes().unwrap();
+        assert_eq!(active.len(), 1);
+
+        let archived = project.list_notes_filtered(true).unwrap();
+        assert_eq!(archived.len(), 1);
+        assert_eq!(archived[0].frontmatter.id, "NOTE-002");
     }
 }
