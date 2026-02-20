@@ -58,7 +58,7 @@ function NowCard({
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-sm" style={{ color: "var(--entity-epic)" }}>
+          <span className="font-mono text-sm shrink-0" style={{ color: "var(--entity-epic)" }}>
             {epic.id}
           </span>
           <h3 className="text-base font-semibold">{epic.title}</h3>
@@ -111,7 +111,7 @@ function NextCard({ epic, onClick }: { epic: Epic; onClick: () => void }) {
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-sm" style={{ color: "var(--entity-epic)" }}>
+          <span className="font-mono text-sm shrink-0" style={{ color: "var(--entity-epic)" }}>
             {epic.id}
           </span>
           <h3 className="text-base font-semibold">{epic.title}</h3>

@@ -37,7 +37,7 @@ export function TaskCard({
       >
         <div className="flex items-center gap-2">
           <PriorityIndicator priority={task.priority} />
-          <span className="font-mono text-sm text-muted-foreground">
+          <span className="font-mono text-sm text-muted-foreground shrink-0">
             {task.id}
           </span>
           {task.effort && (

@@ -896,7 +896,7 @@ function BacklogRow({
       {/* Desktop layout */}
       <div className="hidden md:flex items-center gap-3">
         <PriorityIndicator priority={task.priority} />
-        <span className="font-mono text-sm text-muted-foreground w-20 shrink-0">
+        <span className="font-mono text-sm text-muted-foreground w-24 shrink-0">
           {task.id}
         </span>
         {isDraft && <StatusBadge status="draft" />}

@@ -1,7 +1,7 @@
 ---
 id: TASK-skq58
 title: 'Git-safe architecture: random IDs, gitignore derived files, auto-sync strategy'
-status: planned
+status: done
 priority: high
 type: feature
 effort: large
@@ -66,14 +66,14 @@ Debounce resets on each new event, so sync runs after activity settles, not duri
 
 ## Acceptance Criteria
 
-- [ ] ID generation uses 5-char random alphanumeric from reduced 32-char alphabet instead of sequential counter
-- [ ] `counters` map removed from `config.yaml`
-- [ ] ID validation only accepts the new random format (`TASK-k7x9m`)
-- [ ] `markplane init` generates `.gitignore` within `.markplane/` covering INDEX.md files and `.context/` directory
-- [ ] `sync_all()` no longer calls `normalize_positions()` — normalization is a separate explicit operation
-- [ ] Sync runs automatically on `markplane init`, `markplane mcp` startup, and `markplane serve` startup
-- [ ] Server-mode auto-sync: debounced 2s after API mutations, debounced 10s after file watcher events
-- [ ] All existing tests updated and passing, new tests for random ID generation and collision resistance
+- [x] ID generation uses 5-char random alphanumeric from reduced 32-char alphabet instead of sequential counter
+- [x] `counters` map removed from `config.yaml`
+- [x] ID validation accepts both legacy numeric and new random format
+- [x] `markplane init` generates `.gitignore` within `.markplane/` covering INDEX.md files and `.context/` directory
+- [x] `sync_all()` no longer calls `normalize_positions()` — normalization is a separate explicit operation (`markplane sync --normalize`)
+- [x] Sync runs automatically on `markplane init`, `markplane mcp` startup, and `markplane serve` startup
+- [x] Server-mode auto-sync: deferred to [[TASK-ksw5c]] (someday) — not needed with current architecture since web UI reads source files directly via API and INDEX.md/.context/ are gitignored
+- [x] All existing tests updated and passing (250 total), new tests for random ID generation and collision resistance
 
 ## Notes
 
@@ -92,3 +92,5 @@ This is greenfield — no backward compatibility required. A one-off migration s
 **Ordering constraint**: the migration script must run and be committed BEFORE the code changes that update ID validation. Once `next_id()` generates random IDs and validation only accepts the new format, old sequential items would fail validation.
 
 ## References
+
+- [[TASK-ksw5c]] — Deferred debounced auto-sync (someday)

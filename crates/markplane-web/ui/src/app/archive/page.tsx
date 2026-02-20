@@ -192,7 +192,7 @@ function ArchiveContent() {
                 </span>
 
                 {/* ID */}
-                <span className="font-mono text-sm text-muted-foreground w-20 shrink-0">
+                <span className="font-mono text-sm text-muted-foreground w-24 shrink-0">
                   {item.id}
                 </span>
 

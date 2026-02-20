@@ -112,7 +112,7 @@ function DashboardContent() {
                     className="flex items-center gap-3 rounded-md px-3 py-2 w-full text-left hover:bg-accent/50 transition-colors"
                   >
                     <span className="text-status-blocked text-sm">!</span>
-                    <span className="font-mono text-xs text-muted-foreground">
+                    <span className="font-mono text-xs text-muted-foreground shrink-0">
                       {task.id}
                     </span>
                     <span className="text-sm flex-1 truncate">{task.title}</span>
@@ -139,7 +139,7 @@ function DashboardContent() {
                     className="flex items-center gap-3 rounded-md px-3 py-2 w-full text-left hover:bg-accent/50 transition-colors"
                   >
                     <PriorityIndicator priority={task.priority} />
-                    <span className="font-mono text-xs text-muted-foreground">
+                    <span className="font-mono text-xs text-muted-foreground shrink-0">
                       {task.id}
                     </span>
                     <span className="text-sm flex-1 truncate">{task.title}</span>
@@ -168,7 +168,7 @@ function DashboardContent() {
                     onClick={() => openTask(task.id)}
                     className="flex items-center gap-3 rounded-md px-3 py-2 w-full text-left hover:bg-accent/50 transition-colors"
                   >
-                    <span className="font-mono text-xs text-muted-foreground">
+                    <span className="font-mono text-xs text-muted-foreground shrink-0">
                       {task.id}
                     </span>
                     <span className="text-sm flex-1 truncate text-muted-foreground line-through decoration-muted-foreground/40">{task.title}</span>
@@ -210,7 +210,7 @@ function DashboardContent() {
                     className="flex items-center gap-3 rounded-md px-3 py-2 w-full text-left hover:bg-accent/50 transition-colors"
                   >
                     <PriorityIndicator priority={task.priority} />
-                    <span className="font-mono text-xs text-muted-foreground">
+                    <span className="font-mono text-xs text-muted-foreground shrink-0">
                       {task.id}
                     </span>
                     <span className="text-sm flex-1 truncate">{task.title}</span>

@@ -1,5 +1,6 @@
 use std::collections::HashSet;
-use std::fs;
+use std::fs::{self, File};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use chrono::Local;
@@ -13,6 +14,25 @@ use crate::templates::{self, render_template};
 
 /// Maximum allowed title length in characters.
 const MAX_TITLE_LENGTH: usize = 500;
+
+/// Atomically create a new file, failing if it already exists.
+/// Uses `File::create_new()` (O_CREAT | O_EXCL) to prevent TOCTOU races.
+fn write_new_file(path: &Path, content: &str) -> Result<()> {
+    let mut file = File::create_new(path).map_err(|e| {
+        if e.kind() == std::io::ErrorKind::AlreadyExists {
+            MarkplaneError::DuplicateId(
+                path.file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("unknown")
+                    .to_string(),
+            )
+        } else {
+            e.into()
+        }
+    })?;
+    file.write_all(content.as_bytes())?;
+    Ok(())
+}
 
 /// Represents a `.markplane/` project directory.
 pub struct Project {
@@ -175,7 +195,7 @@ impl Project {
         let items_dir = self.item_dir(&IdPrefix::Task).join("items");
         fs::create_dir_all(&items_dir)?;
         let path = items_dir.join(format!("{}.md", id));
-        fs::write(&path, &content)?;
+        write_new_file(&path, &content)?;
 
         let item = Task {
             id,
@@ -216,7 +236,7 @@ impl Project {
         let items_dir = self.item_dir(&IdPrefix::Epic).join("items");
         fs::create_dir_all(&items_dir)?;
         let path = items_dir.join(format!("{}.md", id));
-        fs::write(&path, &content)?;
+        write_new_file(&path, &content)?;
 
         let epic = Epic {
             id,
@@ -262,7 +282,7 @@ impl Project {
         let items_dir = self.item_dir(&IdPrefix::Plan).join("items");
         fs::create_dir_all(&items_dir)?;
         let path = items_dir.join(format!("{}.md", id));
-        fs::write(&path, &content)?;
+        write_new_file(&path, &content)?;
 
         let plan = Plan {
             id,
@@ -314,7 +334,7 @@ impl Project {
         let items_dir = self.item_dir(&IdPrefix::Note).join("items");
         fs::create_dir_all(&items_dir)?;
         let path = items_dir.join(format!("{}.md", id));
-        fs::write(&path, &content)?;
+        write_new_file(&path, &content)?;
 
         let note = Note {
             id,
