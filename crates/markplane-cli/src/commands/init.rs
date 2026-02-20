@@ -12,7 +12,8 @@ pub fn run(name: Option<String>, description: String) -> anyhow::Result<()> {
             .unwrap_or_else(|| "my-project".to_string())
     });
 
-    Project::init(root, &project_name, &description)?;
+    let project = Project::init(root, &project_name, &description)?;
+    project.sync_all()?;
 
     println!("Initialized Markplane project: {}", project_name);
     println!();

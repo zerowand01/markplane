@@ -5,9 +5,17 @@ use std::str::FromStr;
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
+use rand::Rng;
+
 use crate::error::{MarkplaneError, Result};
 
 // ── ID System ──────────────────────────────────────────────────────────────
+
+/// Alphabet for random ID suffixes: a-z minus o,l + 2-9 (32 chars, no ambiguous chars).
+pub const RANDOM_ID_ALPHABET: &[u8] = b"abcdefghijkmnpqrstuvwxyz23456789";
+
+/// Length of the random suffix in generated IDs.
+pub const RANDOM_ID_LENGTH: usize = 5;
 
 /// Prefix for Markplane item IDs: EPIC, TASK, PLAN, NOTE.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -61,25 +69,44 @@ impl fmt::Display for IdPrefix {
     }
 }
 
-/// Parse an item ID string like "TASK-042" into its prefix and number.
-pub fn parse_id(id: &str) -> Result<(IdPrefix, u32)> {
+/// Parse an item ID string like "TASK-k7x9m" into its prefix and suffix.
+/// Accepts both random IDs (5 alphanumeric chars) and legacy sequential IDs (digits).
+pub fn parse_id(id: &str) -> Result<(IdPrefix, &str)> {
     let parts: Vec<&str> = id.splitn(2, '-').collect();
     if parts.len() != 2 {
         return Err(MarkplaneError::InvalidId(format!(
-            "Expected format PREFIX-NUMBER, got: {}",
+            "Expected format PREFIX-SUFFIX, got: {}",
             id
         )));
     }
     let prefix = IdPrefix::parse(parts[0])?;
-    let number = parts[1]
-        .parse::<u32>()
-        .map_err(|_| MarkplaneError::InvalidId(format!("Invalid number in ID: {}", id)))?;
-    Ok((prefix, number))
+    let suffix = parts[1];
+    if suffix.is_empty() {
+        return Err(MarkplaneError::InvalidId(format!(
+            "Empty suffix in ID: {}",
+            id
+        )));
+    }
+    // Validate suffix: all chars must be alphanumeric (covers both random and legacy formats)
+    if !suffix.bytes().all(|b| b.is_ascii_alphanumeric()) {
+        return Err(MarkplaneError::InvalidId(format!(
+            "Invalid suffix in ID: {}",
+            id
+        )));
+    }
+    Ok((prefix, suffix))
 }
 
-/// Format a prefix and number into an ID string like "TASK-042".
-pub fn format_id(prefix: &IdPrefix, number: u32) -> String {
-    format!("{}-{:03}", prefix.as_str(), number)
+/// Generate a random ID like "TASK-k7x9m" using the random alphabet.
+pub fn generate_random_id(prefix: &IdPrefix) -> String {
+    let mut rng = rand::rng();
+    let suffix: String = (0..RANDOM_ID_LENGTH)
+        .map(|_| {
+            let idx = rng.random_range(0..RANDOM_ID_ALPHABET.len());
+            RANDOM_ID_ALPHABET[idx] as char
+        })
+        .collect();
+    format!("{}-{}", prefix.as_str(), suffix)
 }
 
 // ── Status Enums ───────────────────────────────────────────────────────────
@@ -464,7 +491,9 @@ pub struct Note {
 pub struct Config {
     pub version: u32,
     pub project: ProjectInfo,
-    pub counters: HashMap<String, u32>,
+    /// Legacy counter field — silently ignored on read, never written.
+    #[serde(default, skip_serializing)]
+    pub counters: Option<HashMap<String, u32>>,
     pub context: ContextConfig,
     /// Deprecated: archive is now an explicit operation, not time-based.
     /// This field is kept for backward compatibility with existing config files
@@ -496,19 +525,13 @@ pub struct ArchiveConfig {
 
 impl Default for Config {
     fn default() -> Self {
-        let mut counters = HashMap::new();
-        counters.insert("EPIC".to_string(), 0);
-        counters.insert("TASK".to_string(), 0);
-        counters.insert("PLAN".to_string(), 0);
-        counters.insert("NOTE".to_string(), 0);
-
         Config {
             version: 1,
             project: ProjectInfo {
                 name: "My Project".to_string(),
                 description: "Project description".to_string(),
             },
-            counters,
+            counters: None,
             context: ContextConfig {
                 token_budget: 1000,
                 recent_days: 7,
@@ -543,16 +566,40 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_id() {
-        let (prefix, num) = parse_id("TASK-042").unwrap();
+    fn test_parse_id_legacy() {
+        let (prefix, suffix) = parse_id("TASK-042").unwrap();
         assert_eq!(prefix, IdPrefix::Task);
-        assert_eq!(num, 42);
+        assert_eq!(suffix, "042");
     }
 
     #[test]
-    fn test_format_id() {
-        assert_eq!(format_id(&IdPrefix::Task, 42), "TASK-042");
-        assert_eq!(format_id(&IdPrefix::Epic, 1), "EPIC-001");
+    fn test_parse_id_random() {
+        let (prefix, suffix) = parse_id("TASK-k7x9m").unwrap();
+        assert_eq!(prefix, IdPrefix::Task);
+        assert_eq!(suffix, "k7x9m");
+    }
+
+    #[test]
+    fn test_generate_random_id() {
+        let id = generate_random_id(&IdPrefix::Task);
+        assert!(id.starts_with("TASK-"));
+        let (prefix, suffix) = parse_id(&id).unwrap();
+        assert_eq!(prefix, IdPrefix::Task);
+        assert_eq!(suffix.len(), RANDOM_ID_LENGTH);
+        // All chars should be from the alphabet
+        for c in suffix.bytes() {
+            assert!(RANDOM_ID_ALPHABET.contains(&c), "Invalid char: {}", c as char);
+        }
+    }
+
+    #[test]
+    fn test_generate_random_id_uniqueness() {
+        use std::collections::HashSet;
+        let mut ids = HashSet::new();
+        for _ in 0..1000 {
+            let id = generate_random_id(&IdPrefix::Task);
+            assert!(ids.insert(id), "Duplicate ID generated");
+        }
     }
 
     #[test]
@@ -661,7 +708,7 @@ updated: 2026-02-09
     fn test_config_default() {
         let config = Config::default();
         assert_eq!(config.version, 1);
-        assert_eq!(config.counters.get("TASK"), Some(&0));
+        assert!(config.counters.is_none());
         assert_eq!(config.context.token_budget, 1000);
         assert!(config.archive.is_none());
     }
@@ -695,9 +742,9 @@ updated: 2026-02-09
     #[test]
     fn test_parse_id_lowercase() {
         // IdPrefix::parse does to_uppercase, so lowercase should work
-        let (prefix, num) = parse_id("task-042").unwrap();
+        let (prefix, suffix) = parse_id("task-042").unwrap();
         assert_eq!(prefix, IdPrefix::Task);
-        assert_eq!(num, 42);
+        assert_eq!(suffix, "042");
     }
 
     #[test]
@@ -713,15 +760,16 @@ updated: 2026-02-09
     #[test]
     fn test_parse_id_all_prefixes() {
         let cases = [
-            ("EPIC-001", IdPrefix::Epic, 1),
-            ("TASK-042", IdPrefix::Task, 42),
-            ("PLAN-003", IdPrefix::Plan, 3),
-            ("NOTE-007", IdPrefix::Note, 7),
+            ("EPIC-001", IdPrefix::Epic, "001"),
+            ("TASK-042", IdPrefix::Task, "042"),
+            ("PLAN-003", IdPrefix::Plan, "003"),
+            ("NOTE-007", IdPrefix::Note, "007"),
+            ("TASK-k7x9m", IdPrefix::Task, "k7x9m"),
         ];
-        for (input, expected_prefix, expected_num) in cases {
-            let (prefix, num) = parse_id(input).unwrap();
+        for (input, expected_prefix, expected_suffix) in cases {
+            let (prefix, suffix) = parse_id(input).unwrap();
             assert_eq!(prefix, expected_prefix);
-            assert_eq!(num, expected_num);
+            assert_eq!(suffix, expected_suffix);
         }
     }
 

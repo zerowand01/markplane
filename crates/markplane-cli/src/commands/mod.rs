@@ -106,7 +106,11 @@ pub enum Commands {
     },
 
     /// Regenerate INDEX.md files and .context/ summaries
-    Sync,
+    Sync {
+        /// Also normalize position keys (rewrites source files)
+        #[arg(long)]
+        normalize: bool,
+    },
 
     /// Start working on an item (sets status to in-progress and assigns to you)
     Start {
@@ -307,7 +311,7 @@ pub fn execute(cmd: Commands) -> anyhow::Result<()> {
             archived,
         } => ls::run(kind, status, priority, epic, tags, assignee, r#type, archived),
         Commands::Status { id, new_status } => status::run(id, new_status),
-        Commands::Sync => sync::run(),
+        Commands::Sync { normalize } => sync::run(normalize),
         Commands::Start { id, user } => start::run(id, user),
         Commands::Done { id } => done::run(id),
         Commands::Promote { id, priority, effort } => promote::run(id, priority, effort),

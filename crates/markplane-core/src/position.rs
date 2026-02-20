@@ -6,7 +6,6 @@
 /// Format: integer part (prefix char + digits) + optional fractional part.
 /// - `a` prefix = 1 digit (values 0–61): a0, a1, ..., az
 /// - `b` prefix = 2 digits (values 62–3905): b00, b01, ..., bzz
-
 const DIGITS: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 /// Generate N sequential position keys for sync normalization.

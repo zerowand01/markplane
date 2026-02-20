@@ -37,27 +37,12 @@ fn send_request(tmp: &TempDir, request: &Value) -> Value {
     panic!("No response received from MCP server. stdout: {}", stdout);
 }
 
-/// Send multiple requests in sequence and return responses.
-fn send_requests(tmp: &TempDir, requests: &[Value]) -> Vec<Value> {
-    let mut input = String::new();
-    for req in requests {
-        input.push_str(&serde_json::to_string(req).unwrap());
-        input.push('\n');
-    }
-
-    let output = mcp_cmd()
-        .arg("--project")
-        .arg(tmp.path().to_str().unwrap())
-        .write_stdin(input)
-        .output()
-        .expect("failed to run markplane mcp");
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    stdout
-        .lines()
-        .filter(|line| !line.trim().is_empty())
-        .map(|line| serde_json::from_str(line.trim()).expect("failed to parse response"))
-        .collect()
+/// Extract the ID from an MCP markplane_add tool response.
+/// The response text is JSON like: {"id":"TASK-k7x9m","title":"..."}
+fn extract_id_from_response(response: &Value) -> String {
+    let text = response["result"]["content"][0]["text"].as_str().unwrap();
+    let result: Value = serde_json::from_str(text).unwrap();
+    result["id"].as_str().unwrap().to_string()
 }
 
 // ── Initialize ──────────────────────────────────────────────────────────
@@ -307,7 +292,9 @@ fn test_tool_add() {
     assert!(response["error"].is_null());
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
     let result: Value = serde_json::from_str(text).unwrap();
-    assert_eq!(result["id"], "TASK-001");
+    let id = result["id"].as_str().unwrap();
+    assert!(id.starts_with("TASK-"), "ID should start with TASK-, got: {}", id);
+    assert_eq!(id.len(), 10, "ID should be 10 chars (TASK-xxxxx), got: {}", id);
     assert_eq!(result["title"], "Build the API");
 }
 
@@ -337,7 +324,7 @@ fn test_tool_add_missing_title() {
 fn test_tool_show() {
     let tmp = setup_project();
     // Add an item first
-    send_request(
+    let add_response = send_request(
         &tmp,
         &json!({
             "jsonrpc": "2.0",
@@ -349,6 +336,7 @@ fn test_tool_show() {
             }
         }),
     );
+    let task_id = extract_id_from_response(&add_response);
 
     let response = send_request(
         &tmp,
@@ -358,14 +346,14 @@ fn test_tool_show() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_show",
-                "arguments": { "id": "TASK-001" }
+                "arguments": { "id": task_id }
             }
         }),
     );
 
     assert!(response["error"].is_null());
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
-    assert!(text.contains("TASK-001"));
+    assert!(text.contains(&task_id));
     assert!(text.contains("Show me"));
 }
 
@@ -464,7 +452,7 @@ fn test_tool_query() {
 #[test]
 fn test_tool_update() {
     let tmp = setup_project();
-    send_request(
+    let add_response = send_request(
         &tmp,
         &json!({
             "jsonrpc": "2.0",
@@ -476,6 +464,7 @@ fn test_tool_update() {
             }
         }),
     );
+    let task_id = extract_id_from_response(&add_response);
 
     // Update status
     let response = send_request(
@@ -486,7 +475,7 @@ fn test_tool_update() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_update",
-                "arguments": { "id": "TASK-001", "status": "in-progress" }
+                "arguments": { "id": task_id, "status": "in-progress" }
             }
         }),
     );
@@ -504,7 +493,7 @@ fn test_tool_update() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_show",
-                "arguments": { "id": "TASK-001" }
+                "arguments": { "id": task_id }
             }
         }),
     );
@@ -517,7 +506,7 @@ fn test_tool_update() {
 #[test]
 fn test_tool_start() {
     let tmp = setup_project();
-    send_request(
+    let add_response = send_request(
         &tmp,
         &json!({
             "jsonrpc": "2.0",
@@ -529,6 +518,7 @@ fn test_tool_start() {
             }
         }),
     );
+    let task_id = extract_id_from_response(&add_response);
 
     let response = send_request(
         &tmp,
@@ -538,7 +528,7 @@ fn test_tool_start() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_start",
-                "arguments": { "id": "TASK-001" }
+                "arguments": { "id": task_id }
             }
         }),
     );
@@ -553,7 +543,7 @@ fn test_tool_start() {
 #[test]
 fn test_tool_done() {
     let tmp = setup_project();
-    send_request(
+    let add_response = send_request(
         &tmp,
         &json!({
             "jsonrpc": "2.0",
@@ -565,6 +555,7 @@ fn test_tool_done() {
             }
         }),
     );
+    let task_id = extract_id_from_response(&add_response);
 
     let response = send_request(
         &tmp,
@@ -574,7 +565,7 @@ fn test_tool_done() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_done",
-                "arguments": { "id": "TASK-001" }
+                "arguments": { "id": task_id }
             }
         }),
     );
@@ -631,7 +622,7 @@ fn test_tool_context_default() {
 #[test]
 fn test_tool_context_for_item() {
     let tmp = setup_project();
-    send_request(
+    let add_response = send_request(
         &tmp,
         &json!({
             "jsonrpc": "2.0",
@@ -643,6 +634,7 @@ fn test_tool_context_for_item() {
             }
         }),
     );
+    let task_id = extract_id_from_response(&add_response);
 
     let response = send_request(
         &tmp,
@@ -652,14 +644,14 @@ fn test_tool_context_for_item() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_context",
-                "arguments": { "item": "TASK-001" }
+                "arguments": { "item": task_id }
             }
         }),
     );
 
     assert!(response["error"].is_null());
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
-    assert!(text.contains("TASK-001"));
+    assert!(text.contains(&task_id));
     assert!(text.contains("Context target"));
 }
 
@@ -742,7 +734,7 @@ fn test_tool_stale() {
 fn test_tool_graph() {
     let tmp = setup_project();
     // Create linked items
-    send_request(
+    let add1 = send_request(
         &tmp,
         &json!({
             "jsonrpc": "2.0",
@@ -754,7 +746,9 @@ fn test_tool_graph() {
             }
         }),
     );
-    send_request(
+    let task1_id = extract_id_from_response(&add1);
+
+    let add2 = send_request(
         &tmp,
         &json!({
             "jsonrpc": "2.0",
@@ -766,6 +760,8 @@ fn test_tool_graph() {
             }
         }),
     );
+    let task2_id = extract_id_from_response(&add2);
+
     send_request(
         &tmp,
         &json!({
@@ -774,7 +770,7 @@ fn test_tool_graph() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_link",
-                "arguments": { "from": "TASK-001", "to": "TASK-002", "relation": "blocks" }
+                "arguments": { "from": task1_id, "to": task2_id, "relation": "blocks" }
             }
         }),
     );
@@ -787,15 +783,15 @@ fn test_tool_graph() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_graph",
-                "arguments": { "id": "TASK-001" }
+                "arguments": { "id": task1_id }
             }
         }),
     );
 
     assert!(response["error"].is_null());
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
-    assert!(text.contains("Reference Graph for TASK-001"));
-    assert!(text.contains("TASK-002"));
+    assert!(text.contains(&format!("Reference Graph for {}", task1_id)));
+    assert!(text.contains(&task2_id));
 }
 
 // ── Tool: markplane_promote ──────────────────────────────────────────────
@@ -806,7 +802,7 @@ fn test_tool_promote() {
     // Create a note first (directly using core)
     let root = tmp.path().join(".markplane");
     let project = markplane_core::Project::new(root);
-    project
+    let note = project
         .create_note("Good idea", markplane_core::NoteType::Idea, vec!["cool".to_string()])
         .unwrap();
 
@@ -818,7 +814,7 @@ fn test_tool_promote() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_promote",
-                "arguments": { "note_id": "NOTE-001", "priority": "high" }
+                "arguments": { "note_id": note.id, "priority": "high" }
             }
         }),
     );
@@ -826,8 +822,8 @@ fn test_tool_promote() {
     assert!(response["error"].is_null());
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
     let result: Value = serde_json::from_str(text).unwrap();
-    assert_eq!(result["id"], "TASK-001");
-    assert_eq!(result["promoted_from"], "NOTE-001");
+    assert!(result["id"].as_str().unwrap().starts_with("TASK-"));
+    assert_eq!(result["promoted_from"], note.id);
 }
 
 // ── Tool: markplane_plan ─────────────────────────────────────────────────
@@ -835,7 +831,7 @@ fn test_tool_promote() {
 #[test]
 fn test_tool_plan() {
     let tmp = setup_project();
-    send_request(
+    let add_response = send_request(
         &tmp,
         &json!({
             "jsonrpc": "2.0",
@@ -847,6 +843,7 @@ fn test_tool_plan() {
             }
         }),
     );
+    let task_id = extract_id_from_response(&add_response);
 
     let response = send_request(
         &tmp,
@@ -856,7 +853,7 @@ fn test_tool_plan() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_plan",
-                "arguments": { "task_id": "TASK-001", "title": "My plan" }
+                "arguments": { "task_id": task_id, "title": "My plan" }
             }
         }),
     );
@@ -864,8 +861,8 @@ fn test_tool_plan() {
     assert!(response["error"].is_null());
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
     let result: Value = serde_json::from_str(text).unwrap();
-    assert_eq!(result["id"], "PLAN-001");
-    assert_eq!(result["implements"], "TASK-001");
+    assert!(result["id"].as_str().unwrap().starts_with("PLAN-"));
+    assert_eq!(result["implements"], task_id);
 }
 
 // ── Tool: markplane_link ─────────────────────────────────────────────────
@@ -873,44 +870,51 @@ fn test_tool_plan() {
 #[test]
 fn test_tool_link_blocks() {
     let tmp = setup_project();
-    let responses = send_requests(
+    let add1 = send_request(
         &tmp,
-        &[
-            json!({
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "tools/call",
-                "params": {
-                    "name": "markplane_add",
-                    "arguments": { "title": "A" }
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "A" }
+            }
+        }),
+    );
+    let task1_id = extract_id_from_response(&add1);
+
+    let add2 = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "B" }
+            }
+        }),
+    );
+    let task2_id = extract_id_from_response(&add2);
+
+    let link_resp = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_link",
+                "arguments": {
+                    "from": task1_id,
+                    "to": task2_id,
+                    "relation": "blocks"
                 }
-            }),
-            json!({
-                "jsonrpc": "2.0",
-                "id": 2,
-                "method": "tools/call",
-                "params": {
-                    "name": "markplane_add",
-                    "arguments": { "title": "B" }
-                }
-            }),
-            json!({
-                "jsonrpc": "2.0",
-                "id": 3,
-                "method": "tools/call",
-                "params": {
-                    "name": "markplane_link",
-                    "arguments": {
-                        "from": "TASK-001",
-                        "to": "TASK-002",
-                        "relation": "blocks"
-                    }
-                }
-            }),
-        ],
+            }
+        }),
     );
 
-    let link_resp = &responses[2];
     assert!(link_resp["error"].is_null());
     let text = link_resp["result"]["content"][0]["text"].as_str().unwrap();
     assert!(text.contains("success"));
@@ -1065,7 +1069,7 @@ fn test_resource_task_item() {
     // Create an item first
     let root = tmp.path().join(".markplane");
     let project = markplane_core::Project::new(root);
-    project
+    let task = project
         .create_task(
             "Resource test",
             markplane_core::ItemType::Feature,
@@ -1082,7 +1086,7 @@ fn test_resource_task_item() {
             "jsonrpc": "2.0",
             "id": 203,
             "method": "resources/read",
-            "params": { "uri": "markplane://task/TASK-001" }
+            "params": { "uri": format!("markplane://task/{}", task.id) }
         }),
     );
 
@@ -1090,7 +1094,7 @@ fn test_resource_task_item() {
     let text = response["result"]["contents"][0]["text"]
         .as_str()
         .unwrap();
-    assert!(text.contains("TASK-001"));
+    assert!(text.contains(&task.id));
     assert!(text.contains("Resource test"));
 }
 
@@ -1099,7 +1103,7 @@ fn test_resource_epic_item() {
     let tmp = setup_project();
     let root = tmp.path().join(".markplane");
     let project = markplane_core::Project::new(root);
-    project
+    let epic = project
         .create_epic("Epic resource test", markplane_core::Priority::High)
         .unwrap();
 
@@ -1109,7 +1113,7 @@ fn test_resource_epic_item() {
             "jsonrpc": "2.0",
             "id": 204,
             "method": "resources/read",
-            "params": { "uri": "markplane://epic/EPIC-001" }
+            "params": { "uri": format!("markplane://epic/{}", epic.id) }
         }),
     );
 
@@ -1117,7 +1121,7 @@ fn test_resource_epic_item() {
     let text = response["result"]["contents"][0]["text"]
         .as_str()
         .unwrap();
-    assert!(text.contains("EPIC-001"));
+    assert!(text.contains(&epic.id));
 }
 
 #[test]
@@ -1163,7 +1167,7 @@ fn test_resource_plan_item() {
     let tmp = setup_project();
     let root = tmp.path().join(".markplane");
     let project = markplane_core::Project::new(root);
-    project
+    let plan = project
         .create_plan(
             "Plan resource test",
             vec![],
@@ -1177,7 +1181,7 @@ fn test_resource_plan_item() {
             "jsonrpc": "2.0",
             "id": 210,
             "method": "resources/read",
-            "params": { "uri": "markplane://plan/PLAN-001" }
+            "params": { "uri": format!("markplane://plan/{}", plan.id) }
         }),
     );
 
@@ -1185,7 +1189,7 @@ fn test_resource_plan_item() {
     let text = response["result"]["contents"][0]["text"]
         .as_str()
         .unwrap();
-    assert!(text.contains("PLAN-001"));
+    assert!(text.contains(&plan.id));
     assert!(text.contains("Plan resource test"));
 }
 
@@ -1194,7 +1198,7 @@ fn test_resource_plan_wrong_prefix() {
     let tmp = setup_project();
     let root = tmp.path().join(".markplane");
     let project = markplane_core::Project::new(root);
-    project
+    let task = project
         .create_task(
             "Not a plan",
             markplane_core::ItemType::Feature,
@@ -1211,7 +1215,7 @@ fn test_resource_plan_wrong_prefix() {
             "jsonrpc": "2.0",
             "id": 211,
             "method": "resources/read",
-            "params": { "uri": "markplane://plan/TASK-001" }
+            "params": { "uri": format!("markplane://plan/{}", task.id) }
         }),
     );
 
@@ -1227,7 +1231,7 @@ fn test_resource_note_item() {
     let tmp = setup_project();
     let root = tmp.path().join(".markplane");
     let project = markplane_core::Project::new(root);
-    project
+    let note = project
         .create_note(
             "Note resource test",
             markplane_core::NoteType::Research,
@@ -1241,7 +1245,7 @@ fn test_resource_note_item() {
             "jsonrpc": "2.0",
             "id": 212,
             "method": "resources/read",
-            "params": { "uri": "markplane://note/NOTE-001" }
+            "params": { "uri": format!("markplane://note/{}", note.id) }
         }),
     );
 
@@ -1249,7 +1253,7 @@ fn test_resource_note_item() {
     let text = response["result"]["contents"][0]["text"]
         .as_str()
         .unwrap();
-    assert!(text.contains("NOTE-001"));
+    assert!(text.contains(&note.id));
     assert!(text.contains("Note resource test"));
 }
 
@@ -1258,7 +1262,7 @@ fn test_resource_note_wrong_prefix() {
     let tmp = setup_project();
     let root = tmp.path().join(".markplane");
     let project = markplane_core::Project::new(root);
-    project
+    let task = project
         .create_task(
             "Not a note",
             markplane_core::ItemType::Feature,
@@ -1275,7 +1279,7 @@ fn test_resource_note_wrong_prefix() {
             "jsonrpc": "2.0",
             "id": 213,
             "method": "resources/read",
-            "params": { "uri": "markplane://note/TASK-001" }
+            "params": { "uri": format!("markplane://note/{}", task.id) }
         }),
     );
 

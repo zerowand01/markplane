@@ -2,14 +2,9 @@ version: 1
 project:
   name: Markplane
   description: AI-native, markdown-first project management system
-counters:
-  EPIC: 6
-  PLAN: 1
-  NOTE: 0
-  TASK: 31
+documentation_paths:
+- docs
 context:
   token_budget: 1000
   recent_days: 7
   auto_generate: true
-documentation_paths:
-- docs

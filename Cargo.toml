@@ -25,8 +25,8 @@ chrono = { version = "0.4", features = ["serde"] }
 # File matching
 glob = "0.3"
 
-# File locking
-fs2 = "0.4"
+# Random ID generation
+rand = "0.9"
 
 # Error handling
 thiserror = "2.0"

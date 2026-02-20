@@ -466,9 +466,10 @@ impl Project {
         Ok(())
     }
 
-    /// Full sync: normalize positions + all INDEX.md + all .context/ files
+    /// Full sync: all INDEX.md + all .context/ files.
+    /// Does NOT normalize positions — use `normalize_positions()` separately
+    /// or `markplane sync --normalize` for that (it rewrites source files).
     pub fn sync_all(&self) -> Result<()> {
-        self.normalize_positions()?;
         self.sync_all_indexes()?;
         self.generate_all_context()?;
         Ok(())
@@ -548,22 +549,22 @@ mod tests {
     #[test]
     fn test_generate_context_summary_with_items() {
         let (_tmp, project) = setup_project();
-        project.create_epic("Phase 1", Priority::High).unwrap();
-        project.update_status("EPIC-001", "active").unwrap();
+        let epic = project.create_epic("Phase 1", Priority::High).unwrap();
+        project.update_status(&epic.id, "active").unwrap();
 
-        project
+        let task1 = project
             .create_task(
                 "In progress item",
                 ItemType::Feature,
                 Priority::High,
                 Effort::Medium,
-                Some("EPIC-001".to_string()),
+                Some(epic.id.clone()),
                 vec![],
             )
             .unwrap();
-        project.update_status("TASK-001", "in-progress").unwrap();
+        project.update_status(&task1.id, "in-progress").unwrap();
 
-        project
+        let task2 = project
             .create_task(
                 "Planned item",
                 ItemType::Feature,
@@ -573,23 +574,23 @@ mod tests {
                 vec![],
             )
             .unwrap();
-        project.update_status("TASK-002", "planned").unwrap();
+        project.update_status(&task2.id, "planned").unwrap();
 
         project.generate_context_summary().unwrap();
         let content =
             fs::read_to_string(project.root().join(".context/summary.md")).unwrap();
         assert!(content.contains("Active Epics"));
-        assert!(content.contains("EPIC-001"));
+        assert!(content.contains(&epic.id));
         assert!(content.contains("In-Progress Work"));
-        assert!(content.contains("TASK-001"));
+        assert!(content.contains(&task1.id));
         assert!(content.contains("Priority Queue"));
-        assert!(content.contains("TASK-002"));
+        assert!(content.contains(&task2.id));
     }
 
     #[test]
     fn test_generate_context_summary_blocked() {
         let (_tmp, project) = setup_project();
-        project
+        let blocker = project
             .create_task(
                 "Blocker",
                 ItemType::Feature,
@@ -599,10 +600,10 @@ mod tests {
                 vec![],
             )
             .unwrap();
-        project.update_status("TASK-001", "in-progress").unwrap();
+        project.update_status(&blocker.id, "in-progress").unwrap();
 
-        // Create item that depends on TASK-001 (not done)
-        project
+        // Create item that depends on blocker (not done)
+        let blocked = project
             .create_task(
                 "Blocked item",
                 ItemType::Feature,
@@ -613,16 +614,16 @@ mod tests {
             )
             .unwrap();
         // Manually set depends_on by reading/writing the item
-        let mut doc: MarkplaneDocument<Task> = project.read_item("TASK-002").unwrap();
-        doc.frontmatter.depends_on = vec!["TASK-001".to_string()];
-        project.write_item("TASK-002", &doc).unwrap();
+        let mut doc: MarkplaneDocument<Task> = project.read_item(&blocked.id).unwrap();
+        doc.frontmatter.depends_on = vec![blocker.id.clone()];
+        project.write_item(&blocked.id, &doc).unwrap();
 
         project.generate_context_summary().unwrap();
         let content =
             fs::read_to_string(project.root().join(".context/summary.md")).unwrap();
         assert!(content.contains("Blocked Items"));
-        assert!(content.contains("TASK-002"));
-        assert!(content.contains("blocked by TASK-001"));
+        assert!(content.contains(&blocked.id));
+        assert!(content.contains(&format!("blocked by {}", blocker.id)));
     }
 
     #[test]
@@ -637,7 +638,7 @@ mod tests {
     #[test]
     fn test_generate_context_active_work_with_items() {
         let (_tmp, project) = setup_project();
-        project
+        let task = project
             .create_task(
                 "Active item",
                 ItemType::Bug,
@@ -647,12 +648,12 @@ mod tests {
                 vec![],
             )
             .unwrap();
-        project.update_status("TASK-001", "in-progress").unwrap();
+        project.update_status(&task.id, "in-progress").unwrap();
 
         project.generate_context_active_work().unwrap();
         let content =
             fs::read_to_string(project.root().join(".context/active-work.md")).unwrap();
-        assert!(content.contains("TASK-001"));
+        assert!(content.contains(&task.id));
         assert!(content.contains("Active item"));
         assert!(content.contains("critical"));
     }
@@ -669,7 +670,7 @@ mod tests {
     #[test]
     fn test_generate_context_blocked_with_items() {
         let (_tmp, project) = setup_project();
-        project
+        let blocker = project
             .create_task(
                 "Blocker",
                 ItemType::Feature,
@@ -679,7 +680,7 @@ mod tests {
                 vec![],
             )
             .unwrap();
-        project
+        let blocked = project
             .create_task(
                 "Blocked",
                 ItemType::Feature,
@@ -689,29 +690,29 @@ mod tests {
                 vec![],
             )
             .unwrap();
-        let mut doc: MarkplaneDocument<Task> = project.read_item("TASK-002").unwrap();
-        doc.frontmatter.depends_on = vec!["TASK-001".to_string()];
-        project.write_item("TASK-002", &doc).unwrap();
+        let mut doc: MarkplaneDocument<Task> = project.read_item(&blocked.id).unwrap();
+        doc.frontmatter.depends_on = vec![blocker.id.clone()];
+        project.write_item(&blocked.id, &doc).unwrap();
 
         project.generate_context_blocked().unwrap();
         let content =
             fs::read_to_string(project.root().join(".context/blocked-items.md")).unwrap();
         assert!(content.contains("1 blocked items"));
-        assert!(content.contains("TASK-002"));
-        assert!(content.contains("[[TASK-001]]"));
+        assert!(content.contains(&blocked.id));
+        assert!(content.contains(&format!("[[{}]]", blocker.id)));
     }
 
     #[test]
     fn test_generate_context_metrics() {
         let (_tmp, project) = setup_project();
-        project.create_epic("Phase 1", Priority::High).unwrap();
+        let epic = project.create_epic("Phase 1", Priority::High).unwrap();
         project
             .create_task(
                 "Item 1",
                 ItemType::Feature,
                 Priority::High,
                 Effort::Medium,
-                Some("EPIC-001".to_string()),
+                Some(epic.id.clone()),
                 vec![],
             )
             .unwrap();
@@ -735,7 +736,7 @@ mod tests {
         assert!(content.contains("Critical: 1"));
         assert!(content.contains("High: 1"));
         assert!(content.contains("Epic Progress"));
-        assert!(content.contains("EPIC-001"));
+        assert!(content.contains(&epic.id));
     }
 
     #[test]
@@ -752,14 +753,14 @@ mod tests {
     #[test]
     fn test_sync_all() {
         let (_tmp, project) = setup_project();
-        project.create_epic("Phase 1", Priority::High).unwrap();
+        let epic = project.create_epic("Phase 1", Priority::High).unwrap();
         project
             .create_task(
                 "Item 1",
                 ItemType::Feature,
                 Priority::High,
                 Effort::Medium,
-                Some("EPIC-001".to_string()),
+                Some(epic.id.clone()),
                 vec![],
             )
             .unwrap();

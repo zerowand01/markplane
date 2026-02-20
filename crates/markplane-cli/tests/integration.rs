@@ -18,6 +18,21 @@ fn setup_project() -> TempDir {
     tmp
 }
 
+/// Extract the generated ID from CLI output like "Created TASK-k7x9m — title"
+fn extract_id(output: &[u8]) -> String {
+    let stdout = String::from_utf8_lossy(output);
+    stdout
+        .split_whitespace()
+        .find(|w| {
+            w.starts_with("TASK-")
+                || w.starts_with("EPIC-")
+                || w.starts_with("PLAN-")
+                || w.starts_with("NOTE-")
+        })
+        .unwrap_or_else(|| panic!("No ID found in output: {}", stdout))
+        .to_string()
+}
+
 // ── Init ─────────────────────────────────────────────────────────────────
 
 #[test]
@@ -66,21 +81,25 @@ fn test_init_already_initialized() {
 #[test]
 fn test_add_basic() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args(["add", "Fix login bug"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("Created TASK-001"))
-        .stdout(predicate::str::contains("Fix login bug"));
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let task_id = extract_id(&output.stdout);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Created"));
+    assert!(stdout.contains(&task_id));
+    assert!(stdout.contains("Fix login bug"));
 
-    assert!(tmp.path().join(".markplane/backlog/items/TASK-001.md").is_file());
+    assert!(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id)).is_file());
 }
 
 #[test]
 fn test_add_with_flags() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args([
             "add",
@@ -94,13 +113,14 @@ fn test_add_with_flags() {
             "--tags",
             "ui,frontend",
         ])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("Created TASK-001"));
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let task_id = extract_id(&output.stdout);
 
     // Verify the file contains the right metadata
     let content =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/TASK-001.md")).unwrap();
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
     assert!(content.contains("priority: high"));
     assert!(content.contains("type: feature"));
     assert!(content.contains("effort: large"));
@@ -112,45 +132,61 @@ fn test_add_with_flags() {
 fn test_add_with_epic() {
     let tmp = setup_project();
     // Create an epic first
-    cmd()
+    let epic_output = cmd()
         .current_dir(tmp.path())
         .args(["epic", "Phase 1"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(epic_output.status.success(), "stderr: {}", String::from_utf8_lossy(&epic_output.stderr));
+    let epic_id = extract_id(&epic_output.stdout);
 
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
-        .args(["add", "Task in epic", "--epic", "EPIC-001"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("Created TASK-001"));
+        .args(["add", "Task in epic", "--epic", &epic_id])
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let task_id = extract_id(&output.stdout);
 
     let content =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/TASK-001.md")).unwrap();
-    assert!(content.contains("epic: EPIC-001"));
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    assert!(content.contains(&format!("epic: {}", epic_id)));
 }
 
 #[test]
-fn test_add_sequential_ids() {
+fn test_add_random_ids() {
     let tmp = setup_project();
-    cmd()
+    let out1 = cmd()
         .current_dir(tmp.path())
         .args(["add", "First"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("TASK-001"));
-    cmd()
+        .output()
+        .unwrap();
+    assert!(out1.status.success(), "stderr: {}", String::from_utf8_lossy(&out1.stderr));
+    let id1 = extract_id(&out1.stdout);
+    assert!(id1.starts_with("TASK-"));
+
+    let out2 = cmd()
         .current_dir(tmp.path())
         .args(["add", "Second"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("TASK-002"));
-    cmd()
+        .output()
+        .unwrap();
+    assert!(out2.status.success(), "stderr: {}", String::from_utf8_lossy(&out2.stderr));
+    let id2 = extract_id(&out2.stdout);
+    assert!(id2.starts_with("TASK-"));
+
+    let out3 = cmd()
         .current_dir(tmp.path())
         .args(["add", "Third"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("TASK-003"));
+        .output()
+        .unwrap();
+    assert!(out3.status.success(), "stderr: {}", String::from_utf8_lossy(&out3.stderr));
+    let id3 = extract_id(&out3.stdout);
+    assert!(id3.starts_with("TASK-"));
+
+    // All IDs should be unique
+    assert_ne!(id1, id2);
+    assert_ne!(id2, id3);
+    assert_ne!(id1, id3);
 }
 
 // ── Show ─────────────────────────────────────────────────────────────────
@@ -158,18 +194,20 @@ fn test_add_sequential_ids() {
 #[test]
 fn test_show_task() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args(["add", "Show me", "--priority", "high"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let task_id = extract_id(&output.stdout);
 
     cmd()
         .current_dir(tmp.path())
-        .args(["show", "TASK-001"])
+        .args(["show", &task_id])
         .assert()
         .success()
-        .stdout(predicate::str::contains("TASK-001"))
+        .stdout(predicate::str::contains(&task_id))
         .stdout(predicate::str::contains("Show me"))
         .stdout(predicate::str::contains("high"));
 }
@@ -187,18 +225,20 @@ fn test_show_not_found() {
 #[test]
 fn test_show_epic() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args(["epic", "Phase 1", "--priority", "high"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let epic_id = extract_id(&output.stdout);
 
     cmd()
         .current_dir(tmp.path())
-        .args(["show", "EPIC-001"])
+        .args(["show", &epic_id])
         .assert()
         .success()
-        .stdout(predicate::str::contains("EPIC-001"))
+        .stdout(predicate::str::contains(&epic_id))
         .stdout(predicate::str::contains("Phase 1"));
 }
 
@@ -218,24 +258,29 @@ fn test_ls_empty() {
 #[test]
 fn test_ls_with_items() {
     let tmp = setup_project();
-    cmd()
+    let out1 = cmd()
         .current_dir(tmp.path())
         .args(["add", "Task A"])
-        .assert()
-        .success();
-    cmd()
+        .output()
+        .unwrap();
+    assert!(out1.status.success(), "stderr: {}", String::from_utf8_lossy(&out1.stderr));
+    let id1 = extract_id(&out1.stdout);
+
+    let out2 = cmd()
         .current_dir(tmp.path())
         .args(["add", "Task B"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(out2.status.success(), "stderr: {}", String::from_utf8_lossy(&out2.stderr));
+    let id2 = extract_id(&out2.stdout);
 
     cmd()
         .current_dir(tmp.path())
         .arg("ls")
         .assert()
         .success()
-        .stdout(predicate::str::contains("TASK-001"))
-        .stdout(predicate::str::contains("TASK-002"))
+        .stdout(predicate::str::contains(&id1))
+        .stdout(predicate::str::contains(&id2))
         .stdout(predicate::str::contains("Task A"))
         .stdout(predicate::str::contains("Task B"));
 }
@@ -243,19 +288,24 @@ fn test_ls_with_items() {
 #[test]
 fn test_ls_filter_status() {
     let tmp = setup_project();
-    cmd()
+    let out1 = cmd()
         .current_dir(tmp.path())
         .args(["add", "Draft item"])
-        .assert()
-        .success();
-    cmd()
+        .output()
+        .unwrap();
+    assert!(out1.status.success(), "stderr: {}", String::from_utf8_lossy(&out1.stderr));
+
+    let out2 = cmd()
         .current_dir(tmp.path())
         .args(["add", "Progress item"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(out2.status.success(), "stderr: {}", String::from_utf8_lossy(&out2.stderr));
+    let id2 = extract_id(&out2.stdout);
+
     cmd()
         .current_dir(tmp.path())
-        .args(["status", "TASK-002", "in-progress"])
+        .args(["status", &id2, "in-progress"])
         .assert()
         .success();
 
@@ -264,65 +314,74 @@ fn test_ls_filter_status() {
         .args(["ls", "--status", "in-progress"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("TASK-002"))
+        .stdout(predicate::str::contains(&id2))
         .stdout(predicate::str::contains("Draft item").not());
 }
 
 #[test]
 fn test_ls_epics() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args(["epic", "Phase 1"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let epic_id = extract_id(&output.stdout);
 
     cmd()
         .current_dir(tmp.path())
         .args(["ls", "epics"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("EPIC-001"))
+        .stdout(predicate::str::contains(&epic_id))
         .stdout(predicate::str::contains("Phase 1"));
 }
 
 #[test]
 fn test_ls_plans() {
     let tmp = setup_project();
-    cmd()
+    let task_out = cmd()
         .current_dir(tmp.path())
         .args(["add", "Some task"])
-        .assert()
-        .success();
-    cmd()
+        .output()
+        .unwrap();
+    assert!(task_out.status.success(), "stderr: {}", String::from_utf8_lossy(&task_out.stderr));
+    let task_id = extract_id(&task_out.stdout);
+
+    let plan_out = cmd()
         .current_dir(tmp.path())
-        .args(["plan", "TASK-001"])
-        .assert()
-        .success();
+        .args(["plan", &task_id])
+        .output()
+        .unwrap();
+    assert!(plan_out.status.success(), "stderr: {}", String::from_utf8_lossy(&plan_out.stderr));
+    let plan_id = extract_id(&plan_out.stdout);
 
     cmd()
         .current_dir(tmp.path())
         .args(["ls", "plans"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("PLAN-001"));
+        .stdout(predicate::str::contains(&plan_id));
 }
 
 #[test]
 fn test_ls_notes() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args(["note", "Research topic", "--type", "research"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let note_id = extract_id(&output.stdout);
 
     cmd()
         .current_dir(tmp.path())
         .args(["ls", "notes"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("NOTE-001"))
+        .stdout(predicate::str::contains(&note_id))
         .stdout(predicate::str::contains("Research topic"));
 }
 
@@ -331,24 +390,26 @@ fn test_ls_notes() {
 #[test]
 fn test_status_update() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args(["add", "Status test"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let task_id = extract_id(&output.stdout);
 
     cmd()
         .current_dir(tmp.path())
-        .args(["status", "TASK-001", "in-progress"])
+        .args(["status", &task_id, "in-progress"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("TASK-001"))
+        .stdout(predicate::str::contains(&task_id))
         .stdout(predicate::str::contains("in-progress"));
 
     // Verify the change
     cmd()
         .current_dir(tmp.path())
-        .args(["show", "TASK-001"])
+        .args(["show", &task_id])
         .assert()
         .success()
         .stdout(predicate::str::contains("in-progress"));
@@ -357,15 +418,17 @@ fn test_status_update() {
 #[test]
 fn test_status_invalid() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args(["add", "Status test"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let task_id = extract_id(&output.stdout);
 
     cmd()
         .current_dir(tmp.path())
-        .args(["status", "TASK-001", "invalid-status"])
+        .args(["status", &task_id, "invalid-status"])
         .assert()
         .failure();
 }
@@ -404,15 +467,17 @@ fn test_sync() {
 #[test]
 fn test_start_and_done() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args(["add", "Start/done test"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let task_id = extract_id(&output.stdout);
 
     cmd()
         .current_dir(tmp.path())
-        .args(["start", "TASK-001", "--user", "alice"])
+        .args(["start", &task_id, "--user", "alice"])
         .assert()
         .success()
         .stdout(predicate::str::contains("in-progress"))
@@ -420,13 +485,13 @@ fn test_start_and_done() {
 
     // Verify status and assignee
     let content =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/TASK-001.md")).unwrap();
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
     assert!(content.contains("status: in-progress"));
     assert!(content.contains("assignee: alice"));
 
     cmd()
         .current_dir(tmp.path())
-        .args(["done", "TASK-001"])
+        .args(["done", &task_id])
         .assert()
         .success()
         .stdout(predicate::str::contains("done"));
@@ -437,59 +502,73 @@ fn test_start_and_done() {
 #[test]
 fn test_epic_creation() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args(["epic", "Phase 1", "--priority", "high"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("Created EPIC-001"))
-        .stdout(predicate::str::contains("Phase 1"));
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let epic_id = extract_id(&output.stdout);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Created"));
+    assert!(stdout.contains(&epic_id));
+    assert!(stdout.contains("Phase 1"));
 
     assert!(tmp
         .path()
-        .join(".markplane/roadmap/items/EPIC-001.md")
+        .join(format!(".markplane/roadmap/items/{}.md", epic_id))
         .is_file());
 }
 
 #[test]
 fn test_note_creation() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args(["note", "Research caching", "--type", "research", "--tags", "cache,perf"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("Created NOTE-001"))
-        .stdout(predicate::str::contains("Research caching"));
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let note_id = extract_id(&output.stdout);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Created"));
+    assert!(stdout.contains(&note_id));
+    assert!(stdout.contains("Research caching"));
 
     assert!(tmp
         .path()
-        .join(".markplane/notes/items/NOTE-001.md")
+        .join(format!(".markplane/notes/items/{}.md", note_id))
         .is_file());
 }
 
 #[test]
 fn test_plan_creation() {
     let tmp = setup_project();
-    cmd()
+    let task_out = cmd()
         .current_dir(tmp.path())
         .args(["add", "Dark mode"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(task_out.status.success(), "stderr: {}", String::from_utf8_lossy(&task_out.stderr));
+    let task_id = extract_id(&task_out.stdout);
 
-    cmd()
+    let plan_out = cmd()
         .current_dir(tmp.path())
-        .args(["plan", "TASK-001", "--title", "Dark mode plan"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("Created PLAN-001"))
-        .stdout(predicate::str::contains("Dark mode plan"))
-        .stdout(predicate::str::contains("Linked to TASK-001"));
+        .args(["plan", &task_id, "--title", "Dark mode plan"])
+        .output()
+        .unwrap();
+    assert!(plan_out.status.success(), "stderr: {}", String::from_utf8_lossy(&plan_out.stderr));
+    let plan_id = extract_id(&plan_out.stdout);
+    let stdout = String::from_utf8_lossy(&plan_out.stdout);
+    assert!(stdout.contains("Created"));
+    assert!(stdout.contains(&plan_id));
+    assert!(stdout.contains("Dark mode plan"));
+    assert!(stdout.contains(&format!("Linked to {}", task_id)));
 
     // Verify task has plan linked
     let content =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/TASK-001.md")).unwrap();
-    assert!(content.contains("PLAN-001"));
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    assert!(content.contains(&plan_id));
 }
 
 // ── Promote ──────────────────────────────────────────────────────────────
@@ -497,38 +576,50 @@ fn test_plan_creation() {
 #[test]
 fn test_promote_note_to_task() {
     let tmp = setup_project();
-    cmd()
+    let note_out = cmd()
         .current_dir(tmp.path())
         .args(["note", "Good idea", "--type", "idea", "--tags", "cool"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(note_out.status.success(), "stderr: {}", String::from_utf8_lossy(&note_out.stderr));
+    let note_id = extract_id(&note_out.stdout);
 
-    cmd()
+    let promote_out = cmd()
         .current_dir(tmp.path())
-        .args(["promote", "NOTE-001", "--priority", "high"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("Promoted NOTE-001"))
-        .stdout(predicate::str::contains("TASK-001"));
+        .args(["promote", &note_id, "--priority", "high"])
+        .output()
+        .unwrap();
+    assert!(promote_out.status.success(), "stderr: {}", String::from_utf8_lossy(&promote_out.stderr));
+    let stdout = String::from_utf8_lossy(&promote_out.stdout);
+    assert!(stdout.contains(&format!("Promoted {}", note_id)));
+    // Extract the TASK ID from "Promoted NOTE-xxx → TASK-yyy — title"
+    let task_id = stdout
+        .split_whitespace()
+        .filter(|w| w.starts_with("TASK-"))
+        .next()
+        .expect("No TASK ID found in promote output")
+        .to_string();
 
     assert!(tmp
         .path()
-        .join(".markplane/backlog/items/TASK-001.md")
+        .join(format!(".markplane/backlog/items/{}.md", task_id))
         .is_file());
 }
 
 #[test]
 fn test_promote_non_note_fails() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args(["add", "Not a note"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let task_id = extract_id(&output.stdout);
 
     cmd()
         .current_dir(tmp.path())
-        .args(["promote", "TASK-001"])
+        .args(["promote", &task_id])
         .assert()
         .failure();
 }
@@ -538,21 +629,23 @@ fn test_promote_non_note_fails() {
 #[test]
 fn test_assign() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args(["add", "Assign test"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let task_id = extract_id(&output.stdout);
 
     cmd()
         .current_dir(tmp.path())
-        .args(["assign", "TASK-001", "@daniel"])
+        .args(["assign", &task_id, "@daniel"])
         .assert()
         .success()
         .stdout(predicate::str::contains("assigned to daniel"));
 
     let content =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/TASK-001.md")).unwrap();
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
     assert!(content.contains("assignee: daniel"));
 }
 
@@ -561,46 +654,53 @@ fn test_assign() {
 #[test]
 fn test_link_blocks() {
     let tmp = setup_project();
-    cmd()
+    let out1 = cmd()
         .current_dir(tmp.path())
         .args(["add", "Blocker"])
-        .assert()
-        .success();
-    cmd()
+        .output()
+        .unwrap();
+    assert!(out1.status.success(), "stderr: {}", String::from_utf8_lossy(&out1.stderr));
+    let id1 = extract_id(&out1.stdout);
+
+    let out2 = cmd()
         .current_dir(tmp.path())
         .args(["add", "Blocked"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(out2.status.success(), "stderr: {}", String::from_utf8_lossy(&out2.stderr));
+    let id2 = extract_id(&out2.stdout);
 
     cmd()
         .current_dir(tmp.path())
-        .args(["link", "TASK-001", "--blocks", "TASK-002"])
+        .args(["link", &id1, "--blocks", &id2])
         .assert()
         .success()
-        .stdout(predicate::str::contains("TASK-001 blocks TASK-002"));
+        .stdout(predicate::str::contains(format!("{} blocks {}", id1, id2)));
 
     // Verify bidirectional
     let blocker =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/TASK-001.md")).unwrap();
-    assert!(blocker.contains("TASK-002"));
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", id1))).unwrap();
+    assert!(blocker.contains(&id2));
 
     let blocked =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/TASK-002.md")).unwrap();
-    assert!(blocked.contains("TASK-001"));
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", id2))).unwrap();
+    assert!(blocked.contains(&id1));
 }
 
 #[test]
 fn test_link_no_flags_fails() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args(["add", "Lonely"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let task_id = extract_id(&output.stdout);
 
     cmd()
         .current_dir(tmp.path())
-        .args(["link", "TASK-001"])
+        .args(["link", &task_id])
         .assert()
         .failure();
 }
@@ -610,21 +710,23 @@ fn test_link_no_flags_fails() {
 #[test]
 fn test_tag() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args(["add", "Tag test"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let task_id = extract_id(&output.stdout);
 
     cmd()
         .current_dir(tmp.path())
-        .args(["tag", "TASK-001", "ui,frontend"])
+        .args(["tag", &task_id, "ui,frontend"])
         .assert()
         .success()
         .stdout(predicate::str::contains("tagged with: ui, frontend"));
 
     let content =
-        std::fs::read_to_string(tmp.path().join(".markplane/backlog/items/TASK-001.md")).unwrap();
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
     assert!(content.contains("ui"));
     assert!(content.contains("frontend"));
 }
@@ -767,14 +869,16 @@ fn test_stale_no_stale_items() {
 #[test]
 fn test_stale_with_old_items() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args(["add", "Old item"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let task_id = extract_id(&output.stdout);
 
     // Manually backdate the item's updated field to make it stale
-    let item_path = tmp.path().join(".markplane/backlog/items/TASK-001.md");
+    let item_path = tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id));
     let content = std::fs::read_to_string(&item_path).unwrap();
     let old_date = "2020-01-01";
     let today = chrono::Local::now()
@@ -792,7 +896,7 @@ fn test_stale_with_old_items() {
         .args(["stale", "--days", "30"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("TASK-001"))
+        .stdout(predicate::str::contains(&task_id))
         .stdout(predicate::str::contains("Old item"));
 }
 
@@ -819,14 +923,17 @@ fn test_archive_nothing_to_archive() {
 #[test]
 fn test_archive_dry_run() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args(["add", "To archive"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let task_id = extract_id(&output.stdout);
+
     cmd()
         .current_dir(tmp.path())
-        .args(["status", "TASK-001", "done"])
+        .args(["status", &task_id, "done"])
         .assert()
         .success();
 
@@ -836,53 +943,59 @@ fn test_archive_dry_run() {
         .assert()
         .success()
         .stdout(predicate::str::contains("Would archive"))
-        .stdout(predicate::str::contains("TASK-001"));
+        .stdout(predicate::str::contains(&task_id));
 
     // File should still be in active dir (not moved)
-    assert!(tmp.path().join(".markplane/backlog/items/TASK-001.md").is_file());
+    assert!(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id)).is_file());
 }
 
 #[test]
 fn test_archive_actual() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args(["add", "To archive"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let task_id = extract_id(&output.stdout);
+
     cmd()
         .current_dir(tmp.path())
-        .args(["status", "TASK-001", "done"])
+        .args(["status", &task_id, "done"])
         .assert()
         .success();
 
     // Single-item archive by ID
     cmd()
         .current_dir(tmp.path())
-        .args(["archive", "TASK-001"])
+        .args(["archive", &task_id])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Archived TASK-001"));
+        .stdout(predicate::str::contains(format!("Archived {}", task_id)));
 
     // File should be in archive dir
     assert!(tmp
         .path()
-        .join(".markplane/backlog/archive/TASK-001.md")
+        .join(format!(".markplane/backlog/archive/{}.md", task_id))
         .is_file());
-    assert!(!tmp.path().join(".markplane/backlog/items/TASK-001.md").is_file());
+    assert!(!tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id)).is_file());
 }
 
 #[test]
 fn test_archive_keep_cancelled() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args(["add", "To cancel"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let task_id = extract_id(&output.stdout);
+
     cmd()
         .current_dir(tmp.path())
-        .args(["status", "TASK-001", "cancelled"])
+        .args(["status", &task_id, "cancelled"])
         .assert()
         .success();
 
@@ -897,58 +1010,65 @@ fn test_archive_keep_cancelled() {
     // File should be in archive dir
     assert!(tmp
         .path()
-        .join(".markplane/backlog/archive/TASK-001.md")
+        .join(format!(".markplane/backlog/archive/{}.md", task_id))
         .is_file());
 }
 
 #[test]
 fn test_unarchive() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args(["add", "To archive and restore"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let task_id = extract_id(&output.stdout);
 
     // Archive it
     cmd()
         .current_dir(tmp.path())
-        .args(["archive", "TASK-001"])
+        .args(["archive", &task_id])
         .assert()
         .success();
 
-    assert!(tmp.path().join(".markplane/backlog/archive/TASK-001.md").is_file());
+    assert!(tmp.path().join(format!(".markplane/backlog/archive/{}.md", task_id)).is_file());
 
     // Unarchive it
     cmd()
         .current_dir(tmp.path())
-        .args(["unarchive", "TASK-001"])
+        .args(["unarchive", &task_id])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Restored TASK-001"));
+        .stdout(predicate::str::contains(format!("Restored {}", task_id)));
 
-    assert!(tmp.path().join(".markplane/backlog/items/TASK-001.md").is_file());
-    assert!(!tmp.path().join(".markplane/backlog/archive/TASK-001.md").is_file());
+    assert!(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id)).is_file());
+    assert!(!tmp.path().join(format!(".markplane/backlog/archive/{}.md", task_id)).is_file());
 }
 
 #[test]
 fn test_ls_archived() {
     let tmp = setup_project();
-    cmd()
+    let out1 = cmd()
         .current_dir(tmp.path())
         .args(["add", "Active item"])
-        .assert()
-        .success();
-    cmd()
+        .output()
+        .unwrap();
+    assert!(out1.status.success(), "stderr: {}", String::from_utf8_lossy(&out1.stderr));
+    let id1 = extract_id(&out1.stdout);
+
+    let out2 = cmd()
         .current_dir(tmp.path())
         .args(["add", "Archived item"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(out2.status.success(), "stderr: {}", String::from_utf8_lossy(&out2.stderr));
+    let id2 = extract_id(&out2.stdout);
 
-    // Archive TASK-002
+    // Archive second item
     cmd()
         .current_dir(tmp.path())
-        .args(["archive", "TASK-002"])
+        .args(["archive", &id2])
         .assert()
         .success();
 
@@ -958,8 +1078,8 @@ fn test_ls_archived() {
         .arg("ls")
         .assert()
         .success()
-        .stdout(predicate::str::contains("TASK-001"))
-        .stdout(predicate::str::contains("TASK-002").not());
+        .stdout(predicate::str::contains(id1.as_str()))
+        .stdout(predicate::str::contains(id2.as_str()).not());
 
     // ls --archived should only show archived
     cmd()
@@ -967,8 +1087,8 @@ fn test_ls_archived() {
         .args(["ls", "--archived"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("TASK-002"))
-        .stdout(predicate::str::contains("TASK-001").not());
+        .stdout(predicate::str::contains(id2.as_str()))
+        .stdout(predicate::str::contains(id1.as_str()).not());
 }
 
 // ── Graph ─────────────────────────────────────────────────────────────────
@@ -976,29 +1096,35 @@ fn test_ls_archived() {
 #[test]
 fn test_graph() {
     let tmp = setup_project();
-    cmd()
+    let out1 = cmd()
         .current_dir(tmp.path())
         .args(["add", "Blocker"])
-        .assert()
-        .success();
-    cmd()
+        .output()
+        .unwrap();
+    assert!(out1.status.success(), "stderr: {}", String::from_utf8_lossy(&out1.stderr));
+    let id1 = extract_id(&out1.stdout);
+
+    let out2 = cmd()
         .current_dir(tmp.path())
         .args(["add", "Blocked"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(out2.status.success(), "stderr: {}", String::from_utf8_lossy(&out2.stderr));
+    let id2 = extract_id(&out2.stdout);
+
     cmd()
         .current_dir(tmp.path())
-        .args(["link", "TASK-001", "--blocks", "TASK-002"])
+        .args(["link", &id1, "--blocks", &id2])
         .assert()
         .success();
 
     cmd()
         .current_dir(tmp.path())
-        .args(["graph", "TASK-001"])
+        .args(["graph", &id1])
         .assert()
         .success()
-        .stdout(predicate::str::contains("TASK-001"))
-        .stdout(predicate::str::contains("TASK-002"));
+        .stdout(predicate::str::contains(&id1))
+        .stdout(predicate::str::contains(&id2));
 }
 
 // ── Context ───────────────────────────────────────────────────────────────
@@ -1022,18 +1148,20 @@ fn test_context_regenerate() {
 #[test]
 fn test_context_for_item() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args(["add", "Context item", "--priority", "high"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let task_id = extract_id(&output.stdout);
 
     cmd()
         .current_dir(tmp.path())
-        .args(["context", "--item", "TASK-001"])
+        .args(["context", "--item", &task_id])
         .assert()
         .success()
-        .stdout(predicate::str::contains("TASK-001"))
+        .stdout(predicate::str::contains(&task_id))
         .stdout(predicate::str::contains("Context item"));
 }
 
@@ -1072,15 +1200,17 @@ fn test_plan_for_nonexistent_task() {
 #[test]
 fn test_plan_for_non_task_item() {
     let tmp = setup_project();
-    cmd()
+    let output = cmd()
         .current_dir(tmp.path())
         .args(["epic", "Phase 1"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let epic_id = extract_id(&output.stdout);
 
     cmd()
         .current_dir(tmp.path())
-        .args(["plan", "EPIC-001"])
+        .args(["plan", &epic_id])
         .assert()
         .failure();
 }
@@ -1122,14 +1252,16 @@ fn test_full_workflow() {
     let tmp = setup_project();
 
     // Create epic
-    cmd()
+    let epic_out = cmd()
         .current_dir(tmp.path())
         .args(["epic", "Phase 1", "--priority", "high"])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(epic_out.status.success(), "stderr: {}", String::from_utf8_lossy(&epic_out.stderr));
+    let epic_id = extract_id(&epic_out.stdout);
 
     // Create tasks
-    cmd()
+    let task1_out = cmd()
         .current_dir(tmp.path())
         .args([
             "add",
@@ -1137,13 +1269,16 @@ fn test_full_workflow() {
             "--priority",
             "high",
             "--epic",
-            "EPIC-001",
+            &epic_id,
             "--tags",
             "api",
         ])
-        .assert()
-        .success();
-    cmd()
+        .output()
+        .unwrap();
+    assert!(task1_out.status.success(), "stderr: {}", String::from_utf8_lossy(&task1_out.stderr));
+    let task1_id = extract_id(&task1_out.stdout);
+
+    let task2_out = cmd()
         .current_dir(tmp.path())
         .args([
             "add",
@@ -1151,38 +1286,40 @@ fn test_full_workflow() {
             "--priority",
             "medium",
             "--epic",
-            "EPIC-001",
+            &epic_id,
             "--tags",
             "ui",
         ])
-        .assert()
-        .success();
+        .output()
+        .unwrap();
+    assert!(task2_out.status.success(), "stderr: {}", String::from_utf8_lossy(&task2_out.stderr));
+    let task2_id = extract_id(&task2_out.stdout);
 
     // Link
     cmd()
         .current_dir(tmp.path())
-        .args(["link", "TASK-002", "--depends-on", "TASK-001"])
+        .args(["link", &task2_id, "--depends-on", &task1_id])
         .assert()
         .success();
 
     // Start work
     cmd()
         .current_dir(tmp.path())
-        .args(["start", "TASK-001", "--user", "alice"])
+        .args(["start", &task1_id, "--user", "alice"])
         .assert()
         .success();
 
     // Create plan
     cmd()
         .current_dir(tmp.path())
-        .args(["plan", "TASK-001"])
+        .args(["plan", &task1_id])
         .assert()
         .success();
 
     // Finish
     cmd()
         .current_dir(tmp.path())
-        .args(["done", "TASK-001"])
+        .args(["done", &task1_id])
         .assert()
         .success();
 
@@ -1206,8 +1343,8 @@ fn test_full_workflow() {
         .arg("ls")
         .assert()
         .success()
-        .stdout(predicate::str::contains("TASK-001"))
-        .stdout(predicate::str::contains("TASK-002"));
+        .stdout(predicate::str::contains(&task1_id))
+        .stdout(predicate::str::contains(&task2_id));
 
     // Dashboard should work
     cmd()

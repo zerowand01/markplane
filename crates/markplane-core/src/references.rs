@@ -189,7 +189,7 @@ fn extract_frontmatter_references(content: &str) -> Vec<String> {
     refs
 }
 
-/// Extract ID patterns (PREFIX-NNN) from a line of text.
+/// Extract ID patterns (PREFIX-SUFFIX) from a line of text.
 fn extract_ids_from_line(line: &str, refs: &mut Vec<String>) {
     let prefixes = ["EPIC-", "TASK-", "PLAN-", "NOTE-"];
     for prefix in &prefixes {
@@ -198,18 +198,18 @@ fn extract_ids_from_line(line: &str, refs: &mut Vec<String>) {
             let abs_pos = start + pos;
             let id_start = abs_pos;
             let after_prefix = abs_pos + prefix.len();
-            // Collect digits after the prefix
-            let num_end = line[after_prefix..]
-                .find(|c: char| !c.is_ascii_digit())
+            // Collect alphanumeric chars after the prefix (handles both random and legacy IDs)
+            let suffix_end = line[after_prefix..]
+                .find(|c: char| !c.is_ascii_alphanumeric())
                 .map(|p| after_prefix + p)
                 .unwrap_or(line.len());
-            if num_end > after_prefix {
-                let id = &line[id_start..num_end];
+            if suffix_end > after_prefix {
+                let id = &line[id_start..suffix_end];
                 if parse_id(id).is_ok() {
                     refs.push(id.to_string());
                 }
             }
-            start = num_end;
+            start = suffix_end;
         }
     }
 }
@@ -369,18 +369,18 @@ mod tests {
         let root = tmp.path().join(".markplane");
         let project = Project::init(root, "Test", "Test").unwrap();
 
-        project
+        let task_a = project
             .create_task("Item A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
-        project
+        let task_b = project
             .create_task("Item B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
 
-        // Add a valid reference from TASK-001 to TASK-002 in the body
+        // Add a valid reference from task_a to task_b in the body
         let mut doc: crate::models::MarkplaneDocument<crate::models::Task> =
-            project.read_item("TASK-001").unwrap();
-        doc.body = "# Item A\n\nSee [[TASK-002]] for details.\n".to_string();
-        project.write_item("TASK-001", &doc).unwrap();
+            project.read_item(&task_a.id).unwrap();
+        doc.body = format!("# Item A\n\nSee [[{}]] for details.\n", task_b.id);
+        project.write_item(&task_a.id, &doc).unwrap();
 
         let broken = validate_references(&project).unwrap();
         assert!(broken.is_empty());
@@ -396,19 +396,19 @@ mod tests {
         let root = tmp.path().join(".markplane");
         let project = Project::init(root, "Test", "Test").unwrap();
 
-        project
+        let task_a = project
             .create_task("Item A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
 
         // Add a broken reference to a non-existent item
         let mut doc: crate::models::MarkplaneDocument<crate::models::Task> =
-            project.read_item("TASK-001").unwrap();
-        doc.body = "# Item A\n\nSee [[TASK-999]] for details.\n".to_string();
-        project.write_item("TASK-001", &doc).unwrap();
+            project.read_item(&task_a.id).unwrap();
+        doc.body = "# Item A\n\nSee [[TASK-zzzzz]] for details.\n".to_string();
+        project.write_item(&task_a.id, &doc).unwrap();
 
         let broken = validate_references(&project).unwrap();
         assert_eq!(broken.len(), 1);
-        assert_eq!(broken[0].target_id, "TASK-999");
+        assert_eq!(broken[0].target_id, "TASK-zzzzz");
     }
 
     // ── find_orphans ─────────────────────────────────────────────────────
@@ -423,23 +423,23 @@ mod tests {
         let root = tmp.path().join(".markplane");
         let project = Project::init(root, "Test", "Test").unwrap();
 
-        project
+        let task_a = project
             .create_task("Item A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
-        project
+        let task_b = project
             .create_task("Item B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
 
         // A references B, B references A
         let mut doc_a: crate::models::MarkplaneDocument<crate::models::Task> =
-            project.read_item("TASK-001").unwrap();
-        doc_a.body = "# A\nSee [[TASK-002]]\n".to_string();
-        project.write_item("TASK-001", &doc_a).unwrap();
+            project.read_item(&task_a.id).unwrap();
+        doc_a.body = format!("# A\nSee [[{}]]\n", task_b.id);
+        project.write_item(&task_a.id, &doc_a).unwrap();
 
         let mut doc_b: crate::models::MarkplaneDocument<crate::models::Task> =
-            project.read_item("TASK-002").unwrap();
-        doc_b.body = "# B\nSee [[TASK-001]]\n".to_string();
-        project.write_item("TASK-002", &doc_b).unwrap();
+            project.read_item(&task_b.id).unwrap();
+        doc_b.body = format!("# B\nSee [[{}]]\n", task_a.id);
+        project.write_item(&task_b.id, &doc_b).unwrap();
 
         let orphans = find_orphans(&project).unwrap();
         assert!(orphans.is_empty());
@@ -455,19 +455,18 @@ mod tests {
         let root = tmp.path().join(".markplane");
         let project = Project::init(root, "Test", "Test").unwrap();
 
-        project
+        let task_a = project
             .create_task("Referenced", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
-        project
+        let _task_b = project
             .create_task("Orphan", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
 
-        // Only TASK-001 references TASK-002 via frontmatter (depends_on or body), but neither references the other
-        // TASK-002 body references TASK-001, leaving TASK-002 as orphan since nothing refs it
+        // Neither references the other — both are orphans
         let mut doc: crate::models::MarkplaneDocument<crate::models::Task> =
-            project.read_item("TASK-001").unwrap();
+            project.read_item(&task_a.id).unwrap();
         doc.body = "# Referenced\nStandalone.\n".to_string();
-        project.write_item("TASK-001", &doc).unwrap();
+        project.write_item(&task_a.id, &doc).unwrap();
 
         let orphans = find_orphans(&project).unwrap();
         // Both items are orphans since neither references the other
@@ -486,26 +485,26 @@ mod tests {
         let root = tmp.path().join(".markplane");
         let project = Project::init(root, "Test", "Test").unwrap();
 
-        project
+        let task_a = project
             .create_task("A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
-        project
+        let task_b = project
             .create_task("B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
 
         // A's body references B
         let mut doc: crate::models::MarkplaneDocument<crate::models::Task> =
-            project.read_item("TASK-001").unwrap();
-        doc.body = "# A\n\nSee [[TASK-002]].\n".to_string();
-        project.write_item("TASK-001", &doc).unwrap();
+            project.read_item(&task_a.id).unwrap();
+        doc.body = format!("# A\n\nSee [[{}]].\n", task_b.id);
+        project.write_item(&task_a.id, &doc).unwrap();
 
         let graph = build_reference_graph(&project).unwrap();
-        assert!(graph.contains_key("TASK-001"));
-        assert!(graph["TASK-001"].contains(&"TASK-002".to_string()));
+        assert!(graph.contains_key(task_a.id.as_str()));
+        assert!(graph[task_a.id.as_str()].contains(&task_b.id));
 
         // B doesn't reference A
-        if let Some(b_refs) = graph.get("TASK-002") {
-            assert!(!b_refs.contains(&"TASK-001".to_string()));
+        if let Some(b_refs) = graph.get(task_b.id.as_str()) {
+            assert!(!b_refs.contains(&task_a.id));
         }
     }
 

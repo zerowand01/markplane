@@ -1,9 +1,8 @@
 use std::collections::HashSet;
-use std::fs::{self, File};
+use std::fs;
 use std::path::{Path, PathBuf};
 
 use chrono::Local;
-use fs2::FileExt;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -70,27 +69,21 @@ impl Project {
 
     // ── ID Management ─────────────────────────────────────────────────────
 
-    /// Get the next ID for a given prefix and increment the counter in config.
-    /// Uses advisory file locking to prevent concurrent ID conflicts.
+    /// Generate a unique random ID for a given prefix.
+    /// Retries up to 100 times to avoid collisions with existing files.
     pub fn next_id(&self, prefix: &IdPrefix) -> Result<String> {
-        let config_path = self.root.join("config.yaml");
-        let lock_file = File::open(&config_path).map_err(|e| {
-            MarkplaneError::NotInitialized(format!("Cannot open config.yaml for locking: {}", e))
-        })?;
-        lock_file.lock_exclusive().map_err(MarkplaneError::Io)?;
-
-        let result = (|| {
-            let mut config = self.load_config()?;
-            let key = prefix.as_str().to_string();
-            let counter = config.counters.entry(key).or_insert(0);
-            *counter += 1;
-            let id = format_id(prefix, *counter);
-            self.save_config(&config)?;
-            Ok(id)
-        })();
-
-        lock_file.unlock().map_err(MarkplaneError::Io)?;
-        result
+        let dir = self.item_dir(prefix);
+        for _ in 0..100 {
+            let id = generate_random_id(prefix);
+            let items_path = dir.join("items").join(format!("{}.md", id));
+            let archive_path = dir.join("archive").join(format!("{}.md", id));
+            if !items_path.exists() && !archive_path.exists() {
+                return Ok(id);
+            }
+        }
+        Err(MarkplaneError::Config(
+            "Failed to generate unique ID after 100 attempts".into(),
+        ))
     }
 
     /// Resolve an item ID to its file path.
@@ -533,6 +526,9 @@ impl Project {
             fs::create_dir_all(root.join(dir))?;
         }
 
+        // Write .gitignore for derived files
+        fs::write(root.join(".gitignore"), templates::GITIGNORE_TEMPLATE)?;
+
         // Write config.yaml
         let mut config = Config::default();
         config.project.name = project_name.to_string();
@@ -681,6 +677,7 @@ mod tests {
         assert!(root.join("templates/task.md").is_file());
         assert!(root.join("templates/epic.md").is_file());
         assert!(root.join(".context").is_dir());
+        assert!(root.join(".gitignore").is_file());
     }
 
     #[test]
@@ -690,7 +687,7 @@ mod tests {
         assert_eq!(config.project.name, "Test Project");
         assert_eq!(config.project.description, "A test project");
         assert_eq!(config.version, 1);
-        assert_eq!(config.counters.get("TASK"), Some(&0));
+        assert!(config.counters.is_none());
     }
 
     #[test]
@@ -705,11 +702,15 @@ mod tests {
     fn test_next_id() {
         let (_tmp, project) = setup_project();
         let id1 = project.next_id(&IdPrefix::Task).unwrap();
-        assert_eq!(id1, "TASK-001");
+        assert!(id1.starts_with("TASK-"), "Expected TASK- prefix, got: {}", id1);
+        assert!(parse_id(&id1).is_ok());
+
         let id2 = project.next_id(&IdPrefix::Task).unwrap();
-        assert_eq!(id2, "TASK-002");
+        assert!(id2.starts_with("TASK-"));
+        assert_ne!(id1, id2, "IDs should be unique");
+
         let id3 = project.next_id(&IdPrefix::Epic).unwrap();
-        assert_eq!(id3, "EPIC-001");
+        assert!(id3.starts_with("EPIC-"));
     }
 
     #[test]
@@ -726,15 +727,15 @@ mod tests {
             )
             .unwrap();
 
-        assert_eq!(item.id, "TASK-001");
+        assert!(item.id.starts_with("TASK-"));
         assert_eq!(item.title, "Fix login bug");
         assert_eq!(item.status, TaskStatus::Draft);
         assert_eq!(item.priority, Priority::High);
         assert_eq!(item.item_type, ItemType::Bug);
 
         // Verify file exists and is parseable
-        let doc: MarkplaneDocument<Task> = project.read_item("TASK-001").unwrap();
-        assert_eq!(doc.frontmatter.id, "TASK-001");
+        let doc: MarkplaneDocument<Task> = project.read_item(&item.id).unwrap();
+        assert_eq!(doc.frontmatter.id, item.id);
         assert_eq!(doc.frontmatter.title, "Fix login bug");
         assert!(doc.body.contains("# Fix login bug"));
     }
@@ -744,10 +745,10 @@ mod tests {
         let (_tmp, project) = setup_project();
         let epic = project.create_epic("Phase 1: Foundation", Priority::High).unwrap();
 
-        assert_eq!(epic.id, "EPIC-001");
+        assert!(epic.id.starts_with("EPIC-"));
         assert_eq!(epic.status, EpicStatus::Planned);
 
-        let doc: MarkplaneDocument<Epic> = project.read_item("EPIC-001").unwrap();
+        let doc: MarkplaneDocument<Epic> = project.read_item(&epic.id).unwrap();
         assert_eq!(doc.frontmatter.title, "Phase 1: Foundation");
     }
 
@@ -755,7 +756,7 @@ mod tests {
     fn test_create_plan() {
         let (_tmp, project) = setup_project();
         // Create a task first
-        project
+        let task = project
             .create_task(
                 "Dark mode",
                 ItemType::Feature,
@@ -769,14 +770,14 @@ mod tests {
         let plan = project
             .create_plan(
                 "Dark mode implementation",
-                vec!["TASK-001".to_string()],
+                vec![task.id.clone()],
                 None,
             )
             .unwrap();
 
-        assert_eq!(plan.id, "PLAN-001");
+        assert!(plan.id.starts_with("PLAN-"));
         assert_eq!(plan.status, PlanStatus::Draft);
-        assert_eq!(plan.implements, vec!["TASK-001"]);
+        assert_eq!(plan.implements, vec![task.id]);
     }
 
     #[test]
@@ -790,7 +791,7 @@ mod tests {
             )
             .unwrap();
 
-        assert_eq!(note.id, "NOTE-001");
+        assert!(note.id.starts_with("NOTE-"));
         assert_eq!(note.note_type, NoteType::Research);
         assert_eq!(note.status, NoteStatus::Draft);
     }
@@ -798,7 +799,7 @@ mod tests {
     #[test]
     fn test_update_status() {
         let (_tmp, project) = setup_project();
-        project
+        let task = project
             .create_task(
                 "Test item",
                 ItemType::Feature,
@@ -809,16 +810,16 @@ mod tests {
             )
             .unwrap();
 
-        project.update_status("TASK-001", "in-progress").unwrap();
+        project.update_status(&task.id, "in-progress").unwrap();
 
-        let doc: MarkplaneDocument<Task> = project.read_item("TASK-001").unwrap();
+        let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
         assert_eq!(doc.frontmatter.status, TaskStatus::InProgress);
     }
 
     #[test]
     fn test_update_status_invalid() {
         let (_tmp, project) = setup_project();
-        project
+        let task = project
             .create_task(
                 "Test item",
                 ItemType::Feature,
@@ -829,14 +830,14 @@ mod tests {
             )
             .unwrap();
 
-        let result = project.update_status("TASK-001", "invalid-status");
+        let result = project.update_status(&task.id, "invalid-status");
         assert!(result.is_err());
     }
 
     #[test]
     fn test_archive_item() {
         let (_tmp, project) = setup_project();
-        project
+        let task = project
             .create_task(
                 "To archive",
                 ItemType::Chore,
@@ -847,28 +848,28 @@ mod tests {
             )
             .unwrap();
 
-        project.archive_item("TASK-001").unwrap();
+        project.archive_item(&task.id).unwrap();
 
         // Should now be found in archive
-        let path = project.item_path("TASK-001").unwrap();
+        let path = project.item_path(&task.id).unwrap();
         assert!(path.to_string_lossy().contains("archive"));
 
         // Reading should still work
-        let doc: MarkplaneDocument<Task> = project.read_item("TASK-001").unwrap();
+        let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
         assert_eq!(doc.frontmatter.title, "To archive");
     }
 
     #[test]
     fn test_archive_nonexistent() {
         let (_tmp, project) = setup_project();
-        let result = project.archive_item("TASK-999");
+        let result = project.archive_item("TASK-zzzzz");
         assert!(result.is_err());
     }
 
     #[test]
     fn test_item_path_not_found() {
         let (_tmp, project) = setup_project();
-        let result = project.item_path("TASK-999");
+        let result = project.item_path("TASK-zzzzz");
         assert!(result.is_err());
     }
 
@@ -884,7 +885,7 @@ mod tests {
     #[test]
     fn test_write_item() {
         let (_tmp, project) = setup_project();
-        project
+        let task = project
             .create_task(
                 "Original title",
                 ItemType::Feature,
@@ -895,12 +896,12 @@ mod tests {
             )
             .unwrap();
 
-        let mut doc: MarkplaneDocument<Task> = project.read_item("TASK-001").unwrap();
+        let mut doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
         doc.frontmatter.priority = Priority::High;
         doc.body = "# Updated body\n\nNew content.\n".to_string();
-        project.write_item("TASK-001", &doc).unwrap();
+        project.write_item(&task.id, &doc).unwrap();
 
-        let updated: MarkplaneDocument<Task> = project.read_item("TASK-001").unwrap();
+        let updated: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
         assert_eq!(updated.frontmatter.priority, Priority::High);
         assert!(updated.body.contains("Updated body"));
     }
@@ -930,14 +931,14 @@ mod tests {
     #[test]
     fn test_update_status_epic() {
         let (_tmp, project) = setup_project();
-        project.create_epic("Phase 1", Priority::High).unwrap();
+        let epic = project.create_epic("Phase 1", Priority::High).unwrap();
 
-        project.update_status("EPIC-001", "active").unwrap();
-        let doc: MarkplaneDocument<Epic> = project.read_item("EPIC-001").unwrap();
+        project.update_status(&epic.id, "active").unwrap();
+        let doc: MarkplaneDocument<Epic> = project.read_item(&epic.id).unwrap();
         assert_eq!(doc.frontmatter.status, EpicStatus::Active);
 
-        project.update_status("EPIC-001", "done").unwrap();
-        let doc: MarkplaneDocument<Epic> = project.read_item("EPIC-001").unwrap();
+        project.update_status(&epic.id, "done").unwrap();
+        let doc: MarkplaneDocument<Epic> = project.read_item(&epic.id).unwrap();
         assert_eq!(doc.frontmatter.status, EpicStatus::Done);
 
     }
@@ -945,49 +946,49 @@ mod tests {
     #[test]
     fn test_update_status_plan() {
         let (_tmp, project) = setup_project();
-        project.create_plan("Plan A", vec![], None).unwrap();
+        let plan = project.create_plan("Plan A", vec![], None).unwrap();
 
-        project.update_status("PLAN-001", "approved").unwrap();
-        let doc: MarkplaneDocument<Plan> = project.read_item("PLAN-001").unwrap();
+        project.update_status(&plan.id, "approved").unwrap();
+        let doc: MarkplaneDocument<Plan> = project.read_item(&plan.id).unwrap();
         assert_eq!(doc.frontmatter.status, PlanStatus::Approved);
 
-        project.update_status("PLAN-001", "in-progress").unwrap();
-        let doc: MarkplaneDocument<Plan> = project.read_item("PLAN-001").unwrap();
+        project.update_status(&plan.id, "in-progress").unwrap();
+        let doc: MarkplaneDocument<Plan> = project.read_item(&plan.id).unwrap();
         assert_eq!(doc.frontmatter.status, PlanStatus::InProgress);
 
-        project.update_status("PLAN-001", "done").unwrap();
-        let doc: MarkplaneDocument<Plan> = project.read_item("PLAN-001").unwrap();
+        project.update_status(&plan.id, "done").unwrap();
+        let doc: MarkplaneDocument<Plan> = project.read_item(&plan.id).unwrap();
         assert_eq!(doc.frontmatter.status, PlanStatus::Done);
     }
 
     #[test]
     fn test_update_status_note() {
         let (_tmp, project) = setup_project();
-        project
+        let note = project
             .create_note("Research A", NoteType::Research, vec![])
             .unwrap();
 
-        project.update_status("NOTE-001", "active").unwrap();
-        let doc: MarkplaneDocument<Note> = project.read_item("NOTE-001").unwrap();
+        project.update_status(&note.id, "active").unwrap();
+        let doc: MarkplaneDocument<Note> = project.read_item(&note.id).unwrap();
         assert_eq!(doc.frontmatter.status, NoteStatus::Active);
 
-        project.update_status("NOTE-001", "archived").unwrap();
-        let doc: MarkplaneDocument<Note> = project.read_item("NOTE-001").unwrap();
+        project.update_status(&note.id, "archived").unwrap();
+        let doc: MarkplaneDocument<Note> = project.read_item(&note.id).unwrap();
         assert_eq!(doc.frontmatter.status, NoteStatus::Archived);
     }
 
     #[test]
     fn test_update_status_epic_invalid() {
         let (_tmp, project) = setup_project();
-        project.create_epic("Phase 1", Priority::High).unwrap();
-        assert!(project.update_status("EPIC-001", "in-progress").is_err());
+        let epic = project.create_epic("Phase 1", Priority::High).unwrap();
+        assert!(project.update_status(&epic.id, "in-progress").is_err());
     }
 
     #[test]
     fn test_update_status_plan_invalid() {
         let (_tmp, project) = setup_project();
-        project.create_plan("Plan A", vec![], None).unwrap();
-        assert!(project.update_status("PLAN-001", "cancelled").is_err());
+        let plan = project.create_plan("Plan A", vec![], None).unwrap();
+        assert!(project.update_status(&plan.id, "cancelled").is_err());
     }
 
     // ── find_blocked_items ───────────────────────────────────────────────
@@ -1010,41 +1011,41 @@ mod tests {
     #[test]
     fn test_find_blocked_items_with_blocked() {
         let (_tmp, project) = setup_project();
-        project
+        let blocker = project
             .create_task("Blocker", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
-        project
+        let blocked_task = project
             .create_task("Blocked", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
 
-        // Set TASK-002 to depend on TASK-001
-        let mut doc: MarkplaneDocument<Task> = project.read_item("TASK-002").unwrap();
-        doc.frontmatter.depends_on = vec!["TASK-001".to_string()];
-        project.write_item("TASK-002", &doc).unwrap();
+        // Set blocked_task to depend on blocker
+        let mut doc: MarkplaneDocument<Task> = project.read_item(&blocked_task.id).unwrap();
+        doc.frontmatter.depends_on = vec![blocker.id.clone()];
+        project.write_item(&blocked_task.id, &doc).unwrap();
 
         let items = project.list_tasks(&crate::query::QueryFilter::default()).unwrap();
         let blocked = find_blocked_items(&items);
         assert_eq!(blocked.len(), 1);
-        assert_eq!(blocked[0].frontmatter.id, "TASK-002");
+        assert_eq!(blocked[0].frontmatter.id, blocked_task.id);
     }
 
     #[test]
     fn test_find_blocked_items_resolved_dependency() {
         let (_tmp, project) = setup_project();
-        project
+        let blocker = project
             .create_task("Blocker", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
-        project
+        let blocked_task = project
             .create_task("Blocked", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
 
         // Set dependency
-        let mut doc: MarkplaneDocument<Task> = project.read_item("TASK-002").unwrap();
-        doc.frontmatter.depends_on = vec!["TASK-001".to_string()];
-        project.write_item("TASK-002", &doc).unwrap();
+        let mut doc: MarkplaneDocument<Task> = project.read_item(&blocked_task.id).unwrap();
+        doc.frontmatter.depends_on = vec![blocker.id.clone()];
+        project.write_item(&blocked_task.id, &doc).unwrap();
 
         // Mark blocker as done
-        project.update_status("TASK-001", "done").unwrap();
+        project.update_status(&blocker.id, "done").unwrap();
 
         let items = project.list_tasks(&crate::query::QueryFilter::default()).unwrap();
         let blocked = find_blocked_items(&items);
@@ -1080,7 +1081,7 @@ mod tests {
 
         assert_eq!(item.title, "Fix login bug 🔥🚀");
         // Read it back and verify
-        let doc: MarkplaneDocument<Task> = project.read_item("TASK-001").unwrap();
+        let doc: MarkplaneDocument<Task> = project.read_item(&item.id).unwrap();
         assert_eq!(doc.frontmatter.title, "Fix login bug 🔥🚀");
     }
 
@@ -1118,69 +1119,69 @@ mod tests {
     #[test]
     fn test_update_body_task() {
         let (_tmp, project) = setup_project();
-        project
+        let task = project
             .create_task("Test item", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
 
-        let original: MarkplaneDocument<Task> = project.read_item("TASK-001").unwrap();
+        let original: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
         assert!(original.body.contains("[What needs to be done"));
 
         project
-            .update_body("TASK-001", "# Test item\n\nActual description here.\n")
+            .update_body(&task.id, "# Test item\n\nActual description here.\n")
             .unwrap();
 
-        let updated: MarkplaneDocument<Task> = project.read_item("TASK-001").unwrap();
+        let updated: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
         assert!(updated.body.contains("Actual description here."));
-        assert_eq!(updated.frontmatter.id, "TASK-001");
+        assert_eq!(updated.frontmatter.id, task.id);
         assert_eq!(updated.frontmatter.title, "Test item");
     }
 
     #[test]
     fn test_update_body_epic() {
         let (_tmp, project) = setup_project();
-        project.create_epic("Phase 1", Priority::High).unwrap();
+        let epic = project.create_epic("Phase 1", Priority::High).unwrap();
 
         project
-            .update_body("EPIC-001", "# Phase 1\n\n## Objective\n\nBuild the foundation.\n")
+            .update_body(&epic.id, "# Phase 1\n\n## Objective\n\nBuild the foundation.\n")
             .unwrap();
 
-        let updated: MarkplaneDocument<Epic> = project.read_item("EPIC-001").unwrap();
+        let updated: MarkplaneDocument<Epic> = project.read_item(&epic.id).unwrap();
         assert!(updated.body.contains("Build the foundation."));
-        assert_eq!(updated.frontmatter.id, "EPIC-001");
+        assert_eq!(updated.frontmatter.id, epic.id);
     }
 
     #[test]
     fn test_update_body_plan() {
         let (_tmp, project) = setup_project();
-        project.create_plan("Plan A", vec![], None).unwrap();
+        let plan = project.create_plan("Plan A", vec![], None).unwrap();
 
         project
-            .update_body("PLAN-001", "# Plan A\n\nDetailed steps.\n")
+            .update_body(&plan.id, "# Plan A\n\nDetailed steps.\n")
             .unwrap();
 
-        let updated: MarkplaneDocument<Plan> = project.read_item("PLAN-001").unwrap();
+        let updated: MarkplaneDocument<Plan> = project.read_item(&plan.id).unwrap();
         assert!(updated.body.contains("Detailed steps."));
     }
 
     #[test]
     fn test_update_body_note() {
         let (_tmp, project) = setup_project();
-        project
+        let note = project
             .create_note("Research A", NoteType::Research, vec![])
             .unwrap();
 
         project
-            .update_body("NOTE-001", "# Research A\n\nFindings here.\n")
+            .update_body(&note.id, "# Research A\n\nFindings here.\n")
             .unwrap();
 
-        let updated: MarkplaneDocument<Note> = project.read_item("NOTE-001").unwrap();
+        let updated: MarkplaneDocument<Note> = project.read_item(&note.id).unwrap();
         assert!(updated.body.contains("Findings here."));
     }
 
     #[test]
     fn test_update_body_nonexistent() {
         let (_tmp, project) = setup_project();
-        let result = project.update_body("TASK-999", "new body");
+        let result = project.update_body("TASK-zzzzz", "new body");
         assert!(result.is_err());
     }
 
@@ -1230,29 +1231,29 @@ mod tests {
     #[test]
     fn test_unarchive_item() {
         let (_tmp, project) = setup_project();
-        project
+        let task = project
             .create_task("To archive", ItemType::Chore, Priority::Low, Effort::Xs, None, vec![])
             .unwrap();
 
-        project.archive_item("TASK-001").unwrap();
-        assert!(project.is_archived("TASK-001").unwrap());
+        project.archive_item(&task.id).unwrap();
+        assert!(project.is_archived(&task.id).unwrap());
 
-        project.unarchive_item("TASK-001").unwrap();
-        assert!(!project.is_archived("TASK-001").unwrap());
+        project.unarchive_item(&task.id).unwrap();
+        assert!(!project.is_archived(&task.id).unwrap());
 
         // Should still be readable
-        let doc: MarkplaneDocument<Task> = project.read_item("TASK-001").unwrap();
+        let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
         assert_eq!(doc.frontmatter.title, "To archive");
     }
 
     #[test]
     fn test_unarchive_not_archived_errors() {
         let (_tmp, project) = setup_project();
-        project
+        let task = project
             .create_task("Active item", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
 
-        let result = project.unarchive_item("TASK-001");
+        let result = project.unarchive_item(&task.id);
         assert!(result.is_err());
     }
 
@@ -1261,13 +1262,13 @@ mod tests {
     #[test]
     fn test_is_archived() {
         let (_tmp, project) = setup_project();
-        project
+        let task = project
             .create_task("Test", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
 
-        assert!(!project.is_archived("TASK-001").unwrap());
-        project.archive_item("TASK-001").unwrap();
-        assert!(project.is_archived("TASK-001").unwrap());
+        assert!(!project.is_archived(&task.id).unwrap());
+        project.archive_item(&task.id).unwrap();
+        assert!(project.is_archived(&task.id).unwrap());
     }
 
     // ── Config backward compatibility ──────────────────────────────────

@@ -16,6 +16,11 @@ pub fn run(project_path: Option<PathBuf>) -> anyhow::Result<()> {
 
     let project = resolve_project(project_path)?;
 
+    // Sync derived files on startup to ensure they're up-to-date
+    if let Err(e) = project.sync_all() {
+        eprintln!("markplane-mcp: sync warning: {}", e);
+    }
+
     const MAX_LINE_LENGTH: usize = 1_048_576; // 1 MB
 
     let stdin = io::stdin();

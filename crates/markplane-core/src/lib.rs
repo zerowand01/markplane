@@ -13,7 +13,7 @@ pub use error::{MarkplaneError, Result};
 pub use models::{
     Task, TaskStatus, Config, Effort, Epic, EpicStatus, IdPrefix, ItemType,
     MarkplaneDocument, Note, NoteStatus, NoteType, Plan, PlanStatus, Priority,
-    format_id, parse_id,
+    generate_random_id, parse_id,
 };
 pub use frontmatter::{parse_frontmatter, parse_frontmatter_raw, write_frontmatter};
 pub use project::{Project, find_blocked_items};

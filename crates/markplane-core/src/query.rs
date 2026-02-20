@@ -285,7 +285,7 @@ mod tests {
     fn test_list_tasks_filter_status() {
         let (_tmp, project) = setup_project();
 
-        project
+        let task1 = project
             .create_task(
                 "Draft item",
                 ItemType::Feature,
@@ -295,7 +295,7 @@ mod tests {
                 vec![],
             )
             .unwrap();
-        project
+        let task2 = project
             .create_task(
                 "Another draft",
                 ItemType::Bug,
@@ -307,7 +307,7 @@ mod tests {
             .unwrap();
 
         // Change one to in-progress
-        project.update_status("TASK-001", "in-progress").unwrap();
+        project.update_status(&task1.id, "in-progress").unwrap();
 
         let filter = QueryFilter {
             status: Some(vec!["draft".to_string()]),
@@ -315,7 +315,7 @@ mod tests {
         };
         let items = project.list_tasks(&filter).unwrap();
         assert_eq!(items.len(), 1);
-        assert_eq!(items[0].frontmatter.id, "TASK-002");
+        assert_eq!(items[0].frontmatter.id, task2.id);
     }
 
     #[test]
@@ -435,20 +435,20 @@ mod tests {
     fn test_scan_directory_active_only() {
         let (_tmp, project) = setup_project();
 
-        project
+        let task1 = project
             .create_task("Active task", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
-        project
+        let task2 = project
             .create_task("To archive", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
 
         // Archive one task
-        project.archive_item("TASK-002").unwrap();
+        project.archive_item(&task2.id).unwrap();
 
         // Default (active) should return only active items
         let items = project.list_tasks(&QueryFilter::default()).unwrap();
         assert_eq!(items.len(), 1);
-        assert_eq!(items[0].frontmatter.id, "TASK-001");
+        assert_eq!(items[0].frontmatter.id, task1.id);
     }
 
     #[test]
@@ -458,11 +458,11 @@ mod tests {
         project
             .create_task("Active task", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
-        project
+        let task2 = project
             .create_task("To archive", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
             .unwrap();
 
-        project.archive_item("TASK-002").unwrap();
+        project.archive_item(&task2.id).unwrap();
 
         let filter = QueryFilter {
             archived: true,
@@ -470,7 +470,7 @@ mod tests {
         };
         let items = project.list_tasks(&filter).unwrap();
         assert_eq!(items.len(), 1);
-        assert_eq!(items[0].frontmatter.id, "TASK-002");
+        assert_eq!(items[0].frontmatter.id, task2.id);
     }
 
     #[test]
@@ -480,21 +480,21 @@ mod tests {
         project
             .create_task("Active", ItemType::Feature, Priority::High, Effort::Small, None, vec![])
             .unwrap();
-        project
+        let task2 = project
             .create_task("Archived", ItemType::Bug, Priority::Low, Effort::Medium, None, vec![])
             .unwrap();
-        project
+        let task3 = project
             .create_task("Also archived", ItemType::Chore, Priority::Medium, Effort::Xs, None, vec![])
             .unwrap();
 
-        project.archive_item("TASK-002").unwrap();
-        project.archive_item("TASK-003").unwrap();
+        project.archive_item(&task2.id).unwrap();
+        project.archive_item(&task3.id).unwrap();
 
-        // Active: only TASK-001
+        // Active: only the first task
         let active = project.list_tasks(&QueryFilter::default()).unwrap();
         assert_eq!(active.len(), 1);
 
-        // Archived: TASK-002 and TASK-003
+        // Archived: task2 and task3
         let archived = project.list_tasks(&QueryFilter { archived: true, ..Default::default() }).unwrap();
         assert_eq!(archived.len(), 2);
     }
@@ -503,18 +503,18 @@ mod tests {
     fn test_list_epics_archived() {
         let (_tmp, project) = setup_project();
 
-        project.create_epic("Active epic", Priority::High).unwrap();
-        project.create_epic("Done epic", Priority::Medium).unwrap();
+        let epic1 = project.create_epic("Active epic", Priority::High).unwrap();
+        let epic2 = project.create_epic("Done epic", Priority::Medium).unwrap();
 
-        project.archive_item("EPIC-002").unwrap();
+        project.archive_item(&epic2.id).unwrap();
 
         let active = project.list_epics().unwrap();
         assert_eq!(active.len(), 1);
-        assert_eq!(active[0].frontmatter.id, "EPIC-001");
+        assert_eq!(active[0].frontmatter.id, epic1.id);
 
         let archived = project.list_epics_filtered(true).unwrap();
         assert_eq!(archived.len(), 1);
-        assert_eq!(archived[0].frontmatter.id, "EPIC-002");
+        assert_eq!(archived[0].frontmatter.id, epic2.id);
     }
 
     #[test]
@@ -522,16 +522,16 @@ mod tests {
         let (_tmp, project) = setup_project();
 
         project.create_plan("Active plan", vec![], None).unwrap();
-        project.create_plan("Done plan", vec![], None).unwrap();
+        let plan2 = project.create_plan("Done plan", vec![], None).unwrap();
 
-        project.archive_item("PLAN-002").unwrap();
+        project.archive_item(&plan2.id).unwrap();
 
         let active = project.list_plans().unwrap();
         assert_eq!(active.len(), 1);
 
         let archived = project.list_plans_filtered(true).unwrap();
         assert_eq!(archived.len(), 1);
-        assert_eq!(archived[0].frontmatter.id, "PLAN-002");
+        assert_eq!(archived[0].frontmatter.id, plan2.id);
     }
 
     #[test]
@@ -539,15 +539,15 @@ mod tests {
         let (_tmp, project) = setup_project();
 
         project.create_note("Active note", NoteType::Research, vec![]).unwrap();
-        project.create_note("Done note", NoteType::Idea, vec![]).unwrap();
+        let note2 = project.create_note("Done note", NoteType::Idea, vec![]).unwrap();
 
-        project.archive_item("NOTE-002").unwrap();
+        project.archive_item(&note2.id).unwrap();
 
         let active = project.list_notes().unwrap();
         assert_eq!(active.len(), 1);
 
         let archived = project.list_notes_filtered(true).unwrap();
         assert_eq!(archived.len(), 1);
-        assert_eq!(archived[0].frontmatter.id, "NOTE-002");
+        assert_eq!(archived[0].frontmatter.id, note2.id);
     }
 }
