@@ -86,7 +86,7 @@ export function EpicDetailSheet({
         ) : (
           <>
             <SheetHeader>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 pr-8">
                 <span
                   className="font-mono text-sm"
                   style={{ color: "var(--entity-epic)" }}
@@ -98,7 +98,7 @@ export function EpicDetailSheet({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 px-2 gap-1 text-muted-foreground hover:text-foreground"
+                    className="h-7 px-2 gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
                     onClick={() => {
                       archiveItem.mutate(epic.id);
                       onOpenChange(false);

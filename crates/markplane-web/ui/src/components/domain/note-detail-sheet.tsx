@@ -62,7 +62,7 @@ export function NoteDetailSheet({
         ) : (
           <>
             <SheetHeader>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 pr-8">
                 <span
                   className="font-mono text-sm"
                   style={{ color: "var(--entity-note)" }}
@@ -74,7 +74,7 @@ export function NoteDetailSheet({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 px-2 gap-1 text-muted-foreground hover:text-foreground"
+                    className="h-7 px-2 gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
                     onClick={() => {
                       archiveItem.mutate(note.id);
                       onOpenChange(false);
