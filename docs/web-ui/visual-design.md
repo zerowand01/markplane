@@ -1,8 +1,8 @@
 # Markplane Web UI: Visual Design System
 
-**Status**: Design Specification
+**Status**: Design Specification (implemented — see architecture.md for current state)
 **Created**: 2026-02-12
-**Updated**: 2026-02-12
+**Updated**: 2026-02-21
 **Stack**: React, Next.js, Tailwind CSS, shadcn/ui
 **Related**: [[TASK-017]], [[PLAN-001]]
 

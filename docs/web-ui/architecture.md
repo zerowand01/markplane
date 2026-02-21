@@ -1,8 +1,8 @@
 # Markplane Web UI Architecture
 
-**Status**: Design Proposal
+**Status**: Implemented
 **Created**: 2026-02-12
-**Updated**: 2026-02-12
+**Updated**: 2026-02-21
 **Related**: [[TASK-017]], [[PLAN-001]]
 
 ---
@@ -16,7 +16,7 @@ The Markplane web UI is a local-first interface for browsing and managing `.mark
 1. **Local-first**: Reads/writes `.markplane/` files via the Rust backend. No external services.
 2. **Real-time**: File changes (from CLI, MCP, or manual edits) reflect in the UI immediately.
 3. **Embeddable**: The production build can be embedded in the Rust binary via `rust-embed`, requiring zero Node.js runtime.
-4. **Progressively enhanced**: Server Components for fast initial load; client interactivity where needed.
+4. **Keyboard-first**: Chord navigation (`g`+letter), command palette (`Cmd+K`), keyboard shortcuts for all key actions.
 
 ### Architecture Summary
 
@@ -42,18 +42,20 @@ Browser (React + Next.js)
 
 | Technology | Choice | Rationale |
 |-----------|--------|-----------|
-| Framework | Next.js 15+ (App Router) | RSC support, file-based routing, static export, industry standard |
-| UI library | shadcn/ui | Composable, accessible, Tailwind-native, customizable via copy-paste |
+| Framework | Next.js 16 (App Router) | File-based routing, static export, industry standard |
+| UI library | shadcn/ui + Radix UI | Composable, accessible, Tailwind-native, customizable via copy-paste |
 | Styling | Tailwind CSS v4 | OKLCH color space, `@theme inline`, CSS-first config, dark mode via class strategy |
-| State/data | TanStack Query v5 | Purpose-built `useMutation` lifecycle for optimistic updates, `staleTime`/`gcTime` for smart caching, targeted `invalidateQueries` for WebSocket integration, first-party DevTools |
+| State/data | TanStack Query v5 | Purpose-built `useMutation` lifecycle for optimistic updates, `staleTime`/`gcTime` for smart caching, targeted `invalidateQueries` for WebSocket integration |
 | Fonts | Geist Sans + Geist Mono | Vercel's font family — native Next.js integration, slightly condensed for dashboard density, modern developer tool aesthetic |
-| Timeline | SVAR React Gantt | MIT licensed, React 19 compatible, gantt/swimlane for roadmap view |
-| Animations | Framer Motion | Drag-and-drop springs, page transitions, status change animations |
-| Markdown | `react-markdown` + `remark-gfm` | Runtime rendering of arbitrary `.md` content (not page-based MDX); supports GFM tables, checkboxes |
-| Syntax highlighting | `shiki` (lazy) | Accurate, VS Code-compatible, tree-shakeable |
-| Graph visualization | `@xyflow/react` (React Flow) | Purpose-built for node/edge graphs, interactive, well-maintained, MIT licensed |
+| Animations | Framer Motion | Page transitions, status change animations |
+| Markdown reading | `react-markdown` + `remark-gfm` | Runtime rendering of arbitrary `.md` content (not page-based MDX); supports GFM tables, checkboxes |
+| Markdown editing | TipTap (`@tiptap/react`) | Rich text editor with markdown source view, task lists, wiki-link syntax support |
+| Graph visualization | `@xyflow/react` (React Flow) + `elkjs` | React Flow for interactive canvas; ELK.js for hierarchical/orthogonal auto-layout (better than Dagre for complex dependency graphs) |
+| Drag-and-drop | `@dnd-kit/core` + `@dnd-kit/sortable` | Lightweight, accessible drag-and-drop for kanban board |
 | Icons | `lucide-react` | Already bundled with shadcn/ui, consistent, tree-shakeable |
-| Date handling | `date-fns` | Lightweight, tree-shakeable, no locale bloat |
+| Toasts | `sonner` | Lightweight toast notifications for mutation feedback |
+| Command palette | `cmdk` (via shadcn Command) | Keyboard-first navigation and search |
+| Ordering | `fractional-indexing` | Stable ordering for kanban card drag-and-drop position |
 | Build output | Static export (`output: 'export'`) | Embeddable in Rust binary; no Node.js server required at runtime |
 
 ### Why Not MDX?
@@ -73,9 +75,8 @@ The ~9KB bundle size difference (SWR ~4KB vs TQ ~13KB) is acceptable given TQ's 
 ### Client-Only State
 
 TanStack Query handles all server state (API data, caching, revalidation). For client-only state:
-- **React Context**: Theme preference, sidebar collapsed state
-- **URL search params**: Filter selections, view mode (kanban/list/table) — shareable via URL
-- **Zustand** (if needed): Complex client state like command palette history, drag-in-progress state. Only add if React Context proves insufficient.
+- **React Context**: Theme preference (next-themes), sidebar collapsed state (shadcn SidebarProvider)
+- **URL search params**: Active detail sheet (e.g., `?task=TASK-042`), view mode (kanban/list)
 
 ### Why Static Export?
 
@@ -89,111 +90,102 @@ TanStack Query handles all server state (API data, caching, revalidation). For c
 ## 3. Project Structure
 
 ```
-crates/markplane-web/               # New crate (or directory within existing)
-├── ui/                              # Next.js project root
+crates/markplane-web/ui/               # Next.js project root
 │   ├── next.config.ts
-│   ├── tailwind.config.ts           # Minimal — most config via CSS @theme
+│   ├── postcss.config.mjs           # Tailwind v4 via @tailwindcss/postcss
 │   ├── tsconfig.json
 │   ├── package.json
 │   │
 │   ├── public/
-│   │   └── logo.svg
 │   │
 │   ├── src/
 │   │   ├── app/                     # Next.js App Router
-│   │   │   ├── layout.tsx           # Root layout: ThemeProvider, sidebar, fonts
-│   │   │   ├── page.tsx             # Dashboard (redirect or inline)
+│   │   │   ├── layout.tsx           # Root layout: providers, sidebar, fonts
+│   │   │   ├── page.tsx             # Redirect to /dashboard
 │   │   │   ├── globals.css          # Tailwind directives + OKLCH theme variables
 │   │   │   │
 │   │   │   ├── dashboard/
 │   │   │   │   └── page.tsx         # Project overview dashboard
 │   │   │   │
 │   │   │   ├── backlog/
-│   │   │   │   ├── page.tsx         # Kanban board + list view
-│   │   │   │   └── [id]/
-│   │   │   │       └── page.tsx     # Task detail view
-│   │   │   │
-│   │   │   ├── epics/
-│   │   │   │   ├── page.tsx         # All epics overview
-│   │   │   │   └── [id]/
-│   │   │   │       └── page.tsx     # Epic detail with linked tasks
+│   │   │   │   └── page.tsx         # Kanban board + list view (detail via Sheet)
 │   │   │   │
 │   │   │   ├── roadmap/
-│   │   │   │   └── page.tsx         # Timeline / swimlane view
+│   │   │   │   └── page.tsx         # Epic roadmap with progress
 │   │   │   │
 │   │   │   ├── plans/
-│   │   │   │   ├── page.tsx         # Plans list
-│   │   │   │   └── [id]/
-│   │   │   │       └── page.tsx     # Plan detail
+│   │   │   │   └── page.tsx         # Plans list (detail via Sheet)
 │   │   │   │
 │   │   │   ├── notes/
-│   │   │   │   ├── page.tsx         # Notes list
-│   │   │   │   └── [id]/
-│   │   │   │       └── page.tsx     # Note detail
+│   │   │   │   └── page.tsx         # Notes list (detail via Sheet)
 │   │   │   │
 │   │   │   ├── graph/
-│   │   │   │   └── page.tsx         # Dependency graph (React Flow)
+│   │   │   │   └── page.tsx         # Dependency graph (React Flow + ELK)
 │   │   │   │
-│   │   │   └── search/
-│   │   │       └── page.tsx         # Full-text search with filters
+│   │   │   └── archive/
+│   │   │       └── page.tsx         # Archived items with restore action
 │   │   │
 │   │   ├── components/
-│   │   │   ├── ui/                  # shadcn/ui primitives (Button, Card, Badge, etc.)
+│   │   │   ├── ui/                  # shadcn/ui primitives (22 components)
 │   │   │   │
 │   │   │   ├── layout/
-│   │   │   │   ├── sidebar.tsx      # App sidebar navigation
-│   │   │   │   ├── header.tsx       # Page header with breadcrumbs
-│   │   │   │   ├── command-palette.tsx  # Cmd+K command palette
-│   │   │   │   └── theme-toggle.tsx # Dark/light mode switch
+│   │   │   │   ├── app-sidebar.tsx      # App sidebar navigation + theme toggle
+│   │   │   │   ├── command-palette.tsx  # Cmd+K / ? command palette
+│   │   │   │   ├── command-palette-wrapper.tsx  # Keyboard shortcut handler
+│   │   │   │   ├── mobile-header.tsx    # Mobile responsive header
+│   │   │   │   └── providers.tsx        # React Query + Next Themes providers
 │   │   │   │
-│   │   │   ├── domain/              # Markplane-specific compound components
-│   │   │   │   ├── kanban-board.tsx
-│   │   │   │   ├── kanban-column.tsx
-│   │   │   │   ├── task-card.tsx
-│   │   │   │   ├── task-detail.tsx
+│   │   │   ├── domain/              # Markplane-specific compound components (25 files)
+│   │   │   │   ├── task-detail-sheet.tsx     # Task slide-over panel
+│   │   │   │   ├── epic-detail-sheet.tsx     # Epic slide-over panel
+│   │   │   │   ├── plan-detail-sheet.tsx     # Plan slide-over panel
+│   │   │   │   ├── note-detail-sheet.tsx     # Note slide-over panel
+│   │   │   │   ├── task-card.tsx             # Kanban/list task card
 │   │   │   │   ├── status-badge.tsx
 │   │   │   │   ├── priority-indicator.tsx
-│   │   │   │   ├── effort-badge.tsx
 │   │   │   │   ├── epic-progress.tsx
-│   │   │   │   ├── roadmap-timeline.tsx
-│   │   │   │   ├── dependency-graph.tsx
-│   │   │   │   ├── markdown-renderer.tsx
-│   │   │   │   ├── item-references.tsx
-│   │   │   │   ├── filter-bar.tsx
-│   │   │   │   └── metrics-card.tsx
+│   │   │   │   ├── metrics-card.tsx
+│   │   │   │   ├── markdown-renderer.tsx     # Read-only markdown with wiki-links
+│   │   │   │   ├── markdown-editor.tsx       # TipTap rich text + markdown source
+│   │   │   │   ├── graph-view.tsx            # React Flow + ELK dependency graph
+│   │   │   │   ├── wiki-link-chip.tsx        # Clickable [[ID]] chip
+│   │   │   │   ├── tiptap-wiki-link.ts       # TipTap wiki-link extension
+│   │   │   │   ├── inline-edit.tsx           # In-place text editing
+│   │   │   │   ├── tag-editor.tsx            # Tag management
+│   │   │   │   ├── entity-combobox.tsx       # Searchable entity selector
+│   │   │   │   ├── entity-ref-editor.tsx     # Edit entity relationships
+│   │   │   │   ├── field-row.tsx             # Consistent field display
+│   │   │   │   ├── empty-state.tsx
+│   │   │   │   ├── error-boundary.tsx
+│   │   │   │   ├── page-transition.tsx       # Framer Motion transitions
+│   │   │   │   └── resizable-sheet-content.tsx
 │   │   │   │
-│   │   │   └── shared/              # Generic reusable components
-│   │   │       ├── data-table.tsx
-│   │   │       ├── empty-state.tsx
-│   │   │       └── loading-skeleton.tsx
+│   │   │   └── providers.tsx        # Additional provider setup
 │   │   │
 │   │   ├── lib/
 │   │   │   ├── api.ts               # API client (fetch wrapper for /api/*)
 │   │   │   ├── types.ts             # TypeScript types mirroring Rust models
-│   │   │   ├── constants.ts         # Status colors, priority weights, routes
-│   │   │   ├── utils.ts             # Shared utilities (cn(), formatDate, etc.)
+│   │   │   ├── constants.ts         # Status configs, priority configs, nav items, prefix routing
+│   │   │   ├── utils.ts             # Shared utilities (cn(), etc.)
 │   │   │   └── hooks/
-│   │   │       ├── use-tasks.ts     # TanStack Query: useTasks(filter?)
-│   │   │       ├── use-task.ts      # TanStack Query: useTask(id)
-│   │   │       ├── use-epics.ts     # TanStack Query: useEpics()
-│   │   │       ├── use-epic.ts      # TanStack Query: useEpic(id)
-│   │   │       ├── use-plans.ts     # TanStack Query: usePlans()
-│   │   │       ├── use-notes.ts     # TanStack Query: useNotes()
-│   │   │       ├── use-summary.ts   # TanStack Query: useSummary()
-│   │   │       ├── use-graph.ts     # TanStack Query: useGraph(id)
+│   │   │       ├── use-tasks.ts     # useTasks(), useTask(), useArchivedTasks()
+│   │   │       ├── use-epics.ts     # useEpics(), useEpic()
+│   │   │       ├── use-plans.ts     # usePlans(), usePlan()
+│   │   │       ├── use-notes.ts     # useNotes(), useNote()
+│   │   │       ├── use-summary.ts   # useSummary()
+│   │   │       ├── use-graph.ts     # useGraph(focusId?)
+│   │   │       ├── use-search.ts    # useSearch(query)
 │   │   │       ├── use-websocket.ts # WebSocket + TanStack Query invalidation
-│   │   │       └── use-search.ts    # TanStack Query: useSearch(query)
+│   │   │       ├── use-mutations.ts # All mutations (create, update, archive, link)
+│   │   │       └── use-keyboard-nav.ts # Keyboard chord navigation (g+letter)
 │   │   │
-│   │   └── styles/
-│   │       └── (empty — all in globals.css)
+│   │   └── hooks/
+│   │       └── use-mobile.ts        # Mobile viewport detection
 │   │
 │   └── out/                         # Static build output (gitignored)
-│
-└── src/                             # Rust: HTTP server + file watcher
-    ├── server.rs                    # Axum/Actix HTTP server serving static + API
-    ├── api.rs                       # REST API handlers (uses markplane-core)
-    ├── websocket.rs                 # WebSocket handler for file change events
-    └── embed.rs                     # rust-embed integration for static files
+
+crates/markplane-cli/src/commands/
+    └── serve.rs                     # Axum HTTP server + WebSocket + file watcher
 ```
 
 ### Component Organization Rationale
@@ -222,7 +214,7 @@ Since the Next.js app is statically exported, **all data fetching happens client
                                │
                     ┌──────────▼──────────┐
                     │   Rust HTTP Server   │
-                    │   (axum or actix)    │
+                    │      (axum)         │
                     │                      │
                     │  GET /api/tasks      │──→ markplane_core::list_tasks()
                     │  GET /api/tasks/:id  │──→ markplane_core::read_item()
@@ -249,9 +241,8 @@ The Rust HTTP server exposes a REST API that mirrors `markplane-core` operations
 | `GET` | `/api/tasks` | List tasks with filters | `list_tasks(filter)` |
 | `GET` | `/api/tasks/:id` | Get task detail | `read_item(id)` |
 | `POST` | `/api/tasks` | Create task | `create_task(...)` |
-| `PATCH` | `/api/tasks/:id` | Update task fields | `update_status()`, `write_item()` |
-| `PATCH` | `/api/tasks/:id/status` | Update status only | `update_status(id, status)` |
-| `DELETE` | `/api/tasks/:id` | Archive task (deprecated) | `archive_item(id)` |
+| `PATCH` | `/api/tasks/:id` | Update task fields (status, priority, body, etc.) | `update_item()` |
+| `DELETE` | `/api/tasks/:id` | Archive task | `archive_item(id)` |
 
 **Query parameters for `GET /api/tasks`:**
 - `status` — comma-separated: `in-progress,planned`
@@ -266,10 +257,9 @@ The Rust HTTP server exposes a REST API that mirrors `markplane-core` operations
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/epics` | List all epics |
+| `GET` | `/api/epics` | List all epics with progress metrics |
 | `GET` | `/api/epics/:id` | Get epic detail with linked task summary |
-| `POST` | `/api/epics` | Create epic |
-| `PATCH` | `/api/epics/:id` | Update epic |
+| `PATCH` | `/api/epics/:id` | Update epic fields (title, status, priority, dates, tags, body) |
 
 #### Plans & Notes
 
@@ -277,8 +267,10 @@ The Rust HTTP server exposes a REST API that mirrors `markplane-core` operations
 |--------|------|-------------|
 | `GET` | `/api/plans` | List plans |
 | `GET` | `/api/plans/:id` | Get plan detail |
+| `PATCH` | `/api/plans/:id` | Update plan fields (title, status, body) |
 | `GET` | `/api/notes` | List notes |
 | `GET` | `/api/notes/:id` | Get note detail |
+| `PATCH` | `/api/notes/:id` | Update note fields (title, status, tags, body) |
 
 #### Archive
 
@@ -289,17 +281,23 @@ The Rust HTTP server exposes a REST API that mirrors `markplane-core` operations
 
 All list endpoints (`GET /api/tasks`, `/api/epics`, `/api/plans`, `/api/notes`) accept an `?archived=true` query parameter to return archived items instead of active ones.
 
+#### Relationships
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/link` | Add or remove a relationship between two items |
+
+The link endpoint accepts `{ from, to, relation, remove? }` where `relation` is one of: `blocks`, `depends_on`, `epic`, `plan`, `implements`, `related`. Set `remove: true` to remove an existing link.
+
 #### Project-Level
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/summary` | Project summary (from `.context/summary.md`) |
-| `GET` | `/api/metrics` | Project health metrics |
-| `GET` | `/api/graph/:id` | Dependency graph for an item |
+| `GET` | `/api/summary` | Project summary with counts, active epics, tasks, blocked items, context |
+| `GET` | `/api/graph/:id` | Dependency graph for an item (2 hops) |
 | `GET` | `/api/graph` | Full project dependency graph |
-| `POST` | `/api/sync` | Trigger `markplane sync` |
-| `GET` | `/api/search?q=...` | Full-text search across all items |
-| `GET` | `/api/blocked` | Blocked items |
+| `POST` | `/api/sync` | Trigger `markplane sync` (regenerate INDEX.md + .context/) |
+| `GET` | `/api/search?q=...` | Full-text search across all items (min 2 chars) |
 
 #### Response Format
 
@@ -330,6 +328,7 @@ type NoteStatus = 'draft' | 'active' | 'archived';
 type Priority = 'critical' | 'high' | 'medium' | 'low' | 'someday';
 type ItemType = 'feature' | 'bug' | 'enhancement' | 'chore' | 'research' | 'spike';
 type Effort = 'xs' | 'small' | 'medium' | 'large' | 'xl';
+type NoteType = 'research' | 'analysis' | 'idea' | 'decision' | 'meeting';
 
 interface Task {
   id: string;
@@ -344,9 +343,10 @@ interface Task {
   depends_on: string[];
   blocks: string[];
   assignee: string | null;
+  position: string | null;  // Fractional index for kanban ordering
   created: string;  // ISO date
   updated: string;
-  body: string;     // Rendered markdown body
+  body: string;     // Markdown body content
 }
 
 interface Epic {
@@ -363,7 +363,7 @@ interface Epic {
   task_count: number;
   done_count: number;
   progress: number;  // 0.0 - 1.0
-  status_breakdown: Record<TaskStatus, number>;  // e.g., { "in-progress": 3, "planned": 5, "done": 2 }
+  status_breakdown: Record<TaskStatus, number>;
 }
 
 interface Plan {
@@ -380,7 +380,7 @@ interface Plan {
 interface Note {
   id: string;
   title: string;
-  type: string;
+  note_type: NoteType;
   status: NoteStatus;
   tags: string[];
   related: string[];
@@ -405,6 +405,9 @@ interface ProjectSummary {
   in_progress_tasks: Task[];
   blocked_tasks: Task[];
   recent_completions: Task[];
+  next_up_tasks: Task[];
+  context_summary: string | null;       // Content of .context/summary.md
+  context_last_synced: string | null;   // ISO 8601 timestamp
 }
 
 interface GraphNode {
@@ -412,81 +415,58 @@ interface GraphNode {
   type: 'task' | 'epic' | 'plan' | 'note';
   title: string;
   status: string;
+  priority: string;
+  tags: string[];
 }
 
 interface GraphEdge {
   source: string;
   target: string;
-  relation: 'blocks' | 'depends_on' | 'implements' | 'epic' | 'plan' | 'related';
+  relation: 'blocks' | 'depends_on' | 'implements' | 'epic' | 'related';
 }
 ```
 
 ### 4.4 TanStack Query Hooks
 
-```typescript
-// lib/hooks/use-tasks.ts
-import { useQuery } from '@tanstack/react-query';
-import { fetcher } from '@/lib/api';
-import type { Task, TaskStatus, Priority } from '@/lib/types';
+**Query hooks** (`lib/hooks/`):
 
-interface TaskFilter {
-  status?: TaskStatus[];
-  priority?: Priority[];
-  epic?: string;
-  tags?: string[];
-  assignee?: string;
-}
+| Hook | File | Purpose |
+|------|------|---------|
+| `useTasks(filter?)` | `use-tasks.ts` | Query tasks with optional status/priority/epic/tags/assignee filters |
+| `useTask(id)` | `use-tasks.ts` | Single task query |
+| `useArchivedTasks()` | `use-tasks.ts` | Archived tasks query |
+| `useEpics(filter?)` | `use-epics.ts` | Epic queries with optional filter |
+| `useEpic(id)` | `use-epics.ts` | Single epic query |
+| `usePlans(filter?)` | `use-plans.ts` | Plan queries |
+| `usePlan(id)` | `use-plans.ts` | Single plan query |
+| `useNotes(filter?)` | `use-notes.ts` | Note queries |
+| `useNote(id)` | `use-notes.ts` | Single note query |
+| `useSummary()` | `use-summary.ts` | Dashboard project summary |
+| `useGraph(focusId?)` | `use-graph.ts` | Dependency graph (all or focused on entity) |
+| `useSearch(query)` | `use-search.ts` | Full-text search (min 2 chars) |
 
-export function useTasks(filter?: TaskFilter) {
-  const params = new URLSearchParams();
-  if (filter?.status) params.set('status', filter.status.join(','));
-  if (filter?.priority) params.set('priority', filter.priority.join(','));
-  if (filter?.epic) params.set('epic', filter.epic);
-  // ...
+**Mutation hooks** (`use-mutations.ts`):
 
-  const query = params.toString();
-  return useQuery<Task[]>({
-    queryKey: ['tasks', filter],
-    queryFn: () => fetcher(`/api/tasks${query ? `?${query}` : ''}`),
-  });
-}
-```
+| Hook | Purpose |
+|------|---------|
+| `useCreateTask()` | Create new task |
+| `useUpdateTask()` | Update task properties (optimistic + rollback) |
+| `useUpdateEpic()` | Update epic properties |
+| `useUpdatePlan()` | Update plan properties |
+| `useUpdateNote()` | Update note properties |
+| `useArchiveItem()` | Archive a single item |
+| `useBatchArchive()` | Batch archive multiple items |
+| `useUnarchiveItem()` | Restore an archived item |
 
-```typescript
-// lib/hooks/use-websocket.ts
-import { useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+**Infrastructure hooks**:
 
-export function useWebSocket() {
-  const queryClient = useQueryClient();
+| Hook | File | Purpose |
+|------|------|---------|
+| `useWebSocket()` | `use-websocket.ts` | WebSocket with auto-reconnect + TanStack Query cache invalidation |
+| `useKeyboardNav()` | `use-keyboard-nav.ts` | Keyboard chord navigation (`g`+letter) + `?` for command palette |
+| `useMobile()` | `hooks/use-mobile.ts` | Mobile viewport detection |
 
-  useEffect(() => {
-    const ws = new WebSocket(`ws://${window.location.host}/ws`);
-
-    ws.onmessage = (event) => {
-      const msg = JSON.parse(event.data);
-      // msg: { type: "file_changed", entity: "task", id: "TASK-001", action: "modified" }
-      // msg: { type: "sync_complete" }
-
-      switch (msg.type) {
-        case 'file_changed':
-          // Invalidate the specific item and its list
-          // Only queries with active observers will refetch
-          queryClient.invalidateQueries({ queryKey: [msg.entity + 's', msg.id] });
-          queryClient.invalidateQueries({ queryKey: [msg.entity + 's'] });
-          queryClient.invalidateQueries({ queryKey: ['summary'] });
-          break;
-        case 'sync_complete':
-          // Invalidate everything
-          queryClient.invalidateQueries();
-          break;
-      }
-    };
-
-    return () => ws.close();
-  }, [queryClient]);
-}
-```
+All mutation hooks use TanStack Query's `useMutation` with `onMutate`/`onError`/`onSettled` lifecycle for optimistic updates with rollback on failure, plus `sonner` toast notifications for success/error feedback.
 
 ---
 
@@ -496,23 +476,16 @@ export function useWebSocket() {
 |-------|------|-------------|
 | `/` | Redirect | Redirects to `/dashboard` |
 | `/dashboard` | Dashboard | Project overview, metrics, active work, blocked items |
-| `/backlog` | Backlog | Kanban board + list toggle, filterable |
-| `/backlog/[id]` | Task Detail | Full task view: metadata sidebar + markdown body |
-| `/epics` | Epics List | All epics with progress bars |
-| `/epics/[id]` | Epic Detail | Epic info + linked tasks table + progress |
-| `/roadmap` | Roadmap | Timeline/swimlane view of epics |
-| `/plans` | Plans List | All implementation plans |
-| `/plans/[id]` | Plan Detail | Plan content with linked tasks |
-| `/notes` | Notes List | Research, ideas, decisions |
-| `/notes/[id]` | Note Detail | Note content |
-| `/graph` | Dependency Graph | Full project graph (React Flow) |
-| `/graph?focus=[id]` | Focused Graph | Graph centered on a specific item |
+| `/backlog` | Backlog | Kanban board + list view, filterable. Task detail via Sheet slide-over |
+| `/roadmap` | Roadmap | Epic roadmap with progress bars and status breakdowns |
+| `/plans` | Plans | All implementation plans. Plan detail via Sheet slide-over |
+| `/notes` | Notes | Research, ideas, decisions. Note detail via Sheet slide-over |
+| `/graph` | Dependency Graph | Full project graph (React Flow + ELK layout) |
 | `/archive` | Archive | Archived items with restore action |
-| `/search` | Search | Full-text search with faceted filters |
 
 ### URL Design
 
-Item URLs use the entity type + ID format (e.g., `/backlog/TASK-042`). This mirrors the `.markplane/` directory structure and makes URLs predictable. The `[id]` dynamic segment uses `generateStaticParams()` at build time — but since we're doing client-side data fetching, routes render a loading skeleton then fetch data via TanStack Query.
+Item detail views use Sheet slide-over panels driven by URL query parameters (e.g., `/backlog?task=TASK-042`). This avoids full-page navigation for quick viewing/editing while keeping URLs shareable. The command palette (`Cmd+K` or `?`) provides full-text search across all entities.
 
 ---
 
@@ -522,18 +495,18 @@ Item URLs use the entity type + ID format (e.g., `/backlog/TASK-042`). This mirr
 
 ```
 <RootLayout>                          # app/layout.tsx
-├── <ThemeProvider>                   # Dark/light mode (next-themes)
-│   ├── <Sidebar>                    # Left nav: logo, navigation links, project name
-│   │   ├── <SidebarNav>             # Link items with icons
-│   │   └── <SidebarFooter>          # Theme toggle, settings
+├── <Providers>                      # React Query + Next Themes (layout/providers.tsx)
+│   ├── <SidebarProvider>            # shadcn sidebar state
+│   │   ├── <AppSidebar>             # Left nav: logo, navigation links, theme toggle
+│   │   ├── <CommandPaletteWrapper>  # Keyboard shortcut handler (Cmd+K, ?, g+letter)
+│   │   ├── <MobileHeader>           # Mobile responsive header
+│   │   │
+│   │   └── <main>
+│   │       └── {page content}       # Page-specific content
 │   │
-│   ├── <CommandPalette>             # Cmd+K overlay (shadcn/ui Command)
-│   │
-│   └── <main>
-│       ├── <Header>                 # Breadcrumbs, page title, actions
-│       └── {page content}           # Page-specific content
-│
-└── <WebSocketProvider>              # useWebSocket() at app root
+│   └── <WebSocket>                  # useWebSocket() at app root
+│   └── <KeyboardNav>               # useKeyboardNav() chord navigation
+│   └── <Toaster>                    # sonner toast notifications
 ```
 
 ### 6.2 Key Domain Components
@@ -551,166 +524,85 @@ Item URLs use the entity type + ID format (e.g., `/backlog/TASK-042`). This mirr
     └── <KanbanColumn status="draft">
 ```
 
-- Drag-and-drop via `@dnd-kit/core` (lightweight, accessible)
-- Drop triggers `PATCH /api/tasks/:id/status` to update the task
+- Drag-and-drop via `@dnd-kit/core` + `@dnd-kit/sortable` (lightweight, accessible)
+- Drop triggers `PATCH /api/tasks/:id` to update status and position
+- `fractional-indexing` for stable card ordering within columns
 - TanStack Query optimistic updates via `useMutation` for instant feedback with rollback on failure
-- **WIP limits**: Configurable per-column. Column header shows count/limit (e.g., "In Progress 3/5"). At capacity: amber border. Over capacity: red border with subtle pulse animation. Prevents drag-in when over limit (with override option).
+- **WIP limits**: Configurable per-column (e.g., 5 for In Progress). Column header shows count/limit.
 
-#### TaskDetail
+#### TaskDetailSheet
 ```
-<TaskDetail>
-├── <Header>                         # Title, status badge, actions (edit, archive)
+<TaskDetailSheet>                     # Sheet slide-over (resizable)
+├── <Header>                         # Title (inline-editable), status badge, archive button
 ├── <div className="flex">
 │   ├── <main>                       # 2/3 width
-│   │   ├── <MarkdownRenderer>       # Task body content
-│   │   └── <ItemReferences>         # Linked items (clickable [[ID]] links)
+│   │   ├── <MarkdownEditor>         # TipTap rich text + markdown source toggle
+│   │   └── (wiki-links rendered as clickable chips)
 │   │
 │   └── <aside>                      # 1/3 width — metadata sidebar
-│       ├── <StatusBadge>
-│       ├── <PriorityIndicator>
-│       ├── <EffortBadge>
-│       ├── <EpicLink>
-│       ├── <PlanLink>
-│       ├── <TagList>
-│       ├── <AssigneeField>
-│       ├── <DependencyList>         # depends_on + blocks
+│       ├── <StatusBadge> (dropdown)
+│       ├── <PriorityIndicator> (dropdown)
+│       ├── <EffortBadge> (dropdown)
+│       ├── <ItemType> (dropdown)
+│       ├── <EpicLink> (EntityCombobox)
+│       ├── <PlanLink> (EntityCombobox)
+│       ├── <TagEditor>
+│       ├── <AssigneeField> (InlineEdit)
+│       ├── <EntityRefEditor>         # depends_on, blocks, implements, related
 │       └── <DateInfo>               # created, updated
 ```
 
-#### DependencyGraph
+#### GraphView
 ```
-<DependencyGraph>
-├── <FilterBar>                      # Filter by type, status
-├── <ReactFlow>                      # @xyflow/react
-│   ├── <ItemNode>*                  # Custom node: shows ID, title, status color
-│   ├── <Edge>*                      # Animated edges: blocks (red), depends_on (blue)
+<GraphView>
+├── <Toolbar>                        # Layout direction (TB/LR), layer toggles (Epics/Plans/Notes)
+├── <FilterBar>                      # Priority, epic, tag multi-select filters + show completed toggle
+├── <ReactFlow>                      # @xyflow/react + elkjs for auto-layout
+│   ├── <ItemNode>*                  # Custom node: ID, title, status, priority color
+│   ├── <EpicGroup>*                 # Compound grouping for epic containers
+│   ├── <Edge>*                      # Styled edges: blocks (animated), depends_on, epic (dashed), implements, related
 │   ├── <MiniMap>                    # Overview minimap
-│   └── <Controls>                   # Zoom, fit, fullscreen
+│   ├── <Controls>                   # Zoom, fit view
+│   └── <Legend>                     # Edge type legend
 ```
 
-#### MarkdownRenderer
+#### Markdown Rendering & Editing
 
-Renders markdown body content with `[[TASK-042]]` wiki-links transformed into entity-colored `<WikiLinkChip>` components with hover tooltip previews.
+Two components handle markdown:
 
-```typescript
-// components/domain/markdown-renderer.tsx
-'use client';
+- **`MarkdownRenderer`** (read-only): Uses `react-markdown` + `remark-gfm` to render markdown body content. `[[TASK-042]]` wiki-links are pre-processed and transformed into entity-colored `<WikiLinkChip>` components with click-to-navigate behavior.
 
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { WikiLinkChip } from './wiki-link-chip';
+- **`MarkdownEditor`** (editing): Uses TipTap (`@tiptap/react`) with a dual-mode interface:
+  - **Rich text mode**: WYSIWYG editing with formatting toolbar (bold, italic, strikethrough, headings, lists, task lists, code blocks, blockquotes, links). Uses `@tiptap/starter-kit`, `@tiptap/extension-task-list`, `@tiptap/extension-task-item`, `@tiptap/extension-link`.
+  - **Markdown source mode**: Raw markdown editing with `tiptap-markdown` for serialization.
+  - Custom `tiptap-wiki-link.ts` extension for `[[ID]]` syntax support.
 
-const WIKI_LINK_REGEX = /\[\[([A-Z]+-\d+)\]\]/g;
+Both components use `WikiLinkChip` for rendering entity references as interactive, entity-colored inline chips.
 
-function resolveRoute(id: string): string {
-  const type = id.split('-')[0].toLowerCase();
-  return type === 'task' ? 'backlog'
-       : type === 'epic' ? 'epics'
-       : type === 'plan' ? 'plans'
-       : 'notes';
-}
-
-export function MarkdownRenderer({ content }: { content: string }) {
-  // Pre-process: replace [[ID]] with markdown links tagged as wiki-links
-  const processed = content.replace(
-    WIKI_LINK_REGEX,
-    (_, id) => `[${id}](/${resolveRoute(id)}/${id} "wikilink")`
-  );
-
-  return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
-      className="prose prose-invert max-w-none"
-      components={{
-        // Render wiki-links as entity-colored chips with hover preview
-        a: ({ href, children, title }) => {
-          if (title === 'wikilink' && typeof children === 'string') {
-            return <WikiLinkChip id={children} />;
-          }
-          return <a href={href}>{children}</a>;
-        },
-      }}
-    >
-      {processed}
-    </ReactMarkdown>
-  );
-}
-```
-
-```typescript
-// components/domain/wiki-link-chip.tsx
-'use client';
-
-import { useQuery } from '@tanstack/react-query';
-import { fetcher } from '@/lib/api';
-import Link from 'next/link';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-
-const ENTITY_COLORS: Record<string, string> = {
-  task: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  epic: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
-  plan: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-  note: 'bg-green-500/15 text-green-400 border-green-500/30',
-};
-
-export function WikiLinkChip({ id }: { id: string }) {
-  const type = id.split('-')[0].toLowerCase();
-  const route = type === 'task' ? 'backlog' : type === 'epic' ? 'epics' : type === 'plan' ? 'plans' : 'notes';
-  const colorClass = ENTITY_COLORS[type] || ENTITY_COLORS.task;
-
-  // Lazy-fetch item preview on hover
-  const { data, refetch } = useQuery({
-    queryKey: [type + 's', id, 'preview'],
-    queryFn: () => fetcher(`/api/${route === 'backlog' ? 'tasks' : route}/${id}`),
-    enabled: false,
-    staleTime: 60_000,
-  });
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Link
-          href={`/${route}/${id}`}
-          className={`inline-flex items-center px-1.5 py-0.5 rounded border text-xs font-mono font-medium ${colorClass} hover:opacity-80 transition-opacity`}
-          onMouseEnter={() => refetch()}
-        >
-          {id}
-        </Link>
-      </TooltipTrigger>
-      <TooltipContent side="top" className="max-w-xs">
-        {data ? (
-          <div className="text-sm">
-            <p className="font-medium">{data.title}</p>
-            <p className="text-muted-foreground text-xs mt-1">{data.status} · {data.priority}</p>
-          </div>
-        ) : (
-          <p className="text-xs text-muted-foreground">Loading...</p>
-        )}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-```
-
-### 6.3 shadcn/ui Components Used
+### 6.3 shadcn/ui Components Used (22 installed)
 
 | Component | Usage |
 |-----------|-------|
 | `Badge` | Status, priority, effort, tags |
 | `Button` | Actions, navigation |
 | `Card` | Task cards, metric cards, dashboard panels |
-| `Command` | Command palette (Cmd+K) |
-| `Dialog` | Create/edit item modals |
-| `DropdownMenu` | Context menus, filter dropdowns |
+| `Command` | Command palette (Cmd+K / ?) |
+| `Dialog` | Confirmation dialogs |
+| `DropdownMenu` | Context menus, status/priority selectors |
 | `Input` | Search, form fields |
+| `Popover` | Inline editors, entity selectors |
 | `Select` | Status/priority/effort selectors |
 | `Separator` | Visual dividers |
-| `Sheet` | Mobile sidebar |
+| `Sheet` | Detail slide-over panels (task, epic, plan, note) |
+| `Sidebar` | Main navigation sidebar with collapsible state |
 | `Skeleton` | Loading states |
 | `Table` | List views, epic task tables |
-| `Tabs` | View toggles (kanban/list/table) |
-| `Tooltip` | Hover info on badges, icons, and wiki-link chips |
+| `Tabs` | View toggles (kanban/list) |
+| `Textarea` | Multi-line text input |
+| `Tooltip` | Hover info on badges, icons |
 | `Progress` | Epic completion bars |
+| `Sonner` | Toast notification config (via sonner) |
+| `Markplane Logo` | Custom SVG logo component |
 
 ---
 
@@ -917,6 +809,8 @@ Debouncing: File watcher events are debounced at 100ms to batch rapid changes (e
 
 ## 9. Key Page Designs
 
+> **Note**: The wireframes below are design references. The implementation uses Sheet slide-over panels for item detail views rather than dedicated detail pages. The actual sidebar navigation is: Dashboard, Backlog, Plans, Notes, Roadmap, Graph (no separate Epics or Search pages — search is via the command palette).
+
 ### 9.1 Dashboard (`/dashboard`)
 
 ```
@@ -990,7 +884,7 @@ The **AI Context** panel surfaces the `.context/summary.md` content — Markplan
 - Filter bar persists state in URL query params for shareability
 - List view alternative uses `<DataTable>` with sortable columns
 
-### 9.3 Task Detail (`/backlog/TASK-042`)
+### 9.3 Task Detail (Sheet slide-over, e.g., `/backlog?task=TASK-042`)
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -1024,10 +918,11 @@ The **AI Context** panel surfaces the `.context/summary.md` content — Markplan
 └─────────────────────────────────────────────────────────┘
 ```
 
-- Left: `<MarkdownRenderer>` with rendered body content
+- Left: `<MarkdownEditor>` (TipTap) with rich text + markdown source toggle
 - Right: Metadata sidebar with editable fields (click status badge → dropdown to change)
-- `[[ID]]` references in markdown body render as entity-colored `<WikiLinkChip>` components with hover tooltip previews
+- `[[ID]]` references render as entity-colored `<WikiLinkChip>` components
 - Sidebar fields trigger `PATCH /api/tasks/:id` on change
+- Relationship changes (epic, depends_on, blocks) use `POST /api/link`
 
 ---
 
@@ -1057,13 +952,7 @@ npm run build   # next build → generates out/ directory
 cargo build --release -p markplane-cli
 ```
 
-The Rust binary uses `rust-embed` to include the `out/` directory contents:
-
-```rust
-#[derive(RustEmbed)]
-#[folder = "crates/markplane-web/ui/out"]
-struct WebAssets;
-```
+The Rust binary uses `rust-embed` (behind the `embed-ui` feature flag) to include the `out/` directory contents. Without the feature flag, static files are served from the filesystem at `crates/markplane-web/ui/out/`.
 
 ### 10.3 Runtime: `markplane serve`
 
@@ -1071,31 +960,37 @@ struct WebAssets;
 markplane serve              # Start on http://localhost:4200
 markplane serve --port 8080  # Custom port
 markplane serve --open       # Open browser automatically
+markplane serve --dev        # Dev mode: API only, no static files (for Next.js dev server proxy)
 ```
 
-The Rust server:
-1. Serves embedded static HTML/CSS/JS for all frontend routes
+The Rust server (axum):
+1. Serves embedded static HTML/CSS/JS for all frontend routes (with SPA fallback to `index.html`)
 2. Handles `/api/*` requests using `markplane-core`
 3. Runs WebSocket server on `/ws` for real-time file change notifications
-4. Watches `.markplane/` via `notify` crate
+4. Watches `.markplane/` via `notify` crate (debounced at 100ms)
+5. Runs initial `sync_all()` on startup to ensure INDEX.md and .context/ are fresh
 
 ### 10.4 Next.js Configuration
 
 ```typescript
 // next.config.ts
-import type { NextConfig } from 'next';
-
-const nextConfig: NextConfig = {
-  output: 'export',
-  // All routes are client-rendered SPA-style
-  // API calls go to the Rust backend
-  trailingSlash: true,
+const nextConfig = {
+  output: 'export',           // Static export for single-binary embedding
+  trailingSlash: true,        // Required for static export routing
   images: {
-    unoptimized: true,  // No image optimization server needed
+    unoptimized: true,        // No image optimization server needed
+  },
+  // Dev mode: proxy API and WS to Rust backend
+  rewrites: async () => ({
+    fallback: [
+      { source: '/api/:path*', destination: 'http://localhost:4200/api/:path*' },
+    ],
+  }),
+  env: {
+    NEXT_PUBLIC_WS_URL: process.env.NODE_ENV === 'development'
+      ? 'ws://localhost:4200/ws' : undefined,
   },
 };
-
-export default nextConfig;
 ```
 
 ---
@@ -1104,8 +999,8 @@ export default nextConfig;
 
 ### Code Splitting
 - Next.js automatically code-splits by route
-- React Flow (dependency graph) is lazy-loaded only on `/graph` route
-- `shiki` syntax highlighter loaded on-demand when code blocks are present
+- React Flow + ELK (dependency graph) loaded only on `/graph` route
+- TipTap editor loaded only in detail sheet panels
 
 ### Bundle Size Targets
 - Initial load (dashboard): < 150KB gzipped
@@ -1141,31 +1036,11 @@ These are explicitly out of scope for v1 but inform the architecture:
 
 ---
 
-## 13. Implementation Phases
+## 13. Implementation Status
 
-### Phase 1: Foundation
-- Scaffold Next.js project with shadcn/ui + Tailwind v4
-- Implement Rust HTTP server with `axum` serving static files + API
-- Build core API endpoints: tasks CRUD, epics list, summary
-- Implement sidebar layout, routing, theme system
-- Dashboard page with summary data
+All phases are complete:
 
-### Phase 2: Core Views
-- Backlog kanban board with drag-and-drop
-- Task detail page with markdown rendering
-- Epic overview with progress bars
-- List/table view alternatives
-
-### Phase 3: Advanced Features
-- WebSocket file watching + TanStack Query invalidation
-- Dependency graph with React Flow
-- Full-text search
-- Command palette (Cmd+K)
-- Roadmap timeline view
-
-### Phase 4: Polish
-- Loading skeletons and error states
-- Mobile responsive layout
-- Keyboard navigation
-- Performance optimization
-- `rust-embed` integration + `markplane serve` command
+- **Foundation**: Next.js 16 + shadcn/ui + Tailwind v4 scaffolded. Axum HTTP server with 22 API endpoints. Sidebar layout, routing, theme system. Dashboard with project summary.
+- **Core Views**: Backlog kanban with dnd-kit drag-and-drop + fractional indexing. Sheet slide-over detail panels for all entity types. TipTap markdown editor with rich text + source modes. Epic roadmap with progress bars.
+- **Advanced Features**: WebSocket file watching with auto-reconnect. React Flow + ELK dependency graph with layer toggles and multi-filter system. Full-text search via command palette. Keyboard chord navigation (g+letter).
+- **Polish**: Loading skeletons, error boundaries, toast notifications. Mobile responsive layout. `rust-embed` integration behind `embed-ui` feature flag. Archive view with batch archive support.

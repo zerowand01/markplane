@@ -611,7 +611,7 @@ Markplane = Linear's UI clarity
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | Next.js 15 (App Router) |
+| Framework | Next.js 16 (App Router) |
 | Styling | Tailwind CSS v4 |
 | Components | shadcn/ui (Radix primitives) |
 | Animations | Framer Motion |
