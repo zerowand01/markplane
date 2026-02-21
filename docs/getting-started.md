@@ -222,21 +222,31 @@ markplane link TASK-002 --blocks TASK-004
 
 Both directions are automatically maintained — adding a `depends-on` link also adds the reverse `blocks` link on the target.
 
-## 8. Assign and Tag Items
+## 8. Update Item Properties
 
-Assign a task to someone:
-
-```bash
-markplane assign TASK-003 @daniel
-```
-
-Add tags to an existing item:
+Use the `update` command to change any property on an item:
 
 ```bash
-markplane tag TASK-003 "urgent,sprint-3"
+# Assign a task
+markplane update TASK-003 --assignee @daniel
+
+# Add tags
+markplane update TASK-003 --add-tag "urgent,sprint-3"
+
+# Change effort and priority
+markplane update TASK-003 --effort large --priority high
+
+# Remove a tag
+markplane update TASK-003 --remove-tag urgent
+
+# Clear assignee
+markplane update TASK-003 --clear-assignee
+
+# Rename a task and change its type
+markplane update TASK-003 --title "New title" --type bug
 ```
 
-Tags are additive — existing tags are preserved.
+Fields that don't apply to the item type are rejected (e.g. `--effort` on an epic).
 
 ## 9. Create Notes and Promote Them
 

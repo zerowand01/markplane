@@ -117,32 +117,6 @@ markplane unarchive TASK-001
 
 ---
 
-## assign
-
-Assign a task to a user.
-
-```
-markplane assign <ID> <USER>
-```
-
-**Arguments:**
-
-| Argument | Description |
-|----------|-------------|
-| `<ID>` | Task ID (e.g. `TASK-042`) |
-| `<USER>` | Username to assign (leading `@` is stripped automatically) |
-
-Currently only supported for tasks (`TASK-NNN`).
-
-**Example:**
-
-```bash
-markplane assign TASK-001 @daniel
-# TASK-001 assigned to daniel
-```
-
----
-
 ## check
 
 Validate cross-references and find broken links.
@@ -764,26 +738,64 @@ markplane sync
 
 ---
 
-## tag
+## update
 
-Add tags to an item.
+Update properties on any item. Replaces the old `assign` and `tag` commands.
 
 ```
-markplane tag <ID> <TAGS>
+markplane update <ID> [OPTIONS]
 ```
 
 **Arguments:**
 
 | Argument | Description |
 |----------|-------------|
-| `<ID>` | Item ID (e.g. `TASK-042`, `NOTE-001`) |
-| `<TAGS>` | Comma-separated tags to add |
+| `<ID>` | Item ID (e.g. `TASK-042`, `EPIC-001`, `PLAN-003`, `NOTE-007`) |
 
-Tags are additive — existing tags are preserved, duplicates are ignored. Currently supported for tasks and notes.
+**Options:**
 
-**Example:**
+| Option | Applies to | Description |
+|--------|-----------|-------------|
+| `--title <TITLE>` | All | New title |
+| `--status <STATUS>` | All | New status value |
+| `--priority <PRIORITY>` | Tasks, Epics | New priority |
+| `--effort <EFFORT>` | Tasks | Effort size: `xs`, `small`, `medium`, `large`, `xl` |
+| `--type <TYPE>` | Tasks | Item type: `feature`, `bug`, `enhancement`, `chore`, `research`, `spike` |
+| `--assignee <USER>` | Tasks | Set assignee (leading `@` stripped automatically) |
+| `--clear-assignee` | Tasks | Clear assignee |
+| `--position <KEY>` | Tasks | Set position key for manual ordering |
+| `--clear-position` | Tasks | Clear position |
+| `--add-tag <TAGS>` | Tasks, Epics, Notes | Comma-separated tags to add (duplicates ignored) |
+| `--remove-tag <TAGS>` | Tasks, Epics, Notes | Comma-separated tags to remove |
+| `--started <DATE>` | Epics | Set started date (YYYY-MM-DD) |
+| `--clear-started` | Epics | Clear started date |
+| `--target <DATE>` | Epics | Set target date (YYYY-MM-DD) |
+| `--clear-target` | Epics | Clear target date |
+| `--note-type <TYPE>` | Notes | Note type: `research`, `analysis`, `idea`, `decision`, `meeting` |
+
+Fields that don't apply to the item's entity type are rejected with an error. Multiple options can be combined in a single command.
+
+**Examples:**
 
 ```bash
-markplane tag TASK-001 "frontend,urgent"
-# TASK-001 tagged with: frontend, urgent
+# Update effort and priority on a task
+markplane update TASK-001 --effort large --priority high
+
+# Assign and add tags
+markplane update TASK-001 --assignee @daniel --add-tag "ui,frontend"
+
+# Remove a tag and change type
+markplane update TASK-001 --remove-tag wip --type bug
+
+# Clear assignee
+markplane update TASK-001 --clear-assignee
+
+# Rename a task
+markplane update TASK-001 --title "New title"
+
+# Set epic dates
+markplane update EPIC-001 --started 2026-02-20 --target 2026-06-01
+
+# Change a note's type
+markplane update NOTE-001 --note-type decision --add-tag arch
 ```

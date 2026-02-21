@@ -3,7 +3,7 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use chrono::Local;
+use chrono::{Local, NaiveDate};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -11,6 +11,93 @@ use crate::error::{MarkplaneError, Result};
 use crate::frontmatter::{parse_frontmatter, write_frontmatter};
 use crate::models::*;
 use crate::templates::{self, render_template};
+
+// ── Patch<T> ────────────────────────────────────────────────────────────────
+
+/// Three-state type for clearable optional fields in updates.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub enum Patch<T> {
+    /// Don't touch this field.
+    #[default]
+    Unchanged,
+    /// Set the field to None.
+    Clear,
+    /// Set the field to a value.
+    Set(T),
+}
+
+// ── Per-type update structs ─────────────────────────────────────────────────
+
+/// Fields that can be updated on a Task.
+#[derive(Clone, Debug, Default)]
+pub struct TaskUpdate {
+    pub title: Option<String>,
+    pub status: Option<String>,
+    pub priority: Option<String>,
+    pub effort: Option<String>,
+    pub item_type: Option<String>,
+    pub assignee: Patch<String>,
+    pub position: Patch<String>,
+    pub add_tags: Vec<String>,
+    pub remove_tags: Vec<String>,
+}
+
+/// Fields that can be updated on an Epic.
+#[derive(Clone, Debug, Default)]
+pub struct EpicUpdate {
+    pub title: Option<String>,
+    pub status: Option<String>,
+    pub priority: Option<String>,
+    pub add_tags: Vec<String>,
+    pub remove_tags: Vec<String>,
+    pub started: Patch<NaiveDate>,
+    pub target: Patch<NaiveDate>,
+}
+
+/// Fields that can be updated on a Plan.
+#[derive(Clone, Debug, Default)]
+pub struct PlanUpdate {
+    pub title: Option<String>,
+    pub status: Option<String>,
+}
+
+/// Fields that can be updated on a Note.
+#[derive(Clone, Debug, Default)]
+pub struct NoteUpdate {
+    pub title: Option<String>,
+    pub status: Option<String>,
+    pub note_type: Option<String>,
+    pub add_tags: Vec<String>,
+    pub remove_tags: Vec<String>,
+}
+
+/// Generic union of all per-type update fields, for MCP/CLI dispatch.
+/// `update_item()` parses the prefix, validates inapplicable fields, and delegates.
+#[derive(Clone, Debug, Default)]
+pub struct UpdateFields {
+    pub title: Option<String>,
+    pub status: Option<String>,
+    pub priority: Option<String>,
+    pub effort: Option<String>,
+    pub item_type: Option<String>,
+    pub assignee: Patch<String>,
+    pub position: Patch<String>,
+    pub add_tags: Vec<String>,
+    pub remove_tags: Vec<String>,
+    pub started: Patch<NaiveDate>,
+    pub target: Patch<NaiveDate>,
+    pub note_type: Option<String>,
+}
+
+/// Apply tag changes: retain non-removed tags, then push non-duplicate adds.
+pub fn apply_tag_changes(current: &mut Vec<String>, add: &[String], remove: &[String]) {
+    current.retain(|t| !remove.contains(t));
+    for tag in add {
+        if !current.contains(tag) {
+            current.push(tag.clone());
+        }
+    }
+}
 
 /// Maximum allowed title length in characters.
 const MAX_TITLE_LENGTH: usize = 500;
@@ -434,6 +521,257 @@ impl Project {
         Ok(())
     }
 
+    // ── Typed Update Methods ──────────────────────────────────────────────
+
+    /// Update properties on a Task.
+    pub fn update_task(&self, id: &str, u: &TaskUpdate) -> Result<()> {
+        let mut doc: MarkplaneDocument<Task> = self.read_item(id)?;
+        let fm = &mut doc.frontmatter;
+
+        if let Some(ref title) = u.title {
+            validate_title_length(title)?;
+            fm.title = title.clone();
+        }
+        if let Some(ref status) = u.status {
+            fm.status = status.parse()?;
+        }
+        if let Some(ref priority) = u.priority {
+            fm.priority = priority.parse()?;
+        }
+        if let Some(ref effort) = u.effort {
+            fm.effort = effort.parse()?;
+        }
+        if let Some(ref item_type) = u.item_type {
+            fm.item_type = item_type.parse()?;
+        }
+        match &u.assignee {
+            Patch::Set(v) => fm.assignee = Some(v.clone()),
+            Patch::Clear => fm.assignee = None,
+            Patch::Unchanged => {}
+        }
+        match &u.position {
+            Patch::Set(v) => fm.position = Some(v.clone()),
+            Patch::Clear => fm.position = None,
+            Patch::Unchanged => {}
+        }
+        apply_tag_changes(&mut fm.tags, &u.add_tags, &u.remove_tags);
+        fm.updated = Local::now().date_naive();
+        self.write_item(id, &doc)
+    }
+
+    /// Update properties on an Epic.
+    pub fn update_epic(&self, id: &str, u: &EpicUpdate) -> Result<()> {
+        let mut doc: MarkplaneDocument<Epic> = self.read_item(id)?;
+        let fm = &mut doc.frontmatter;
+
+        if let Some(ref title) = u.title {
+            validate_title_length(title)?;
+            fm.title = title.clone();
+        }
+        if let Some(ref status) = u.status {
+            fm.status = status.parse()?;
+        }
+        if let Some(ref priority) = u.priority {
+            fm.priority = priority.parse()?;
+        }
+        apply_tag_changes(&mut fm.tags, &u.add_tags, &u.remove_tags);
+        match &u.started {
+            Patch::Set(v) => fm.started = Some(*v),
+            Patch::Clear => fm.started = None,
+            Patch::Unchanged => {}
+        }
+        match &u.target {
+            Patch::Set(v) => fm.target = Some(*v),
+            Patch::Clear => fm.target = None,
+            Patch::Unchanged => {}
+        }
+        self.write_item(id, &doc)
+    }
+
+    /// Update properties on a Plan.
+    pub fn update_plan(&self, id: &str, u: &PlanUpdate) -> Result<()> {
+        let mut doc: MarkplaneDocument<Plan> = self.read_item(id)?;
+        let fm = &mut doc.frontmatter;
+
+        if let Some(ref title) = u.title {
+            validate_title_length(title)?;
+            fm.title = title.clone();
+        }
+        if let Some(ref status) = u.status {
+            fm.status = status.parse()?;
+        }
+        fm.updated = Local::now().date_naive();
+        self.write_item(id, &doc)
+    }
+
+    /// Update properties on a Note.
+    pub fn update_note(&self, id: &str, u: &NoteUpdate) -> Result<()> {
+        let mut doc: MarkplaneDocument<Note> = self.read_item(id)?;
+        let fm = &mut doc.frontmatter;
+
+        if let Some(ref title) = u.title {
+            validate_title_length(title)?;
+            fm.title = title.clone();
+        }
+        if let Some(ref status) = u.status {
+            fm.status = status.parse()?;
+        }
+        if let Some(ref note_type) = u.note_type {
+            fm.note_type = note_type.parse()?;
+        }
+        apply_tag_changes(&mut fm.tags, &u.add_tags, &u.remove_tags);
+        fm.updated = Local::now().date_naive();
+        self.write_item(id, &doc)
+    }
+
+    /// Generic dispatch: parse prefix from ID, validate inapplicable fields, delegate.
+    pub fn update_item(&self, id: &str, fields: UpdateFields) -> Result<()> {
+        let (prefix, _) = parse_id(id)?;
+
+        match prefix {
+            IdPrefix::Task => {
+                // Reject fields not applicable to tasks
+                if !matches!(fields.started, Patch::Unchanged) || !matches!(fields.target, Patch::Unchanged) {
+                    return Err(MarkplaneError::Config(
+                        "Tasks do not support started/target fields".into(),
+                    ));
+                }
+                if fields.note_type.is_some() {
+                    return Err(MarkplaneError::Config(
+                        "Tasks do not support the note_type field".into(),
+                    ));
+                }
+                self.update_task(id, &TaskUpdate {
+                    title: fields.title,
+                    status: fields.status,
+                    priority: fields.priority,
+                    effort: fields.effort,
+                    item_type: fields.item_type,
+                    assignee: fields.assignee,
+                    position: fields.position,
+                    add_tags: fields.add_tags,
+                    remove_tags: fields.remove_tags,
+                })
+            }
+            IdPrefix::Epic => {
+                // Reject fields not applicable to epics
+                if fields.effort.is_some() {
+                    return Err(MarkplaneError::Config(
+                        "Epics do not support the effort field".into(),
+                    ));
+                }
+                if fields.item_type.is_some() {
+                    return Err(MarkplaneError::Config(
+                        "Epics do not support the type field".into(),
+                    ));
+                }
+                if !matches!(fields.assignee, Patch::Unchanged) {
+                    return Err(MarkplaneError::Config(
+                        "Epics do not support the assignee field".into(),
+                    ));
+                }
+                if !matches!(fields.position, Patch::Unchanged) {
+                    return Err(MarkplaneError::Config(
+                        "Epics do not support the position field".into(),
+                    ));
+                }
+                if fields.note_type.is_some() {
+                    return Err(MarkplaneError::Config(
+                        "Epics do not support the note_type field".into(),
+                    ));
+                }
+                self.update_epic(id, &EpicUpdate {
+                    title: fields.title,
+                    status: fields.status,
+                    priority: fields.priority,
+                    add_tags: fields.add_tags,
+                    remove_tags: fields.remove_tags,
+                    started: fields.started,
+                    target: fields.target,
+                })
+            }
+            IdPrefix::Plan => {
+                // Reject fields not applicable to plans
+                for (name, present) in [
+                    ("priority", fields.priority.is_some()),
+                    ("effort", fields.effort.is_some()),
+                    ("type", fields.item_type.is_some()),
+                    ("note_type", fields.note_type.is_some()),
+                ] {
+                    if present {
+                        return Err(MarkplaneError::Config(
+                            format!("Plans do not support the {} field", name),
+                        ));
+                    }
+                }
+                if !matches!(fields.assignee, Patch::Unchanged) {
+                    return Err(MarkplaneError::Config(
+                        "Plans do not support the assignee field".into(),
+                    ));
+                }
+                if !matches!(fields.position, Patch::Unchanged) {
+                    return Err(MarkplaneError::Config(
+                        "Plans do not support the position field".into(),
+                    ));
+                }
+                if !fields.add_tags.is_empty() || !fields.remove_tags.is_empty() {
+                    return Err(MarkplaneError::Config(
+                        "Plans do not support tags".into(),
+                    ));
+                }
+                if !matches!(fields.started, Patch::Unchanged) || !matches!(fields.target, Patch::Unchanged) {
+                    return Err(MarkplaneError::Config(
+                        "Plans do not support started/target fields".into(),
+                    ));
+                }
+                self.update_plan(id, &PlanUpdate {
+                    title: fields.title,
+                    status: fields.status,
+                })
+            }
+            IdPrefix::Note => {
+                // Reject fields not applicable to notes
+                if fields.priority.is_some() {
+                    return Err(MarkplaneError::Config(
+                        "Notes do not support the priority field".into(),
+                    ));
+                }
+                if fields.effort.is_some() {
+                    return Err(MarkplaneError::Config(
+                        "Notes do not support the effort field".into(),
+                    ));
+                }
+                if fields.item_type.is_some() {
+                    return Err(MarkplaneError::Config(
+                        "Notes do not support the type field".into(),
+                    ));
+                }
+                if !matches!(fields.assignee, Patch::Unchanged) {
+                    return Err(MarkplaneError::Config(
+                        "Notes do not support the assignee field".into(),
+                    ));
+                }
+                if !matches!(fields.position, Patch::Unchanged) {
+                    return Err(MarkplaneError::Config(
+                        "Notes do not support the position field".into(),
+                    ));
+                }
+                if !matches!(fields.started, Patch::Unchanged) || !matches!(fields.target, Patch::Unchanged) {
+                    return Err(MarkplaneError::Config(
+                        "Notes do not support started/target fields".into(),
+                    ));
+                }
+                self.update_note(id, &NoteUpdate {
+                    title: fields.title,
+                    status: fields.status,
+                    note_type: fields.note_type,
+                    add_tags: fields.add_tags,
+                    remove_tags: fields.remove_tags,
+                })
+            }
+        }
+    }
+
     /// Move an item to the archive/ subdirectory.
     pub fn archive_item(&self, id: &str) -> Result<()> {
         let (prefix, _) = parse_id(id)?;
@@ -608,11 +946,12 @@ fn sanitize_yaml_string(s: &str) -> String {
 
 /// Validate that a title does not exceed the maximum length.
 fn validate_title_length(title: &str) -> Result<()> {
-    if title.len() > MAX_TITLE_LENGTH {
+    let char_count = title.chars().count();
+    if char_count > MAX_TITLE_LENGTH {
         return Err(MarkplaneError::Config(format!(
             "Title exceeds maximum length of {} characters (got {})",
             MAX_TITLE_LENGTH,
-            title.len()
+            char_count
         )));
     }
     Ok(())
@@ -1326,5 +1665,313 @@ mod tests {
         project.save_config(&config).unwrap();
         let reloaded = project.load_config().unwrap();
         assert!(reloaded.archive.is_none());
+    }
+
+    // ── apply_tag_changes ──────────────────────────────────────────────
+
+    #[test]
+    fn test_apply_tag_changes_add() {
+        let mut tags = vec!["a".to_string()];
+        apply_tag_changes(&mut tags, &["b".to_string(), "c".to_string()], &[]);
+        assert_eq!(tags, vec!["a", "b", "c"]);
+    }
+
+    #[test]
+    fn test_apply_tag_changes_remove() {
+        let mut tags = vec!["a".to_string(), "b".to_string(), "c".to_string()];
+        apply_tag_changes(&mut tags, &[], &["b".to_string()]);
+        assert_eq!(tags, vec!["a", "c"]);
+    }
+
+    #[test]
+    fn test_apply_tag_changes_add_and_remove() {
+        let mut tags = vec!["a".to_string(), "b".to_string()];
+        apply_tag_changes(&mut tags, &["c".to_string()], &["a".to_string()]);
+        assert_eq!(tags, vec!["b", "c"]);
+    }
+
+    #[test]
+    fn test_apply_tag_changes_no_duplicates() {
+        let mut tags = vec!["a".to_string(), "b".to_string()];
+        apply_tag_changes(&mut tags, &["a".to_string(), "b".to_string()], &[]);
+        assert_eq!(tags, vec!["a", "b"]);
+    }
+
+    #[test]
+    fn test_apply_tag_changes_remove_then_add_same() {
+        let mut tags = vec!["a".to_string(), "b".to_string()];
+        // Remove "a" then re-add "a" — should still have "a" (remove first, then add)
+        apply_tag_changes(&mut tags, &["a".to_string()], &["a".to_string()]);
+        assert_eq!(tags, vec!["b", "a"]);
+    }
+
+    // ── update_task ────────────────────────────────────────────────────
+
+    #[test]
+    fn test_update_task_title() {
+        let (_tmp, project) = setup_project();
+        let task = project
+            .create_task("Original", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+
+        project.update_task(&task.id, &TaskUpdate {
+            title: Some("Updated title".to_string()),
+            ..Default::default()
+        }).unwrap();
+
+        let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
+        assert_eq!(doc.frontmatter.title, "Updated title");
+    }
+
+    #[test]
+    fn test_update_task_multiple_fields() {
+        let (_tmp, project) = setup_project();
+        let task = project
+            .create_task("Multi", ItemType::Feature, Priority::Low, Effort::Small, None, vec!["old".to_string()])
+            .unwrap();
+
+        project.update_task(&task.id, &TaskUpdate {
+            priority: Some("high".to_string()),
+            effort: Some("large".to_string()),
+            item_type: Some("bug".to_string()),
+            assignee: Patch::Set("daniel".to_string()),
+            add_tags: vec!["new".to_string()],
+            remove_tags: vec!["old".to_string()],
+            ..Default::default()
+        }).unwrap();
+
+        let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
+        assert_eq!(doc.frontmatter.priority, Priority::High);
+        assert_eq!(doc.frontmatter.effort, Effort::Large);
+        assert_eq!(doc.frontmatter.item_type, ItemType::Bug);
+        assert_eq!(doc.frontmatter.assignee, Some("daniel".to_string()));
+        assert_eq!(doc.frontmatter.tags, vec!["new"]);
+    }
+
+    #[test]
+    fn test_update_task_clear_assignee() {
+        let (_tmp, project) = setup_project();
+        let task = project
+            .create_task("Clear test", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+
+        // Set assignee first
+        project.update_task(&task.id, &TaskUpdate {
+            assignee: Patch::Set("daniel".to_string()),
+            ..Default::default()
+        }).unwrap();
+        let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
+        assert_eq!(doc.frontmatter.assignee, Some("daniel".to_string()));
+
+        // Clear it
+        project.update_task(&task.id, &TaskUpdate {
+            assignee: Patch::Clear,
+            ..Default::default()
+        }).unwrap();
+        let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
+        assert_eq!(doc.frontmatter.assignee, None);
+    }
+
+    #[test]
+    fn test_update_task_clear_position() {
+        let (_tmp, project) = setup_project();
+        let task = project
+            .create_task("Pos test", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+
+        // Set position first
+        project.update_task(&task.id, &TaskUpdate {
+            position: Patch::Set("aaa".to_string()),
+            ..Default::default()
+        }).unwrap();
+        let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
+        assert_eq!(doc.frontmatter.position, Some("aaa".to_string()));
+
+        // Clear it
+        project.update_task(&task.id, &TaskUpdate {
+            position: Patch::Clear,
+            ..Default::default()
+        }).unwrap();
+        let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
+        assert_eq!(doc.frontmatter.position, None);
+    }
+
+    #[test]
+    fn test_update_epic_clear_started_and_target() {
+        let (_tmp, project) = setup_project();
+        let epic = project.create_epic("Date test", Priority::Medium).unwrap();
+
+        let start = chrono::NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
+        let end = chrono::NaiveDate::from_ymd_opt(2026, 6, 1).unwrap();
+
+        // Set dates
+        project.update_epic(&epic.id, &EpicUpdate {
+            started: Patch::Set(start),
+            target: Patch::Set(end),
+            ..Default::default()
+        }).unwrap();
+        let doc: MarkplaneDocument<Epic> = project.read_item(&epic.id).unwrap();
+        assert_eq!(doc.frontmatter.started, Some(start));
+        assert_eq!(doc.frontmatter.target, Some(end));
+
+        // Clear started
+        project.update_epic(&epic.id, &EpicUpdate {
+            started: Patch::Clear,
+            ..Default::default()
+        }).unwrap();
+        let doc: MarkplaneDocument<Epic> = project.read_item(&epic.id).unwrap();
+        assert_eq!(doc.frontmatter.started, None);
+        assert_eq!(doc.frontmatter.target, Some(end));
+
+        // Clear target
+        project.update_epic(&epic.id, &EpicUpdate {
+            target: Patch::Clear,
+            ..Default::default()
+        }).unwrap();
+        let doc: MarkplaneDocument<Epic> = project.read_item(&epic.id).unwrap();
+        assert_eq!(doc.frontmatter.target, None);
+    }
+
+    #[test]
+    fn test_update_task_invalid_status() {
+        let (_tmp, project) = setup_project();
+        let task = project
+            .create_task("Bad status", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+
+        let result = project.update_task(&task.id, &TaskUpdate {
+            status: Some("bogus".to_string()),
+            ..Default::default()
+        });
+        assert!(result.is_err());
+    }
+
+    // ── update_epic ────────────────────────────────────────────────────
+
+    #[test]
+    fn test_update_epic_fields() {
+        let (_tmp, project) = setup_project();
+        let epic = project.create_epic("Phase 1", Priority::Medium).unwrap();
+
+        let date = chrono::NaiveDate::from_ymd_opt(2026, 6, 1).unwrap();
+        project.update_epic(&epic.id, &EpicUpdate {
+            title: Some("Phase 1 Updated".to_string()),
+            priority: Some("high".to_string()),
+            started: Patch::Set(chrono::NaiveDate::from_ymd_opt(2026, 2, 20).unwrap()),
+            target: Patch::Set(date),
+            add_tags: vec!["core".to_string()],
+            ..Default::default()
+        }).unwrap();
+
+        let doc: MarkplaneDocument<Epic> = project.read_item(&epic.id).unwrap();
+        assert_eq!(doc.frontmatter.title, "Phase 1 Updated");
+        assert_eq!(doc.frontmatter.priority, Priority::High);
+        assert!(doc.frontmatter.started.is_some());
+        assert_eq!(doc.frontmatter.target, Some(date));
+        assert_eq!(doc.frontmatter.tags, vec!["core"]);
+    }
+
+    // ── update_plan ────────────────────────────────────────────────────
+
+    #[test]
+    fn test_update_plan_fields() {
+        let (_tmp, project) = setup_project();
+        let plan = project.create_plan("Plan A", vec![], None).unwrap();
+
+        project.update_plan(&plan.id, &PlanUpdate {
+            title: Some("Plan A v2".to_string()),
+            status: Some("approved".to_string()),
+        }).unwrap();
+
+        let doc: MarkplaneDocument<Plan> = project.read_item(&plan.id).unwrap();
+        assert_eq!(doc.frontmatter.title, "Plan A v2");
+        assert_eq!(doc.frontmatter.status, PlanStatus::Approved);
+    }
+
+    // ── update_note ────────────────────────────────────────────────────
+
+    #[test]
+    fn test_update_note_fields() {
+        let (_tmp, project) = setup_project();
+        let note = project.create_note("Research", NoteType::Idea, vec!["wip".to_string()]).unwrap();
+
+        project.update_note(&note.id, &NoteUpdate {
+            title: Some("Decision: Use Redis".to_string()),
+            note_type: Some("decision".to_string()),
+            add_tags: vec!["arch".to_string()],
+            remove_tags: vec!["wip".to_string()],
+            ..Default::default()
+        }).unwrap();
+
+        let doc: MarkplaneDocument<Note> = project.read_item(&note.id).unwrap();
+        assert_eq!(doc.frontmatter.title, "Decision: Use Redis");
+        assert_eq!(doc.frontmatter.note_type, NoteType::Decision);
+        assert_eq!(doc.frontmatter.tags, vec!["arch"]);
+    }
+
+    // ── update_item (generic dispatch) ─────────────────────────────────
+
+    #[test]
+    fn test_update_item_task() {
+        let (_tmp, project) = setup_project();
+        let task = project
+            .create_task("Dispatch test", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+
+        project.update_item(&task.id, UpdateFields {
+            effort: Some("large".to_string()),
+            priority: Some("high".to_string()),
+            ..Default::default()
+        }).unwrap();
+
+        let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
+        assert_eq!(doc.frontmatter.effort, Effort::Large);
+        assert_eq!(doc.frontmatter.priority, Priority::High);
+    }
+
+    #[test]
+    fn test_update_item_rejects_invalid_field_for_type() {
+        let (_tmp, project) = setup_project();
+        let epic = project.create_epic("Epic", Priority::Medium).unwrap();
+
+        // effort is not valid for epics
+        let result = project.update_item(&epic.id, UpdateFields {
+            effort: Some("large".to_string()),
+            ..Default::default()
+        });
+        assert!(result.is_err());
+
+        let plan = project.create_plan("Plan", vec![], None).unwrap();
+
+        // priority is not valid for plans
+        let result = project.update_item(&plan.id, UpdateFields {
+            priority: Some("high".to_string()),
+            ..Default::default()
+        });
+        assert!(result.is_err());
+
+        let note = project.create_note("Note", NoteType::Idea, vec![]).unwrap();
+
+        // assignee is not valid for notes
+        let result = project.update_item(&note.id, UpdateFields {
+            assignee: Patch::Set("someone".to_string()),
+            ..Default::default()
+        });
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_update_item_title_too_long() {
+        let (_tmp, project) = setup_project();
+        let task = project
+            .create_task("Title test", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .unwrap();
+
+        let long_title = "x".repeat(501);
+        let result = project.update_item(&task.id, UpdateFields {
+            title: Some(long_title),
+            ..Default::default()
+        });
+        assert!(result.is_err());
     }
 }

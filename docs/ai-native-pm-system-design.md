@@ -663,8 +663,8 @@ markplane graph TASK-042          # Show dependency graph
 
 # Update
 markplane status TASK-042 in-progress  # Change status
-markplane assign TASK-042 @daniel      # Assign item
-markplane tag TASK-042 cache,permissions  # Add tags
+markplane update TASK-042 --assignee @daniel  # Assign item
+markplane update TASK-042 --add-tag cache,permissions  # Add tags
 markplane link TASK-042 --blocks TASK-045  # Add dependency
 
 # Workflow shortcuts

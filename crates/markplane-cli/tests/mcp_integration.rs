@@ -196,6 +196,8 @@ fn test_tools_list() {
     assert!(tool_names.contains(&"markplane_link"));
     assert!(tool_names.contains(&"markplane_check"));
     assert!(tool_names.contains(&"markplane_stale"));
+    assert!(tool_names.contains(&"markplane_archive"));
+    assert!(tool_names.contains(&"markplane_unarchive"));
 }
 
 // ── Resources List ───────────────────────────────────────────────────────
@@ -1288,4 +1290,392 @@ fn test_resource_note_wrong_prefix() {
         .as_str()
         .unwrap()
         .contains("Expected NOTE-"));
+}
+
+// ── Tool: markplane_update (expanded) ────────────────────────────────────
+
+#[test]
+fn test_tool_update_effort_and_type() {
+    let tmp = setup_project();
+    let add_response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "Update effort test" }
+            }
+        }),
+    );
+    let task_id = extract_id_from_response(&add_response);
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 300,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_update",
+                "arguments": { "id": task_id, "effort": "large", "type": "bug" }
+            }
+        }),
+    );
+
+    assert!(response["error"].is_null());
+
+    // Verify via show
+    let show = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 301,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_show",
+                "arguments": { "id": task_id }
+            }
+        }),
+    );
+    let text = show["result"]["content"][0]["text"].as_str().unwrap();
+    assert!(text.contains("effort: large"));
+    assert!(text.contains("type: bug"));
+}
+
+#[test]
+fn test_tool_update_title() {
+    let tmp = setup_project();
+    let add_response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "Old title" }
+            }
+        }),
+    );
+    let task_id = extract_id_from_response(&add_response);
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 310,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_update",
+                "arguments": { "id": task_id, "title": "New title" }
+            }
+        }),
+    );
+    assert!(response["error"].is_null());
+
+    let show = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 311,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_show",
+                "arguments": { "id": task_id }
+            }
+        }),
+    );
+    let text = show["result"]["content"][0]["text"].as_str().unwrap();
+    assert!(text.contains("title: New title"));
+}
+
+#[test]
+fn test_tool_update_tags() {
+    let tmp = setup_project();
+    let add_response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "Tag test", "tags": ["old"] }
+            }
+        }),
+    );
+    let task_id = extract_id_from_response(&add_response);
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 320,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_update",
+                "arguments": { "id": task_id, "add_tags": ["new", "ui"], "remove_tags": ["old"] }
+            }
+        }),
+    );
+    assert!(response["error"].is_null());
+
+    let show = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 321,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_show",
+                "arguments": { "id": task_id }
+            }
+        }),
+    );
+    let text = show["result"]["content"][0]["text"].as_str().unwrap();
+    assert!(text.contains("new"));
+    assert!(text.contains("ui"));
+    assert!(!text.contains("- old"));
+}
+
+#[test]
+fn test_tool_update_clear_assignee() {
+    let tmp = setup_project();
+    let add_response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "Clear assignee test" }
+            }
+        }),
+    );
+    let task_id = extract_id_from_response(&add_response);
+
+    // Set assignee
+    send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 330,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_update",
+                "arguments": { "id": task_id, "assignee": "daniel" }
+            }
+        }),
+    );
+
+    // Clear assignee (null)
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 331,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_update",
+                "arguments": { "id": task_id, "assignee": null }
+            }
+        }),
+    );
+    assert!(response["error"].is_null());
+
+    let show = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 332,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_show",
+                "arguments": { "id": task_id }
+            }
+        }),
+    );
+    let text = show["result"]["content"][0]["text"].as_str().unwrap();
+    assert!(!text.contains("assignee: daniel"));
+}
+
+#[test]
+fn test_tool_update_epic_priority_and_tags() {
+    let tmp = setup_project();
+    let root = tmp.path().join(".markplane");
+    let project = markplane_core::Project::new(root);
+    let epic = project
+        .create_epic("Epic update test", markplane_core::Priority::Medium)
+        .unwrap();
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 350,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_update",
+                "arguments": {
+                    "id": epic.id,
+                    "priority": "high",
+                    "add_tags": ["core", "v2"],
+                    "started": "2026-02-20"
+                }
+            }
+        }),
+    );
+    assert!(response["error"].is_null());
+
+    let show = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 351,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_show",
+                "arguments": { "id": epic.id }
+            }
+        }),
+    );
+    let text = show["result"]["content"][0]["text"].as_str().unwrap();
+    assert!(text.contains("priority: high"));
+    assert!(text.contains("core"));
+    assert!(text.contains("v2"));
+    assert!(text.contains("started: 2026-02-20"));
+}
+
+#[test]
+fn test_tool_update_note_type_and_tags() {
+    let tmp = setup_project();
+    let root = tmp.path().join(".markplane");
+    let project = markplane_core::Project::new(root);
+    let note = project
+        .create_note("Note update test", markplane_core::NoteType::Idea, vec!["wip".to_string()])
+        .unwrap();
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 360,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_update",
+                "arguments": {
+                    "id": note.id,
+                    "note_type": "decision",
+                    "add_tags": ["arch"],
+                    "remove_tags": ["wip"]
+                }
+            }
+        }),
+    );
+    assert!(response["error"].is_null());
+
+    let show = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 361,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_show",
+                "arguments": { "id": note.id }
+            }
+        }),
+    );
+    let text = show["result"]["content"][0]["text"].as_str().unwrap();
+    assert!(text.contains("type: decision"));
+    assert!(text.contains("arch"));
+    assert!(!text.contains("- wip"));
+}
+
+#[test]
+fn test_tool_update_clear_position_via_null() {
+    let tmp = setup_project();
+    let add_response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "Position clear test" }
+            }
+        }),
+    );
+    let task_id = extract_id_from_response(&add_response);
+
+    // Set position
+    send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 370,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_update",
+                "arguments": { "id": task_id, "position": "aaa" }
+            }
+        }),
+    );
+
+    // Clear via null
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 371,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_update",
+                "arguments": { "id": task_id, "position": null }
+            }
+        }),
+    );
+    assert!(response["error"].is_null());
+
+    let show = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 372,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_show",
+                "arguments": { "id": task_id }
+            }
+        }),
+    );
+    let text = show["result"]["content"][0]["text"].as_str().unwrap();
+    assert!(!text.contains("position: aaa"));
+}
+
+#[test]
+fn test_tool_update_rejects_invalid_field_for_type() {
+    let tmp = setup_project();
+    let root = tmp.path().join(".markplane");
+    let project = markplane_core::Project::new(root);
+    let plan = project.create_plan("Test plan", vec![], None).unwrap();
+
+    // priority is not valid for plans
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 340,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_update",
+                "arguments": { "id": plan.id, "priority": "high" }
+            }
+        }),
+    );
+    assert!(response["error"].is_object());
 }

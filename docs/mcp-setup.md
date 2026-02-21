@@ -131,7 +131,7 @@ The server exposes 17 tools via the `tools/list` method.
 | Tool | Description | Required Params | Optional Params |
 |------|-------------|-----------------|-----------------|
 | `markplane_add` | Create a new task. | `title` (string) | `type` (string): feature/bug/enhancement/chore/research/spike, default feature; `priority` (string): critical/high/medium/low/someday, default medium; `effort` (string): xs/small/medium/large/xl, default medium; `epic` (string): parent epic ID; `tags` (string[]): tags for the item |
-| `markplane_update` | Update fields on an existing item. | `id` (string) | `status` (string): new status; `priority` (string): new priority; `assignee` (string): new assignee |
+| `markplane_update` | Update fields on an existing item. | `id` (string) | `title` (string): new title; `status` (string): new status; `priority` (string): new priority; `effort` (string): effort size (tasks); `type` (string): item type (tasks); `assignee` (string/null): set or clear assignee (tasks); `position` (string/null): position key; `add_tags` (string[]): tags to add; `remove_tags` (string[]): tags to remove; `started` (string/null): started date YYYY-MM-DD (epics); `target` (string/null): target date YYYY-MM-DD (epics); `note_type` (string): note type (notes) |
 | `markplane_start` | Set a task to in-progress status. | `id` (string) | *(none)* |
 | `markplane_done` | Mark a task as done. | `id` (string) | *(none)* |
 

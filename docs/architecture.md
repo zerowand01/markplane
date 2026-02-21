@@ -50,7 +50,7 @@ The core library contains all domain logic. It exposes a `Project` struct that r
 The CLI crate provides the user-facing terminal interface and the integrated MCP server.
 
 - **Argument parsing**: `clap` with derive macros
-- **Commands**: 23 subcommands — `init`, `add`, `show`, `ls`, `status`, `sync`, `start`, `done`, `promote`, `plan`, `epic`, `note`, `assign`, `link`, `tag`, `check`, `stale`, `archive`, `context`, `metrics`, `graph`, `claude-md`, `dashboard`, `serve`, `mcp`
+- **Commands**: 25 subcommands — `init`, `add`, `show`, `ls`, `status`, `sync`, `start`, `done`, `promote`, `plan`, `epic`, `note`, `update`, `link`, `check`, `stale`, `archive`, `unarchive`, `context`, `metrics`, `graph`, `claude-md`, `dashboard`, `serve`, `mcp`
 - **Formatting**: `commands/formatting.rs` — shared helpers for truncation, status/priority colorization (via `colored`), table output (via `tabled`)
 - **MCP module** (`src/mcp/`): The `markplane mcp` subcommand runs the MCP server enabling AI tools (Claude, Cursor, etc.) to interact with the project
   - **Protocol**: JSON-RPC 2.0 over stdio (one JSON object per line)

@@ -3,8 +3,8 @@ use std::fs;
 
 use chrono::Local;
 use markplane_core::{
-    Task, TaskStatus, Effort, Epic, IdPrefix, ItemType,
-    MarkplaneDocument, Note, Priority, Project, QueryFilter,
+    Task, TaskStatus, Effort, IdPrefix, ItemType,
+    MarkplaneDocument, Note, Patch, Priority, Project, QueryFilter, UpdateFields,
     build_reference_graph, parse_id, validate_references,
 };
 use serde_json::{json, Value};
@@ -120,6 +120,10 @@ pub fn list_tools() -> Value {
                             "type": "string",
                             "description": "Item ID to update"
                         },
+                        "title": {
+                            "type": "string",
+                            "description": "New title"
+                        },
                         "status": {
                             "type": "string",
                             "description": "New status value"
@@ -128,13 +132,43 @@ pub fn list_tools() -> Value {
                             "type": "string",
                             "description": "New priority value"
                         },
+                        "effort": {
+                            "type": "string",
+                            "description": "Effort size (xs, small, medium, large, xl). Tasks only."
+                        },
+                        "type": {
+                            "type": "string",
+                            "description": "Item type (feature, bug, enhancement, chore, research, spike). Tasks only."
+                        },
                         "assignee": {
                             "type": "string",
-                            "description": "New assignee"
+                            "description": "New assignee. Set to null to clear. Tasks only."
                         },
                         "position": {
                             "type": "string",
-                            "description": "Position key for manual ordering within priority group"
+                            "description": "Position key for manual ordering within priority group. Set to null to clear. Tasks only."
+                        },
+                        "add_tags": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "description": "Tags to add"
+                        },
+                        "remove_tags": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "description": "Tags to remove"
+                        },
+                        "started": {
+                            "type": "string",
+                            "description": "Started date (YYYY-MM-DD). Epics only. Set to null to clear."
+                        },
+                        "target": {
+                            "type": "string",
+                            "description": "Target date (YYYY-MM-DD). Epics only. Set to null to clear."
+                        },
+                        "note_type": {
+                            "type": "string",
+                            "description": "Note type (research, analysis, idea, decision, meeting). Notes only."
                         }
                     },
                     "required": ["id"]
@@ -247,7 +281,7 @@ pub fn list_tools() -> Value {
                         },
                         "title": {
                             "type": "string",
-                            "description": "Optional plan title (defaults to 'Implementation plan for {task_id}')"
+                            "description": "Optional plan title (defaults to 'Implementation plan for <task title>')"
                         }
                     },
                     "required": ["task_id"]
@@ -526,67 +560,80 @@ fn handle_update(project: &Project, args: &Value) -> Result<String, String> {
         .and_then(|v| v.as_str())
         .ok_or_else(|| "Missing required parameter: id".to_string())?;
 
-    // Update status if provided (works for all item types via project.update_status)
-    if let Some(status) = args.get("status").and_then(|v| v.as_str()) {
-        project
-            .update_status(id, status)
-            .map_err(|e| e.to_string())?;
-    }
-
-    let has_priority = args.get("priority").and_then(|v| v.as_str()).is_some();
-    let has_assignee = args.get("assignee").is_some();
-    let has_position = args.get("position").is_some();
-
-    // Only update additional fields if requested
-    if has_priority || has_assignee || has_position {
-        let (prefix, _) = parse_id(id).map_err(|e| e.to_string())?;
-        match prefix {
-            IdPrefix::Task => {
-                let mut doc: MarkplaneDocument<Task> =
-                    project.read_item(id).map_err(|e| e.to_string())?;
-                if let Some(priority_str) = args.get("priority").and_then(|v| v.as_str()) {
-                    doc.frontmatter.priority = priority_str
-                        .parse()
-                        .map_err(|e: markplane_core::MarkplaneError| e.to_string())?;
-                }
-                if let Some(assignee_val) = args.get("assignee") {
-                    doc.frontmatter.assignee = assignee_val.as_str().map(|s| s.to_string());
-                }
-                if let Some(position_val) = args.get("position") {
-                    doc.frontmatter.position = position_val.as_str().map(|s| s.to_string());
-                }
-                doc.frontmatter.updated = Local::now().date_naive();
-                project.write_item(id, &doc).map_err(|e| e.to_string())?;
-            }
-            IdPrefix::Epic => {
-                if has_priority {
-                    let mut doc: MarkplaneDocument<Epic> =
-                        project.read_item(id).map_err(|e| e.to_string())?;
-                    if let Some(priority_str) = args.get("priority").and_then(|v| v.as_str()) {
-                        doc.frontmatter.priority = priority_str
-                            .parse()
-                            .map_err(|e: markplane_core::MarkplaneError| e.to_string())?;
-                    }
-                    project.write_item(id, &doc).map_err(|e| e.to_string())?;
-                }
-            }
-            IdPrefix::Plan | IdPrefix::Note => {
-                // Plans and notes don't have priority or assignee fields
-                if has_priority {
-                    return Err(format!(
-                        "{} items do not support the priority field",
-                        prefix
-                    ));
-                }
-                if has_assignee {
-                    return Err(format!(
-                        "{} items do not support the assignee field",
-                        prefix
-                    ));
-                }
-            }
+    // Build Patch for assignee: explicit null → Clear, string → Set, absent → Unchanged
+    let assignee = if let Some(val) = args.get("assignee") {
+        if val.is_null() {
+            Patch::Clear
+        } else if let Some(s) = val.as_str() {
+            Patch::Set(s.to_string())
+        } else {
+            Patch::Unchanged
         }
-    }
+    } else {
+        Patch::Unchanged
+    };
+
+    // Build Patch for position
+    let position = if let Some(val) = args.get("position") {
+        if val.is_null() {
+            Patch::Clear
+        } else if let Some(s) = val.as_str() {
+            Patch::Set(s.to_string())
+        } else {
+            Patch::Unchanged
+        }
+    } else {
+        Patch::Unchanged
+    };
+
+    // Build Patch for started date
+    let started = if let Some(val) = args.get("started") {
+        if val.is_null() {
+            Patch::Clear
+        } else if let Some(s) = val.as_str() {
+            let date = s.parse().map_err(|_| format!("Invalid date for started: {} (expected YYYY-MM-DD)", s))?;
+            Patch::Set(date)
+        } else {
+            Patch::Unchanged
+        }
+    } else {
+        Patch::Unchanged
+    };
+
+    // Build Patch for target date
+    let target = if let Some(val) = args.get("target") {
+        if val.is_null() {
+            Patch::Clear
+        } else if let Some(s) = val.as_str() {
+            let date = s.parse().map_err(|_| format!("Invalid date for target: {} (expected YYYY-MM-DD)", s))?;
+            Patch::Set(date)
+        } else {
+            Patch::Unchanged
+        }
+    } else {
+        Patch::Unchanged
+    };
+
+    let fields = UpdateFields {
+        title: args.get("title").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        status: args.get("status").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        priority: args.get("priority").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        effort: args.get("effort").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        item_type: args.get("type").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        assignee,
+        position,
+        add_tags: args.get("add_tags")
+            .and_then(|v| serde_json::from_value(v.clone()).ok())
+            .unwrap_or_default(),
+        remove_tags: args.get("remove_tags")
+            .and_then(|v| serde_json::from_value(v.clone()).ok())
+            .unwrap_or_default(),
+        started,
+        target,
+        note_type: args.get("note_type").and_then(|v| v.as_str()).map(|s| s.to_string()),
+    };
+
+    project.update_item(id, fields).map_err(|e| e.to_string())?;
 
     Ok(r#"{"success":true}"#.to_string())
 }

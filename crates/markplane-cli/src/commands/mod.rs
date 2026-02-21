@@ -10,9 +10,8 @@ mod promote;
 mod plan;
 mod epic;
 mod note;
-mod assign;
+mod update;
 mod link;
-mod tag;
 mod check;
 mod stale;
 mod archive;
@@ -169,12 +168,58 @@ pub enum Commands {
         tags: Option<String>,
     },
 
-    /// Assign an item to a user
-    Assign {
-        /// Item ID (e.g. TASK-042)
+    /// Update properties on any item
+    Update {
+        /// Item ID (e.g. TASK-042, EPIC-001, PLAN-003, NOTE-007)
         id: String,
-        /// User to assign (e.g. @daniel)
-        user: String,
+        /// New title
+        #[arg(long)]
+        title: Option<String>,
+        /// New status
+        #[arg(long)]
+        status: Option<String>,
+        /// New priority (tasks and epics only)
+        #[arg(long)]
+        priority: Option<String>,
+        /// New effort size (tasks only)
+        #[arg(long)]
+        effort: Option<String>,
+        /// New item type (tasks only: feature, bug, enhancement, chore, research, spike)
+        #[arg(long)]
+        r#type: Option<String>,
+        /// Set assignee (tasks only)
+        #[arg(long)]
+        assignee: Option<String>,
+        /// Clear assignee
+        #[arg(long)]
+        clear_assignee: bool,
+        /// Set position key (tasks only)
+        #[arg(long)]
+        position: Option<String>,
+        /// Clear position
+        #[arg(long)]
+        clear_position: bool,
+        /// Comma-separated tags to add
+        #[arg(long)]
+        add_tag: Option<String>,
+        /// Comma-separated tags to remove
+        #[arg(long)]
+        remove_tag: Option<String>,
+        /// Set started date (epics only, YYYY-MM-DD)
+        #[arg(long)]
+        started: Option<String>,
+        /// Clear started date
+        #[arg(long)]
+        clear_started: bool,
+        /// Set target date (epics only, YYYY-MM-DD)
+        #[arg(long)]
+        target: Option<String>,
+        /// Clear target date
+        #[arg(long)]
+        clear_target: bool,
+        /// New note type (notes only: research, analysis, idea, decision, meeting)
+        #[arg(long)]
+        note_type: Option<String>,
     },
 
     /// Add a dependency link between items
@@ -187,14 +232,6 @@ pub enum Commands {
         /// Target item that the source depends on
         #[arg(long)]
         depends_on: Option<String>,
-    },
-
-    /// Add tags to an item
-    Tag {
-        /// Item ID (e.g. TASK-042)
-        id: String,
-        /// Comma-separated tags to add
-        tags: String,
     },
 
     /// Validate cross-references and find broken links
@@ -318,13 +355,20 @@ pub fn execute(cmd: Commands) -> anyhow::Result<()> {
         Commands::Plan { id, title } => plan::run(id, title),
         Commands::Epic { title, priority } => epic::run(title, priority),
         Commands::Note { title, r#type, tags } => note::run(title, r#type, tags),
-        Commands::Assign { id, user } => assign::run(id, user),
+        Commands::Update {
+            id, title, status, priority, effort, r#type, assignee,
+            clear_assignee, position, clear_position, add_tag, remove_tag,
+            started, clear_started, target, clear_target, note_type,
+        } => update::run(
+            id, title, status, priority, effort, r#type, assignee,
+            clear_assignee, position, clear_position, add_tag, remove_tag,
+            started, clear_started, target, clear_target, note_type,
+        ),
         Commands::Link {
             id,
             blocks,
             depends_on,
         } => link::run(id, blocks, depends_on),
-        Commands::Tag { id, tags } => tag::run(id, tags),
         Commands::Check { orphans } => check::run(orphans),
         Commands::Stale { days } => stale::run(days),
         Commands::Archive { id, all_done, dry_run } => archive::run(id, all_done, dry_run),

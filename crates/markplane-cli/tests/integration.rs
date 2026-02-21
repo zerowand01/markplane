@@ -624,14 +624,14 @@ fn test_promote_non_note_fails() {
         .failure();
 }
 
-// ── Assign ───────────────────────────────────────────────────────────────
+// ── Update ───────────────────────────────────────────────────────────────
 
 #[test]
-fn test_assign() {
+fn test_update_assignee() {
     let tmp = setup_project();
     let output = cmd()
         .current_dir(tmp.path())
-        .args(["add", "Assign test"])
+        .args(["add", "Update assignee test"])
         .output()
         .unwrap();
     assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
@@ -639,14 +639,238 @@ fn test_assign() {
 
     cmd()
         .current_dir(tmp.path())
-        .args(["assign", &task_id, "@daniel"])
+        .args(["update", &task_id, "--assignee", "@daniel"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("assigned to daniel"));
+        .stdout(predicate::str::contains(format!("Updated {}", task_id)));
 
     let content =
         std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
     assert!(content.contains("assignee: daniel"));
+}
+
+#[test]
+fn test_update_clear_assignee() {
+    let tmp = setup_project();
+    let output = cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Clear assignee test"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let task_id = extract_id(&output.stdout);
+
+    // Set assignee first
+    cmd()
+        .current_dir(tmp.path())
+        .args(["update", &task_id, "--assignee", "daniel"])
+        .assert()
+        .success();
+
+    // Clear it
+    cmd()
+        .current_dir(tmp.path())
+        .args(["update", &task_id, "--clear-assignee"])
+        .assert()
+        .success();
+
+    let content =
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    assert!(!content.contains("assignee: daniel"));
+}
+
+#[test]
+fn test_update_tags() {
+    let tmp = setup_project();
+    let output = cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Tag test"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let task_id = extract_id(&output.stdout);
+
+    cmd()
+        .current_dir(tmp.path())
+        .args(["update", &task_id, "--add-tag", "ui,frontend"])
+        .assert()
+        .success();
+
+    let content =
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    assert!(content.contains("ui"));
+    assert!(content.contains("frontend"));
+
+    // Remove one tag
+    cmd()
+        .current_dir(tmp.path())
+        .args(["update", &task_id, "--remove-tag", "ui"])
+        .assert()
+        .success();
+
+    let content =
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    assert!(!content.contains("ui"));
+    assert!(content.contains("frontend"));
+}
+
+#[test]
+fn test_update_effort_priority() {
+    let tmp = setup_project();
+    let output = cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Effort test"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let task_id = extract_id(&output.stdout);
+
+    cmd()
+        .current_dir(tmp.path())
+        .args(["update", &task_id, "--effort", "large", "--priority", "high"])
+        .assert()
+        .success();
+
+    let content =
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    assert!(content.contains("effort: large"));
+    assert!(content.contains("priority: high"));
+}
+
+#[test]
+fn test_update_title_and_type() {
+    let tmp = setup_project();
+    let output = cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Title test"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let task_id = extract_id(&output.stdout);
+
+    cmd()
+        .current_dir(tmp.path())
+        .args(["update", &task_id, "--title", "Renamed task", "--type", "bug"])
+        .assert()
+        .success();
+
+    let content =
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    assert!(content.contains("title: Renamed task"));
+    assert!(content.contains("type: bug"));
+}
+
+#[test]
+fn test_update_position() {
+    let tmp = setup_project();
+    let output = cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Position test"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let task_id = extract_id(&output.stdout);
+
+    // Set position
+    cmd()
+        .current_dir(tmp.path())
+        .args(["update", &task_id, "--position", "aaa"])
+        .assert()
+        .success();
+
+    let content =
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    assert!(content.contains("position: aaa"));
+
+    // Clear position
+    cmd()
+        .current_dir(tmp.path())
+        .args(["update", &task_id, "--clear-position"])
+        .assert()
+        .success();
+
+    let content =
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    assert!(!content.contains("position: aaa"));
+}
+
+#[test]
+fn test_update_epic_dates() {
+    let tmp = setup_project();
+    let output = cmd()
+        .current_dir(tmp.path())
+        .args(["epic", "Dates test"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let epic_id = extract_id(&output.stdout);
+
+    // Set started and target dates
+    cmd()
+        .current_dir(tmp.path())
+        .args(["update", &epic_id, "--started", "2026-02-20", "--target", "2026-06-01"])
+        .assert()
+        .success();
+
+    let content =
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/roadmap/items/{}.md", epic_id))).unwrap();
+    assert!(content.contains("started: 2026-02-20"));
+    assert!(content.contains("target: 2026-06-01"));
+
+    // Clear started
+    cmd()
+        .current_dir(tmp.path())
+        .args(["update", &epic_id, "--clear-started"])
+        .assert()
+        .success();
+
+    let content =
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/roadmap/items/{}.md", epic_id))).unwrap();
+    assert!(!content.contains("started: 2026-02-20"));
+    assert!(content.contains("target: 2026-06-01"));
+}
+
+#[test]
+fn test_update_note_type() {
+    let tmp = setup_project();
+    let output = cmd()
+        .current_dir(tmp.path())
+        .args(["note", "Note type test", "--type", "idea"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let note_id = extract_id(&output.stdout);
+
+    // Change note type
+    cmd()
+        .current_dir(tmp.path())
+        .args(["update", &note_id, "--note-type", "decision"])
+        .assert()
+        .success();
+
+    let content =
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/notes/items/{}.md", note_id))).unwrap();
+    assert!(content.contains("type: decision"));
+}
+
+#[test]
+fn test_update_rejects_invalid_field() {
+    let tmp = setup_project();
+    // Create an epic
+    let output = cmd()
+        .current_dir(tmp.path())
+        .args(["epic", "Test Epic"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let epic_id = extract_id(&output.stdout);
+
+    // effort is not valid for epics
+    cmd()
+        .current_dir(tmp.path())
+        .args(["update", &epic_id, "--effort", "large"])
+        .assert()
+        .failure();
 }
 
 // ── Link ─────────────────────────────────────────────────────────────────
@@ -703,32 +927,6 @@ fn test_link_no_flags_fails() {
         .args(["link", &task_id])
         .assert()
         .failure();
-}
-
-// ── Tag ──────────────────────────────────────────────────────────────────
-
-#[test]
-fn test_tag() {
-    let tmp = setup_project();
-    let output = cmd()
-        .current_dir(tmp.path())
-        .args(["add", "Tag test"])
-        .output()
-        .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
-    let task_id = extract_id(&output.stdout);
-
-    cmd()
-        .current_dir(tmp.path())
-        .args(["tag", &task_id, "ui,frontend"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("tagged with: ui, frontend"));
-
-    let content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
-    assert!(content.contains("ui"));
-    assert!(content.contains("frontend"));
 }
 
 // ── Check ────────────────────────────────────────────────────────────────
@@ -835,9 +1033,8 @@ fn test_help() {
         .stdout(predicate::str::contains("plan"))
         .stdout(predicate::str::contains("epic"))
         .stdout(predicate::str::contains("note"))
-        .stdout(predicate::str::contains("assign"))
+        .stdout(predicate::str::contains("update"))
         .stdout(predicate::str::contains("link"))
-        .stdout(predicate::str::contains("tag"))
         .stdout(predicate::str::contains("check"))
         .stdout(predicate::str::contains("stale"))
         .stdout(predicate::str::contains("archive"))

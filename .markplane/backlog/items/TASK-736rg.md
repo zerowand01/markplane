@@ -1,7 +1,7 @@
 ---
 id: TASK-736rg
 title: Extend link command to support cross-type entity linking
-status: backlog
+status: planned
 priority: high
 type: enhancement
 effort: medium
@@ -12,37 +12,60 @@ tags:
 epic: null
 plan: null
 depends_on: []
-blocks: []
+blocks:
+- TASK-t2hvn
 assignee: null
 position: a0
 created: 2026-02-19
-updated: 2026-02-19
+updated: 2026-02-20
 ---
 
 # Extend link command to support cross-type entity linking
 
 ## Description
 
-The `link` command and `markplane_link` MCP tool currently only support Task-to-Task linking (`blocks`/`depends_on`). Several entity types have relationship fields in the data model that have no CLI/MCP/API support for modification, forcing users to manually edit frontmatter.
+The `link` command and `markplane_link` MCP tool currently only support Task-to-Task linking (`blocks`/`depends_on`). All relationship fields — references to other tracked entities by ID — should be managed through the link system, not through the update command.
+
+## Architectural Decision
+
+Frontmatter fields split into **properties** (local to the item) and **relationships** (links to other entities). The `update` command/tool owns properties; the `link` command/tool owns all relationships. This separation exists because link mutations involve referential integrity, potential reciprocal writes, and cross-entity side effects.
+
+**All relationship fields in the data model:**
+
+| Field | Entity types | Cardinality | Reciprocal |
+|-------|-------------|-------------|------------|
+| `epic` | Task, Plan | single | no (derived via scan) |
+| `plan` | Task | single | `plan.implements` |
+| `depends_on` | Task, Epic | array | `blocks` (Task only) |
+| `blocks` | Task | array | `depends_on` |
+| `implements` | Plan | array | `task.plan` |
+| `related` | Note | array | no |
 
 ## Gaps
 
-**Epic-to-Epic:** Epic has a `depends_on` field but no command wires to it.
+**Currently supported:** Task `blocks`/`depends_on` (with reciprocal management)
 
-**Plan-Task linking:** `markplane plan` creates the initial bidirectional link (`task.plan` + `plan.implements`), but there's no way to unlink, re-link, or add additional tasks to a plan's `implements` list after creation.
+**Missing:**
+- Epic-to-Epic `depends_on`
+- Task/Plan `epic` (set/clear a "belongs to" single-valued link)
+- Task `plan` / Plan `implements` (bidirectional, set/clear + add/remove)
+- Note `related` (add/remove)
+- Unlinking (remove any relationship)
 
-**Web UI:** The plan field on task detail sheets and implements field on plan detail sheets are read-only because the API (`UpdatePlanRequest`, `UpdateTaskRequest.plan`) doesn't handle bidirectional consistency. Extending the link tool would unblock making these editable in the UI.
+**Web UI:** Plan field on task detail sheets and implements field on plan detail sheets are read-only because the API doesn't handle bidirectional consistency. Extending the link tool would unblock making these editable.
 
 ## Acceptance Criteria
 
-- [ ] `markplane link` supports Epic-to-Epic `depends_on` relations
-- [ ] `markplane link` supports Plan-Task `implements` relation (sets both `task.plan` and `plan.implements` atomically)
+- [ ] `markplane link` supports all relationship types listed above
+- [ ] Single-valued links (`epic`, `plan`) support set and clear semantics
+- [ ] Array links support add and remove
+- [ ] Bidirectional links (`plan`/`implements`, `blocks`/`depends_on`) update both sides atomically
 - [ ] `markplane_link` MCP tool updated with same capabilities
-- [ ] Unlinking supported (remove a relationship)
-- [ ] Web API supports plan-task link management (unblocks UI editing)
+- [ ] Works across all entity types (Task, Epic, Plan, Note)
+- [ ] Web API supports link management (unblocks UI editing)
 
 ## Notes
 
-- Bidirectional consistency is the key challenge for plan-task links — updating one side must update the other
-- Consider whether `link` should also support Note `related` field
 - The `plan` field on Task is singular (one plan per task) while `implements` on Plan is plural — linking a second plan to a task would need to handle this constraint
+- `epic` has no reciprocal field — epics discover their tasks via scanning, not via a stored field
+- This task is the relationship counterpart to the update expansion task which handles properties only
