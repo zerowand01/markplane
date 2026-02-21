@@ -270,6 +270,31 @@ export function useArchiveItem() {
   });
 }
 
+export function useBatchArchive() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const results = await Promise.all(
+        ids.map((id) => postAction<{ id: string; status: string }>(`/api/items/${id}/archive`))
+      );
+      return results;
+    },
+    onSuccess: (data) => {
+      toast.success(`Archived ${data.length} item${data.length === 1 ? "" : "s"}`);
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["epics"] });
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.invalidateQueries({ queryKey: ["notes"] });
+      queryClient.invalidateQueries({ queryKey: ["archived"] });
+      queryClient.invalidateQueries({ queryKey: ["summary"] });
+    },
+    onError: (err) => {
+      toast.error("Failed to archive items", { description: err.message });
+    },
+  });
+}
+
 export function useUnarchiveItem() {
   const queryClient = useQueryClient();
 

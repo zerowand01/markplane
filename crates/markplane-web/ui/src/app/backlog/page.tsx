@@ -22,7 +22,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useDroppable } from "@dnd-kit/core";
 import { useTasks } from "@/lib/hooks/use-tasks";
 import { useEpics } from "@/lib/hooks/use-epics";
-import { useUpdateTask } from "@/lib/hooks/use-mutations";
+import { useUpdateTask, useArchiveItem, useBatchArchive } from "@/lib/hooks/use-mutations";
 import { TaskCard } from "@/components/domain/task-card";
 import { TaskDetailSheet } from "@/components/domain/task-detail-sheet";
 import { StatusBadge } from "@/components/domain/status-badge";
@@ -37,7 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PageTransition } from "@/components/domain/page-transition";
-import { ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { ArrowUpRight, ArrowDownLeft, Archive } from "lucide-react";
 import { generateKeyBetween } from "fractional-indexing";
 import type { Task, TaskStatus, Priority, Effort } from "@/lib/types";
 
@@ -51,7 +51,7 @@ const KANBAN_COLUMNS: { status: TaskStatus; label: string; wipLimit?: number }[]
 
 type ViewMode = "board" | "backlog";
 
-const BOARD_STATUSES: TaskStatus[] = ["planned", "in-progress", "done"];
+const BOARD_STATUSES: TaskStatus[] = ["planned", "in-progress", "done", "cancelled"];
 const BACKLOG_STATUSES: TaskStatus[] = ["draft", "backlog"];
 
 const PRIORITY_GROUPS: { priority: Priority; label: string }[] = [
@@ -372,35 +372,34 @@ function KanbanView({
   onTaskClick: (id: string) => void;
 }) {
   const updateTask = useUpdateTask();
+  const archiveItem = useArchiveItem();
+  const batchArchive = useBatchArchive();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
-  const DONE_LIMIT = 10;
-
-  const { tasksByStatus, totalsByStatus } = useMemo(() => {
+  const { tasksByStatus, totalsByStatus, cancelledTasks } = useMemo(() => {
     const map = new Map<TaskStatus, Task[]>();
     const totals = new Map<TaskStatus, number>();
+    const cancelled: Task[] = [];
     for (const col of KANBAN_COLUMNS) {
       map.set(col.status, []);
       totals.set(col.status, 0);
     }
     for (const task of tasks) {
+      if (task.status === "cancelled") {
+        cancelled.push(task);
+        continue;
+      }
       const list = map.get(task.status);
       if (list) {
         list.push(task);
         totals.set(task.status, (totals.get(task.status) || 0) + 1);
       }
     }
-    // Truncate Done column to most recent items
-    const doneTasks = map.get("done");
-    if (doneTasks && doneTasks.length > DONE_LIMIT) {
-      doneTasks.sort((a, b) => b.updated.localeCompare(a.updated));
-      map.set("done", doneTasks.slice(0, DONE_LIMIT));
-    }
-    return { tasksByStatus: map, totalsByStatus: totals };
+    return { tasksByStatus: map, totalsByStatus: totals, cancelledTasks: cancelled };
   }, [tasks]);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -457,6 +456,8 @@ function KanbanView({
           const isOverWip =
             col.wipLimit !== undefined && columnTasks.length > col.wipLimit;
 
+          const isDoneColumn = col.status === "done";
+
           return (
             <KanbanColumn
               key={col.status}
@@ -469,6 +470,15 @@ function KanbanView({
               tasks={columnTasks}
               onTaskClick={onTaskClick}
               onDemote={col.status === "planned" ? (id) => updateTask.mutate({ id, status: "backlog" }) : undefined}
+              cancelledTasks={isDoneColumn ? cancelledTasks : undefined}
+              onArchive={isDoneColumn ? (id) => archiveItem.mutate(id) : undefined}
+              onArchiveAll={isDoneColumn ? () => {
+                const ids = [
+                  ...columnTasks.map((t) => t.id),
+                  ...cancelledTasks.map((t) => t.id),
+                ];
+                if (ids.length > 0) batchArchive.mutate(ids);
+              } : undefined}
             />
           );
         })}
@@ -495,6 +505,9 @@ function KanbanColumn({
   tasks,
   onTaskClick,
   onDemote,
+  cancelledTasks,
+  onArchive,
+  onArchiveAll,
 }: {
   status: TaskStatus;
   label: string;
@@ -505,9 +518,13 @@ function KanbanColumn({
   tasks: Task[];
   onTaskClick: (id: string) => void;
   onDemote?: (id: string) => void;
+  cancelledTasks?: Task[];
+  onArchive?: (id: string) => void;
+  onArchiveAll?: () => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const isTruncated = totalCount > count;
+  const hasArchivable = tasks.length > 0 || (cancelledTasks && cancelledTasks.length > 0);
 
   return (
     <div
@@ -524,6 +541,19 @@ function KanbanColumn({
           ({isTruncated ? `${count} of ${totalCount}` : count}
           {wipLimit !== undefined && `/${wipLimit}`})
         </span>
+        {onArchiveAll && hasArchivable && (
+          <>
+            <div className="flex-1" />
+            <button
+              title="Archive all done & cancelled"
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+              onClick={onArchiveAll}
+            >
+              <Archive className="size-3" />
+              Archive all
+            </button>
+          </>
+        )}
       </div>
 
       <SortableContext
@@ -536,6 +566,7 @@ function KanbanColumn({
               <TaskCard
                 task={task}
                 onClick={() => onTaskClick(task.id)}
+                onArchive={onArchive}
               />
               {onDemote && (
                 <button
@@ -549,13 +580,33 @@ function KanbanColumn({
               )}
             </div>
           ))}
-          {tasks.length === 0 && (
+          {tasks.length === 0 && !cancelledTasks?.length && (
             <div className="rounded-lg border border-dashed p-6 text-center">
               <p className="text-xs text-muted-foreground">No tasks</p>
             </div>
           )}
         </div>
       </SortableContext>
+
+      {cancelledTasks && cancelledTasks.length > 0 && (
+        <div className="mt-4">
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <h3 className="text-xs font-medium text-muted-foreground">Cancelled</h3>
+            <span className="text-xs text-muted-foreground">({cancelledTasks.length})</span>
+          </div>
+          <div className="space-y-2">
+            {cancelledTasks.map((task) => (
+              <div key={task.id} className="group/card relative">
+                <TaskCard
+                  task={task}
+                  onClick={() => onTaskClick(task.id)}
+                  onArchive={onArchive}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -921,7 +972,7 @@ function BacklogRow({
         {onPromote && !isOverlay ? (
           <button
             title="Move to Board"
-            className="size-6 flex items-center justify-center rounded opacity-0 group-hover/row:opacity-100 transition-opacity text-muted-foreground hover:text-primary hover:bg-primary/10 shrink-0"
+            className="size-6 flex items-center justify-center rounded opacity-0 group-hover/row:opacity-100 transition-opacity text-muted-foreground hover:text-primary hover:bg-primary/10 cursor-pointer shrink-0"
             onClick={(e) => { e.stopPropagation(); onPromote(); }}
             onPointerDown={(e) => e.stopPropagation()}
           >
@@ -941,7 +992,7 @@ function BacklogRow({
           {onPromote && !isOverlay && (
             <button
               title="Move to Board"
-              className="ml-auto size-6 flex items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-primary/10"
+              className="ml-auto size-6 flex items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-primary/10 cursor-pointer"
               onClick={(e) => { e.stopPropagation(); onPromote(); }}
               onPointerDown={(e) => e.stopPropagation()}
             >

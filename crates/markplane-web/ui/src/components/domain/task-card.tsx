@@ -2,15 +2,18 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Archive } from "lucide-react";
 import { PriorityIndicator } from "./priority-indicator";
 import type { Task } from "@/lib/types";
 
 export function TaskCard({
   task,
   onClick,
+  onArchive,
 }: {
   task: Task;
   onClick?: () => void;
+  onArchive?: (id: string) => void;
 }) {
   const {
     attributes,
@@ -40,6 +43,16 @@ export function TaskCard({
           <span className="font-mono text-sm text-muted-foreground shrink-0">
             {task.id}
           </span>
+          {onArchive && (
+            <button
+              title="Archive"
+              className="size-6 flex items-center justify-center rounded opacity-0 group-hover/card:opacity-100 transition-opacity text-muted-foreground hover:text-primary hover:bg-primary/10 cursor-pointer"
+              onClick={(e) => { e.stopPropagation(); onArchive(task.id); }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <Archive className="size-3.5" />
+            </button>
+          )}
           {task.effort && (
             <span className="ml-auto text-sm font-medium px-2 py-0.5 rounded bg-secondary text-secondary-foreground uppercase">
               {task.effort === "xs"
