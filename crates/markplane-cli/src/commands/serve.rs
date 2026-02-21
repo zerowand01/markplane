@@ -19,9 +19,9 @@ use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 
 use markplane_core::{
-    Effort, Epic, EpicStatus, ItemType, LinkAction, LinkRelation, MarkplaneDocument,
-    Note, Plan, Priority, Project, QueryFilter, Task, TaskStatus, find_blocked_items,
-    parse_id,
+    Effort, Epic, EpicStatus, EpicUpdate, ItemType, LinkAction, LinkRelation,
+    MarkplaneDocument, MarkplaneError, Note, NoteUpdate, Patch, Plan, PlanUpdate, Priority,
+    Project, QueryFilter, Task, TaskStatus, TaskUpdate, find_blocked_items, parse_id,
 };
 
 #[cfg(feature = "embed-ui")]
@@ -334,6 +334,34 @@ fn error_response(status: StatusCode, code: &str, message: &str) -> (StatusCode,
             },
         }),
     )
+}
+
+/// Map a `MarkplaneError` to an HTTP error response.
+fn map_core_error(e: MarkplaneError) -> (StatusCode, Json<ApiError>) {
+    match &e {
+        MarkplaneError::NotFound(_) => error_response(StatusCode::NOT_FOUND, "not_found", &e.to_string()),
+        MarkplaneError::InvalidId(_) => error_response(StatusCode::BAD_REQUEST, "invalid_id", &e.to_string()),
+        MarkplaneError::InvalidStatus(_) | MarkplaneError::InvalidTransition { .. } => {
+            error_response(StatusCode::BAD_REQUEST, "invalid_status", &e.to_string())
+        }
+        MarkplaneError::InvalidLink(_) => error_response(StatusCode::BAD_REQUEST, "invalid_link", &e.to_string()),
+        MarkplaneError::DuplicateId(_) => error_response(StatusCode::CONFLICT, "duplicate_id", &e.to_string()),
+        MarkplaneError::BrokenReference(_) => error_response(StatusCode::BAD_REQUEST, "broken_reference", &e.to_string()),
+        MarkplaneError::Config(_) | MarkplaneError::Frontmatter(_) => {
+            error_response(StatusCode::BAD_REQUEST, "invalid_field", &e.to_string())
+        }
+        MarkplaneError::NotInitialized(_) | MarkplaneError::Io(_) | MarkplaneError::Yaml(_) => {
+            error_response(StatusCode::INTERNAL_SERVER_ERROR, "internal_error", &e.to_string())
+        }
+    }
+}
+
+/// Diff two vectors to produce add/remove lists.
+/// Converts the web UI's replacement semantics (full desired array) to core's add/remove semantics.
+fn diff_vec(current: &[String], desired: &[String]) -> (Vec<String>, Vec<String>) {
+    let to_add = desired.iter().filter(|d| !current.contains(d)).cloned().collect();
+    let to_remove = current.iter().filter(|c| !desired.contains(c)).cloned().collect();
+    (to_add, to_remove)
 }
 
 // ── Task API types ────────────────────────────────────────────────────────
@@ -832,88 +860,126 @@ async fn update_task(
     parse_id(&id)
         .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
 
-    let mut doc: MarkplaneDocument<Task> = state
-        .project
-        .read_item(&id)
-        .map_err(|e| error_response(StatusCode::NOT_FOUND, "not_found", &e.to_string()))?;
+    // Read current state for diffing tags and links
+    let current: MarkplaneDocument<Task> = state.project.read_item(&id).map_err(map_core_error)?;
+    let fm = &current.frontmatter;
 
-    if let Some(title) = body.title {
-        doc.frontmatter.title = title;
-    }
-    if let Some(status) = &body.status {
-        doc.frontmatter.status = status
-            .parse()
-            .map_err(|e: markplane_core::MarkplaneError| {
-                error_response(StatusCode::BAD_REQUEST, "invalid_status", &e.to_string())
-            })?;
-    }
-    if let Some(priority) = &body.priority {
-        doc.frontmatter.priority = priority
-            .parse()
-            .map_err(|e: markplane_core::MarkplaneError| {
-                error_response(StatusCode::BAD_REQUEST, "invalid_priority", &e.to_string())
-            })?;
-    }
-    if let Some(effort) = &body.effort {
-        doc.frontmatter.effort = effort
-            .parse()
-            .map_err(|e: markplane_core::MarkplaneError| {
-                error_response(StatusCode::BAD_REQUEST, "invalid_effort", &e.to_string())
-            })?;
-    }
-    if let Some(item_type) = &body.item_type {
-        doc.frontmatter.item_type = item_type
-            .parse()
-            .map_err(|e: markplane_core::MarkplaneError| {
-                error_response(StatusCode::BAD_REQUEST, "invalid_type", &e.to_string())
-            })?;
-    }
-    if let Some(tags) = body.tags {
-        doc.frontmatter.tags = tags;
-    }
-    if let Some(epic) = body.epic {
-        doc.frontmatter.epic = if epic.is_empty() { None } else { Some(epic) };
-    }
-    if let Some(plan) = body.plan {
-        doc.frontmatter.plan = if plan.is_empty() { None } else { Some(plan) };
-    }
-    if let Some(assignee) = body.assignee {
-        doc.frontmatter.assignee = if assignee.is_empty() {
-            None
-        } else {
-            Some(assignee)
-        };
-    }
-    if let Some(position) = body.position {
-        doc.frontmatter.position = if position.is_empty() {
-            None
-        } else {
-            Some(position)
-        };
-    }
-    if let Some(depends_on) = body.depends_on {
-        doc.frontmatter.depends_on = depends_on;
-    }
-    if let Some(blocks) = body.blocks {
-        doc.frontmatter.blocks = blocks;
-    }
-    if let Some(new_body) = body.body {
-        doc.body = new_body;
+    // ── Properties → TaskUpdate ──────────────────────────────────────
+    let (add_tags, remove_tags) = if let Some(ref desired_tags) = body.tags {
+        diff_vec(&fm.tags, desired_tags)
+    } else {
+        (vec![], vec![])
+    };
+
+    let assignee = match &body.assignee {
+        None => Patch::Unchanged,
+        Some(s) if s.is_empty() => Patch::Clear,
+        Some(s) => Patch::Set(s.clone()),
+    };
+    let position = match &body.position {
+        None => Patch::Unchanged,
+        Some(s) if s.is_empty() => Patch::Clear,
+        Some(s) => Patch::Set(s.clone()),
+    };
+
+    let has_properties = body.title.is_some() || body.status.is_some()
+        || body.priority.is_some() || body.effort.is_some() || body.item_type.is_some()
+        || !add_tags.is_empty() || !remove_tags.is_empty()
+        || !matches!(assignee, Patch::Unchanged) || !matches!(position, Patch::Unchanged);
+    if has_properties {
+        state.project.update_task(&id, &TaskUpdate {
+            title: body.title,
+            status: body.status,
+            priority: body.priority,
+            effort: body.effort,
+            item_type: body.item_type,
+            assignee,
+            position,
+            add_tags,
+            remove_tags,
+        }).map_err(map_core_error)?;
     }
 
-    doc.frontmatter.updated = chrono::Local::now().date_naive();
+    // ── Links → link_items() per change ──────────────────────────────
 
-    state
-        .project
-        .write_item(&id, &doc)
-        .map_err(|e| {
-            error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "write_error",
-                &e.to_string(),
-            )
-        })?;
+    // Epic (scalar): Add overwrites, Remove clears
+    if let Some(ref desired_epic) = body.epic {
+        let desired = if desired_epic.is_empty() { None } else { Some(desired_epic.as_str()) };
+        let current_epic = fm.epic.as_deref();
+        if desired != current_epic {
+            match desired {
+                Some(new) => {
+                    // Add overwrites the epic field directly
+                    state.project.link_items(&id, new, LinkRelation::Epic, LinkAction::Add)
+                        .map_err(map_core_error)?;
+                }
+                None => {
+                    // Clear: remove the current epic link
+                    if let Some(old) = current_epic {
+                        state.project.link_items(&id, old, LinkRelation::Epic, LinkAction::Remove)
+                            .map_err(map_core_error)?;
+                    }
+                }
+            }
+        }
+    }
 
+    // Plan (scalar): Add handles old plan cleanup internally
+    if let Some(ref desired_plan) = body.plan {
+        let desired = if desired_plan.is_empty() { None } else { Some(desired_plan.as_str()) };
+        let current_plan = fm.plan.as_deref();
+        if desired != current_plan {
+            match desired {
+                Some(new) => {
+                    // Add cleans up old plan's implements list and sets new plan
+                    state.project.link_items(&id, new, LinkRelation::Plan, LinkAction::Add)
+                        .map_err(map_core_error)?;
+                }
+                None => {
+                    // Clear: remove the current plan link
+                    if let Some(old) = current_plan {
+                        state.project.link_items(&id, old, LinkRelation::Plan, LinkAction::Remove)
+                            .map_err(map_core_error)?;
+                    }
+                }
+            }
+        }
+    }
+
+    // depends_on (array): diff
+    if let Some(ref desired_deps) = body.depends_on {
+        let (to_add, to_remove) = diff_vec(&fm.depends_on, desired_deps);
+        // Remove first to avoid transient invalid states
+        for dep in &to_remove {
+            state.project.link_items(&id, dep, LinkRelation::DependsOn, LinkAction::Remove)
+                .map_err(map_core_error)?;
+        }
+        for dep in &to_add {
+            state.project.link_items(&id, dep, LinkRelation::DependsOn, LinkAction::Add)
+                .map_err(map_core_error)?;
+        }
+    }
+
+    // blocks (array): diff
+    if let Some(ref desired_blocks) = body.blocks {
+        let (to_add, to_remove) = diff_vec(&fm.blocks, desired_blocks);
+        for blk in &to_remove {
+            state.project.link_items(&id, blk, LinkRelation::Blocks, LinkAction::Remove)
+                .map_err(map_core_error)?;
+        }
+        for blk in &to_add {
+            state.project.link_items(&id, blk, LinkRelation::Blocks, LinkAction::Add)
+                .map_err(map_core_error)?;
+        }
+    }
+
+    // ── Body ─────────────────────────────────────────────────────────
+    if let Some(ref new_body) = body.body {
+        state.project.update_body(&id, new_body).map_err(map_core_error)?;
+    }
+
+    // Re-read for response
+    let doc: MarkplaneDocument<Task> = state.project.read_item(&id).map_err(map_core_error)?;
     Ok(Json(ApiResponse {
         data: task_to_response(&doc),
     }))
@@ -1123,64 +1189,56 @@ async fn update_epic(
     parse_id(&id)
         .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
 
-    let mut doc: MarkplaneDocument<Epic> = state
-        .project
-        .read_item(&id)
-        .map_err(|e| error_response(StatusCode::NOT_FOUND, "not_found", &e.to_string()))?;
+    // Diff tags if provided
+    let (add_tags, remove_tags) = if let Some(ref desired_tags) = body.tags {
+        let current: MarkplaneDocument<Epic> = state.project.read_item(&id).map_err(map_core_error)?;
+        diff_vec(&current.frontmatter.tags, desired_tags)
+    } else {
+        (vec![], vec![])
+    };
 
-    if let Some(title) = body.title {
-        doc.frontmatter.title = title;
-    }
-    if let Some(status) = &body.status {
-        doc.frontmatter.status = status
-            .parse()
-            .map_err(|e: markplane_core::MarkplaneError| {
-                error_response(StatusCode::BAD_REQUEST, "invalid_status", &e.to_string())
-            })?;
-    }
-    if let Some(priority) = &body.priority {
-        doc.frontmatter.priority = priority
-            .parse()
-            .map_err(|e: markplane_core::MarkplaneError| {
-                error_response(StatusCode::BAD_REQUEST, "invalid_priority", &e.to_string())
-            })?;
-    }
-    if let Some(tags) = body.tags {
-        doc.frontmatter.tags = tags;
-    }
-    if let Some(started) = body.started {
-        doc.frontmatter.started = if started.is_empty() {
-            None
-        } else {
-            Some(
-                chrono::NaiveDate::parse_from_str(&started, "%Y-%m-%d")
-                    .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_date", "Invalid date format, expected YYYY-MM-DD"))?,
-            )
-        };
-    }
-    if let Some(target) = body.target {
-        doc.frontmatter.target = if target.is_empty() {
-            None
-        } else {
-            Some(
-                chrono::NaiveDate::parse_from_str(&target, "%Y-%m-%d")
-                    .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_date", "Invalid date format, expected YYYY-MM-DD"))?,
-            )
-        };
-    }
-    if let Some(new_body) = body.body {
-        doc.body = new_body;
+    // Parse date fields to Patch<NaiveDate>
+    let started = match body.started {
+        None => Patch::Unchanged,
+        Some(ref s) if s.is_empty() => Patch::Clear,
+        Some(ref s) => Patch::Set(
+            chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
+                .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_date", "Invalid date format, expected YYYY-MM-DD"))?,
+        ),
+    };
+    let target = match body.target {
+        None => Patch::Unchanged,
+        Some(ref s) if s.is_empty() => Patch::Clear,
+        Some(ref s) => Patch::Set(
+            chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
+                .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_date", "Invalid date format, expected YYYY-MM-DD"))?,
+        ),
+    };
+
+    // Properties
+    let has_properties = body.title.is_some() || body.status.is_some() || body.priority.is_some()
+        || !add_tags.is_empty() || !remove_tags.is_empty()
+        || !matches!(started, Patch::Unchanged) || !matches!(target, Patch::Unchanged);
+    if has_properties {
+        state.project.update_epic(&id, &EpicUpdate {
+            title: body.title,
+            status: body.status,
+            priority: body.priority,
+            add_tags,
+            remove_tags,
+            started,
+            target,
+        }).map_err(map_core_error)?;
     }
 
-    state
-        .project
-        .write_item(&id, &doc)
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "write_error", &e.to_string()))?;
+    // Body
+    if let Some(ref new_body) = body.body {
+        state.project.update_body(&id, new_body).map_err(map_core_error)?;
+    }
 
-    let tasks = state
-        .project
-        .list_tasks(&QueryFilter::default())
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+    // Re-read for response
+    let doc: MarkplaneDocument<Epic> = state.project.read_item(&id).map_err(map_core_error)?;
+    let tasks = state.project.list_tasks(&QueryFilter::default()).map_err(map_core_error)?;
 
     Ok(Json(ApiResponse {
         data: epic_to_response(&doc, &tasks),
@@ -1195,32 +1253,22 @@ async fn update_plan(
     parse_id(&id)
         .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
 
-    let mut doc: MarkplaneDocument<Plan> = state
-        .project
-        .read_item(&id)
-        .map_err(|e| error_response(StatusCode::NOT_FOUND, "not_found", &e.to_string()))?;
-
-    if let Some(title) = body.title {
-        doc.frontmatter.title = title;
-    }
-    if let Some(status) = &body.status {
-        doc.frontmatter.status = status
-            .parse()
-            .map_err(|e: markplane_core::MarkplaneError| {
-                error_response(StatusCode::BAD_REQUEST, "invalid_status", &e.to_string())
-            })?;
-    }
-    if let Some(new_body) = body.body {
-        doc.body = new_body;
+    // Properties
+    let has_properties = body.title.is_some() || body.status.is_some();
+    if has_properties {
+        state.project.update_plan(&id, &PlanUpdate {
+            title: body.title,
+            status: body.status,
+        }).map_err(map_core_error)?;
     }
 
-    doc.frontmatter.updated = chrono::Local::now().date_naive();
+    // Body
+    if let Some(ref new_body) = body.body {
+        state.project.update_body(&id, new_body).map_err(map_core_error)?;
+    }
 
-    state
-        .project
-        .write_item(&id, &doc)
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "write_error", &e.to_string()))?;
-
+    // Re-read for response
+    let doc: MarkplaneDocument<Plan> = state.project.read_item(&id).map_err(map_core_error)?;
     Ok(Json(ApiResponse {
         data: plan_to_response(&doc),
     }))
@@ -1234,35 +1282,34 @@ async fn update_note(
     parse_id(&id)
         .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
 
-    let mut doc: MarkplaneDocument<Note> = state
-        .project
-        .read_item(&id)
-        .map_err(|e| error_response(StatusCode::NOT_FOUND, "not_found", &e.to_string()))?;
+    // Diff tags if provided
+    let (add_tags, remove_tags) = if let Some(ref desired_tags) = body.tags {
+        let current: MarkplaneDocument<Note> = state.project.read_item(&id).map_err(map_core_error)?;
+        diff_vec(&current.frontmatter.tags, desired_tags)
+    } else {
+        (vec![], vec![])
+    };
 
-    if let Some(title) = body.title {
-        doc.frontmatter.title = title;
-    }
-    if let Some(status) = &body.status {
-        doc.frontmatter.status = status
-            .parse()
-            .map_err(|e: markplane_core::MarkplaneError| {
-                error_response(StatusCode::BAD_REQUEST, "invalid_status", &e.to_string())
-            })?;
-    }
-    if let Some(tags) = body.tags {
-        doc.frontmatter.tags = tags;
-    }
-    if let Some(new_body) = body.body {
-        doc.body = new_body;
+    // Properties
+    let has_properties = body.title.is_some() || body.status.is_some()
+        || !add_tags.is_empty() || !remove_tags.is_empty();
+    if has_properties {
+        state.project.update_note(&id, &NoteUpdate {
+            title: body.title,
+            status: body.status,
+            note_type: None,
+            add_tags,
+            remove_tags,
+        }).map_err(map_core_error)?;
     }
 
-    doc.frontmatter.updated = chrono::Local::now().date_naive();
+    // Body
+    if let Some(ref new_body) = body.body {
+        state.project.update_body(&id, new_body).map_err(map_core_error)?;
+    }
 
-    state
-        .project
-        .write_item(&id, &doc)
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "write_error", &e.to_string()))?;
-
+    // Re-read for response
+    let doc: MarkplaneDocument<Note> = state.project.read_item(&id).map_err(map_core_error)?;
     Ok(Json(ApiResponse {
         data: note_to_response(&doc),
     }))
@@ -1727,4 +1774,63 @@ fn build_graph(
 
     let nodes: Vec<GraphNodeResponse> = nodes_map.into_values().collect();
     Ok(GraphResponse { nodes, edges })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_diff_vec_no_change() {
+        let current = vec!["a".to_string(), "b".to_string()];
+        let desired = vec!["a".to_string(), "b".to_string()];
+        let (add, remove) = diff_vec(&current, &desired);
+        assert!(add.is_empty());
+        assert!(remove.is_empty());
+    }
+
+    #[test]
+    fn test_diff_vec_additions_only() {
+        let current = vec!["a".to_string()];
+        let desired = vec!["a".to_string(), "b".to_string(), "c".to_string()];
+        let (add, remove) = diff_vec(&current, &desired);
+        assert_eq!(add, vec!["b", "c"]);
+        assert!(remove.is_empty());
+    }
+
+    #[test]
+    fn test_diff_vec_removals_only() {
+        let current = vec!["a".to_string(), "b".to_string(), "c".to_string()];
+        let desired = vec!["a".to_string()];
+        let (add, remove) = diff_vec(&current, &desired);
+        assert!(add.is_empty());
+        assert_eq!(remove, vec!["b", "c"]);
+    }
+
+    #[test]
+    fn test_diff_vec_mixed() {
+        let current = vec!["a".to_string(), "b".to_string()];
+        let desired = vec!["b".to_string(), "c".to_string()];
+        let (add, remove) = diff_vec(&current, &desired);
+        assert_eq!(add, vec!["c"]);
+        assert_eq!(remove, vec!["a"]);
+    }
+
+    #[test]
+    fn test_diff_vec_empty_to_some() {
+        let current: Vec<String> = vec![];
+        let desired = vec!["a".to_string(), "b".to_string()];
+        let (add, remove) = diff_vec(&current, &desired);
+        assert_eq!(add, vec!["a", "b"]);
+        assert!(remove.is_empty());
+    }
+
+    #[test]
+    fn test_diff_vec_some_to_empty() {
+        let current = vec!["a".to_string(), "b".to_string()];
+        let desired: Vec<String> = vec![];
+        let (add, remove) = diff_vec(&current, &desired);
+        assert!(add.is_empty());
+        assert_eq!(remove, vec!["a", "b"]);
+    }
 }

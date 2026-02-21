@@ -1,7 +1,7 @@
 ---
 id: TASK-t2hvn
 title: Refactor web API to use core update and link methods
-status: backlog
+status: done
 priority: high
 type: enhancement
 effort: medium
@@ -18,7 +18,7 @@ blocks: []
 assignee: null
 position: a0G
 created: 2026-02-20
-updated: 2026-02-20
+updated: 2026-02-21
 ---
 
 # Refactor web API to use core update and link methods
@@ -49,10 +49,15 @@ Each entity type has an `Update*Request` deserialization struct and an inline ha
 - [ ] All existing web UI functionality works unchanged
 - [ ] `Update*Request` structs can be simplified or removed if no longer needed
 
-## Notes
+## Implementation Notes
 
-- This is intentionally deferred until both dependencies land — doing it in one sweep avoids an awkward partial refactor where properties use core but links are still inline
-- The web API uses replacement semantics for arrays (tags, depends_on, blocks) because the UI round-trips the full state. The core update uses add/remove semantics. The handler will need to diff current vs requested to produce the right add/remove calls, or core could also expose a replacement-style API for the web use case
+- `diff_vec()` helper added to convert the web UI's replacement semantics (full desired array) to core's add/remove semantics. Lives in serve.rs as a private helper — the adapter layer between the two representations.
+- `map_core_error()` exhaustively maps all `MarkplaneError` variants to HTTP status codes (no wildcard catch-all).
+- Scalar link fields (epic, plan) use single Add call when switching values — core's `link_items()` handles old-value cleanup internally. Remove is only used for clearing.
+- Array link fields (depends_on, blocks) use `diff_vec` to compute per-element Add/Remove calls. Removes execute before adds to avoid transient invalid states.
+- `Update*Request` structs kept as-is — they serve a different purpose (JSON deserialization with Option/replacement arrays) than core structs (Patch/add-remove). The handler is the adapter.
+- Epic/plan/note update handlers don't handle link fields because those request types never included them — the web UI already routes link changes through `POST /api/link`.
+- 3-agent review team verified: no bugs, confirmed snapshot-after-property-update is safe (update_task only modifies property fields, not link fields), and no frontend breakage from error code changes.
 
 ## References
 
