@@ -19,8 +19,9 @@ use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 
 use markplane_core::{
-    Effort, Epic, EpicStatus, ItemType, MarkplaneDocument, Note, Plan, Priority,
-    Project, QueryFilter, Task, TaskStatus, find_blocked_items, parse_id,
+    Effort, Epic, EpicStatus, ItemType, LinkAction, LinkRelation, MarkplaneDocument,
+    Note, Plan, Priority, Project, QueryFilter, Task, TaskStatus, find_blocked_items,
+    parse_id,
 };
 
 #[cfg(feature = "embed-ui")]
@@ -73,6 +74,7 @@ pub async fn run(port: u16, open: bool, dev: bool) -> anyhow::Result<()> {
         .route("/api/notes/{id}", get(get_note).patch(update_note))
         .route("/api/items/{id}/archive", post(post_archive_item))
         .route("/api/items/{id}/unarchive", post(post_unarchive_item))
+        .route("/api/link", post(post_link))
         .route("/api/sync", post(post_sync))
         .route("/api/search", get(get_search))
         .route("/api/graph", get(get_graph_all))
@@ -1290,6 +1292,55 @@ async fn post_sync(
 struct SyncResponse {
     success: bool,
     message: String,
+}
+
+// ── Link ─────────────────────────────────────────────────────────────────
+
+#[derive(Deserialize)]
+struct LinkRequest {
+    from: String,
+    to: String,
+    relation: String,
+    #[serde(default)]
+    remove: bool,
+}
+
+#[derive(Serialize)]
+struct LinkResponse {
+    from: String,
+    to: String,
+    relation: String,
+    action: String,
+}
+
+async fn post_link(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<LinkRequest>,
+) -> Result<Json<ApiResponse<LinkResponse>>, (StatusCode, Json<ApiError>)> {
+    let relation: LinkRelation = req.relation.parse().map_err(|e: markplane_core::MarkplaneError| {
+        error_response(StatusCode::BAD_REQUEST, "invalid_relation", &e.to_string())
+    })?;
+    let action = if req.remove {
+        LinkAction::Remove
+    } else {
+        LinkAction::Add
+    };
+
+    state
+        .project
+        .link_items(&req.from, &req.to, relation, action)
+        .map_err(|e| error_response(StatusCode::BAD_REQUEST, "link_error", &e.to_string()))?;
+
+    let action_str = if req.remove { "removed" } else { "added" };
+
+    Ok(Json(ApiResponse {
+        data: LinkResponse {
+            from: req.from,
+            to: req.to,
+            relation: relation.to_string(),
+            action: action_str.to_string(),
+        },
+    }))
 }
 
 // ── Search ───────────────────────────────────────────────────────────────

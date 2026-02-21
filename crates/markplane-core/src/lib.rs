@@ -8,6 +8,7 @@ pub mod context;
 pub mod templates;
 pub mod position;
 pub mod error;
+pub mod links;
 
 pub use error::{MarkplaneError, Result};
 pub use models::{
@@ -23,3 +24,4 @@ pub use project::{
 pub use query::{QueryFilter, ScanScope};
 pub use references::{extract_references, validate_references, find_orphans, BrokenReference, build_reference_graph};
 pub use templates::render_template;
+pub use links::{LinkRelation, LinkAction};

@@ -896,7 +896,7 @@ fn test_link_blocks() {
 
     cmd()
         .current_dir(tmp.path())
-        .args(["link", &id1, "--blocks", &id2])
+        .args(["link", &id1, &id2, "--relation", "blocks"])
         .assert()
         .success()
         .stdout(predicate::str::contains(format!("{} blocks {}", id1, id2)));
@@ -912,7 +912,7 @@ fn test_link_blocks() {
 }
 
 #[test]
-fn test_link_no_flags_fails() {
+fn test_link_missing_args_fails() {
     let tmp = setup_project();
     let output = cmd()
         .current_dir(tmp.path())
@@ -922,11 +922,105 @@ fn test_link_no_flags_fails() {
     assert!(output.status.success());
     let task_id = extract_id(&output.stdout);
 
+    // Missing TO and --relation
     cmd()
         .current_dir(tmp.path())
         .args(["link", &task_id])
         .assert()
         .failure();
+}
+
+#[test]
+fn test_link_epic() {
+    let tmp = setup_project();
+    let task_out = cmd()
+        .current_dir(tmp.path())
+        .args(["add", "A task"])
+        .output()
+        .unwrap();
+    assert!(task_out.status.success());
+    let task_id = extract_id(&task_out.stdout);
+
+    let epic_out = cmd()
+        .current_dir(tmp.path())
+        .args(["epic", "An epic"])
+        .output()
+        .unwrap();
+    assert!(epic_out.status.success());
+    let epic_id = extract_id(&epic_out.stdout);
+
+    cmd()
+        .current_dir(tmp.path())
+        .args(["link", &task_id, &epic_id, "--relation", "epic"])
+        .assert()
+        .success();
+
+    let task_content =
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    assert!(task_content.contains(&epic_id));
+}
+
+#[test]
+fn test_link_plan() {
+    let tmp = setup_project();
+    let task_out = cmd()
+        .current_dir(tmp.path())
+        .args(["add", "A task"])
+        .output()
+        .unwrap();
+    assert!(task_out.status.success());
+    let task_id = extract_id(&task_out.stdout);
+
+    // Create plan via the plan command (which now uses link_items internally)
+    let plan_out = cmd()
+        .current_dir(tmp.path())
+        .args(["plan", &task_id])
+        .output()
+        .unwrap();
+    assert!(plan_out.status.success(), "stderr: {}", String::from_utf8_lossy(&plan_out.stderr));
+
+    // Verify task.plan is set
+    let task_content =
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    assert!(task_content.contains("plan: PLAN-"));
+}
+
+#[test]
+fn test_link_remove() {
+    let tmp = setup_project();
+    let out1 = cmd()
+        .current_dir(tmp.path())
+        .args(["add", "A"])
+        .output()
+        .unwrap();
+    assert!(out1.status.success());
+    let id1 = extract_id(&out1.stdout);
+
+    let out2 = cmd()
+        .current_dir(tmp.path())
+        .args(["add", "B"])
+        .output()
+        .unwrap();
+    assert!(out2.status.success());
+    let id2 = extract_id(&out2.stdout);
+
+    // Add link
+    cmd()
+        .current_dir(tmp.path())
+        .args(["link", &id1, &id2, "--relation", "blocks"])
+        .assert()
+        .success();
+
+    // Remove link
+    cmd()
+        .current_dir(tmp.path())
+        .args(["link", &id1, &id2, "--relation", "blocks", "--remove"])
+        .assert()
+        .success();
+
+    let content =
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", id1))).unwrap();
+    assert!(!content.contains(&id2));
 }
 
 // ── Check ────────────────────────────────────────────────────────────────
@@ -1311,7 +1405,7 @@ fn test_graph() {
 
     cmd()
         .current_dir(tmp.path())
-        .args(["link", &id1, "--blocks", &id2])
+        .args(["link", &id1, &id2, "--relation", "blocks"])
         .assert()
         .success();
 
@@ -1495,7 +1589,7 @@ fn test_full_workflow() {
     // Link
     cmd()
         .current_dir(tmp.path())
-        .args(["link", &task2_id, "--depends-on", &task1_id])
+        .args(["link", &task2_id, &task1_id, "--relation", "depends-on"])
         .assert()
         .success();
 

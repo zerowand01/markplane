@@ -141,7 +141,7 @@ The server exposes 17 tools via the `tools/list` method.
 |------|-------------|-----------------|-----------------|
 | `markplane_promote` | Promote a note to a task. | `note_id` (string) | `priority` (string): default medium; `effort` (string): default medium |
 | `markplane_plan` | Create an implementation plan linked to a task. | `task_id` (string) | `title` (string): defaults to "Implementation plan for {item title}" |
-| `markplane_link` | Link two items with a blocks/depends_on relationship. | `from` (string), `to` (string), `relation` (string): `blocks` or `depends_on` | *(none)* |
+| `markplane_link` | Link two items with a typed relationship. | `from` (string), `to` (string), `relation` (string): `blocks`, `depends_on`, `epic`, `plan`, `implements`, or `related` | `remove` (boolean): remove the link instead of adding it (default: false) |
 
 ### Archive
 

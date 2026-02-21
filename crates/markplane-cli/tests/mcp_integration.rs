@@ -941,6 +941,189 @@ fn test_tool_link_missing_params() {
     assert!(response["error"].is_object());
 }
 
+#[test]
+fn test_tool_link_epic() {
+    let tmp = setup_project();
+    let add_task = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "A task" }
+            }
+        }),
+    );
+    let task_id = extract_id_from_response(&add_task);
+
+    // Create an epic by writing the file directly (no add_epic MCP tool)
+    let epic_id = {
+        use std::fs;
+        let epic_dir = tmp.path().join(".markplane/roadmap/items");
+        fs::create_dir_all(&epic_dir).unwrap();
+        let id = "EPIC-test1";
+        let content = format!(
+            "---\nid: {}\ntitle: Test Epic\nstatus: planned\npriority: medium\ntags: []\ndepends_on: []\n---\n",
+            id
+        );
+        fs::write(epic_dir.join(format!("{}.md", id)), content).unwrap();
+        id.to_string()
+    };
+
+    let link_resp = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_link",
+                "arguments": {
+                    "from": task_id,
+                    "to": epic_id,
+                    "relation": "epic"
+                }
+            }
+        }),
+    );
+
+    assert!(link_resp["error"].is_null());
+    let text = link_resp["result"]["content"][0]["text"].as_str().unwrap();
+    assert!(text.contains("success"));
+
+    // Verify task.epic is set
+    let task_content = std::fs::read_to_string(
+        tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))
+    ).unwrap();
+    assert!(task_content.contains(&epic_id));
+}
+
+#[test]
+fn test_tool_link_plan_reciprocal() {
+    let tmp = setup_project();
+    let add_task = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "A task" }
+            }
+        }),
+    );
+    let task_id = extract_id_from_response(&add_task);
+
+    let plan_resp = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_plan",
+                "arguments": { "task_id": task_id }
+            }
+        }),
+    );
+    assert!(plan_resp["error"].is_null());
+    let plan_text = plan_resp["result"]["content"][0]["text"].as_str().unwrap();
+    let plan_data: serde_json::Value = serde_json::from_str(plan_text).unwrap();
+    let plan_id = plan_data["id"].as_str().unwrap();
+
+    // Verify task has plan set
+    let task_content = std::fs::read_to_string(
+        tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))
+    ).unwrap();
+    assert!(task_content.contains(plan_id));
+
+    // Verify plan has implements set
+    let plan_content = std::fs::read_to_string(
+        tmp.path().join(format!(".markplane/plans/items/{}.md", plan_id))
+    ).unwrap();
+    assert!(plan_content.contains(&task_id));
+}
+
+#[test]
+fn test_tool_link_remove() {
+    let tmp = setup_project();
+    let add1 = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "A" }
+            }
+        }),
+    );
+    let task1_id = extract_id_from_response(&add1);
+
+    let add2 = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "B" }
+            }
+        }),
+    );
+    let task2_id = extract_id_from_response(&add2);
+
+    // Add link
+    send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_link",
+                "arguments": {
+                    "from": task1_id,
+                    "to": task2_id,
+                    "relation": "blocks"
+                }
+            }
+        }),
+    );
+
+    // Remove link
+    let remove_resp = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_link",
+                "arguments": {
+                    "from": task1_id,
+                    "to": task2_id,
+                    "relation": "blocks",
+                    "remove": true
+                }
+            }
+        }),
+    );
+
+    assert!(remove_resp["error"].is_null());
+
+    // Verify link is removed
+    let task_content = std::fs::read_to_string(
+        tmp.path().join(format!(".markplane/backlog/items/{}.md", task1_id))
+    ).unwrap();
+    assert!(!task_content.contains(&task2_id));
+}
+
 // ── Unknown tool ─────────────────────────────────────────────────────────
 
 #[test]

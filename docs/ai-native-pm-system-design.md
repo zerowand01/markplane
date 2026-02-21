@@ -665,7 +665,7 @@ markplane graph TASK-042          # Show dependency graph
 markplane status TASK-042 in-progress  # Change status
 markplane update TASK-042 --assignee @daniel  # Assign item
 markplane update TASK-042 --add-tag cache,permissions  # Add tags
-markplane link TASK-042 --blocks TASK-045  # Add dependency
+markplane link TASK-042 TASK-045 -r blocks  # Add dependency
 
 # Workflow shortcuts
 markplane start TASK-042          # Set to in-progress + assign to current user
@@ -924,7 +924,7 @@ markplane_promote        // Promote a note to a task
 markplane_plan           // Create a plan linked to a task
   { task_id: string, title: string }
 markplane_link           // Link items together
-  { from: string, to: string, relation: "blocks" | "depends_on" | "related" }
+  { from: string, to: string, relation: "blocks" | "depends_on" | "epic" | "plan" | "implements" | "related", remove?: boolean }
 
 // Maintenance
 markplane_sync           // Update all INDEX.md files and .context/ summaries

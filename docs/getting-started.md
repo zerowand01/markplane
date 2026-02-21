@@ -214,13 +214,20 @@ Link items that depend on each other:
 
 ```bash
 # TASK-004 depends on TASK-002 being completed first
-markplane link TASK-004 --depends-on TASK-002
+markplane link TASK-004 TASK-002 -r depends-on
 
 # Equivalently, TASK-002 blocks TASK-004
-markplane link TASK-002 --blocks TASK-004
+markplane link TASK-002 TASK-004 -r blocks
 ```
 
 Both directions are automatically maintained — adding a `depends-on` link also adds the reverse `blocks` link on the target.
+
+The `link` command supports 6 relation types: `blocks`, `depends-on`, `epic`, `plan`, `implements`, `related`. Use `--remove` to unlink:
+
+```bash
+# Remove a dependency
+markplane link TASK-004 TASK-002 -r depends-on --remove
+```
 
 ## 8. Update Item Properties
 

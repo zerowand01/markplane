@@ -222,16 +222,18 @@ pub enum Commands {
         note_type: Option<String>,
     },
 
-    /// Add a dependency link between items
+    /// Link two items with a relationship
     Link {
         /// Source item ID
-        id: String,
-        /// Target item that the source blocks
+        from: String,
+        /// Target item ID
+        to: String,
+        /// Relationship type: blocks, depends-on, epic, plan, implements, related
+        #[arg(long, short = 'r')]
+        relation: String,
+        /// Remove the link instead of adding it
         #[arg(long)]
-        blocks: Option<String>,
-        /// Target item that the source depends on
-        #[arg(long)]
-        depends_on: Option<String>,
+        remove: bool,
     },
 
     /// Validate cross-references and find broken links
@@ -365,10 +367,11 @@ pub fn execute(cmd: Commands) -> anyhow::Result<()> {
             started, clear_started, target, clear_target, note_type,
         ),
         Commands::Link {
-            id,
-            blocks,
-            depends_on,
-        } => link::run(id, blocks, depends_on),
+            from,
+            to,
+            relation,
+            remove,
+        } => link::run(from, to, relation, remove),
         Commands::Check { orphans } => check::run(orphans),
         Commands::Stale { days } => stale::run(days),
         Commands::Archive { id, all_done, dry_run } => archive::run(id, all_done, dry_run),

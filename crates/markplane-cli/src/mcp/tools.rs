@@ -3,9 +3,9 @@ use std::fs;
 
 use chrono::Local;
 use markplane_core::{
-    Task, TaskStatus, Effort, IdPrefix, ItemType,
+    Task, TaskStatus, Effort, ItemType, LinkAction, LinkRelation,
     MarkplaneDocument, Note, Patch, Priority, Project, QueryFilter, UpdateFields,
-    build_reference_graph, parse_id, validate_references,
+    build_reference_graph, validate_references,
 };
 use serde_json::{json, Value};
 
@@ -289,7 +289,7 @@ pub fn list_tools() -> Value {
             },
             {
                 "name": "markplane_link",
-                "description": "Link two items with a blocks/depends_on relationship.",
+                "description": "Link two items with a typed relationship (blocks, depends_on, epic, plan, implements, related).",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -303,8 +303,12 @@ pub fn list_tools() -> Value {
                         },
                         "relation": {
                             "type": "string",
-                            "enum": ["blocks", "depends_on"],
-                            "description": "Relationship type: 'blocks' or 'depends_on'"
+                            "enum": ["blocks", "depends_on", "epic", "plan", "implements", "related"],
+                            "description": "Relationship type: blocks, depends_on, epic, plan, implements, or related"
+                        },
+                        "remove": {
+                            "type": "boolean",
+                            "description": "If true, remove the link instead of adding it. Default: false"
                         }
                     },
                     "required": ["from", "to", "relation"]
@@ -863,18 +867,14 @@ fn handle_plan(project: &Project, args: &Value) -> Result<String, String> {
     let plan = project
         .create_plan(
             title,
-            vec![task_id.to_string()],
+            vec![],
             task_doc.frontmatter.epic.clone(),
         )
         .map_err(|e| e.to_string())?;
 
-    // Link the plan back to the task
-    let mut doc: MarkplaneDocument<Task> =
-        project.read_item(task_id).map_err(|e| e.to_string())?;
-    doc.frontmatter.plan = Some(plan.id.clone());
-    doc.frontmatter.updated = Local::now().date_naive();
+    // Link the plan to the task via the centralized link system
     project
-        .write_item(task_id, &doc)
+        .link_items(task_id, &plan.id, LinkRelation::Plan, LinkAction::Add)
         .map_err(|e| e.to_string())?;
 
     let result = json!({
@@ -894,77 +894,21 @@ fn handle_link(project: &Project, args: &Value) -> Result<String, String> {
         .get("to")
         .and_then(|v| v.as_str())
         .ok_or_else(|| "Missing required parameter: to".to_string())?;
-    let relation = args
+    let relation_str = args
         .get("relation")
         .and_then(|v| v.as_str())
         .ok_or_else(|| "Missing required parameter: relation".to_string())?;
+    let remove = args
+        .get("remove")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
 
-    // Verify both items exist
-    project.item_path(from).map_err(|e| e.to_string())?;
-    project.item_path(to).map_err(|e| e.to_string())?;
+    let relation: LinkRelation = relation_str.parse().map_err(|e: markplane_core::MarkplaneError| e.to_string())?;
+    let action = if remove { LinkAction::Remove } else { LinkAction::Add };
 
-    // Both `from` and `to` must be TASK- items for blocks/depends_on
-    let (from_prefix, _) = parse_id(from).map_err(|e| e.to_string())?;
-    let (to_prefix, _) = parse_id(to).map_err(|e| e.to_string())?;
-
-    if from_prefix != IdPrefix::Task || to_prefix != IdPrefix::Task {
-        return Err(
-            "blocks/depends_on linking is only supported between TASK- items".to_string(),
-        );
-    }
-
-    match relation {
-        "blocks" => {
-            // `from` blocks `to`: add `to` to from.blocks, add `from` to to.depends_on
-            let mut from_doc: MarkplaneDocument<Task> =
-                project.read_item(from).map_err(|e| e.to_string())?;
-            if !from_doc.frontmatter.blocks.contains(&to.to_string()) {
-                from_doc.frontmatter.blocks.push(to.to_string());
-            }
-            from_doc.frontmatter.updated = Local::now().date_naive();
-            project
-                .write_item(from, &from_doc)
-                .map_err(|e| e.to_string())?;
-
-            let mut to_doc: MarkplaneDocument<Task> =
-                project.read_item(to).map_err(|e| e.to_string())?;
-            if !to_doc.frontmatter.depends_on.contains(&from.to_string()) {
-                to_doc.frontmatter.depends_on.push(from.to_string());
-            }
-            to_doc.frontmatter.updated = Local::now().date_naive();
-            project
-                .write_item(to, &to_doc)
-                .map_err(|e| e.to_string())?;
-        }
-        "depends_on" => {
-            // `from` depends on `to`: add `to` to from.depends_on, add `from` to to.blocks
-            let mut from_doc: MarkplaneDocument<Task> =
-                project.read_item(from).map_err(|e| e.to_string())?;
-            if !from_doc.frontmatter.depends_on.contains(&to.to_string()) {
-                from_doc.frontmatter.depends_on.push(to.to_string());
-            }
-            from_doc.frontmatter.updated = Local::now().date_naive();
-            project
-                .write_item(from, &from_doc)
-                .map_err(|e| e.to_string())?;
-
-            let mut to_doc: MarkplaneDocument<Task> =
-                project.read_item(to).map_err(|e| e.to_string())?;
-            if !to_doc.frontmatter.blocks.contains(&from.to_string()) {
-                to_doc.frontmatter.blocks.push(from.to_string());
-            }
-            to_doc.frontmatter.updated = Local::now().date_naive();
-            project
-                .write_item(to, &to_doc)
-                .map_err(|e| e.to_string())?;
-        }
-        _ => {
-            return Err(format!(
-                "Unknown relation type: {}. Use 'blocks' or 'depends_on'.",
-                relation
-            ));
-        }
-    }
+    project
+        .link_items(from, to, relation, action)
+        .map_err(|e| e.to_string())?;
 
     Ok(r#"{"success":true}"#.to_string())
 }

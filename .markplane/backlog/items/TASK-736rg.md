@@ -1,7 +1,7 @@
 ---
 id: TASK-736rg
 title: Extend link command to support cross-type entity linking
-status: planned
+status: done
 priority: high
 type: enhancement
 effort: medium
@@ -17,7 +17,7 @@ blocks:
 assignee: null
 position: a0
 created: 2026-02-19
-updated: 2026-02-20
+updated: 2026-02-21
 ---
 
 # Extend link command to support cross-type entity linking

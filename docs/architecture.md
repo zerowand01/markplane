@@ -40,6 +40,7 @@ The core library contains all domain logic. It exposes a `Project` struct that r
 | `frontmatter` | Parse and serialize `---\nyaml\n---\nbody` format |
 | `query` | `QueryFilter` struct, `list_tasks()`, `list_epics()`, `list_plans()`, `list_notes()` with filtering and sorting |
 | `references` | `extract_references()` (wiki-link `[[ID]]` scanning), `validate_references()`, `find_orphans()`, `build_reference_graph()` |
+| `links` | `LinkRelation` enum (blocks, depends-on, epic, plan, implements, related), `LinkAction` enum, `Project::link_items()` — centralized cross-entity linking with type validation and reciprocal management |
 | `index` | INDEX.md generation for all directories (root, backlog, roadmap, plans, notes) |
 | `context` | `.context/` file generation — summary, active-work, blocked-items, metrics |
 | `templates` | Embedded template constants and `render_template()` placeholder replacement |
@@ -179,6 +180,7 @@ markplane-core                    markplane-cli
 │  ├─ InvalidTrans │              │   → JSON-RPC Error (code+message) │
 │  ├─ InvalidStatus│              └───────────────────────────────────┘
 │  ├─ DuplicateId  │
+│  ├─ InvalidLink  │
 │  ├─ BrokenRef    │
 │  ├─ NotInit      │
 │  ├─ Config       │

@@ -32,6 +32,9 @@ pub enum MarkplaneError {
     #[error("Config error: {0}")]
     Config(String),
 
+    #[error("Link error: {0}")]
+    InvalidLink(String),
+
     #[error("Frontmatter error: {0}")]
     Frontmatter(String),
 }

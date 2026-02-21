@@ -339,37 +339,56 @@ markplane init --name "My App" --description "A web application"
 
 ## link
 
-Add a dependency link between tasks.
+Link two items with a typed relationship.
 
 ```
-markplane link <ID> [OPTIONS]
+markplane link <FROM> <TO> -r <RELATION> [--remove]
 ```
 
 **Arguments:**
 
 | Argument | Description |
 |----------|-------------|
-| `<ID>` | Source task ID |
+| `<FROM>` | Source item ID |
+| `<TO>` | Target item ID |
 
 **Options:**
 
 | Option | Description |
 |--------|-------------|
-| `--blocks <TARGET_ID>` | Target item that the source blocks |
-| `--depends-on <TARGET_ID>` | Target item that the source depends on |
+| `-r, --relation <RELATION>` | Relationship type (required): `blocks`, `depends-on`, `epic`, `plan`, `implements`, `related` |
+| `--remove` | Remove the link instead of adding it |
 
-At least one of `--blocks` or `--depends-on` must be specified. Both can be used together. Reverse links are automatically maintained on the target item.
+Each relation type has specific source/target type constraints:
 
-Currently only supported for tasks (`TASK-NNN`).
+| Relation | From | To | Effect |
+|----------|------|----|--------|
+| `blocks` | TASK | TASK | Adds to `from.blocks[]` and `to.depends_on[]` |
+| `depends-on` | TASK, EPIC | TASK, EPIC | Adds to `from.depends_on[]` and reverse `blocks[]` (tasks only) |
+| `epic` | TASK, PLAN | EPIC | Sets `from.epic` to target |
+| `plan` | TASK | PLAN | Sets `from.plan` to target and adds to `plan.implements[]` |
+| `implements` | PLAN | TASK | Adds to `from.implements[]` and sets `task.plan` |
+| `related` | NOTE | any | Adds to `from.related[]` |
+
+Self-links are rejected. Invalid source/target type combinations return an error. Adding a duplicate link is a no-op. Removing a non-existent link is a no-op.
 
 **Example:**
 
 ```bash
-markplane link TASK-003 --depends-on TASK-001
-# TASK-003 depends on TASK-001
+# Task dependency
+markplane link TASK-003 TASK-001 -r depends-on
 
-markplane link TASK-002 --blocks TASK-005
-# TASK-002 blocks TASK-005
+# Task blocks another task
+markplane link TASK-002 TASK-005 -r blocks
+
+# Assign a task to an epic
+markplane link TASK-001 EPIC-002 -r epic
+
+# Link a task to a plan (bidirectional)
+markplane link TASK-001 PLAN-003 -r plan
+
+# Remove a link
+markplane link TASK-003 TASK-001 -r depends-on --remove
 ```
 
 ---

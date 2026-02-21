@@ -166,7 +166,7 @@ Browser (Next.js static export)
 ```
 
 - **Frontend**: Next.js 16 with Tailwind v4 and shadcn/ui, statically exported
-- **Backend**: axum HTTP server with 18 REST endpoints + WebSocket
+- **Backend**: axum HTTP server with 19 REST endpoints + WebSocket
 - **State management**: TanStack Query for server state, URL params for view state
 - **File watching**: `notify` crate with 100ms debouncing via `notify-debouncer-mini`
 
@@ -194,6 +194,7 @@ Error:             { "error": { "code": string, "message": string } }
 | GET | `/api/plans/:id` | Plan detail |
 | GET | `/api/notes` | List notes |
 | GET | `/api/notes/:id` | Note detail |
+| POST | `/api/link` | Link/unlink two items: `{from, to, relation, remove?}` |
 | POST | `/api/sync` | Trigger markplane sync |
 | GET | `/api/search?q=...` | Full-text search |
 | GET | `/api/graph` | Full dependency graph |
