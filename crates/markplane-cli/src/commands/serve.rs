@@ -611,7 +611,7 @@ struct SummaryResponse {
     name: String,
     description: String,
     counts: SummaryCounts,
-    active_epics: Vec<EpicResponse>,
+    now_epics: Vec<EpicResponse>,
     in_progress_tasks: Vec<TaskResponse>,
     blocked_tasks: Vec<TaskResponse>,
     recent_completions: Vec<TaskResponse>,
@@ -672,7 +672,7 @@ async fn get_summary(
         .filter(|t| t.frontmatter.status == TaskStatus::Done)
         .count();
 
-    let active_epics: Vec<_> = epics
+    let now_epics: Vec<_> = epics
         .iter()
         .filter(|e| e.frontmatter.status == EpicStatus::Now)
         .map(|e| epic_to_response(e, &tasks))
@@ -727,7 +727,7 @@ async fn get_summary(
             done: done_count,
             blocked: blocked.len(),
         },
-        active_epics,
+        now_epics,
         in_progress_tasks,
         blocked_tasks,
         recent_completions,

@@ -86,7 +86,7 @@ After `markplane init`, your repo gets a `.markplane/` directory:
 | Type | Statuses |
 |------|----------|
 | Task | `draft` → `backlog` → `planned` → `in-progress` → `done` (also `cancelled`) |
-| Epic | `planned` → `active` → `done` |
+| Epic | `later` → `next` → `now` → `done` |
 | Plan | `draft` → `approved` → `in-progress` → `done` |
 | Note | `draft` → `active` → `archived` |
 

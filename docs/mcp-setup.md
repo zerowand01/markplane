@@ -109,7 +109,7 @@ The server inherits its working directory from the AI tool that launches it (e.g
 
 ## Tool Catalog
 
-The server exposes 17 tools via the `tools/list` method.
+The server exposes 16 tools via the `tools/list` method.
 
 ### Context & Navigation
 
@@ -122,7 +122,7 @@ The server exposes 17 tools via the `tools/list` method.
 
 | Tool | Description | Required Params | Optional Params |
 |------|-------------|-----------------|-----------------|
-| `markplane_query` | Query tasks with optional filters. Returns matching items. | *(none)* | `status` (string[]): filter by status; `priority` (string[]): filter by priority; `epic` (string): filter by epic ID; `tags` (string[]): filter by tags; `assignee` (string): filter by assignee; `archived` (boolean): show archived items instead of active |
+| `markplane_query` | Query items with optional filters. Returns matching items. | *(none)* | `kind` (string): item kind — `tasks` (default), `epics`, `plans`, or `notes`; `status` (string[]): filter by status; `priority` (string[]): filter by priority; `epic` (string): filter by epic ID; `tags` (string[]): filter by tags; `assignee` (string): filter by assignee; `archived` (boolean): show archived items instead of active |
 | `markplane_show` | Get full details of any item by ID. Returns frontmatter and body. | `id` (string) | *(none)* |
 | `markplane_graph` | Build a reference graph showing how items relate to each other. | `id` (string) | `depth` (number): max traversal depth, default 2 |
 
@@ -130,7 +130,7 @@ The server exposes 17 tools via the `tools/list` method.
 
 | Tool | Description | Required Params | Optional Params |
 |------|-------------|-----------------|-----------------|
-| `markplane_add` | Create a new task. | `title` (string) | `type` (string): feature/bug/enhancement/chore/research/spike, default feature; `priority` (string): critical/high/medium/low/someday, default medium; `effort` (string): xs/small/medium/large/xl, default medium; `epic` (string): parent epic ID; `tags` (string[]): tags for the item |
+| `markplane_add` | Create a new item. | `title` (string) | `kind` (string): item kind — `task` (default), `epic`, or `note`; `type` (string): item type (tasks only), default feature; `priority` (string): priority (tasks and epics), default medium; `effort` (string): effort size (tasks only), default medium; `epic` (string): parent epic ID (tasks only); `note_type` (string): note type (notes only), default research; `tags` (string[]): tags (tasks and notes) |
 | `markplane_update` | Update fields on an existing item. | `id` (string) | `title` (string): new title; `status` (string): new status; `priority` (string): new priority; `effort` (string): effort size (tasks); `type` (string): item type (tasks); `assignee` (string/null): set or clear assignee (tasks); `position` (string/null): position key; `add_tags` (string[]): tags to add; `remove_tags` (string[]): tags to remove; `started` (string/null): started date YYYY-MM-DD (epics); `target` (string/null): target date YYYY-MM-DD (epics); `note_type` (string): note type (notes) |
 | `markplane_start` | Set a task to in-progress status. | `id` (string) | *(none)* |
 | `markplane_done` | Mark a task as done. | `id` (string) | *(none)* |
@@ -156,7 +156,6 @@ The server exposes 17 tools via the `tools/list` method.
 |------|-------------|-----------------|-----------------|
 | `markplane_sync` | Regenerate INDEX.md files and .context/ summaries. | *(none)* | *(none)* |
 | `markplane_check` | Validate all cross-references in the project. Reports broken links. | *(none)* | *(none)* |
-| `markplane_stale` | Find items that have not been updated recently. | *(none)* | `days` (number): threshold in days, default 14 |
 
 ## Resource Catalog
 
@@ -278,7 +277,7 @@ The `instructions` field contains dynamic guidance built from the project's `con
     "content": [
       {
         "type": "text",
-        "text": "[\n  {\n    \"id\": \"TASK-fq2x8\",\n    \"title\": \"Add dark mode support\",\n    \"status\": \"in-progress\",\n    \"priority\": \"high\",\n    \"effort\": \"medium\"\n  }\n]"
+        "text": "[\n  {\n    \"id\": \"TASK-fq2x8\",\n    \"title\": \"Add dark mode support\",\n    \"status\": \"in-progress\",\n    \"priority\": \"high\",\n    \"effort\": \"medium\",\n    \"updated\": \"2026-02-24\"\n  }\n]"
       }
     ]
   }

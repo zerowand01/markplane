@@ -199,7 +199,7 @@ markplane dashboard
 Displays:
 - Items currently in progress (with assignees)
 - Blocked items and what blocks them
-- Active epics with completion percentages
+- Now epics with completion percentages
 - Summary counts (open, in-progress, blocked, critical)
 
 **Example:**
@@ -721,7 +721,7 @@ markplane status <ID> <NEW_STATUS>
 | Prefix | Valid statuses |
 |--------|---------------|
 | `TASK` | `draft`, `backlog`, `planned`, `in-progress`, `done`, `cancelled` |
-| `EPIC` | `planned`, `active`, `done` |
+| `EPIC` | `later`, `next`, `now`, `done` |
 | `PLAN` | `draft`, `approved`, `in-progress`, `done` |
 | `NOTE` | `draft`, `active`, `archived` |
 

@@ -185,11 +185,11 @@ function DashboardContent() {
         {/* Right column — strategic context */}
         <div className="space-y-6">
           {/* Epic progress */}
-          {data.active_epics.length > 0 && (
+          {data.now_epics.length > 0 && (
             <section className="rounded-lg border p-4">
               <h2 className="text-sm font-semibold mb-3">Epic Progress</h2>
               <div className="space-y-4">
-                {data.active_epics.map((epic) => (
+                {data.now_epics.map((epic) => (
                   <Link key={epic.id} href="/roadmap">
                     <EpicProgress epic={epic} />
                   </Link>

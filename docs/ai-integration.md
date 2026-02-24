@@ -10,7 +10,7 @@ The `.context/` directory contains generated summaries that compress project sta
 
 High-level project overview targeting ~1000 tokens. Contains:
 
-- **Active Epics**: Each epic with completion percentage and remaining items
+- **Now Epics**: Each epic with completion percentage and remaining items
 - **In-Progress Work**: Items currently being worked on, with priority and assignee
 - **Blocked Items**: Items with unresolved dependencies
 - **Recent Completions**: Items finished within the configured `recent_days` window (default: 7 days)

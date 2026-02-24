@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 use std::fs;
 
-use chrono::Local;
 use markplane_core::{
     Task, TaskStatus, Effort, ItemType, LinkAction, LinkRelation,
-    MarkplaneDocument, Note, Patch, Priority, Project, QueryFilter, UpdateFields,
+    MarkplaneDocument, Note, NoteType, Patch, Priority, Project, QueryFilter, UpdateFields,
     build_reference_graph, validate_references,
 };
 use serde_json::{json, Value};
@@ -26,10 +25,14 @@ pub fn list_tools() -> Value {
             },
             {
                 "name": "markplane_query",
-                "description": "Query tasks with optional filters. Returns matching items.",
+                "description": "Query items with optional filters. Returns matching items.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
+                        "kind": {
+                            "type": "string",
+                            "description": "Item kind to query: tasks (default), epics, plans, or notes"
+                        },
                         "status": {
                             "type": "array",
                             "items": { "type": "string" },
@@ -77,34 +80,42 @@ pub fn list_tools() -> Value {
             },
             {
                 "name": "markplane_add",
-                "description": "Create a new task.",
+                "description": "Create a new item.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "title": {
                             "type": "string",
-                            "description": "Title of the task"
+                            "description": "Title of the item"
+                        },
+                        "kind": {
+                            "type": "string",
+                            "description": "Item kind: task (default), epic, or note"
                         },
                         "type": {
                             "type": "string",
-                            "description": "Item type (feature, bug, enhancement, chore, research, spike). Default: feature"
+                            "description": "Item type (feature, bug, enhancement, chore, research, spike). Tasks only. Default: feature"
                         },
                         "priority": {
                             "type": "string",
-                            "description": "Priority (critical, high, medium, low, someday). Default: medium"
+                            "description": "Priority (critical, high, medium, low, someday). Tasks and epics. Default: medium"
                         },
                         "effort": {
                             "type": "string",
-                            "description": "Effort size (xs, small, medium, large, xl). Default: medium"
+                            "description": "Effort size (xs, small, medium, large, xl). Tasks only. Default: medium"
                         },
                         "epic": {
                             "type": "string",
-                            "description": "Parent epic ID (e.g. EPIC-001)"
+                            "description": "Parent epic ID (e.g. EPIC-001). Tasks only."
+                        },
+                        "note_type": {
+                            "type": "string",
+                            "description": "Note type (research, analysis, idea, decision, meeting). Notes only. Default: research"
                         },
                         "tags": {
                             "type": "array",
                             "items": { "type": "string" },
-                            "description": "Tags for the item"
+                            "description": "Tags for the item. Tasks and notes."
                         }
                     },
                     "required": ["title"]
@@ -324,20 +335,6 @@ pub fn list_tools() -> Value {
                 }
             },
             {
-                "name": "markplane_stale",
-                "description": "Find items that have not been updated recently.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "days": {
-                            "type": "number",
-                            "description": "Number of days to consider stale (default: 14)"
-                        }
-                    },
-                    "required": []
-                }
-            },
-            {
                 "name": "markplane_archive",
                 "description": "Archive an item (move from items/ to archive/). Works for any entity type.",
                 "inputSchema": {
@@ -386,7 +383,6 @@ pub fn call_tool(id: Value, project: &Project, name: &str, args: Value) -> JsonR
         "markplane_plan" => handle_plan(project, &args),
         "markplane_link" => handle_link(project, &args),
         "markplane_check" => handle_check(project),
-        "markplane_stale" => handle_stale(project, &args),
         "markplane_archive" => handle_archive(project, &args),
         "markplane_unarchive" => handle_unarchive(project, &args),
         _ => {
@@ -457,48 +453,104 @@ fn handle_summary(project: &Project) -> Result<String, String> {
 }
 
 fn handle_query(project: &Project, args: &Value) -> Result<String, String> {
-    let filter = QueryFilter {
-        status: args
-            .get("status")
-            .and_then(|v| serde_json::from_value(v.clone()).ok()),
-        priority: args
-            .get("priority")
-            .and_then(|v| serde_json::from_value(v.clone()).ok()),
-        epic: args
-            .get("epic")
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string()),
-        tags: args
-            .get("tags")
-            .and_then(|v| serde_json::from_value(v.clone()).ok()),
-        assignee: args
-            .get("assignee")
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string()),
-        item_type: None,
-        archived: args
-            .get("archived")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false),
+    let kind = args
+        .get("kind")
+        .and_then(|v| v.as_str())
+        .unwrap_or("tasks");
+
+    let archived = args
+        .get("archived")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+
+    let results: Vec<Value> = match kind {
+        "tasks" => {
+            let filter = QueryFilter {
+                status: args
+                    .get("status")
+                    .and_then(|v| serde_json::from_value(v.clone()).ok()),
+                priority: args
+                    .get("priority")
+                    .and_then(|v| serde_json::from_value(v.clone()).ok()),
+                epic: args
+                    .get("epic")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                tags: args
+                    .get("tags")
+                    .and_then(|v| serde_json::from_value(v.clone()).ok()),
+                assignee: args
+                    .get("assignee")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                item_type: None,
+                archived,
+            };
+
+            let items = project.list_tasks(&filter).map_err(|e| e.to_string())?;
+            items
+                .iter()
+                .map(|doc| {
+                    let fm = &doc.frontmatter;
+                    json!({
+                        "id": fm.id,
+                        "title": fm.title,
+                        "status": fm.status.to_string(),
+                        "priority": fm.priority.to_string(),
+                        "effort": fm.effort.to_string(),
+                        "updated": fm.updated.to_string(),
+                    })
+                })
+                .collect()
+        }
+        "epics" => {
+            let items = project.list_epics_filtered(archived).map_err(|e| e.to_string())?;
+            items
+                .iter()
+                .map(|doc| {
+                    let fm = &doc.frontmatter;
+                    json!({
+                        "id": fm.id,
+                        "title": fm.title,
+                        "status": fm.status.to_string(),
+                        "priority": fm.priority.to_string(),
+                    })
+                })
+                .collect()
+        }
+        "plans" => {
+            let items = project.list_plans_filtered(archived).map_err(|e| e.to_string())?;
+            items
+                .iter()
+                .map(|doc| {
+                    let fm = &doc.frontmatter;
+                    json!({
+                        "id": fm.id,
+                        "title": fm.title,
+                        "status": fm.status.to_string(),
+                        "updated": fm.updated.to_string(),
+                    })
+                })
+                .collect()
+        }
+        "notes" => {
+            let items = project.list_notes_filtered(archived).map_err(|e| e.to_string())?;
+            items
+                .iter()
+                .map(|doc| {
+                    let fm = &doc.frontmatter;
+                    json!({
+                        "id": fm.id,
+                        "title": fm.title,
+                        "status": fm.status.to_string(),
+                        "type": fm.note_type.to_string(),
+                        "updated": fm.updated.to_string(),
+                    })
+                })
+                .collect()
+        }
+        _ => return Err(format!("Unknown kind: {}. Expected tasks, epics, plans, or notes", kind)),
     };
-
-    let items = project
-        .list_tasks(&filter)
-        .map_err(|e| e.to_string())?;
-
-    let results: Vec<Value> = items
-        .iter()
-        .map(|doc| {
-            let fm = &doc.frontmatter;
-            json!({
-                "id": fm.id,
-                "title": fm.title,
-                "status": fm.status.to_string(),
-                "priority": fm.priority.to_string(),
-                "effort": fm.effort.to_string(),
-            })
-        })
-        .collect();
 
     serde_json::to_string_pretty(&results).map_err(|e| e.to_string())
 }
@@ -519,43 +571,88 @@ fn handle_add(project: &Project, args: &Value) -> Result<String, String> {
         .and_then(|v| v.as_str())
         .ok_or_else(|| "Missing required parameter: title".to_string())?;
 
-    let item_type: ItemType = args
-        .get("type")
+    let kind = args
+        .get("kind")
         .and_then(|v| v.as_str())
-        .unwrap_or("feature")
-        .parse()
-        .map_err(|e: markplane_core::MarkplaneError| e.to_string())?;
+        .unwrap_or("task");
 
-    let priority: Priority = args
-        .get("priority")
-        .and_then(|v| v.as_str())
-        .unwrap_or("medium")
-        .parse()
-        .map_err(|e: markplane_core::MarkplaneError| e.to_string())?;
+    match kind {
+        "task" => {
+            let item_type: ItemType = args
+                .get("type")
+                .and_then(|v| v.as_str())
+                .unwrap_or("feature")
+                .parse()
+                .map_err(|e: markplane_core::MarkplaneError| e.to_string())?;
 
-    let effort: Effort = args
-        .get("effort")
-        .and_then(|v| v.as_str())
-        .unwrap_or("medium")
-        .parse()
-        .map_err(|e: markplane_core::MarkplaneError| e.to_string())?;
+            let priority: Priority = args
+                .get("priority")
+                .and_then(|v| v.as_str())
+                .unwrap_or("medium")
+                .parse()
+                .map_err(|e: markplane_core::MarkplaneError| e.to_string())?;
 
-    let epic = args
-        .get("epic")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
+            let effort: Effort = args
+                .get("effort")
+                .and_then(|v| v.as_str())
+                .unwrap_or("medium")
+                .parse()
+                .map_err(|e: markplane_core::MarkplaneError| e.to_string())?;
 
-    let tags: Vec<String> = args
-        .get("tags")
-        .and_then(|v| serde_json::from_value(v.clone()).ok())
-        .unwrap_or_default();
+            let epic = args
+                .get("epic")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
 
-    let item = project
-        .create_task(title, item_type, priority, effort, epic, tags)
-        .map_err(|e| e.to_string())?;
+            let tags: Vec<String> = args
+                .get("tags")
+                .and_then(|v| serde_json::from_value(v.clone()).ok())
+                .unwrap_or_default();
 
-    let result = json!({ "id": item.id, "title": item.title });
-    serde_json::to_string(&result).map_err(|e| e.to_string())
+            let item = project
+                .create_task(title, item_type, priority, effort, epic, tags)
+                .map_err(|e| e.to_string())?;
+
+            let result = json!({ "id": item.id, "title": item.title });
+            serde_json::to_string(&result).map_err(|e| e.to_string())
+        }
+        "epic" => {
+            let priority: Priority = args
+                .get("priority")
+                .and_then(|v| v.as_str())
+                .unwrap_or("medium")
+                .parse()
+                .map_err(|e: markplane_core::MarkplaneError| e.to_string())?;
+
+            let epic = project
+                .create_epic(title, priority)
+                .map_err(|e| e.to_string())?;
+
+            let result = json!({ "id": epic.id, "title": epic.title });
+            serde_json::to_string(&result).map_err(|e| e.to_string())
+        }
+        "note" => {
+            let note_type: NoteType = args
+                .get("note_type")
+                .and_then(|v| v.as_str())
+                .unwrap_or("research")
+                .parse()
+                .map_err(|e: markplane_core::MarkplaneError| e.to_string())?;
+
+            let tags: Vec<String> = args
+                .get("tags")
+                .and_then(|v| serde_json::from_value(v.clone()).ok())
+                .unwrap_or_default();
+
+            let note = project
+                .create_note(title, note_type, tags)
+                .map_err(|e| e.to_string())?;
+
+            let result = json!({ "id": note.id, "title": note.title });
+            serde_json::to_string(&result).map_err(|e| e.to_string())
+        }
+        _ => Err(format!("Unknown kind: {}. Expected task, epic, or note", kind)),
+    }
 }
 
 fn handle_update(project: &Project, args: &Value) -> Result<String, String> {
@@ -925,50 +1022,6 @@ fn handle_check(project: &Project) -> Result<String, String> {
         output.push_str(&format!(
             "- {} references missing item {}\n",
             br.source_file, br.target_id
-        ));
-    }
-    Ok(output)
-}
-
-fn handle_stale(project: &Project, args: &Value) -> Result<String, String> {
-    let days = args
-        .get("days")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(14) as i64;
-
-    let today = Local::now().date_naive();
-    let cutoff = today - chrono::Duration::days(days);
-
-    let items = project
-        .list_tasks(&QueryFilter::default())
-        .map_err(|e| e.to_string())?;
-
-    let stale: Vec<_> = items
-        .iter()
-        .filter(|doc| {
-            doc.frontmatter.status != TaskStatus::Done
-                && doc.frontmatter.status != TaskStatus::Cancelled
-                && doc.frontmatter.updated < cutoff
-        })
-        .collect();
-
-    if stale.is_empty() {
-        return Ok(format!(
-            "No stale items found (threshold: {} days).",
-            days
-        ));
-    }
-
-    let mut output = format!(
-        "{} stale item(s) (not updated in {} days):\n\n",
-        stale.len(),
-        days
-    );
-    for item in &stale {
-        let fm = &item.frontmatter;
-        output.push_str(&format!(
-            "- {} {} (status: {}, last updated: {})\n",
-            fm.id, fm.title, fm.status, fm.updated
         ));
     }
     Ok(output)

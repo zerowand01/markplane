@@ -698,8 +698,8 @@ fn test_update_tags() {
 
     let content =
         std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
-    assert!(content.contains("ui"));
-    assert!(content.contains("frontend"));
+    assert!(content.contains("- ui\n"));
+    assert!(content.contains("- frontend\n"));
 
     // Remove one tag
     cmd()
@@ -710,8 +710,8 @@ fn test_update_tags() {
 
     let content =
         std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
-    assert!(!content.contains("ui"));
-    assert!(content.contains("frontend"));
+    assert!(!content.contains("- ui\n"));
+    assert!(content.contains("- frontend\n"));
 }
 
 #[test]

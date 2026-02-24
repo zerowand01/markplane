@@ -571,7 +571,7 @@ The landing page. Provides a high-level overview of the project, designed for a 
 - "View all" link if more than 3
 
 **Epic progress**:
-- List of active epics, each with a progress bar (see EpicProgress component)
+- List of now epics, each with a progress bar (see EpicProgress component)
 - Sorted by completion percentage (most complete first)
 - Clicking an epic navigates to the epic detail view
 
@@ -583,7 +583,7 @@ The landing page. Provides a high-level overview of the project, designed for a 
 **AI Context panel** (Markplane's unique differentiator):
 - Card with `bg-surface` background, distinct from other panels with a subtle accent left border
 - Header: "AI CONTEXT" in `caption` font with a freshness indicator badge — "fresh" (green) if synced within last 5 minutes, "stale" (amber) if older
-- Content: Rendered `.context/summary.md` — shows project name, task counts by status, active epics, blocked items summary
+- Content: Rendered `.context/summary.md` — shows project name, task counts by status, now epics, blocked items summary
 - Footer: "Last sync: 2m ago" timestamp + "Sync Now" button that triggers `POST /api/sync`
 - While syncing: loading spinner replaces the "Sync Now" button, content shows skeleton loading state
 - This panel surfaces what AI coding tools see when they read the Markplane context, making it visible and actionable for the human user
@@ -830,31 +830,31 @@ A high-level view of all epics with their task progress. Two sub-views: **Progre
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ [Sidebar] │  Roadmap                              [Progress] [Timeline]     │
 │           │                                                                  │
-│           │  ACTIVE EPICS                                                    │
+│           │  NOW                                                             │
 │           │                                                                  │
 │           │  ┌────────────────────────────────────────────────────────────┐  │
-│           │  │ ◆ EPIC-gc8t5  Core Architecture                    active   │  │
+│           │  │ ◆ EPIC-gc8t5  Core Architecture                      now    │  │
 │           │  │ ████████████████░░░░░░░░░░░░░░░░  4/12 tasks     33%     │  │
 │           │  │                                                            │  │
 │           │  │  ◐ 2 in-progress  ◉ 3 planned  ○ 7 backlog               │  │
 │           │  └────────────────────────────────────────────────────────────┘  │
 │           │                                                                  │
 │           │  ┌────────────────────────────────────────────────────────────┐  │
-│           │  │ ◆ EPIC-ve6m1  Platform & Ecosystem                 active   │  │
+│           │  │ ◆ EPIC-ve6m1  Platform & Ecosystem                   now    │  │
 │           │  │ ████░░░░░░░░░░░░░░░░░░░░░░░░░░░  1/5 tasks      20%     │  │
 │           │  │                                                            │  │
 │           │  │  ◐ 1 in-progress  ○ 4 backlog                             │  │
 │           │  └────────────────────────────────────────────────────────────┘  │
 │           │                                                                  │
-│           │  PLANNED EPICS                                                   │
+│           │  NEXT                                                            │
 │           │                                                                  │
 │           │  ┌────────────────────────────────────────────────────────────┐  │
-│           │  │ ◆ EPIC-kb4n9  Developer Experience                 planned  │  │
+│           │  │ ◆ EPIC-kb4n9  Developer Experience                  next    │  │
 │           │  │ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0/2 tasks      0%      │  │
 │           │  └────────────────────────────────────────────────────────────┘  │
 │           │                                                                  │
 │           │  ┌────────────────────────────────────────────────────────────┐  │
-│           │  │ ◆ EPIC-pd3w7  Context & AI Integration             planned  │  │
+│           │  │ ◆ EPIC-pd3w7  Context & AI Integration              next    │  │
 │           │  │ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0/3 tasks      0%      │  │
 │           │  └────────────────────────────────────────────────────────────┘  │
 │           │                                                                  │

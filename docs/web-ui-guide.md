@@ -182,7 +182,7 @@ Error:             { "error": { "code": string, "message": string } }
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/summary` | Dashboard data: counts, active epics, in-progress/blocked tasks |
+| GET | `/api/summary` | Dashboard data: counts, now epics, in-progress/blocked tasks |
 | GET | `/api/tasks` | List tasks with filters: status, priority, epic, tags, assignee, type |
 | GET | `/api/tasks/:id` | Task detail with markdown body |
 | POST | `/api/tasks` | Create task |

@@ -478,7 +478,7 @@ In Progress
 Blocked
   TASK-sv8r2 Add rate limiting — blocked by TASK-d4p7m
 
-Active Epics
+Now
   EPIC-xa7r2 User Authentication System — 1/4 (25%)
 
 3 open items | 1 in-progress | 1 blocked | 1 critical

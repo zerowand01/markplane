@@ -195,9 +195,10 @@ fn test_tools_list() {
     assert!(tool_names.contains(&"markplane_plan"));
     assert!(tool_names.contains(&"markplane_link"));
     assert!(tool_names.contains(&"markplane_check"));
-    assert!(tool_names.contains(&"markplane_stale"));
     assert!(tool_names.contains(&"markplane_archive"));
     assert!(tool_names.contains(&"markplane_unarchive"));
+    assert!(!tool_names.contains(&"markplane_stale"), "markplane_stale should be removed");
+    assert_eq!(tool_names.len(), 16, "Expected 16 tools, got: {:?}", tool_names);
 }
 
 // ── Resources List ───────────────────────────────────────────────────────
@@ -317,6 +318,85 @@ fn test_tool_add_missing_title() {
     );
 
     // Should be an error because title is required
+    assert!(response["error"].is_object());
+}
+
+#[test]
+fn test_tool_add_epic() {
+    let tmp = setup_project();
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 23,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": {
+                    "title": "Phase 1 rollout",
+                    "kind": "epic",
+                    "priority": "high"
+                }
+            }
+        }),
+    );
+
+    assert!(response["error"].is_null());
+    let text = response["result"]["content"][0]["text"].as_str().unwrap();
+    let result: Value = serde_json::from_str(text).unwrap();
+    let id = result["id"].as_str().unwrap();
+    assert!(id.starts_with("EPIC-"), "ID should start with EPIC-, got: {}", id);
+    assert_eq!(result["title"], "Phase 1 rollout");
+}
+
+#[test]
+fn test_tool_add_note() {
+    let tmp = setup_project();
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 24,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": {
+                    "title": "Research caching strategies",
+                    "kind": "note",
+                    "note_type": "research",
+                    "tags": ["perf"]
+                }
+            }
+        }),
+    );
+
+    assert!(response["error"].is_null());
+    let text = response["result"]["content"][0]["text"].as_str().unwrap();
+    let result: Value = serde_json::from_str(text).unwrap();
+    let id = result["id"].as_str().unwrap();
+    assert!(id.starts_with("NOTE-"), "ID should start with NOTE-, got: {}", id);
+    assert_eq!(result["title"], "Research caching strategies");
+}
+
+#[test]
+fn test_tool_add_invalid_kind() {
+    let tmp = setup_project();
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 25,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": {
+                    "title": "Bad kind",
+                    "kind": "widget"
+                }
+            }
+        }),
+    );
+
     assert!(response["error"].is_object());
 }
 
@@ -447,6 +527,189 @@ fn test_tool_query() {
     let items: Vec<Value> = serde_json::from_str(text).unwrap();
     assert_eq!(items.len(), 1);
     assert_eq!(items[0]["title"], "Task A");
+}
+
+#[test]
+fn test_tool_query_tasks_include_updated() {
+    let tmp = setup_project();
+    send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "Check updated" }
+            }
+        }),
+    );
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 42,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_query",
+                "arguments": {}
+            }
+        }),
+    );
+
+    assert!(response["error"].is_null());
+    let text = response["result"]["content"][0]["text"].as_str().unwrap();
+    let items: Vec<Value> = serde_json::from_str(text).unwrap();
+    assert_eq!(items.len(), 1);
+    assert!(items[0]["updated"].is_string(), "Task query should include updated date");
+}
+
+#[test]
+fn test_tool_query_epics() {
+    let tmp = setup_project();
+    send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "Epic A", "kind": "epic", "priority": "high" }
+            }
+        }),
+    );
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 43,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_query",
+                "arguments": { "kind": "epics" }
+            }
+        }),
+    );
+
+    assert!(response["error"].is_null());
+    let text = response["result"]["content"][0]["text"].as_str().unwrap();
+    let items: Vec<Value> = serde_json::from_str(text).unwrap();
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0]["title"], "Epic A");
+    assert_eq!(items[0]["status"], "later");
+    assert_eq!(items[0]["priority"], "high");
+}
+
+#[test]
+fn test_tool_query_plans() {
+    let tmp = setup_project();
+    // Create a task first, then a plan linked to it
+    let add_response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "Plan target task" }
+            }
+        }),
+    );
+    let task_id = extract_id_from_response(&add_response);
+
+    send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_plan",
+                "arguments": { "task_id": task_id }
+            }
+        }),
+    );
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 44,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_query",
+                "arguments": { "kind": "plans" }
+            }
+        }),
+    );
+
+    assert!(response["error"].is_null());
+    let text = response["result"]["content"][0]["text"].as_str().unwrap();
+    let items: Vec<Value> = serde_json::from_str(text).unwrap();
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0]["status"], "draft");
+    assert!(items[0]["updated"].is_string(), "Plan query should include updated date");
+}
+
+#[test]
+fn test_tool_query_notes() {
+    let tmp = setup_project();
+    send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "Note A", "kind": "note", "note_type": "idea" }
+            }
+        }),
+    );
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 45,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_query",
+                "arguments": { "kind": "notes" }
+            }
+        }),
+    );
+
+    assert!(response["error"].is_null());
+    let text = response["result"]["content"][0]["text"].as_str().unwrap();
+    let items: Vec<Value> = serde_json::from_str(text).unwrap();
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0]["title"], "Note A");
+    assert_eq!(items[0]["type"], "idea");
+    assert!(items[0]["updated"].is_string(), "Note query should include updated date");
+}
+
+#[test]
+fn test_tool_query_invalid_kind() {
+    let tmp = setup_project();
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 46,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_query",
+                "arguments": { "kind": "widgets" }
+            }
+        }),
+    );
+
+    assert!(response["error"].is_object());
 }
 
 // ── Tool: markplane_update ───────────────────────────────────────────────
@@ -691,43 +954,6 @@ fn test_tool_check_clean() {
     assert!(response["error"].is_null());
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
     assert!(text.contains("All cross-references are valid"));
-}
-
-// ── Tool: markplane_stale ────────────────────────────────────────────────
-
-#[test]
-fn test_tool_stale() {
-    let tmp = setup_project();
-    // Items created today won't be stale
-    send_request(
-        &tmp,
-        &json!({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/call",
-            "params": {
-                "name": "markplane_add",
-                "arguments": { "title": "Fresh item" }
-            }
-        }),
-    );
-
-    let response = send_request(
-        &tmp,
-        &json!({
-            "jsonrpc": "2.0",
-            "id": 100,
-            "method": "tools/call",
-            "params": {
-                "name": "markplane_stale",
-                "arguments": { "days": 1 }
-            }
-        }),
-    );
-
-    assert!(response["error"].is_null());
-    let text = response["result"]["content"][0]["text"].as_str().unwrap();
-    assert!(text.contains("No stale items"));
 }
 
 // ── Tool: markplane_graph ────────────────────────────────────────────────

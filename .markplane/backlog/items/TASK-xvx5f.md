@@ -1,7 +1,7 @@
 ---
 id: TASK-xvx5f
 title: 'Rationalize MCP tool surface: polymorphic add, query-all-types, drop stale'
-status: backlog
+status: done
 priority: high
 type: enhancement
 effort: medium
@@ -16,7 +16,7 @@ blocks:
 assignee: null
 position: a0d
 created: 2026-02-21
-updated: 2026-02-22
+updated: 2026-02-24
 ---
 
 # Rationalize MCP tool surface: polymorphic add, query-all-types, drop stale

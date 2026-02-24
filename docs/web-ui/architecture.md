@@ -293,7 +293,7 @@ The link endpoint accepts `{ from, to, relation, remove? }` where `relation` is 
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/summary` | Project summary with counts, active epics, tasks, blocked items, context |
+| `GET` | `/api/summary` | Project summary with counts, now epics, tasks, blocked items, context |
 | `GET` | `/api/graph/:id` | Dependency graph for an item (2 hops) |
 | `GET` | `/api/graph` | Full project dependency graph |
 | `POST` | `/api/sync` | Trigger `markplane sync` (regenerate INDEX.md + .context/) |
@@ -322,7 +322,7 @@ Mirror the Rust data model exactly:
 // lib/types.ts
 
 type TaskStatus = 'draft' | 'backlog' | 'planned' | 'in-progress' | 'done' | 'cancelled';
-type EpicStatus = 'planned' | 'active' | 'done';
+type EpicStatus = 'now' | 'next' | 'later' | 'done';
 type PlanStatus = 'draft' | 'approved' | 'in-progress' | 'done';
 type NoteStatus = 'draft' | 'active' | 'archived';
 type Priority = 'critical' | 'high' | 'medium' | 'low' | 'someday';
@@ -847,7 +847,7 @@ Debouncing: File watcher events are debounced at 100ms to batch rapid changes (e
 │            │  │ .context/summary.md content:          │    │
 │            │  │ Project: markplane                    │    │
 │            │  │ 15 tasks (3 in-progress, 5 planned)  │    │
-│            │  │ 3 active epics                       │    │
+│            │  │ 3 now epics                          │    │
 │            │  │ Last sync: 2m ago                    │    │
 │            │  │                                      │    │
 │            │  │ [Sync Now]                           │    │

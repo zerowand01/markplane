@@ -77,7 +77,7 @@ export interface ProjectSummary {
     done: number;
     blocked: number;
   };
-  active_epics: Epic[];
+  now_epics: Epic[];
   in_progress_tasks: Task[];
   blocked_tasks: Task[];
   recent_completions: Task[];
