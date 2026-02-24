@@ -1,7 +1,7 @@
 ---
 id: TASK-45fmi
 title: Customizable templates with manifest and MCP integration
-status: backlog
+status: done
 priority: high
 type: feature
 effort: large
@@ -17,7 +17,7 @@ blocks: []
 assignee: null
 position: a0h
 created: 2026-02-22
-updated: 2026-02-22
+updated: 2026-02-24
 ---
 
 # Customizable templates with manifest and MCP integration

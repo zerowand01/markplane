@@ -549,7 +549,7 @@ mod tests {
     #[test]
     fn test_generate_context_summary_with_items() {
         let (_tmp, project) = setup_project();
-        let epic = project.create_epic("Phase 1", Priority::High).unwrap();
+        let epic = project.create_epic("Phase 1", Priority::High, None).unwrap();
         project.update_status(&epic.id, "now").unwrap();
 
         let task1 = project
@@ -560,6 +560,7 @@ mod tests {
                 Effort::Medium,
                 Some(epic.id.clone()),
                 vec![],
+                None,
             )
             .unwrap();
         project.update_status(&task1.id, "in-progress").unwrap();
@@ -572,6 +573,7 @@ mod tests {
                 Effort::Small,
                 None,
                 vec![],
+                None,
             )
             .unwrap();
         project.update_status(&task2.id, "planned").unwrap();
@@ -598,6 +600,7 @@ mod tests {
                 Effort::Small,
                 None,
                 vec![],
+                None,
             )
             .unwrap();
         project.update_status(&blocker.id, "in-progress").unwrap();
@@ -611,6 +614,7 @@ mod tests {
                 Effort::Medium,
                 None,
                 vec![],
+                None,
             )
             .unwrap();
         // Manually set depends_on by reading/writing the item
@@ -646,6 +650,7 @@ mod tests {
                 Effort::Small,
                 None,
                 vec![],
+                None,
             )
             .unwrap();
         project.update_status(&task.id, "in-progress").unwrap();
@@ -678,6 +683,7 @@ mod tests {
                 Effort::Small,
                 None,
                 vec![],
+                None,
             )
             .unwrap();
         let blocked = project
@@ -688,6 +694,7 @@ mod tests {
                 Effort::Medium,
                 None,
                 vec![],
+                None,
             )
             .unwrap();
         let mut doc: MarkplaneDocument<Task> = project.read_item(&blocked.id).unwrap();
@@ -705,7 +712,7 @@ mod tests {
     #[test]
     fn test_generate_context_metrics() {
         let (_tmp, project) = setup_project();
-        let epic = project.create_epic("Phase 1", Priority::High).unwrap();
+        let epic = project.create_epic("Phase 1", Priority::High, None).unwrap();
         project
             .create_task(
                 "Item 1",
@@ -714,6 +721,7 @@ mod tests {
                 Effort::Medium,
                 Some(epic.id.clone()),
                 vec![],
+                None,
             )
             .unwrap();
         project
@@ -724,6 +732,7 @@ mod tests {
                 Effort::Small,
                 None,
                 vec![],
+                None,
             )
             .unwrap();
 
@@ -753,7 +762,7 @@ mod tests {
     #[test]
     fn test_sync_all() {
         let (_tmp, project) = setup_project();
-        let epic = project.create_epic("Phase 1", Priority::High).unwrap();
+        let epic = project.create_epic("Phase 1", Priority::High, None).unwrap();
         project
             .create_task(
                 "Item 1",
@@ -762,6 +771,7 @@ mod tests {
                 Effort::Medium,
                 Some(epic.id.clone()),
                 vec![],
+                None,
             )
             .unwrap();
 

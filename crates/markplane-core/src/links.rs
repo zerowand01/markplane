@@ -331,18 +331,18 @@ mod tests {
 
     fn create_task(project: &Project, title: &str) -> String {
         let task = project
-            .create_task(title, ItemType::Feature, Priority::Medium, Effort::Medium, None, vec![])
+            .create_task(title, ItemType::Feature, Priority::Medium, Effort::Medium, None, vec![], None)
             .unwrap();
         task.id
     }
 
     fn create_epic(project: &Project, title: &str) -> String {
-        let epic = project.create_epic(title, Priority::Medium).unwrap();
+        let epic = project.create_epic(title, Priority::Medium, None).unwrap();
         epic.id
     }
 
     fn create_plan(project: &Project, title: &str, task_id: &str) -> String {
-        let plan = project.create_plan(title, vec![], None).unwrap();
+        let plan = project.create_plan(title, vec![], None, None).unwrap();
         // Don't auto-link — we'll use link_items to test
         let _ = task_id;
         plan.id
@@ -350,7 +350,7 @@ mod tests {
 
     fn create_note(project: &Project, title: &str) -> String {
         let note = project
-            .create_note(title, NoteType::Idea, vec![])
+            .create_note(title, NoteType::Idea, vec![], None)
             .unwrap();
         note.id
     }

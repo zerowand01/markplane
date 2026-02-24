@@ -9,6 +9,7 @@ pub fn run(
     effort: String,
     epic: Option<String>,
     tags: Option<String>,
+    template: Option<String>,
 ) -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
 
@@ -17,7 +18,10 @@ pub fn run(
     let effort: Effort = effort.parse()?;
     let tags = tags.map(|t| parse_comma_list(&t)).unwrap_or_default();
 
-    let item = project.create_task(&title, item_type, priority, effort, epic, tags)?;
+    let item = project.create_task(
+        &title, item_type, priority, effort, epic, tags,
+        template.as_deref(),
+    )?;
 
     println!("Created {} — {}", item.id, item.title);
 

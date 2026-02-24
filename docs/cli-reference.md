@@ -35,6 +35,7 @@ markplane add <TITLE> [OPTIONS]
 | `--effort <EFFORT>` | `medium` | Effort estimate: `xs`, `small`, `medium`, `large`, `xl` |
 | `--epic <EPIC_ID>` | — | Parent epic ID (e.g. `EPIC-xa7r2`) |
 | `--tags <TAGS>` | — | Comma-separated tags (e.g. `auth,backend`) |
+| `--template <NAME>` | — | Template name override (e.g. `bug`). Uses type-based or kind defaults if omitted. |
 
 New items are created with status `draft`.
 
@@ -43,6 +44,9 @@ New items are created with status `draft`.
 ```bash
 markplane add "Implement dark mode" --type feature --priority high --effort large --epic EPIC-gc8t5 --tags "ui,theming"
 # Created TASK-fq2x8 — Implement dark mode
+
+markplane add "Login crash on Safari" --type bug --template bug
+# Created TASK-kn4r7 — Login crash on Safari (uses bug template)
 ```
 
 ---
@@ -504,6 +508,7 @@ markplane note <TITLE> [OPTIONS]
 |--------|---------|-------------|
 | `--type <TYPE>` | `idea` | Note type: `research`, `analysis`, `idea`, `decision`, `meeting` |
 | `--tags <TAGS>` | — | Comma-separated tags |
+| `--template <NAME>` | — | Template name override (e.g. `research`, `analysis`). Uses type-based defaults if omitted. |
 
 New notes are created with status `draft`.
 
@@ -535,6 +540,7 @@ markplane plan <ID> [OPTIONS]
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--title <TITLE>` | `"Implementation plan for <item title>"` | Custom plan title |
+| `--template <NAME>` | — | Template name override (e.g. `refactor`). Defaults to `implementation`. |
 
 Creates a plan that references the task via `implements` and links the plan back to the item's `plan` field. Inherits the item's epic.
 

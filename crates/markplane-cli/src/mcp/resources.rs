@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::fs;
 
 use markplane_core::{TaskStatus, Project, QueryFilter, parse_id, IdPrefix};
+use markplane_core::manifest;
 use serde_json::{json, Value};
 
 use super::protocol::{JsonRpcResponse, INTERNAL_ERROR, INVALID_PARAMS};
@@ -27,6 +28,12 @@ pub fn list_resources() -> Value {
                 "name": "Blocked Items",
                 "description": "Items that have unresolved dependencies or need attention",
                 "mimeType": "text/markdown"
+            },
+            {
+                "uri": "markplane://templates",
+                "name": "Template Manifest",
+                "description": "Template configuration showing available templates for each item kind",
+                "mimeType": "text/yaml"
             }
         ],
         "resourceTemplates": [
@@ -64,6 +71,7 @@ pub fn read_resource(id: Value, project: &Project, uri: &str) -> JsonRpcResponse
         "markplane://summary" => read_summary(project),
         "markplane://active-work" => read_active_work(project),
         "markplane://blocked" => read_blocked(project),
+        "markplane://templates" => read_templates(project),
         _ if uri.starts_with("markplane://task/") => {
             let item_id = &uri["markplane://task/".len()..];
             read_task_item(project, item_id)
@@ -89,13 +97,19 @@ pub fn read_resource(id: Value, project: &Project, uri: &str) -> JsonRpcResponse
         }
     };
 
+    let mime_type = if uri == "markplane://templates" {
+        "text/yaml"
+    } else {
+        "text/markdown"
+    };
+
     match result {
         Ok(content) => JsonRpcResponse::success(
             id,
             json!({
                 "contents": [{
                     "uri": uri,
-                    "mimeType": "text/markdown",
+                    "mimeType": mime_type,
                     "text": content,
                 }]
             }),
@@ -250,4 +264,14 @@ fn read_note_item(project: &Project, item_id: &str) -> Result<String, String> {
     }
     let path = project.item_path(item_id).map_err(|e| e.to_string())?;
     fs::read_to_string(&path).map_err(|e| e.to_string())
+}
+
+fn read_templates(project: &Project) -> Result<String, String> {
+    // Try to read the manifest file first
+    let manifest_path = project.root().join("templates/manifest.yaml");
+    if let Ok(content) = fs::read_to_string(&manifest_path) {
+        return Ok(content);
+    }
+    // Fall back to built-in default
+    Ok(manifest::DEFAULT_MANIFEST.to_string())
 }

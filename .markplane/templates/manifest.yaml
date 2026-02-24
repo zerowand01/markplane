@@ -1,0 +1,42 @@
+# Template Manifest
+# Maps item kinds and types to template files in this directory.
+# Built-in templates are used as fallback when files are missing.
+
+task:
+  default: default
+  type_defaults:
+    bug: bug
+  templates:
+    default:
+      description: Standard task template
+    bug:
+      description: Bug report with reproduction steps
+
+epic:
+  default: default
+  templates:
+    default:
+      description: Standard epic template
+
+plan:
+  default: implementation
+  type_defaults:
+    refactor: refactor
+  templates:
+    implementation:
+      description: Implementation plan with phases
+    refactor:
+      description: Refactor plan with migration steps
+
+note:
+  default: default
+  type_defaults:
+    research: research
+    analysis: analysis
+  templates:
+    default:
+      description: Generic note
+    research:
+      description: Research note with findings
+    analysis:
+      description: Analysis note with conclusions

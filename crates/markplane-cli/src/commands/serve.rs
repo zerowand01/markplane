@@ -823,7 +823,7 @@ async fn create_task(
 
     let task = state
         .project
-        .create_task(&body.title, item_type, priority, effort, body.epic, body.tags)
+        .create_task(&body.title, item_type, priority, effort, body.epic, body.tags, None)
         .map_err(|e| {
             error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,

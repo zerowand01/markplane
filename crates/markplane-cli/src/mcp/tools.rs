@@ -116,6 +116,10 @@ pub fn list_tools() -> Value {
                             "type": "array",
                             "items": { "type": "string" },
                             "description": "Tags for the item. Tasks and notes."
+                        },
+                        "template": {
+                            "type": "string",
+                            "description": "Template name override (e.g. 'bug', 'refactor', 'research'). Uses type-based or kind defaults if omitted."
                         }
                     },
                     "required": ["title"]
@@ -293,6 +297,10 @@ pub fn list_tools() -> Value {
                         "title": {
                             "type": "string",
                             "description": "Optional plan title (defaults to 'Implementation plan for <task title>')"
+                        },
+                        "template": {
+                            "type": "string",
+                            "description": "Template name override (e.g. 'refactor', 'implementation'). Defaults to 'implementation'."
                         }
                     },
                     "required": ["task_id"]
@@ -576,6 +584,10 @@ fn handle_add(project: &Project, args: &Value) -> Result<String, String> {
         .and_then(|v| v.as_str())
         .unwrap_or("task");
 
+    let template = args
+        .get("template")
+        .and_then(|v| v.as_str());
+
     match kind {
         "task" => {
             let item_type: ItemType = args
@@ -610,7 +622,7 @@ fn handle_add(project: &Project, args: &Value) -> Result<String, String> {
                 .unwrap_or_default();
 
             let item = project
-                .create_task(title, item_type, priority, effort, epic, tags)
+                .create_task(title, item_type, priority, effort, epic, tags, template)
                 .map_err(|e| e.to_string())?;
 
             let result = json!({ "id": item.id, "title": item.title });
@@ -625,7 +637,7 @@ fn handle_add(project: &Project, args: &Value) -> Result<String, String> {
                 .map_err(|e: markplane_core::MarkplaneError| e.to_string())?;
 
             let epic = project
-                .create_epic(title, priority)
+                .create_epic(title, priority, template)
                 .map_err(|e| e.to_string())?;
 
             let result = json!({ "id": epic.id, "title": epic.title });
@@ -645,7 +657,7 @@ fn handle_add(project: &Project, args: &Value) -> Result<String, String> {
                 .unwrap_or_default();
 
             let note = project
-                .create_note(title, note_type, tags)
+                .create_note(title, note_type, tags, template)
                 .map_err(|e| e.to_string())?;
 
             let result = json!({ "id": note.id, "title": note.title });
@@ -931,6 +943,7 @@ fn handle_promote(project: &Project, args: &Value) -> Result<String, String> {
             effort,
             None,
             note_doc.frontmatter.tags.clone(),
+            None,
         )
         .map_err(|e| e.to_string())?;
 
@@ -961,11 +974,16 @@ fn handle_plan(project: &Project, args: &Value) -> Result<String, String> {
         .and_then(|v| v.as_str())
         .unwrap_or(&default_title);
 
+    let template = args
+        .get("template")
+        .and_then(|v| v.as_str());
+
     let plan = project
         .create_plan(
             title,
             vec![],
             task_doc.frontmatter.epic.clone(),
+            template,
         )
         .map_err(|e| e.to_string())?;
 

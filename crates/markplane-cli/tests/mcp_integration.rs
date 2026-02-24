@@ -1031,7 +1031,7 @@ fn test_tool_promote() {
     let root = tmp.path().join(".markplane");
     let project = markplane_core::Project::new(root);
     let note = project
-        .create_note("Good idea", markplane_core::NoteType::Idea, vec!["cool".to_string()])
+        .create_note("Good idea", markplane_core::NoteType::Idea, vec!["cool".to_string()], None)
         .unwrap();
 
     let response = send_request(
@@ -1488,6 +1488,7 @@ fn test_resource_task_item() {
             markplane_core::Effort::Small,
             None,
             vec![],
+            None,
         )
         .unwrap();
 
@@ -1515,7 +1516,7 @@ fn test_resource_epic_item() {
     let root = tmp.path().join(".markplane");
     let project = markplane_core::Project::new(root);
     let epic = project
-        .create_epic("Epic resource test", markplane_core::Priority::High)
+        .create_epic("Epic resource test", markplane_core::Priority::High, None)
         .unwrap();
 
     let response = send_request(
@@ -1583,6 +1584,7 @@ fn test_resource_plan_item() {
             "Plan resource test",
             vec![],
             None,
+            None,
         )
         .unwrap();
 
@@ -1617,6 +1619,7 @@ fn test_resource_plan_wrong_prefix() {
             markplane_core::Effort::Small,
             None,
             vec![],
+            None,
         )
         .unwrap();
 
@@ -1647,6 +1650,7 @@ fn test_resource_note_item() {
             "Note resource test",
             markplane_core::NoteType::Research,
             vec![],
+            None,
         )
         .unwrap();
 
@@ -1681,6 +1685,7 @@ fn test_resource_note_wrong_prefix() {
             markplane_core::Effort::Small,
             None,
             vec![],
+            None,
         )
         .unwrap();
 
@@ -1917,7 +1922,7 @@ fn test_tool_update_epic_priority_and_tags() {
     let root = tmp.path().join(".markplane");
     let project = markplane_core::Project::new(root);
     let epic = project
-        .create_epic("Epic update test", markplane_core::Priority::Medium)
+        .create_epic("Epic update test", markplane_core::Priority::Medium, None)
         .unwrap();
 
     let response = send_request(
@@ -1964,7 +1969,7 @@ fn test_tool_update_note_type_and_tags() {
     let root = tmp.path().join(".markplane");
     let project = markplane_core::Project::new(root);
     let note = project
-        .create_note("Note update test", markplane_core::NoteType::Idea, vec!["wip".to_string()])
+        .create_note("Note update test", markplane_core::NoteType::Idea, vec!["wip".to_string()], None)
         .unwrap();
 
     let response = send_request(
@@ -2071,7 +2076,7 @@ fn test_tool_update_rejects_invalid_field_for_type() {
     let tmp = setup_project();
     let root = tmp.path().join(".markplane");
     let project = markplane_core::Project::new(root);
-    let plan = project.create_plan("Test plan", vec![], None).unwrap();
+    let plan = project.create_plan("Test plan", vec![], None, None).unwrap();
 
     // priority is not valid for plans
     let response = send_request(
@@ -2087,4 +2092,99 @@ fn test_tool_update_rejects_invalid_field_for_type() {
         }),
     );
     assert!(response["error"].is_object());
+}
+
+// ── Template param ──────────────────────────────────────────────────
+
+#[test]
+fn test_tool_add_with_template() {
+    let tmp = setup_project();
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 400,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": {
+                    "title": "Bug report",
+                    "type": "bug",
+                    "template": "bug"
+                }
+            }
+        }),
+    );
+    assert!(response["result"].is_object(), "Expected result, got: {:?}", response);
+
+    let id = extract_id_from_response(&response);
+    let content = std::fs::read_to_string(
+        tmp.path().join(format!(".markplane/backlog/items/{}.md", id)),
+    ).unwrap();
+    assert!(content.contains("## Steps to Reproduce"));
+}
+
+#[test]
+fn test_tool_plan_with_template() {
+    let tmp = setup_project();
+    let root = tmp.path().join(".markplane");
+    let project = markplane_core::Project::new(root);
+
+    let task = project
+        .create_task(
+            "Refactor test",
+            markplane_core::ItemType::Feature,
+            markplane_core::Priority::Medium,
+            markplane_core::Effort::Medium,
+            None,
+            vec![],
+            None,
+        )
+        .unwrap();
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 401,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_plan",
+                "arguments": {
+                    "task_id": task.id,
+                    "template": "refactor"
+                }
+            }
+        }),
+    );
+    assert!(response["result"].is_object(), "Expected result, got: {:?}", response);
+
+    let plan_id = extract_id_from_response(&response);
+    let content = std::fs::read_to_string(
+        tmp.path().join(format!(".markplane/plans/items/{}.md", plan_id)),
+    ).unwrap();
+    assert!(content.contains("## Motivation"));
+}
+
+#[test]
+fn test_resource_templates() {
+    let tmp = setup_project();
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 402,
+            "method": "resources/read",
+            "params": {
+                "uri": "markplane://templates"
+            }
+        }),
+    );
+    assert!(response["result"].is_object(), "Expected result, got: {:?}", response);
+
+    let text = response["result"]["contents"][0]["text"].as_str().unwrap();
+    assert!(text.contains("task:"));
+    assert!(text.contains("epic:"));
+    assert!(text.contains("plan:"));
+    assert!(text.contains("note:"));
 }

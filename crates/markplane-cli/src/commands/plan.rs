@@ -1,6 +1,6 @@
 use markplane_core::{parse_id, Task, IdPrefix, MarkplaneDocument, Project, LinkRelation, LinkAction};
 
-pub fn run(id: String, title: Option<String>) -> anyhow::Result<()> {
+pub fn run(id: String, title: Option<String>, template: Option<String>) -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
     let (prefix, _) = parse_id(&id)?;
 
@@ -17,6 +17,7 @@ pub fn run(id: String, title: Option<String>) -> anyhow::Result<()> {
         &plan_title,
         vec![],
         doc.frontmatter.epic.clone(),
+        template.as_deref(),
     )?;
 
     // Link the plan to the task via the centralized link system

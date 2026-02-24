@@ -370,10 +370,10 @@ mod tests {
         let project = Project::init(root, "Test", "Test").unwrap();
 
         let task_a = project
-            .create_task("Item A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("Item A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
         let task_b = project
-            .create_task("Item B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("Item B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         // Add a valid reference from task_a to task_b in the body
@@ -397,7 +397,7 @@ mod tests {
         let project = Project::init(root, "Test", "Test").unwrap();
 
         let task_a = project
-            .create_task("Item A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("Item A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         // Add a broken reference to a non-existent item
@@ -424,10 +424,10 @@ mod tests {
         let project = Project::init(root, "Test", "Test").unwrap();
 
         let task_a = project
-            .create_task("Item A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("Item A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
         let task_b = project
-            .create_task("Item B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("Item B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         // A references B, B references A
@@ -456,10 +456,10 @@ mod tests {
         let project = Project::init(root, "Test", "Test").unwrap();
 
         let task_a = project
-            .create_task("Referenced", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("Referenced", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
         let _task_b = project
-            .create_task("Orphan", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("Orphan", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         // Neither references the other — both are orphans
@@ -486,10 +486,10 @@ mod tests {
         let project = Project::init(root, "Test", "Test").unwrap();
 
         let task_a = project
-            .create_task("A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
         let task_b = project
-            .create_task("B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         // A's body references B

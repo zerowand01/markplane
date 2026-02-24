@@ -249,6 +249,7 @@ mod tests {
                 Effort::Xs,
                 None,
                 vec![],
+                None,
             )
             .unwrap();
         project
@@ -259,6 +260,7 @@ mod tests {
                 Effort::Medium,
                 None,
                 vec![],
+                None,
             )
             .unwrap();
         project
@@ -269,6 +271,7 @@ mod tests {
                 Effort::Small,
                 None,
                 vec![],
+                None,
             )
             .unwrap();
 
@@ -293,6 +296,7 @@ mod tests {
                 Effort::Small,
                 None,
                 vec![],
+                None,
             )
             .unwrap();
         let task2 = project
@@ -303,6 +307,7 @@ mod tests {
                 Effort::Medium,
                 None,
                 vec![],
+                None,
             )
             .unwrap();
 
@@ -330,6 +335,7 @@ mod tests {
                 Effort::Small,
                 None,
                 vec![],
+                None,
             )
             .unwrap();
         project
@@ -340,6 +346,7 @@ mod tests {
                 Effort::Small,
                 None,
                 vec![],
+                None,
             )
             .unwrap();
 
@@ -364,6 +371,7 @@ mod tests {
                 Effort::Small,
                 None,
                 vec!["ui".to_string(), "frontend".to_string()],
+                None,
             )
             .unwrap();
         project
@@ -374,6 +382,7 @@ mod tests {
                 Effort::Small,
                 None,
                 vec!["api".to_string()],
+                None,
             )
             .unwrap();
 
@@ -390,8 +399,8 @@ mod tests {
     fn test_list_epics() {
         let (_tmp, project) = setup_project();
 
-        project.create_epic("Phase 1", Priority::High).unwrap();
-        project.create_epic("Phase 2", Priority::Medium).unwrap();
+        project.create_epic("Phase 1", Priority::High, None).unwrap();
+        project.create_epic("Phase 2", Priority::Medium, None).unwrap();
 
         let epics = project.list_epics().unwrap();
         assert_eq!(epics.len(), 2);
@@ -404,10 +413,10 @@ mod tests {
         let (_tmp, project) = setup_project();
 
         project
-            .create_plan("Plan A", vec![], None)
+            .create_plan("Plan A", vec![], None, None)
             .unwrap();
         project
-            .create_plan("Plan B", vec![], None)
+            .create_plan("Plan B", vec![], None, None)
             .unwrap();
 
         let plans = project.list_plans().unwrap();
@@ -419,10 +428,10 @@ mod tests {
         let (_tmp, project) = setup_project();
 
         project
-            .create_note("Research A", NoteType::Research, vec![])
+            .create_note("Research A", NoteType::Research, vec![], None)
             .unwrap();
         project
-            .create_note("Analysis B", NoteType::Analysis, vec![])
+            .create_note("Analysis B", NoteType::Analysis, vec![], None)
             .unwrap();
 
         let notes = project.list_notes().unwrap();
@@ -436,10 +445,10 @@ mod tests {
         let (_tmp, project) = setup_project();
 
         let task1 = project
-            .create_task("Active task", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("Active task", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
         let task2 = project
-            .create_task("To archive", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("To archive", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         // Archive one task
@@ -456,10 +465,10 @@ mod tests {
         let (_tmp, project) = setup_project();
 
         project
-            .create_task("Active task", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("Active task", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
         let task2 = project
-            .create_task("To archive", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![])
+            .create_task("To archive", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         project.archive_item(&task2.id).unwrap();
@@ -478,13 +487,13 @@ mod tests {
         let (_tmp, project) = setup_project();
 
         project
-            .create_task("Active", ItemType::Feature, Priority::High, Effort::Small, None, vec![])
+            .create_task("Active", ItemType::Feature, Priority::High, Effort::Small, None, vec![], None)
             .unwrap();
         let task2 = project
-            .create_task("Archived", ItemType::Bug, Priority::Low, Effort::Medium, None, vec![])
+            .create_task("Archived", ItemType::Bug, Priority::Low, Effort::Medium, None, vec![], None)
             .unwrap();
         let task3 = project
-            .create_task("Also archived", ItemType::Chore, Priority::Medium, Effort::Xs, None, vec![])
+            .create_task("Also archived", ItemType::Chore, Priority::Medium, Effort::Xs, None, vec![], None)
             .unwrap();
 
         project.archive_item(&task2.id).unwrap();
@@ -503,8 +512,8 @@ mod tests {
     fn test_list_epics_archived() {
         let (_tmp, project) = setup_project();
 
-        let epic1 = project.create_epic("Active epic", Priority::High).unwrap();
-        let epic2 = project.create_epic("Done epic", Priority::Medium).unwrap();
+        let epic1 = project.create_epic("Active epic", Priority::High, None).unwrap();
+        let epic2 = project.create_epic("Done epic", Priority::Medium, None).unwrap();
 
         project.archive_item(&epic2.id).unwrap();
 
@@ -521,8 +530,8 @@ mod tests {
     fn test_list_plans_archived() {
         let (_tmp, project) = setup_project();
 
-        project.create_plan("Active plan", vec![], None).unwrap();
-        let plan2 = project.create_plan("Done plan", vec![], None).unwrap();
+        project.create_plan("Active plan", vec![], None, None).unwrap();
+        let plan2 = project.create_plan("Done plan", vec![], None, None).unwrap();
 
         project.archive_item(&plan2.id).unwrap();
 
@@ -538,8 +547,8 @@ mod tests {
     fn test_list_notes_archived() {
         let (_tmp, project) = setup_project();
 
-        project.create_note("Active note", NoteType::Research, vec![]).unwrap();
-        let note2 = project.create_note("Done note", NoteType::Idea, vec![]).unwrap();
+        project.create_note("Active note", NoteType::Research, vec![], None).unwrap();
+        let note2 = project.create_note("Done note", NoteType::Idea, vec![], None).unwrap();
 
         project.archive_item(&note2.id).unwrap();
 

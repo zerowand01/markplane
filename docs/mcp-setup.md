@@ -130,7 +130,7 @@ The server exposes 16 tools via the `tools/list` method.
 
 | Tool | Description | Required Params | Optional Params |
 |------|-------------|-----------------|-----------------|
-| `markplane_add` | Create a new item. | `title` (string) | `kind` (string): item kind — `task` (default), `epic`, or `note`; `type` (string): item type (tasks only), default feature; `priority` (string): priority (tasks and epics), default medium; `effort` (string): effort size (tasks only), default medium; `epic` (string): parent epic ID (tasks only); `note_type` (string): note type (notes only), default research; `tags` (string[]): tags (tasks and notes) |
+| `markplane_add` | Create a new item. | `title` (string) | `kind` (string): item kind — `task` (default), `epic`, or `note`; `type` (string): item type (tasks only), default feature; `priority` (string): priority (tasks and epics), default medium; `effort` (string): effort size (tasks only), default medium; `epic` (string): parent epic ID (tasks only); `note_type` (string): note type (notes only), default research; `tags` (string[]): tags (tasks and notes); `template` (string): template name override (e.g. `bug`, `research`) |
 | `markplane_update` | Update fields on an existing item. | `id` (string) | `title` (string): new title; `status` (string): new status; `priority` (string): new priority; `effort` (string): effort size (tasks); `type` (string): item type (tasks); `assignee` (string/null): set or clear assignee (tasks); `position` (string/null): position key; `add_tags` (string[]): tags to add; `remove_tags` (string[]): tags to remove; `started` (string/null): started date YYYY-MM-DD (epics); `target` (string/null): target date YYYY-MM-DD (epics); `note_type` (string): note type (notes) |
 | `markplane_start` | Set a task to in-progress status. | `id` (string) | *(none)* |
 | `markplane_done` | Mark a task as done. | `id` (string) | *(none)* |
@@ -140,7 +140,7 @@ The server exposes 16 tools via the `tools/list` method.
 | Tool | Description | Required Params | Optional Params |
 |------|-------------|-----------------|-----------------|
 | `markplane_promote` | Promote a note to a task. | `note_id` (string) | `priority` (string): default medium; `effort` (string): default medium |
-| `markplane_plan` | Create an implementation plan linked to a task. | `task_id` (string) | `title` (string): defaults to "Implementation plan for {item title}" |
+| `markplane_plan` | Create an implementation plan linked to a task. | `task_id` (string) | `title` (string): defaults to "Implementation plan for {item title}"; `template` (string): template name override (e.g. `refactor`), defaults to `implementation` |
 | `markplane_link` | Link two items with a typed relationship. | `from` (string), `to` (string), `relation` (string): `blocks`, `depends_on`, `epic`, `plan`, `implements`, or `related` | `remove` (boolean): remove the link instead of adding it (default: false) |
 
 ### Archive
@@ -159,15 +159,16 @@ The server exposes 16 tools via the `tools/list` method.
 
 ## Resource Catalog
 
-The server exposes 7 resources via the `resources/list` method. All resources return `text/markdown` content.
+The server exposes 8 resources via the `resources/list` method.
 
 ### Static Resources
 
-| URI | Name | Description |
-|-----|------|-------------|
-| `markplane://summary` | Project Summary | Overview of the project state including item counts by status |
-| `markplane://active-work` | Active Work | Currently in-progress tasks |
-| `markplane://blocked` | Blocked Items | Items that have unresolved dependencies or need attention |
+| URI | Name | Mime Type | Description |
+|-----|------|-----------|-------------|
+| `markplane://summary` | Project Summary | `text/markdown` | Overview of the project state including item counts by status |
+| `markplane://active-work` | Active Work | `text/markdown` | Currently in-progress tasks |
+| `markplane://blocked` | Blocked Items | `text/markdown` | Items that have unresolved dependencies or need attention |
+| `markplane://templates` | Template Manifest | `text/yaml` | Template configuration showing available templates for each item kind |
 
 ### Dynamic Resource Templates
 

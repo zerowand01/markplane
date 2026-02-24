@@ -1651,3 +1651,63 @@ fn test_full_workflow() {
         .assert()
         .success();
 }
+
+// ── Template flag ────────────────────────────────────────────────────
+
+#[test]
+fn test_add_with_template_bug() {
+    let tmp = setup_project();
+    let output = cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Login crash", "--type", "bug", "--template", "bug"])
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let task_id = extract_id(&output.stdout);
+
+    let content =
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    assert!(content.contains("## Steps to Reproduce"));
+}
+
+#[test]
+fn test_plan_with_template_refactor() {
+    let tmp = setup_project();
+    let task_out = cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Refactor auth"])
+        .output()
+        .unwrap();
+    assert!(task_out.status.success(), "stderr: {}", String::from_utf8_lossy(&task_out.stderr));
+    let task_id = extract_id(&task_out.stdout);
+
+    let plan_out = cmd()
+        .current_dir(tmp.path())
+        .args(["plan", &task_id, "--template", "refactor"])
+        .output()
+        .unwrap();
+    assert!(plan_out.status.success(), "stderr: {}", String::from_utf8_lossy(&plan_out.stderr));
+    let plan_id = extract_id(&plan_out.stdout);
+
+    let content =
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/plans/items/{}.md", plan_id))).unwrap();
+    assert!(content.contains("## Motivation"));
+    assert!(content.contains("## Current State"));
+}
+
+#[test]
+fn test_note_with_template_research() {
+    let tmp = setup_project();
+    let output = cmd()
+        .current_dir(tmp.path())
+        .args(["note", "Caching study", "--template", "research"])
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let note_id = extract_id(&output.stdout);
+
+    let content =
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/notes/items/{}.md", note_id))).unwrap();
+    assert!(content.contains("## Findings"));
+    assert!(content.contains("## Recommendations"));
+}

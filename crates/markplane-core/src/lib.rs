@@ -6,6 +6,7 @@ pub mod references;
 pub mod index;
 pub mod context;
 pub mod templates;
+pub mod manifest;
 pub mod position;
 pub mod error;
 pub mod links;

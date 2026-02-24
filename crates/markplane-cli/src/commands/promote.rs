@@ -23,6 +23,7 @@ pub fn run(id: String, priority: String, effort: String) -> anyhow::Result<()> {
         effort,
         None,
         note.tags.clone(),
+        None,
     )?;
 
     println!(

@@ -32,12 +32,15 @@
 │   ├── decisions.md         # Decision log (special file)
 │   └── archive/             # Archived notes
 ├── templates/
-│   ├── task.md              # Template for new tasks
-│   ├── epic.md              # Template for new epics
-│   ├── plan-implementation.md
-│   ├── plan-refactor.md
-│   ├── note-research.md
-│   └── note-analysis.md
+│   ├── manifest.yaml        # Template manifest (kind → template mapping)
+│   ├── task.md              # Default task template
+│   ├── task-bug.md          # Bug report template
+│   ├── epic.md              # Default epic template
+│   ├── plan-implementation.md  # Implementation plan template
+│   ├── plan-refactor.md     # Refactor plan template
+│   ├── note.md              # Generic note template
+│   ├── note-research.md     # Research note template
+│   └── note-analysis.md     # Analysis note template
 └── .context/
     ├── summary.md           # Project overview (~1000 tokens)
     ├── active-work.md       # Currently in-progress items
@@ -254,37 +257,91 @@ This keeps technical documentation in its conventional repo location (`docs/`, e
 
 ## Template System
 
-Templates are embedded in the `markplane-core` binary as Rust string constants. They use `{PLACEHOLDER}` tokens that are replaced at creation time by `render_template()`.
+Templates control the markdown body content generated when items are created. They are **body-only** — frontmatter is always generated programmatically. Templates use `{PLACEHOLDER}` tokens that are replaced at creation time by `render_template()`.
+
+### Template Resolution
+
+When creating an item, the body template is selected via a resolution chain:
+
+1. **Explicit `--template` / `template` param** — use the named template
+2. **`type_defaults[type]`** in manifest — map item type to a template name
+3. **`default`** for the kind in manifest — use the kind's default
+4. **Built-in compiled constant** — final fallback (works even without template files)
+
+At each step, the system first tries to read the template file from `.markplane/templates/`, then falls back to the built-in constant compiled into the binary.
+
+### Manifest
+
+`.markplane/templates/manifest.yaml` maps item kinds and types to template files:
+
+```yaml
+task:
+  default: default
+  type_defaults:
+    bug: bug
+  templates:
+    default:
+      description: Standard task template
+    bug:
+      description: Bug report with reproduction steps
+
+epic:
+  default: default
+  templates:
+    default:
+      description: Standard epic template
+
+plan:
+  default: implementation
+  type_defaults:
+    refactor: refactor
+  templates:
+    implementation:
+      description: Implementation plan with phases
+    refactor:
+      description: Refactor plan with migration steps
+
+note:
+  default: default
+  type_defaults:
+    research: research
+    analysis: analysis
+  templates:
+    default:
+      description: Generic note
+    research:
+      description: Research note with findings
+    analysis:
+      description: Analysis note with conclusions
+```
+
+### File Naming Convention
+
+- `{kind}.md` — default template for the kind (e.g. `task.md`, `epic.md`)
+- `{kind}-{name}.md` — named variant (e.g. `task-bug.md`, `plan-refactor.md`)
+
+### Template Files
+
+Generated during `markplane init`:
+
+- `task.md` — Default tasks (description, acceptance criteria, notes, references)
+- `task-bug.md` — Bug reports (description, steps to reproduce, expected/actual behavior)
+- `epic.md` — Epics (objective, key results, notes)
+- `plan-implementation.md` — Implementation plans (overview, approach, phases, testing, rollback)
+- `plan-refactor.md` — Refactor plans (motivation, current/target state, migration steps, risks)
+- `note.md` — Generic notes (ideas, decisions, meetings)
+- `note-research.md` — Research notes (summary, findings, recommendations)
+- `note-analysis.md` — Analysis notes (context, analysis, conclusions, next steps)
+
+To customize, edit the template files directly. To add new variants, create a `{kind}-{name}.md` file and register it in `manifest.yaml`.
 
 ### Available Placeholders
 
 | Placeholder | Used In | Description |
 |-------------|---------|-------------|
-| `{ID}` | All | Item ID (e.g., `TASK-rm6d3`) |
 | `{TITLE}` | All | Sanitized title string |
-| `{DATE}` | All | Current date (`YYYY-MM-DD`) |
-| `{STATUS}` | Backlog | Initial status value |
-| `{PRIORITY}` | Backlog, Epic | Priority level |
-| `{TYPE}` | Backlog, Note | Item/note type |
-| `{EFFORT}` | Backlog | Effort estimate |
-| `{EPIC}` | Backlog, Plan | Epic ID or `null` |
-| `{TAGS}` | Backlog, Note | YAML-formatted tag list |
-| `{IMPLEMENTS}` | Plan | YAML-formatted implements list |
-| `{RELATED}` | Note | YAML-formatted related list |
-| `{PROJECT_NAME}` | Root INDEX | Project name (init only) |
 
-### Template Files
-
-Templates are written to `.markplane/templates/` during `markplane init`:
-
-- `task.md` — New tasks (description, acceptance criteria, notes, references sections)
-- `epic.md` — New epics (objective, key results, notes)
-- `plan-implementation.md` — Implementation plans (overview, approach, phases, testing, rollback)
-- `plan-refactor.md` — Refactor plans (motivation, current/target state, migration steps, risks)
-- `note-research.md` — Research notes (summary, findings, recommendations)
-- `note-analysis.md` — Analysis notes (context, analysis, conclusions, next steps)
-
-A generic note template is used for `idea`, `decision`, and `meeting` note types.
+Template body files contain only the markdown body scaffold — the `{TITLE}` placeholder is the only token used in body templates. Frontmatter placeholders (`{ID}`, `{DATE}`, `{STATUS}`, etc.) are handled separately by the frontmatter generation system.
 
 Unreplaced placeholders remain as-is in the output (no error is raised).
 

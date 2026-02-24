@@ -59,6 +59,9 @@ pub enum Commands {
         /// Comma-separated tags
         #[arg(long)]
         tags: Option<String>,
+        /// Template name override (e.g. "bug", "default")
+        #[arg(long)]
+        template: Option<String>,
     },
 
     /// Show details of an item
@@ -145,6 +148,9 @@ pub enum Commands {
         /// Plan title (defaults to "Implementation plan for <item title>")
         #[arg(long)]
         title: Option<String>,
+        /// Template name override (e.g. "refactor", "implementation")
+        #[arg(long)]
+        template: Option<String>,
     },
 
     /// Create a new epic
@@ -166,6 +172,9 @@ pub enum Commands {
         /// Comma-separated tags
         #[arg(long)]
         tags: Option<String>,
+        /// Template name override (e.g. "research", "analysis")
+        #[arg(long)]
+        template: Option<String>,
     },
 
     /// Update properties on any item
@@ -337,7 +346,8 @@ pub fn execute(cmd: Commands) -> anyhow::Result<()> {
             effort,
             epic,
             tags,
-        } => add::run(title, r#type, priority, effort, epic, tags),
+            template,
+        } => add::run(title, r#type, priority, effort, epic, tags, template),
         Commands::Show { id } => show::run(id),
         Commands::Ls {
             kind,
@@ -354,9 +364,9 @@ pub fn execute(cmd: Commands) -> anyhow::Result<()> {
         Commands::Start { id, user } => start::run(id, user),
         Commands::Done { id } => done::run(id),
         Commands::Promote { id, priority, effort } => promote::run(id, priority, effort),
-        Commands::Plan { id, title } => plan::run(id, title),
+        Commands::Plan { id, title, template } => plan::run(id, title, template),
         Commands::Epic { title, priority } => epic::run(title, priority),
-        Commands::Note { title, r#type, tags } => note::run(title, r#type, tags),
+        Commands::Note { title, r#type, tags, template } => note::run(title, r#type, tags, template),
         Commands::Update {
             id, title, status, priority, effort, r#type, assignee,
             clear_assignee, position, clear_position, add_tag, remove_tag,
