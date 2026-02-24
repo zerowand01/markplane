@@ -1,7 +1,7 @@
 ---
 id: TASK-5wph3
 title: Enhance plan and task templates with AI authoring guidance
-status: backlog
+status: done
 priority: high
 type: enhancement
 effort: medium
@@ -15,7 +15,7 @@ blocks: []
 assignee: null
 position: a0V
 created: 2026-02-20
-updated: 2026-02-21
+updated: 2026-02-24
 ---
 
 # Enhance plan and task templates with AI authoring guidance
@@ -60,7 +60,7 @@ The refactor template gets the same enhancements adapted for refactor context. I
 
 Add a guidance comment clarifying two boundaries:
 
-1. **WHAT vs HOW** — Acceptance criteria define outcomes and constraints (e.g., "circuit breaker prevents cascading failures with configurable threshold"), not implementation details (e.g., "circuit breaker in `internal/connectors/executor.go` with threshold: 5 using `sony/gobreaker`"). Implementation detail belongs in the linked PLAN. Exception: when a task defines an interface contract that other tasks depend on, the contract shape belongs in acceptance criteria.
+1. **WHAT vs HOW** — Acceptance criteria define outcomes and constraints (e.g., "circuit breaker prevents cascading failures with configurable threshold"), not implementation details (e.g., "circuit breaker in `internal/connectors/executor.go` with threshold: 5 using `sony/gobreaker`"). Implementation detail belongs in the linked PLAN. Exception: when a task defines an interface contract that other tasks depend on, the contract shape belongs in the description.
 2. **Description vs Acceptance Criteria** — The Description carries the full context: what's being built, why, the problems it solves, and key constraints. It's what an implementer reads to understand the work. Acceptance criteria are concise, verifiable checkboxes that confirm completeness — not a spec.
 
 ## Acceptance Criteria

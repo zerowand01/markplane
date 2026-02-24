@@ -36,9 +36,15 @@ updated: {DATE}
 
 ## Description
 
-[What needs to be done and why. 2-5 sentences.]
+[What needs to be done and why — the problem, context, and key constraints.
+An implementer reads this to understand the work. Focus on outcomes, not
+implementation steps; a task defines the problem and success criteria,
+not how to solve it.]
 
 ## Acceptance Criteria
+
+[Observable outcomes that verify completeness — what you'd check in review.
+Not an implementation checklist.]
 
 - [ ] Criterion 1
 - [ ] Criterion 2
@@ -46,7 +52,7 @@ updated: {DATE}
 
 ## Notes
 
-[Additional context, research links, implementation hints, related discussions.]
+[Reference material, links, additional context.]
 
 ## References
 "#;
@@ -91,13 +97,37 @@ updated: {DATE}
 
 # {TITLE} Implementation Plan
 
+<!-- PLAN AUTHORING GUIDANCE — delete this comment when filling in the template.
+- Code in plans: contracts/interfaces, ONE pattern example, directory structures,
+  critical algorithms. NOT full implementations or boilerplate.
+- Use explicit file paths. Link to existing code rather than duplicating.
+- Prefer bullets over prose. Target ~200 lines; if >300, split by concern. -->
+
 ## Overview
 
-This plan implements the listed tasks.
+[What this plan accomplishes and the high-level approach.]
+
+## Ground Truth
+
+[Source files this plan's contracts, patterns, and conventions are derived from.
+Every interface, struct, or convention cited must trace back here.
+If a claim can't point to a source file, it's speculative — verify or remove.]
+
+- `path/to/file.rs:L10-40` — What this establishes
 
 ## Approach
 
-[High-level description of the implementation approach.]
+[Implementation approach — key design choices and how components fit together.]
+
+## Non-Goals / Out of Scope
+
+[What this plan does NOT address. Reference where deferred work is tracked.]
+
+## Key Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| [Choice made] | [Why this over alternatives] |
 
 ## Phases
 
@@ -106,10 +136,14 @@ This plan implements the listed tasks.
 - [ ] Step 1
 - [ ] Step 2
 
+**Checkpoint**: [What must be true when this phase is complete.]
+
 ### Phase 2: [Name]
 
 - [ ] Step 1
 - [ ] Step 2
+
+**Checkpoint**: [What must be true when this phase is complete.]
 
 ## Testing Strategy
 
@@ -119,7 +153,18 @@ This plan implements the listed tasks.
 
 [What happens if this needs to be reverted?]
 
+## Pre-Approval Checklist
+
+- [ ] Ground Truth refs verified against current codebase
+- [ ] Cross-plan contracts are referenced, not redefined
+- [ ] No speculative code — all patterns derived from existing source
+- [ ] Plan is under ~200 lines
+
 ## References
+
+<!-- CROSS-PLAN CONTRACTS: If this plan defines an interface consumed by other plans,
+use a `## Cross-Plan Contract: [Name]` section as the canonical definition.
+Other plans reference it: > **Contract source**: PLAN-xxxxx §Section Name -->
 "#;
 
 pub const PLAN_REFACTOR_TEMPLATE: &str = r#"---
@@ -134,17 +179,41 @@ updated: {DATE}
 
 # {TITLE} Refactor Plan
 
+<!-- PLAN AUTHORING GUIDANCE — delete this comment when filling in the template.
+- Code in plans: contracts/interfaces, ONE pattern example, directory structures,
+  critical algorithms. NOT full implementations or boilerplate.
+- Use explicit file paths. Link to existing code rather than duplicating.
+- Prefer bullets over prose. Target ~200 lines; if >300, split by concern. -->
+
 ## Motivation
 
-[Why is this refactor needed?]
+[Why is this refactor needed? What problems does the current state cause?]
+
+## Ground Truth
+
+[Source files this plan's current-state description and target patterns are derived from.
+The Current State section must match the actual codebase — verify, don't assume.
+Every convention or pattern cited must trace back here.]
+
+- `path/to/file.rs:L10-40` — What this establishes
 
 ## Current State
 
-[Description of the current architecture/code.]
+[Description of the current architecture/code. Must match Ground Truth refs above.]
 
 ## Target State
 
 [Description of the desired architecture/code.]
+
+## Non-Goals / Out of Scope
+
+[What this refactor does NOT address. Reference where deferred work is tracked.]
+
+## Key Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| [Choice made] | [Why this over alternatives] |
 
 ## Migration Steps
 
@@ -153,10 +222,14 @@ updated: {DATE}
 - [ ] Task 1
 - [ ] Task 2
 
+**Checkpoint**: [What must be true when this step is complete.]
+
 ### Step 2: [Name]
 
 - [ ] Task 1
 - [ ] Task 2
+
+**Checkpoint**: [What must be true when this step is complete.]
 
 ## Testing Strategy
 
@@ -166,7 +239,19 @@ updated: {DATE}
 
 [What could go wrong?]
 
+## Pre-Approval Checklist
+
+- [ ] Ground Truth refs verified against current codebase
+- [ ] Current State section matches actual code, not assumptions
+- [ ] Cross-plan contracts are referenced, not redefined
+- [ ] No speculative code — all patterns derived from existing source
+- [ ] Plan is under ~200 lines
+
 ## References
+
+<!-- CROSS-PLAN CONTRACTS: If this plan defines an interface consumed by other plans,
+use a `## Cross-Plan Contract: [Name]` section as the canonical definition.
+Other plans reference it: > **Contract source**: PLAN-xxxxx §Section Name -->
 "#;
 
 pub const NOTE_RESEARCH_TEMPLATE: &str = r#"---
