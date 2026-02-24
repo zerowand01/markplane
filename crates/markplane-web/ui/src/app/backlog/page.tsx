@@ -754,13 +754,23 @@ function BacklogListView({
           const last = targetGroup.filter((t) => t.id !== taskId).at(-1);
           newPosition = generateKeyBetween(last?.position ?? null, null);
         } else {
-          // Dropped on a specific task — insert at that task's position
+          // Dropped on a specific task — insert before or after depending on drag direction
+          const originalIndex = targetGroup.findIndex((t) => t.id === taskId);
           const filtered = targetGroup.filter((t) => t.id !== taskId);
           const insertAt = filtered.findIndex((t) => t.id === overId);
           if (insertAt >= 0) {
-            const before = insertAt > 0 ? (filtered[insertAt - 1].position ?? null) : null;
-            const after = filtered[insertAt]?.position ?? null;
-            newPosition = generateKeyBetween(before, after);
+            const isDraggingDown = originalIndex !== -1 && originalIndex <= insertAt;
+            if (isDraggingDown) {
+              // Insert after the target task
+              const before = filtered[insertAt]?.position ?? null;
+              const after = filtered[insertAt + 1]?.position ?? null;
+              newPosition = generateKeyBetween(before, after);
+            } else {
+              // Insert before the target task (cross-priority or dragging up)
+              const before = insertAt > 0 ? (filtered[insertAt - 1].position ?? null) : null;
+              const after = filtered[insertAt]?.position ?? null;
+              newPosition = generateKeyBetween(before, after);
+            }
           }
         }
       }
