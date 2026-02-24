@@ -178,8 +178,9 @@ Files are the source of truth, git is the changelog.\n\
 3. Use markplane_add to create new items (creates template with placeholder content)\n\
 4. Edit the markdown file directly to fill in the body content\n\
 5. Use markplane_update/markplane_start/markplane_done to track progress\n\
-6. Use markplane_archive/markplane_unarchive to manage completed items\n\
-7. Use markplane_sync to regenerate indexes and context summaries\n\
+6. Use markplane_move to reorder tasks within a priority group (top, bottom, before/after another task)\n\
+7. Use markplane_archive/markplane_unarchive to manage completed items\n\
+8. Use markplane_sync to regenerate indexes and context summaries\n\
 \n\
 ## File Editing\n\
 Items are markdown files in .markplane/ — edit them directly using your file editing tools:\n\

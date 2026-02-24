@@ -1,7 +1,7 @@
 ---
 id: TASK-hgr6d
 title: Add high-level move/reorder MCP tool for task positioning
-status: backlog
+status: done
 priority: high
 type: enhancement
 effort: small
@@ -15,7 +15,7 @@ blocks: []
 assignee: null
 position: a0l
 created: 2026-02-20
-updated: 2026-02-21
+updated: 2026-02-24
 ---
 
 # Add high-level move/reorder MCP tool for task positioning

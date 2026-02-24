@@ -3,8 +3,8 @@ use std::fs;
 
 use markplane_core::{
     Task, TaskStatus, Effort, ItemType, LinkAction, LinkRelation,
-    MarkplaneDocument, Note, NoteType, Patch, Priority, Project, QueryFilter, UpdateFields,
-    build_reference_graph, validate_references,
+    MarkplaneDocument, MoveDirective, Note, NoteType, Patch, Priority, Project, QueryFilter,
+    UpdateFields, build_reference_graph, validate_references,
 };
 use serde_json::{json, Value};
 
@@ -204,6 +204,33 @@ pub fn list_tools() -> Value {
                 }
             },
             {
+                "name": "markplane_move",
+                "description": "Move a task to a new position within its priority group. Handles fractional-indexing math automatically.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "type": "string",
+                            "description": "Task ID to move (e.g. TASK-042)"
+                        },
+                        "to": {
+                            "type": "string",
+                            "enum": ["top", "bottom"],
+                            "description": "Move to top or bottom of the priority group"
+                        },
+                        "before": {
+                            "type": "string",
+                            "description": "Task ID to position before"
+                        },
+                        "after": {
+                            "type": "string",
+                            "description": "Task ID to position after"
+                        }
+                    },
+                    "required": ["id"]
+                }
+            },
+            {
                 "name": "markplane_done",
                 "description": "Mark a task as done. Also works for epics, plans, and notes.",
                 "inputSchema": {
@@ -383,6 +410,7 @@ pub fn call_tool(id: Value, project: &Project, name: &str, args: Value) -> JsonR
         "markplane_add" => handle_add(project, &args),
         "markplane_update" => handle_update(project, &args),
         "markplane_start" => handle_start(project, &args),
+        "markplane_move" => handle_move(project, &args),
         "markplane_done" => handle_done(project, &args),
         "markplane_sync" => handle_sync(project),
         "markplane_context" => handle_context(project, &args),
@@ -759,6 +787,38 @@ fn handle_start(project: &Project, args: &Value) -> Result<String, String> {
 
     project
         .update_status(id, "in-progress")
+        .map_err(|e| e.to_string())?;
+
+    Ok(r#"{"success":true}"#.to_string())
+}
+
+fn handle_move(project: &Project, args: &Value) -> Result<String, String> {
+    let id = args
+        .get("id")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "Missing required parameter: id".to_string())?;
+
+    let to = args.get("to").and_then(|v| v.as_str());
+    let before = args.get("before").and_then(|v| v.as_str());
+    let after = args.get("after").and_then(|v| v.as_str());
+
+    let directive = match (to, before, after) {
+        (Some("top"), None, None) => MoveDirective::Top,
+        (Some("bottom"), None, None) => MoveDirective::Bottom,
+        (None, Some(target), None) => MoveDirective::Before(target.to_string()),
+        (None, None, Some(target)) => MoveDirective::After(target.to_string()),
+        (Some(v), None, None) => {
+            return Err(format!("Invalid 'to' value: {}. Expected 'top' or 'bottom'", v));
+        }
+        _ => {
+            return Err(
+                "Provide exactly one of: to (top/bottom), before, or after".to_string(),
+            );
+        }
+    };
+
+    project
+        .move_item(id, directive)
         .map_err(|e| e.to_string())?;
 
     Ok(r#"{"success":true}"#.to_string())

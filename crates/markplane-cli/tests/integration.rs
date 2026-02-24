@@ -595,8 +595,7 @@ fn test_promote_note_to_task() {
     // Extract the TASK ID from "Promoted NOTE-xxx → TASK-yyy — title"
     let task_id = stdout
         .split_whitespace()
-        .filter(|w| w.starts_with("TASK-"))
-        .next()
+        .find(|w| w.starts_with("TASK-"))
         .expect("No TASK ID found in promote output")
         .to_string();
 

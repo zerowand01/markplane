@@ -197,8 +197,9 @@ fn test_tools_list() {
     assert!(tool_names.contains(&"markplane_check"));
     assert!(tool_names.contains(&"markplane_archive"));
     assert!(tool_names.contains(&"markplane_unarchive"));
+    assert!(tool_names.contains(&"markplane_move"));
     assert!(!tool_names.contains(&"markplane_stale"), "markplane_stale should be removed");
-    assert_eq!(tool_names.len(), 16, "Expected 16 tools, got: {:?}", tool_names);
+    assert_eq!(tool_names.len(), 17, "Expected 17 tools, got: {:?}", tool_names);
 }
 
 // ── Resources List ───────────────────────────────────────────────────────
@@ -2069,6 +2070,307 @@ fn test_tool_update_clear_position_via_null() {
     );
     let text = show["result"]["content"][0]["text"].as_str().unwrap();
     assert!(!text.contains("position: aaa"));
+}
+
+// ── Move tool ─────────────────────────────────────────────────────────
+
+/// Helper: create a task with a given priority and position via core API.
+fn create_positioned_task(
+    tmp: &TempDir,
+    title: &str,
+    priority: markplane_core::Priority,
+    position: &str,
+) -> String {
+    let root = tmp.path().join(".markplane");
+    let project = markplane_core::Project::new(root);
+    let task = project
+        .create_task(
+            title,
+            markplane_core::ItemType::Feature,
+            priority,
+            markplane_core::Effort::Medium,
+            None,
+            vec![],
+            None,
+        )
+        .unwrap();
+    project
+        .update_task(
+            &task.id,
+            &markplane_core::TaskUpdate {
+                position: markplane_core::Patch::Set(position.to_string()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    task.id
+}
+
+/// Helper: read a task's position from its frontmatter via MCP show.
+fn read_position(tmp: &TempDir, task_id: &str) -> Option<String> {
+    let show = send_request(
+        tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 9000,
+            "method": "tools/call",
+            "params": { "name": "markplane_show", "arguments": { "id": task_id } }
+        }),
+    );
+    let text = show["result"]["content"][0]["text"].as_str().unwrap();
+    // Parse the YAML frontmatter for position
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if let Some(val) = trimmed.strip_prefix("position: ") {
+            if val == "null" {
+                return None;
+            }
+            return Some(val.to_string());
+        }
+    }
+    None
+}
+
+#[test]
+fn test_tool_move_to_top() {
+    let tmp = setup_project();
+    let t1 = create_positioned_task(&tmp, "First", markplane_core::Priority::High, "a2");
+    let _t2 = create_positioned_task(&tmp, "Second", markplane_core::Priority::High, "a5");
+    let t3 = create_positioned_task(&tmp, "Third", markplane_core::Priority::High, "a8");
+
+    // Move t3 to top
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 400,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_move",
+                "arguments": { "id": t3, "to": "top" }
+            }
+        }),
+    );
+    assert!(response["error"].is_null(), "move failed: {:?}", response["error"]);
+
+    let pos3 = read_position(&tmp, &t3).expect("t3 should have position");
+    let pos1 = read_position(&tmp, &t1).expect("t1 should have position");
+    assert!(pos3 < pos1, "t3 ({}) should sort before t1 ({})", pos3, pos1);
+}
+
+#[test]
+fn test_tool_move_to_bottom() {
+    let tmp = setup_project();
+    let t1 = create_positioned_task(&tmp, "First", markplane_core::Priority::High, "a2");
+    let _t2 = create_positioned_task(&tmp, "Second", markplane_core::Priority::High, "a5");
+    let t3 = create_positioned_task(&tmp, "Third", markplane_core::Priority::High, "a8");
+
+    // Move t1 to bottom
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 401,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_move",
+                "arguments": { "id": t1, "to": "bottom" }
+            }
+        }),
+    );
+    assert!(response["error"].is_null(), "move failed: {:?}", response["error"]);
+
+    let pos1 = read_position(&tmp, &t1).expect("t1 should have position");
+    let pos3 = read_position(&tmp, &t3).expect("t3 should have position");
+    assert!(pos1 > pos3, "t1 ({}) should sort after t3 ({})", pos1, pos3);
+}
+
+#[test]
+fn test_tool_move_before() {
+    let tmp = setup_project();
+    let t1 = create_positioned_task(&tmp, "First", markplane_core::Priority::High, "a2");
+    let t2 = create_positioned_task(&tmp, "Second", markplane_core::Priority::High, "a5");
+    let t3 = create_positioned_task(&tmp, "Third", markplane_core::Priority::High, "a8");
+
+    // Move t3 before t2
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 402,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_move",
+                "arguments": { "id": t3, "before": t2 }
+            }
+        }),
+    );
+    assert!(response["error"].is_null(), "move failed: {:?}", response["error"]);
+
+    let pos1 = read_position(&tmp, &t1).expect("t1 should have position");
+    let pos3 = read_position(&tmp, &t3).expect("t3 should have position");
+    let pos2 = read_position(&tmp, &t2).expect("t2 should have position");
+    assert!(pos1 < pos3, "t1 ({}) < t3 ({})", pos1, pos3);
+    assert!(pos3 < pos2, "t3 ({}) < t2 ({})", pos3, pos2);
+}
+
+#[test]
+fn test_tool_move_after() {
+    let tmp = setup_project();
+    let t1 = create_positioned_task(&tmp, "First", markplane_core::Priority::High, "a2");
+    let t2 = create_positioned_task(&tmp, "Second", markplane_core::Priority::High, "a5");
+    let t3 = create_positioned_task(&tmp, "Third", markplane_core::Priority::High, "a8");
+
+    // Move t1 after t2
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 403,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_move",
+                "arguments": { "id": t1, "after": t2 }
+            }
+        }),
+    );
+    assert!(response["error"].is_null(), "move failed: {:?}", response["error"]);
+
+    let pos2 = read_position(&tmp, &t2).expect("t2 should have position");
+    let pos1 = read_position(&tmp, &t1).expect("t1 should have position");
+    let pos3 = read_position(&tmp, &t3).expect("t3 should have position");
+    assert!(pos2 < pos1, "t2 ({}) < t1 ({})", pos2, pos1);
+    assert!(pos1 < pos3, "t1 ({}) < t3 ({})", pos1, pos3);
+}
+
+#[test]
+fn test_tool_move_different_priority_error() {
+    let tmp = setup_project();
+    let t1 = create_positioned_task(&tmp, "High task", markplane_core::Priority::High, "a0");
+    let t2 = create_positioned_task(&tmp, "Low task", markplane_core::Priority::Low, "a0");
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 404,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_move",
+                "arguments": { "id": t1, "before": t2 }
+            }
+        }),
+    );
+    assert!(response["error"].is_object(), "should error for different priorities");
+}
+
+#[test]
+fn test_tool_move_self_reference_error() {
+    let tmp = setup_project();
+    let t1 = create_positioned_task(&tmp, "Task", markplane_core::Priority::High, "a0");
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 405,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_move",
+                "arguments": { "id": t1, "before": t1 }
+            }
+        }),
+    );
+    assert!(response["error"].is_object(), "should error for self-reference");
+}
+
+#[test]
+fn test_tool_move_invalid_directive() {
+    let tmp = setup_project();
+    let add_response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": { "name": "markplane_add", "arguments": { "title": "Test" } }
+        }),
+    );
+    let task_id = extract_id_from_response(&add_response);
+
+    // No positioning directive
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 406,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_move",
+                "arguments": { "id": task_id }
+            }
+        }),
+    );
+    assert!(response["error"].is_object(), "should error with no directive");
+
+    // Invalid 'to' value
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 407,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_move",
+                "arguments": { "id": task_id, "to": "middle" }
+            }
+        }),
+    );
+    assert!(response["error"].is_object(), "should error with invalid 'to'");
+}
+
+#[test]
+fn test_tool_move_nonexistent_target() {
+    let tmp = setup_project();
+    let t1 = create_positioned_task(&tmp, "Task", markplane_core::Priority::High, "a0");
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 408,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_move",
+                "arguments": { "id": t1, "after": "TASK-nope0" }
+            }
+        }),
+    );
+    assert!(response["error"].is_object(), "should error for nonexistent target");
+}
+
+#[test]
+fn test_tool_move_non_task_error() {
+    let tmp = setup_project();
+    let root = tmp.path().join(".markplane");
+    let project = markplane_core::Project::new(root);
+    let epic = project
+        .create_epic("Epic", markplane_core::Priority::High, None)
+        .unwrap();
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 409,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_move",
+                "arguments": { "id": epic.id, "to": "top" }
+            }
+        }),
+    );
+    assert!(response["error"].is_object(), "should error for non-task");
 }
 
 #[test]

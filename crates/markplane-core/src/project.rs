@@ -73,6 +73,19 @@ pub struct NoteUpdate {
 }
 
 /// Generic union of all per-type update fields, for MCP/CLI dispatch.
+/// Positioning directive for `move_item()`.
+#[derive(Clone, Debug)]
+pub enum MoveDirective {
+    /// Move to the top of the item's priority group.
+    Top,
+    /// Move to the bottom of the item's priority group.
+    Bottom,
+    /// Position immediately before a specific item.
+    Before(String),
+    /// Position immediately after a specific item.
+    After(String),
+}
+
 /// `update_item()` parses the prefix, validates inapplicable fields, and delegates.
 #[derive(Clone, Debug, Default)]
 pub struct UpdateFields {
@@ -781,6 +794,150 @@ impl Project {
                 })
             }
         }
+    }
+
+    // ── Move / Reorder ─────────────────────────────────────────────────
+
+    /// Move a task to a new position within its priority group.
+    ///
+    /// Computes the correct fractional-indexing position key and updates the
+    /// task's frontmatter. If positions are missing or there is no room for a
+    /// new key, the priority group is normalized automatically.
+    pub fn move_item(&self, id: &str, directive: MoveDirective) -> Result<()> {
+        use crate::position::{generate_key_between, sequential_keys};
+
+        // Validate the ID is a task
+        let (prefix, _) = parse_id(id)?;
+        if prefix != IdPrefix::Task {
+            return Err(MarkplaneError::Config(format!(
+                "{} is not a task — only tasks support positioning",
+                id
+            )));
+        }
+
+        let doc: MarkplaneDocument<Task> = self.read_item(id)?;
+        let priority = doc.frontmatter.priority.clone();
+
+        // Get all tasks in the same priority group, sorted by position
+        let filter = crate::query::QueryFilter {
+            priority: Some(vec![priority.to_string()]),
+            ..Default::default()
+        };
+        let tasks = self.list_tasks(&filter)?;
+
+        // If any task lacks a position, normalize the group first and re-read
+        let tasks = if tasks.iter().any(|t| t.frontmatter.position.is_none()) {
+            self.normalize_priority_group(&tasks)?;
+            self.list_tasks(&filter)?
+        } else {
+            tasks
+        };
+
+        // Build sorted list excluding the item being moved
+        let others: Vec<_> = tasks.iter()
+            .filter(|t| t.frontmatter.id != id)
+            .collect();
+
+        let (insert_index, new_pos) = match &directive {
+            MoveDirective::Top => {
+                let first_pos = others.first().and_then(|t| t.frontmatter.position.as_deref());
+                (0, generate_key_between(None, first_pos))
+            }
+            MoveDirective::Bottom => {
+                let last_pos = others.last().and_then(|t| t.frontmatter.position.as_deref());
+                (others.len(), generate_key_between(last_pos, None))
+            }
+            MoveDirective::Before(target_id) => {
+                if target_id == id {
+                    return Err(MarkplaneError::InvalidLink(
+                        "Cannot position an item relative to itself".into(),
+                    ));
+                }
+                let idx = self.find_move_target(&others, target_id, id, &priority)?;
+                let before = if idx > 0 { others[idx - 1].frontmatter.position.as_deref() } else { None };
+                let after = others[idx].frontmatter.position.as_deref();
+                (idx, generate_key_between(before, after))
+            }
+            MoveDirective::After(target_id) => {
+                if target_id == id {
+                    return Err(MarkplaneError::InvalidLink(
+                        "Cannot position an item relative to itself".into(),
+                    ));
+                }
+                let idx = self.find_move_target(&others, target_id, id, &priority)?;
+                let before = others[idx].frontmatter.position.as_deref();
+                let after = others.get(idx + 1).and_then(|t| t.frontmatter.position.as_deref());
+                (idx + 1, generate_key_between(before, after))
+            }
+        };
+
+        match new_pos {
+            Some(pos) => self.update_task(id, &TaskUpdate {
+                position: Patch::Set(pos),
+                ..Default::default()
+            }),
+            None => {
+                // No room for a fractional key — normalize the group with the
+                // moved item at the desired index.
+                let mut ordered: Vec<_> = tasks.iter()
+                    .filter(|t| t.frontmatter.id != id)
+                    .collect();
+                let moved = tasks.iter().find(|t| t.frontmatter.id == id)
+                    .expect("moved task must be in list");
+                let at = insert_index.min(ordered.len());
+                ordered.insert(at, moved);
+
+                let keys = sequential_keys(ordered.len());
+                for (doc, new_key) in ordered.iter().zip(keys.iter()) {
+                    if doc.frontmatter.position.as_deref() != Some(new_key.as_str()) {
+                        self.update_task(&doc.frontmatter.id, &TaskUpdate {
+                            position: Patch::Set(new_key.clone()),
+                            ..Default::default()
+                        })?;
+                    }
+                }
+                Ok(())
+            }
+        }
+    }
+
+    /// Find the index of `target_id` in the `others` list, or return an
+    /// appropriate error (not found / different priority group).
+    fn find_move_target(
+        &self,
+        others: &[&MarkplaneDocument<Task>],
+        target_id: &str,
+        moved_id: &str,
+        priority: &Priority,
+    ) -> Result<usize> {
+        others
+            .iter()
+            .position(|t| t.frontmatter.id == target_id)
+            .ok_or_else(|| {
+                match self.read_item::<Task>(target_id) {
+                    Ok(target_doc) => MarkplaneError::InvalidLink(format!(
+                        "{} is in priority '{}' but {} is in '{}'",
+                        target_id, target_doc.frontmatter.priority, moved_id, priority,
+                    )),
+                    Err(e) => e,
+                }
+            })
+    }
+
+    /// Assign clean sequential position keys to every task in a list.
+    fn normalize_priority_group(&self, tasks: &[MarkplaneDocument<Task>]) -> Result<()> {
+        use crate::position::sequential_keys;
+
+        let keys = sequential_keys(tasks.len());
+        for (doc, new_pos) in tasks.iter().zip(keys.iter()) {
+            if doc.frontmatter.position.as_deref() != Some(new_pos.as_str()) {
+                self.update_task(&doc.frontmatter.id, &TaskUpdate {
+                    position: Patch::Set(new_pos.clone()),
+                    ..Default::default()
+                })?;
+            }
+        }
+        Ok(())
     }
 
     /// Move an item to the archive/ subdirectory.
@@ -2137,5 +2294,188 @@ mod tests {
         assert!(root.join("templates/note.md").is_file());
         assert!(root.join("templates/note-research.md").is_file());
         assert!(root.join("templates/note-analysis.md").is_file());
+    }
+
+    // ── move_item tests ─────────────────────────────────────────────────
+
+    /// Helper: create a task with a given priority and position.
+    fn create_task_with_position(
+        project: &Project,
+        title: &str,
+        priority: Priority,
+        position: &str,
+    ) -> String {
+        let task = project
+            .create_task(
+                title,
+                ItemType::Feature,
+                priority,
+                Effort::Medium,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap();
+        project
+            .update_task(
+                &task.id,
+                &TaskUpdate {
+                    position: Patch::Set(position.to_string()),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        task.id
+    }
+
+    /// Helper: read position from a task.
+    fn get_position(project: &Project, id: &str) -> Option<String> {
+        let doc: MarkplaneDocument<Task> = project.read_item(id).unwrap();
+        doc.frontmatter.position.clone()
+    }
+
+    #[test]
+    fn test_move_item_top() {
+        let (_tmp, project) = setup_project();
+        let t1 = create_task_with_position(&project, "First", Priority::High, "a2");
+        let t2 = create_task_with_position(&project, "Second", Priority::High, "a5");
+        let t3 = create_task_with_position(&project, "Third", Priority::High, "a8");
+
+        project.move_item(&t3, MoveDirective::Top).unwrap();
+
+        let p1 = get_position(&project, &t1).unwrap();
+        let p2 = get_position(&project, &t2).unwrap();
+        let p3 = get_position(&project, &t3).unwrap();
+        assert!(p3 < p1, "t3 ({}) should be before t1 ({})", p3, p1);
+        assert!(p1 < p2, "t1 ({}) should be before t2 ({})", p1, p2);
+    }
+
+    #[test]
+    fn test_move_item_bottom() {
+        let (_tmp, project) = setup_project();
+        let t1 = create_task_with_position(&project, "First", Priority::High, "a2");
+        let t2 = create_task_with_position(&project, "Second", Priority::High, "a5");
+        let t3 = create_task_with_position(&project, "Third", Priority::High, "a8");
+
+        project.move_item(&t1, MoveDirective::Bottom).unwrap();
+
+        let p1 = get_position(&project, &t1).unwrap();
+        let p2 = get_position(&project, &t2).unwrap();
+        let p3 = get_position(&project, &t3).unwrap();
+        assert!(p2 < p3, "t2 ({}) should be before t3 ({})", p2, p3);
+        assert!(p3 < p1, "t3 ({}) should be before t1 ({})", p3, p1);
+    }
+
+    #[test]
+    fn test_move_item_before() {
+        let (_tmp, project) = setup_project();
+        let t1 = create_task_with_position(&project, "First", Priority::High, "a2");
+        let t2 = create_task_with_position(&project, "Second", Priority::High, "a5");
+        let t3 = create_task_with_position(&project, "Third", Priority::High, "a8");
+
+        project
+            .move_item(&t3, MoveDirective::Before(t2.clone()))
+            .unwrap();
+
+        let p1 = get_position(&project, &t1).unwrap();
+        let p2 = get_position(&project, &t2).unwrap();
+        let p3 = get_position(&project, &t3).unwrap();
+        assert!(p1 < p3, "t1 ({}) < t3 ({})", p1, p3);
+        assert!(p3 < p2, "t3 ({}) < t2 ({})", p3, p2);
+    }
+
+    #[test]
+    fn test_move_item_after() {
+        let (_tmp, project) = setup_project();
+        let t1 = create_task_with_position(&project, "First", Priority::High, "a2");
+        let t2 = create_task_with_position(&project, "Second", Priority::High, "a5");
+        let t3 = create_task_with_position(&project, "Third", Priority::High, "a8");
+
+        project
+            .move_item(&t1, MoveDirective::After(t2.clone()))
+            .unwrap();
+
+        let p1 = get_position(&project, &t1).unwrap();
+        let p2 = get_position(&project, &t2).unwrap();
+        let p3 = get_position(&project, &t3).unwrap();
+        assert!(p2 < p1, "t2 ({}) < t1 ({})", p2, p1);
+        assert!(p1 < p3, "t1 ({}) < t3 ({})", p1, p3);
+    }
+
+    #[test]
+    fn test_move_item_single_task() {
+        let (_tmp, project) = setup_project();
+        let t1 = create_task_with_position(&project, "Only", Priority::High, "a5");
+
+        project.move_item(&t1, MoveDirective::Top).unwrap();
+        let pos = get_position(&project, &t1).unwrap();
+        assert!(!pos.is_empty());
+
+        project.move_item(&t1, MoveDirective::Bottom).unwrap();
+        let pos = get_position(&project, &t1).unwrap();
+        assert!(!pos.is_empty());
+    }
+
+    #[test]
+    fn test_move_item_no_position_normalizes() {
+        let (_tmp, project) = setup_project();
+        // Create tasks without positions
+        let t1 = project
+            .create_task("First", ItemType::Feature, Priority::High, Effort::Small, None, vec![], None)
+            .unwrap()
+            .id;
+        let t2 = project
+            .create_task("Second", ItemType::Feature, Priority::High, Effort::Small, None, vec![], None)
+            .unwrap()
+            .id;
+
+        // Move should normalize first, then position correctly
+        project.move_item(&t2, MoveDirective::Top).unwrap();
+        let p1 = get_position(&project, &t1).unwrap();
+        let p2 = get_position(&project, &t2).unwrap();
+        assert!(p2 < p1, "t2 ({}) should be before t1 ({})", p2, p1);
+    }
+
+    #[test]
+    fn test_move_item_different_priority_error() {
+        let (_tmp, project) = setup_project();
+        let t_high = create_task_with_position(&project, "High", Priority::High, "a0");
+        let t_low = create_task_with_position(&project, "Low", Priority::Low, "a0");
+
+        let result = project.move_item(&t_high, MoveDirective::Before(t_low));
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("priority"), "error should mention priority: {}", err);
+    }
+
+    #[test]
+    fn test_move_item_self_reference_error() {
+        let (_tmp, project) = setup_project();
+        let t1 = create_task_with_position(&project, "Task", Priority::High, "a0");
+
+        let result = project.move_item(&t1, MoveDirective::Before(t1.clone()));
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("itself"), "error should mention self: {}", err);
+    }
+
+    #[test]
+    fn test_move_item_nonexistent_target_error() {
+        let (_tmp, project) = setup_project();
+        let t1 = create_task_with_position(&project, "Task", Priority::High, "a0");
+
+        let result = project.move_item(&t1, MoveDirective::After("TASK-zzzzz".to_string()));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_move_item_non_task_error() {
+        let (_tmp, project) = setup_project();
+        let epic = project.create_epic("Epic", Priority::High, None).unwrap();
+
+        let result = project.move_item(&epic.id, MoveDirective::Top);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("not a task"), "error should say not a task: {}", err);
     }
 }
