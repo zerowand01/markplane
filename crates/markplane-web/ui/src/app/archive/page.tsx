@@ -203,7 +203,7 @@ function ArchiveContent() {
 
                 {/* Status */}
                 {item.type === "epics" ? (
-                  <EpicStatusBadge status={item.status as "planned" | "active" | "done"} />
+                  <EpicStatusBadge status={item.status as "now" | "next" | "later" | "done"} />
                 ) : item.type === "tasks" ? (
                   <StatusBadge status={item.status as "done" | "cancelled" | "draft" | "backlog" | "planned" | "in-progress"} />
                 ) : (

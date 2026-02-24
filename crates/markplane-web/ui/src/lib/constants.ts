@@ -22,8 +22,9 @@ export const STATUS_CONFIG: Record<TaskStatus, { label: string; icon: LucideIcon
 };
 
 export const EPIC_STATUS_CONFIG: Record<EpicStatus, { label: string; icon: LucideIcon }> = {
-  planned: { label: "Planned", icon: CircleDot },
-  active: { label: "Active", icon: CirclePlay },
+  now: { label: "Now", icon: CirclePlay },
+  next: { label: "Next", icon: CircleDot },
+  later: { label: "Later", icon: Circle },
   done: { label: "Done", icon: CircleCheck },
 };
 

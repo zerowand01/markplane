@@ -154,16 +154,18 @@ impl FromStr for TaskStatus {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum EpicStatus {
-    Planned,
-    Active,
+    Now,
+    Next,
+    Later,
     Done,
 }
 
 impl fmt::Display for EpicStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            EpicStatus::Planned => write!(f, "planned"),
-            EpicStatus::Active => write!(f, "active"),
+            EpicStatus::Now => write!(f, "now"),
+            EpicStatus::Next => write!(f, "next"),
+            EpicStatus::Later => write!(f, "later"),
             EpicStatus::Done => write!(f, "done"),
         }
     }
@@ -174,8 +176,9 @@ impl FromStr for EpicStatus {
 
     fn from_str(s: &str) -> Result<Self> {
         match s {
-            "planned" => Ok(EpicStatus::Planned),
-            "active" => Ok(EpicStatus::Active),
+            "now" => Ok(EpicStatus::Now),
+            "next" => Ok(EpicStatus::Next),
+            "later" => Ok(EpicStatus::Later),
             "done" => Ok(EpicStatus::Done),
             _ => Err(MarkplaneError::InvalidStatus(s.into())),
         }
@@ -655,7 +658,7 @@ updated: 2026-02-09
         let yaml = r#"
 id: EPIC-003
 title: "User Dashboard & Theming"
-status: active
+status: now
 priority: high
 started: 2026-01-01
 target: null
@@ -664,7 +667,7 @@ depends_on: [EPIC-001]
 "#;
         let epic: Epic = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(epic.id, "EPIC-003");
-        assert_eq!(epic.status, EpicStatus::Active);
+        assert_eq!(epic.status, EpicStatus::Now);
         assert!(epic.started.is_some());
         assert!(epic.target.is_none());
     }
@@ -777,10 +780,12 @@ updated: 2026-02-09
 
     #[test]
     fn test_epic_status_from_str() {
-        assert_eq!("planned".parse::<EpicStatus>().unwrap(), EpicStatus::Planned);
-        assert_eq!("active".parse::<EpicStatus>().unwrap(), EpicStatus::Active);
+        assert_eq!("now".parse::<EpicStatus>().unwrap(), EpicStatus::Now);
+        assert_eq!("next".parse::<EpicStatus>().unwrap(), EpicStatus::Next);
+        assert_eq!("later".parse::<EpicStatus>().unwrap(), EpicStatus::Later);
         assert_eq!("done".parse::<EpicStatus>().unwrap(), EpicStatus::Done);
-        assert!("paused".parse::<EpicStatus>().is_err());
+        assert!("planned".parse::<EpicStatus>().is_err());
+        assert!("active".parse::<EpicStatus>().is_err());
         assert!("invalid".parse::<EpicStatus>().is_err());
     }
 
@@ -803,7 +808,7 @@ updated: 2026-02-09
 
     #[test]
     fn test_epic_status_display_roundtrip() {
-        for status in [EpicStatus::Planned, EpicStatus::Active, EpicStatus::Done] {
+        for status in [EpicStatus::Now, EpicStatus::Next, EpicStatus::Later, EpicStatus::Done] {
             let s = status.to_string();
             let parsed: EpicStatus = s.parse().unwrap();
             assert_eq!(parsed, status);

@@ -1,7 +1,7 @@
 ---
 id: EPIC-c5uem
 title: "Core Architecture"
-status: planned
+status: later
 priority: medium
 started: null
 target: null

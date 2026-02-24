@@ -674,7 +674,7 @@ async fn get_summary(
 
     let active_epics: Vec<_> = epics
         .iter()
-        .filter(|e| e.frontmatter.status == EpicStatus::Active)
+        .filter(|e| e.frontmatter.status == EpicStatus::Now)
         .map(|e| epic_to_response(e, &tasks))
         .collect();
 

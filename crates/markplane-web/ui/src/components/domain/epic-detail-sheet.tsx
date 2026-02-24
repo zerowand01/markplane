@@ -45,7 +45,7 @@ import {
 import { EPIC_STATUS_CONFIG } from "@/lib/constants";
 import type { EpicStatus, Priority } from "@/lib/types";
 
-const ALL_EPIC_STATUSES: EpicStatus[] = ["planned", "active", "done"];
+const ALL_EPIC_STATUSES: EpicStatus[] = ["now", "next", "later", "done"];
 const ALL_PRIORITIES: Priority[] = ["critical", "high", "medium", "low", "someday"];
 
 export function EpicDetailSheet({

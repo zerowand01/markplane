@@ -60,14 +60,14 @@ pub fn run() -> anyhow::Result<()> {
         println!();
     }
 
-    // Active epics summary
-    let active_epics: Vec<_> = epics
+    // Now epics summary
+    let now_epics: Vec<_> = epics
         .iter()
-        .filter(|e| e.frontmatter.status == markplane_core::EpicStatus::Active)
+        .filter(|e| e.frontmatter.status == markplane_core::EpicStatus::Now)
         .collect();
-    if !active_epics.is_empty() {
-        println!("{}", "Active Epics".bold().cyan());
-        for epic in &active_epics {
+    if !now_epics.is_empty() {
+        println!("{}", "Now".bold().cyan());
+        for epic in &now_epics {
             let epic_items: Vec<_> = items
                 .iter()
                 .filter(|i| i.frontmatter.epic.as_deref() == Some(&epic.frontmatter.id))

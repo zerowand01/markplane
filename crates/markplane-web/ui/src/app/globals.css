@@ -53,7 +53,9 @@
   --color-status-done: var(--status-done);
   --color-status-blocked: var(--status-blocked);
   --color-status-cancelled: var(--status-cancelled);
-  --color-status-active: var(--status-active);
+  --color-status-now: var(--status-now);
+  --color-status-next: var(--status-next);
+  --color-status-later: var(--status-later);
 
   /* Markplane priority colors */
   --color-priority-critical: var(--priority-critical);
@@ -116,7 +118,9 @@
   --status-done: oklch(0.65 0.18 155);
   --status-blocked: oklch(0.72 0.17 70);
   --status-cancelled: oklch(0.60 0.12 10);
-  --status-active: oklch(0.68 0.14 195);
+  --status-now: oklch(0.68 0.14 195);
+  --status-next: oklch(0.58 0.18 275);
+  --status-later: oklch(0.55 0.04 250);
 
   /* Priority colors */
   --priority-critical: oklch(0.60 0.25 25);
@@ -203,7 +207,9 @@
   --status-done: oklch(0.55 0.18 155);
   --status-blocked: oklch(0.60 0.18 70);
   --status-cancelled: oklch(0.55 0.14 10);
-  --status-active: oklch(0.58 0.14 195);
+  --status-now: oklch(0.58 0.14 195);
+  --status-next: oklch(0.55 0.18 275);
+  --status-later: oklch(0.55 0.05 250);
 
   /* Priority colors (light) */
   --priority-critical: oklch(0.50 0.25 25);

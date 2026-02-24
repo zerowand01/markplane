@@ -328,7 +328,7 @@ impl Project {
         let epic = Epic {
             id,
             title: title.to_string(),
-            status: EpicStatus::Planned,
+            status: EpicStatus::Later,
             priority,
             started: None,
             target: None,
@@ -1105,7 +1105,7 @@ mod tests {
         let epic = project.create_epic("Phase 1: Foundation", Priority::High).unwrap();
 
         assert!(epic.id.starts_with("EPIC-"));
-        assert_eq!(epic.status, EpicStatus::Planned);
+        assert_eq!(epic.status, EpicStatus::Later);
 
         let doc: MarkplaneDocument<Epic> = project.read_item(&epic.id).unwrap();
         assert_eq!(doc.frontmatter.title, "Phase 1: Foundation");
@@ -1292,9 +1292,13 @@ mod tests {
         let (_tmp, project) = setup_project();
         let epic = project.create_epic("Phase 1", Priority::High).unwrap();
 
-        project.update_status(&epic.id, "active").unwrap();
+        project.update_status(&epic.id, "next").unwrap();
         let doc: MarkplaneDocument<Epic> = project.read_item(&epic.id).unwrap();
-        assert_eq!(doc.frontmatter.status, EpicStatus::Active);
+        assert_eq!(doc.frontmatter.status, EpicStatus::Next);
+
+        project.update_status(&epic.id, "now").unwrap();
+        let doc: MarkplaneDocument<Epic> = project.read_item(&epic.id).unwrap();
+        assert_eq!(doc.frontmatter.status, EpicStatus::Now);
 
         project.update_status(&epic.id, "done").unwrap();
         let doc: MarkplaneDocument<Epic> = project.read_item(&epic.id).unwrap();
@@ -1341,6 +1345,8 @@ mod tests {
         let (_tmp, project) = setup_project();
         let epic = project.create_epic("Phase 1", Priority::High).unwrap();
         assert!(project.update_status(&epic.id, "in-progress").is_err());
+        assert!(project.update_status(&epic.id, "planned").is_err());
+        assert!(project.update_status(&epic.id, "active").is_err());
     }
 
     #[test]

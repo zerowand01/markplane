@@ -172,23 +172,12 @@ function RoadmapContent() {
   const epics = epicsData ?? [];
   const tasks = tasksData ?? [];
 
-  const { now, next, later, done } = useMemo(() => {
-    const active = sortByPriority(epics.filter((e) => e.status === "active"));
-    const planned = epics.filter((e) => e.status === "planned");
-    const highPriority = sortByPriority(
-      planned.filter((e) => e.priority === "critical" || e.priority === "high")
-    );
-    const lowPriority = sortByPriority(
-      planned.filter(
-        (e) =>
-          e.priority === "medium" ||
-          e.priority === "low" ||
-          e.priority === "someday"
-      )
-    );
-    const completed = epics.filter((e) => e.status === "done");
-    return { now: active, next: highPriority, later: lowPriority, done: completed };
-  }, [epics]);
+  const { now, next, later, done } = useMemo(() => ({
+    now: sortByPriority(epics.filter((e) => e.status === "now")),
+    next: sortByPriority(epics.filter((e) => e.status === "next")),
+    later: sortByPriority(epics.filter((e) => e.status === "later")),
+    done: epics.filter((e) => e.status === "done"),
+  }), [epics]);
 
   const openEpic = (epicId: string) => {
     const params = new URLSearchParams(searchParams);
@@ -236,7 +225,7 @@ function RoadmapContent() {
               </h2>
               {now.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-8 text-center">
-                  <p className="text-sm text-muted-foreground">No active epics</p>
+                  <p className="text-sm text-muted-foreground">No epics in progress</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -260,7 +249,7 @@ function RoadmapContent() {
               {next.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-8 text-center">
                   <p className="text-sm text-muted-foreground">
-                    No high-priority planned epics
+                    No epics planned next
                   </p>
                 </div>
               ) : (
@@ -284,7 +273,7 @@ function RoadmapContent() {
               {later.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-8 text-center">
                   <p className="text-sm text-muted-foreground">
-                    No lower-priority planned epics
+                    No epics planned for later
                   </p>
                 </div>
               ) : (

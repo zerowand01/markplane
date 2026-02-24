@@ -1,7 +1,7 @@
 ---
 id: {ID}
 title: "{TITLE}"
-status: planned
+status: later
 priority: {PRIORITY}
 started: null
 target: null

@@ -29,10 +29,10 @@ impl Project {
         // Active epics with progress
         let active_epics: Vec<_> = epics
             .iter()
-            .filter(|e| e.frontmatter.status == EpicStatus::Active)
+            .filter(|e| e.frontmatter.status == EpicStatus::Now)
             .collect();
         if !active_epics.is_empty() {
-            content.push_str("## Active Epics\n");
+            content.push_str("## Now\n");
             for epic in &active_epics {
                 let epic_items: Vec<_> = tasks
                     .iter()
@@ -550,7 +550,7 @@ mod tests {
     fn test_generate_context_summary_with_items() {
         let (_tmp, project) = setup_project();
         let epic = project.create_epic("Phase 1", Priority::High).unwrap();
-        project.update_status(&epic.id, "active").unwrap();
+        project.update_status(&epic.id, "now").unwrap();
 
         let task1 = project
             .create_task(
@@ -579,7 +579,7 @@ mod tests {
         project.generate_context_summary().unwrap();
         let content =
             fs::read_to_string(project.root().join(".context/summary.md")).unwrap();
-        assert!(content.contains("Active Epics"));
+        assert!(content.contains("Now"));
         assert!(content.contains(&epic.id));
         assert!(content.contains("In-Progress Work"));
         assert!(content.contains(&task1.id));

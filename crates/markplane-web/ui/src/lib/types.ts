@@ -1,5 +1,5 @@
 export type TaskStatus = "draft" | "backlog" | "planned" | "in-progress" | "done" | "cancelled";
-export type EpicStatus = "planned" | "active" | "done";
+export type EpicStatus = "now" | "next" | "later" | "done";
 export type PlanStatus = "draft" | "approved" | "in-progress" | "done";
 export type NoteStatus = "draft" | "active" | "archived";
 export type Priority = "critical" | "high" | "medium" | "low" | "someday";

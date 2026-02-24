@@ -1,7 +1,7 @@
 ---
 id: TASK-s6vjt
 title: Implement Now/Next/Later epic lifecycle model
-status: planned
+status: done
 priority: high
 type: feature
 effort: large

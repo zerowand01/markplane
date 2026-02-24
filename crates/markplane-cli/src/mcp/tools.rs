@@ -126,7 +126,7 @@ pub fn list_tools() -> Value {
                         },
                         "status": {
                             "type": "string",
-                            "description": "New status value"
+                            "description": "New status value. Task: draft/backlog/planned/in-progress/done/cancelled. Epic: now/next/later/done. Plan: draft/approved/in-progress/done. Note: draft/active/archived."
                         },
                         "priority": {
                             "type": "string",
@@ -176,7 +176,7 @@ pub fn list_tools() -> Value {
             },
             {
                 "name": "markplane_start",
-                "description": "Set a task to in-progress status.",
+                "description": "Set a task to in-progress status. For epics, use markplane_update with status: now/next/later/done instead.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -190,7 +190,7 @@ pub fn list_tools() -> Value {
             },
             {
                 "name": "markplane_done",
-                "description": "Mark a task as done.",
+                "description": "Mark a task as done. Also works for epics, plans, and notes.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {

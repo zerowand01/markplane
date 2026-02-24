@@ -249,8 +249,9 @@ impl Project {
         let mut content = format!("{}\n# Roadmap Index\n\n", GENERATED_HEADER);
 
         let status_groups: &[(&str, EpicStatus)] = &[
-            ("Active Epics", EpicStatus::Active),
-            ("Planned Epics", EpicStatus::Planned),
+            ("Now", EpicStatus::Now),
+            ("Next", EpicStatus::Next),
+            ("Later", EpicStatus::Later),
         ];
 
         for (label, status) in status_groups {
@@ -274,7 +275,7 @@ impl Project {
             .filter(|e| e.frontmatter.status == EpicStatus::Done)
             .collect();
         if !done_epics.is_empty() {
-            content.push_str("## Done Epics\n\n");
+            content.push_str("## Done\n\n");
             for epic in &done_epics {
                 render_epic_with_items(&mut content, epic, &tasks);
             }
@@ -751,20 +752,20 @@ mod tests {
     #[test]
     fn test_generate_roadmap_index() {
         let (_tmp, project) = setup_project();
-        let active_epic = project.create_epic("Active Epic", Priority::High).unwrap();
-        project.update_status(&active_epic.id, "active").unwrap();
-        let planned_epic = project
-            .create_epic("Planned Epic", Priority::Medium)
+        let now_epic = project.create_epic("Now Epic", Priority::High).unwrap();
+        project.update_status(&now_epic.id, "now").unwrap();
+        let later_epic = project
+            .create_epic("Later Epic", Priority::Medium)
             .unwrap();
 
-        // Add a task linked to the active epic
+        // Add a task linked to the now epic
         let task = project
             .create_task(
                 "Item 1",
                 ItemType::Feature,
                 Priority::High,
                 Effort::Medium,
-                Some(active_epic.id.clone()),
+                Some(now_epic.id.clone()),
                 vec![],
             )
             .unwrap();
@@ -772,18 +773,18 @@ mod tests {
         project.generate_roadmap_index().unwrap();
         let content = fs::read_to_string(project.root().join("roadmap/INDEX.md")).unwrap();
         assert!(content.contains(GENERATED_HEADER));
-        assert!(content.contains("## Active Epics"));
-        assert!(content.contains(&format!("### [{}](items/{}.md) Active Epic (0/1, 0%)", active_epic.id, active_epic.id)));
+        assert!(content.contains("## Now"));
+        assert!(content.contains(&format!("### [{}](items/{}.md) Now Epic (0/1, 0%)", now_epic.id, now_epic.id)));
         assert!(content.contains(&format!("[{}](../backlog/items/{}.md)", task.id, task.id)));
-        assert!(content.contains("## Planned Epics"));
-        assert!(content.contains(&format!("### [{}](items/{}.md) Planned Epic (0/0, 0%)", planned_epic.id, planned_epic.id)));
+        assert!(content.contains("## Later"));
+        assert!(content.contains(&format!("### [{}](items/{}.md) Later Epic (0/0, 0%)", later_epic.id, later_epic.id)));
     }
 
     #[test]
     fn test_generate_roadmap_index_epic_with_items_table() {
         let (_tmp, project) = setup_project();
         let epic = project.create_epic("Test Epic", Priority::High).unwrap();
-        project.update_status(&epic.id, "active").unwrap();
+        project.update_status(&epic.id, "now").unwrap();
 
         let task_a = project
             .create_task(
@@ -832,27 +833,27 @@ mod tests {
         project.update_status(&task_a.id, "done").unwrap();
         project.update_status(&done_epic.id, "done").unwrap();
 
-        let active_epic = project
-            .create_epic("Active Epic", Priority::Medium)
+        let now_epic = project
+            .create_epic("Now Epic", Priority::Medium)
             .unwrap();
-        project.update_status(&active_epic.id, "active").unwrap();
+        project.update_status(&now_epic.id, "now").unwrap();
 
         project.generate_roadmap_index().unwrap();
         let content = fs::read_to_string(project.root().join("roadmap/INDEX.md")).unwrap();
-        assert!(content.contains("## Done Epics"));
+        assert!(content.contains("## Done"));
         assert!(content.contains("Done Epic (1/1, 100%)"));
-        assert!(content.contains("## Active Epics"));
-        assert!(content.contains("Active Epic"));
+        assert!(content.contains("## Now"));
+        assert!(content.contains("Now Epic"));
     }
 
     #[test]
     fn test_generate_roadmap_index_no_done_section_when_empty() {
         let (_tmp, project) = setup_project();
-        project.create_epic("Planned Epic", Priority::High).unwrap();
+        project.create_epic("Later Epic", Priority::High).unwrap();
 
         project.generate_roadmap_index().unwrap();
         let content = fs::read_to_string(project.root().join("roadmap/INDEX.md")).unwrap();
-        assert!(!content.contains("Done Epics"));
+        assert!(!content.contains("## Done"));
     }
 
     #[test]

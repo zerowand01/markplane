@@ -100,8 +100,13 @@ const RELATION_LABELS: Record<string, string> = {
 function statusToColor(status: string): string {
   switch (status) {
     case "in-progress":
-    case "active":
       return "var(--status-in-progress)";
+    case "now":
+      return "var(--status-now)";
+    case "next":
+      return "var(--status-next)";
+    case "later":
+      return "var(--status-later)";
     case "done":
       return "var(--status-done)";
     case "planned":
