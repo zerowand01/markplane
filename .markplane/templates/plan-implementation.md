@@ -1,13 +1,3 @@
----
-id: {ID}
-title: "{TITLE}"
-status: draft
-implements: {IMPLEMENTS}
-epic: {EPIC}
-created: {DATE}
-updated: {DATE}
----
-
 # {TITLE} Implementation Plan
 
 <!-- PLAN AUTHORING GUIDANCE — delete this comment when filling in the template.

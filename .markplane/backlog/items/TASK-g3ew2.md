@@ -1,7 +1,7 @@
 ---
 id: TASK-g3ew2
 title: Split frontmatter generation from body templates in create methods
-status: planned
+status: done
 priority: high
 type: enhancement
 effort: medium

@@ -1,38 +1,17 @@
 //! Embedded templates for Markplane document types.
 //!
-//! Templates use placeholder tokens that are replaced at creation time:
-//! - `{ID}` — item ID (e.g. TASK-042)
-//! - `{TITLE}` — item title
-//! - `{DATE}` — current date (YYYY-MM-DD)
-//! - `{STATUS}` — initial status
-//! - `{PRIORITY}` — priority level
-//! - `{TYPE}` — item type or note type
-//! - `{EFFORT}` — effort estimate
-//! - `{EPIC}` — linked epic ID or "null"
-//! - `{TAGS}` — YAML-formatted tags list
-//! - `{IMPLEMENTS}` — YAML-formatted implements list (for plans)
-//! - `{RELATED}` — YAML-formatted related list (for notes)
+//! Entity templates contain only the markdown **body** scaffold — no YAML
+//! frontmatter. The `create_*()` methods build the typed struct, serialize
+//! frontmatter via `write_frontmatter()`, and combine it with the body.
+//!
+//! Body templates use placeholder tokens replaced at creation time:
+//! - `{TITLE}` — item title (used in headings)
+//!
+//! Index/init templates may use additional tokens:
 //! - `{PROJECT_NAME}` — project name (for init)
+//! - `{DATE}` — current date (for init)
 
-pub const TASK_TEMPLATE: &str = r#"---
-id: {ID}
-title: "{TITLE}"
-status: {STATUS}
-priority: {PRIORITY}
-type: {TYPE}
-effort: {EFFORT}
-tags: {TAGS}
-epic: {EPIC}
-plan: null
-depends_on: []
-blocks: []
-assignee: null
-position: {POSITION}
-created: {DATE}
-updated: {DATE}
----
-
-# {TITLE}
+pub const TASK_TEMPLATE: &str = r#"# {TITLE}
 
 ## Description
 
@@ -57,18 +36,7 @@ Not an implementation checklist.]
 ## References
 "#;
 
-pub const EPIC_TEMPLATE: &str = r#"---
-id: {ID}
-title: "{TITLE}"
-status: later
-priority: {PRIORITY}
-started: null
-target: null
-tags: []
-depends_on: []
----
-
-# {TITLE}
+pub const EPIC_TEMPLATE: &str = r#"# {TITLE}
 
 ## Objective
 
@@ -85,17 +53,7 @@ depends_on: []
 [Strategic context, dependencies on external work, risks.]
 "#;
 
-pub const PLAN_IMPLEMENTATION_TEMPLATE: &str = r#"---
-id: {ID}
-title: "{TITLE}"
-status: draft
-implements: {IMPLEMENTS}
-epic: {EPIC}
-created: {DATE}
-updated: {DATE}
----
-
-# {TITLE} Implementation Plan
+pub const PLAN_IMPLEMENTATION_TEMPLATE: &str = r#"# {TITLE} Implementation Plan
 
 <!-- PLAN AUTHORING GUIDANCE — delete this comment when filling in the template.
 - Code in plans: contracts/interfaces, ONE pattern example, directory structures,
@@ -167,17 +125,7 @@ use a `## Cross-Plan Contract: [Name]` section as the canonical definition.
 Other plans reference it: > **Contract source**: PLAN-xxxxx §Section Name -->
 "#;
 
-pub const PLAN_REFACTOR_TEMPLATE: &str = r#"---
-id: {ID}
-title: "{TITLE}"
-status: draft
-implements: {IMPLEMENTS}
-epic: {EPIC}
-created: {DATE}
-updated: {DATE}
----
-
-# {TITLE} Refactor Plan
+pub const PLAN_REFACTOR_TEMPLATE: &str = r#"# {TITLE} Refactor Plan
 
 <!-- PLAN AUTHORING GUIDANCE — delete this comment when filling in the template.
 - Code in plans: contracts/interfaces, ONE pattern example, directory structures,
@@ -254,18 +202,7 @@ use a `## Cross-Plan Contract: [Name]` section as the canonical definition.
 Other plans reference it: > **Contract source**: PLAN-xxxxx §Section Name -->
 "#;
 
-pub const NOTE_RESEARCH_TEMPLATE: &str = r#"---
-id: {ID}
-title: "{TITLE}"
-type: research
-status: draft
-tags: {TAGS}
-related: {RELATED}
-created: {DATE}
-updated: {DATE}
----
-
-# {TITLE}
+pub const NOTE_RESEARCH_TEMPLATE: &str = r#"# {TITLE}
 
 ## Summary
 
@@ -284,18 +221,7 @@ updated: {DATE}
 [Sources, links, related items.]
 "#;
 
-pub const NOTE_ANALYSIS_TEMPLATE: &str = r#"---
-id: {ID}
-title: "{TITLE}"
-type: analysis
-status: draft
-tags: {TAGS}
-related: {RELATED}
-created: {DATE}
-updated: {DATE}
----
-
-# {TITLE}
+pub const NOTE_ANALYSIS_TEMPLATE: &str = r#"# {TITLE}
 
 ## Context
 
@@ -314,18 +240,7 @@ updated: {DATE}
 [Recommended actions.]
 "#;
 
-pub const NOTE_GENERIC_TEMPLATE: &str = r#"---
-id: {ID}
-title: "{TITLE}"
-type: {TYPE}
-status: draft
-tags: {TAGS}
-related: {RELATED}
-created: {DATE}
-updated: {DATE}
----
-
-# {TITLE}
+pub const NOTE_GENERIC_TEMPLATE: &str = r#"# {TITLE}
 
 [Content goes here.]
 "#;
@@ -448,39 +363,16 @@ mod tests {
 
     #[test]
     fn test_render_template_task() {
-        let result = render_template(
-            TASK_TEMPLATE,
-            &[
-                ("{ID}", "TASK-001"),
-                ("{TITLE}", "Test item"),
-                ("{STATUS}", "draft"),
-                ("{PRIORITY}", "medium"),
-                ("{TYPE}", "feature"),
-                ("{EFFORT}", "medium"),
-                ("{TAGS}", "[]"),
-                ("{EPIC}", "null"),
-                ("{POSITION}", "a0"),
-                ("{DATE}", "2026-02-09"),
-            ],
-        );
-        assert!(result.contains("id: TASK-001"));
-        assert!(result.contains("title: \"Test item\""));
-        assert!(result.contains("position: a0"));
-        assert!(result.contains("# Test item"));
+        let result = render_template(TASK_TEMPLATE, &[("{TITLE}", "Test item")]);
+        assert!(result.starts_with("# Test item"));
+        assert!(result.contains("## Description"));
     }
 
     #[test]
     fn test_render_template_epic() {
-        let result = render_template(
-            EPIC_TEMPLATE,
-            &[
-                ("{ID}", "EPIC-001"),
-                ("{TITLE}", "Phase 1"),
-                ("{PRIORITY}", "high"),
-            ],
-        );
-        assert!(result.contains("id: EPIC-001"));
-        assert!(result.contains("priority: high"));
+        let result = render_template(EPIC_TEMPLATE, &[("{TITLE}", "Phase 1")]);
+        assert!(result.starts_with("# Phase 1"));
+        assert!(result.contains("## Objective"));
     }
 
     #[test]
@@ -507,35 +399,15 @@ mod tests {
 
     #[test]
     fn test_render_template_plan() {
-        let result = render_template(
-            PLAN_IMPLEMENTATION_TEMPLATE,
-            &[
-                ("{ID}", "PLAN-001"),
-                ("{TITLE}", "Dark mode"),
-                ("{IMPLEMENTS}", "[\"TASK-001\"]"),
-                ("{EPIC}", "null"),
-                ("{DATE}", "2026-02-09"),
-            ],
-        );
-        assert!(result.contains("id: PLAN-001"));
-        assert!(result.contains("implements: [\"TASK-001\"]"));
-        assert!(result.contains("Implementation Plan"));
+        let result = render_template(PLAN_IMPLEMENTATION_TEMPLATE, &[("{TITLE}", "Dark mode")]);
+        assert!(result.starts_with("# Dark mode Implementation Plan"));
+        assert!(result.contains("## Overview"));
     }
 
     #[test]
     fn test_render_template_note() {
-        let result = render_template(
-            NOTE_GENERIC_TEMPLATE,
-            &[
-                ("{ID}", "NOTE-001"),
-                ("{TITLE}", "My idea"),
-                ("{TYPE}", "idea"),
-                ("{TAGS}", "[]"),
-                ("{RELATED}", "[]"),
-                ("{DATE}", "2026-02-09"),
-            ],
-        );
-        assert!(result.contains("id: NOTE-001"));
-        assert!(result.contains("type: idea"));
+        let result = render_template(NOTE_GENERIC_TEMPLATE, &[("{TITLE}", "My idea")]);
+        assert!(result.starts_with("# My idea"));
+        assert!(result.contains("[Content goes here.]"));
     }
 }

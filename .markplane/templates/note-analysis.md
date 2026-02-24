@@ -1,14 +1,3 @@
----
-id: {ID}
-title: "{TITLE}"
-type: analysis
-status: draft
-tags: {TAGS}
-related: {RELATED}
-created: {DATE}
-updated: {DATE}
----
-
 # {TITLE}
 
 ## Context

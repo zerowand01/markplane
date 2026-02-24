@@ -1,14 +1,3 @@
----
-id: {ID}
-title: "{TITLE}"
-status: later
-priority: {PRIORITY}
-started: null
-target: null
-tags: []
-depends_on: []
----
-
 # {TITLE}
 
 ## Objective
@@ -20,18 +9,6 @@ depends_on: []
 - [ ] KR1: [Measurable outcome]
 - [ ] KR2: [Measurable outcome]
 - [ ] KR3: [Measurable outcome]
-
-## Tasks
-
-| ID | Title | Status | Priority | Effort |
-|----|-------|--------|----------|--------|
-
-## Progress
-
-- Total items: 0
-- Done: 0 (0%)
-- In progress: 0
-- Remaining: 0
 
 ## Notes
 

@@ -1,20 +1,3 @@
----
-id: {ID}
-title: "{TITLE}"
-status: {STATUS}
-priority: {PRIORITY}
-type: {TYPE}
-effort: {EFFORT}
-tags: {TAGS}
-epic: {EPIC}
-plan: null
-depends_on: []
-blocks: []
-assignee: null
-created: {DATE}
-updated: {DATE}
----
-
 # {TITLE}
 
 ## Description

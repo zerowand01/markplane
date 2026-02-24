@@ -254,37 +254,9 @@ impl Project {
         validate_title_length(title)?;
         let id = self.next_id(&IdPrefix::Task)?;
         let today = Local::now().date_naive();
-        let date_str = today.format("%Y-%m-%d").to_string();
-
-        // Compute position: append to end of the priority group
         let position = self.append_position(&priority)?;
 
-        let safe_title = sanitize_yaml_string(title);
-        let tags_yaml = format_yaml_list(&tags);
-        let epic_yaml = epic.as_deref().unwrap_or("null");
-
-        let content = render_template(
-            templates::TASK_TEMPLATE,
-            &[
-                ("{ID}", &id),
-                ("{TITLE}", &safe_title),
-                ("{STATUS}", "draft"),
-                ("{PRIORITY}", &priority.to_string()),
-                ("{TYPE}", &item_type.to_string()),
-                ("{EFFORT}", &effort.to_string()),
-                ("{TAGS}", &tags_yaml),
-                ("{EPIC}", epic_yaml),
-                ("{POSITION}", &position),
-                ("{DATE}", &date_str),
-            ],
-        );
-
-        let items_dir = self.item_dir(&IdPrefix::Task).join("items");
-        fs::create_dir_all(&items_dir)?;
-        let path = items_dir.join(format!("{}.md", id));
-        write_new_file(&path, &content)?;
-
-        let item = Task {
+        let task = Task {
             id,
             title: title.to_string(),
             status: TaskStatus::Draft,
@@ -302,28 +274,22 @@ impl Project {
             updated: today,
         };
 
-        Ok(item)
+        let body = render_template(templates::TASK_TEMPLATE, &[("{TITLE}", title)]);
+        let doc = MarkplaneDocument { frontmatter: &task, body };
+        let content = write_frontmatter(&doc)?;
+
+        let items_dir = self.item_dir(&IdPrefix::Task).join("items");
+        fs::create_dir_all(&items_dir)?;
+        let path = items_dir.join(format!("{}.md", task.id));
+        write_new_file(&path, &content)?;
+
+        Ok(task)
     }
 
     /// Create a new epic.
     pub fn create_epic(&self, title: &str, priority: Priority) -> Result<Epic> {
         validate_title_length(title)?;
         let id = self.next_id(&IdPrefix::Epic)?;
-
-        let safe_title = sanitize_yaml_string(title);
-        let content = render_template(
-            templates::EPIC_TEMPLATE,
-            &[
-                ("{ID}", &id),
-                ("{TITLE}", &safe_title),
-                ("{PRIORITY}", &priority.to_string()),
-            ],
-        );
-
-        let items_dir = self.item_dir(&IdPrefix::Epic).join("items");
-        fs::create_dir_all(&items_dir)?;
-        let path = items_dir.join(format!("{}.md", id));
-        write_new_file(&path, &content)?;
 
         let epic = Epic {
             id,
@@ -335,6 +301,15 @@ impl Project {
             tags: vec![],
             depends_on: vec![],
         };
+
+        let body = render_template(templates::EPIC_TEMPLATE, &[("{TITLE}", title)]);
+        let doc = MarkplaneDocument { frontmatter: &epic, body };
+        let content = write_frontmatter(&doc)?;
+
+        let items_dir = self.item_dir(&IdPrefix::Epic).join("items");
+        fs::create_dir_all(&items_dir)?;
+        let path = items_dir.join(format!("{}.md", epic.id));
+        write_new_file(&path, &content)?;
 
         Ok(epic)
     }
@@ -349,27 +324,6 @@ impl Project {
         validate_title_length(title)?;
         let id = self.next_id(&IdPrefix::Plan)?;
         let today = Local::now().date_naive();
-        let date_str = today.format("%Y-%m-%d").to_string();
-
-        let safe_title = sanitize_yaml_string(title);
-        let implements_yaml = format_yaml_list(&implements);
-        let epic_yaml = epic.as_deref().unwrap_or("null");
-
-        let content = render_template(
-            templates::PLAN_IMPLEMENTATION_TEMPLATE,
-            &[
-                ("{ID}", &id),
-                ("{TITLE}", &safe_title),
-                ("{IMPLEMENTS}", &implements_yaml),
-                ("{EPIC}", epic_yaml),
-                ("{DATE}", &date_str),
-            ],
-        );
-
-        let items_dir = self.item_dir(&IdPrefix::Plan).join("items");
-        fs::create_dir_all(&items_dir)?;
-        let path = items_dir.join(format!("{}.md", id));
-        write_new_file(&path, &content)?;
 
         let plan = Plan {
             id,
@@ -380,6 +334,15 @@ impl Project {
             created: today,
             updated: today,
         };
+
+        let body = render_template(templates::PLAN_IMPLEMENTATION_TEMPLATE, &[("{TITLE}", title)]);
+        let doc = MarkplaneDocument { frontmatter: &plan, body };
+        let content = write_frontmatter(&doc)?;
+
+        let items_dir = self.item_dir(&IdPrefix::Plan).join("items");
+        fs::create_dir_all(&items_dir)?;
+        let path = items_dir.join(format!("{}.md", plan.id));
+        write_new_file(&path, &content)?;
 
         Ok(plan)
     }
@@ -394,34 +357,6 @@ impl Project {
         validate_title_length(title)?;
         let id = self.next_id(&IdPrefix::Note)?;
         let today = Local::now().date_naive();
-        let date_str = today.format("%Y-%m-%d").to_string();
-
-        let safe_title = sanitize_yaml_string(title);
-        let tags_yaml = format_yaml_list(&tags);
-        let type_str = note_type.to_string();
-
-        let template = match note_type {
-            NoteType::Research => templates::NOTE_RESEARCH_TEMPLATE,
-            NoteType::Analysis => templates::NOTE_ANALYSIS_TEMPLATE,
-            _ => templates::NOTE_GENERIC_TEMPLATE,
-        };
-
-        let content = render_template(
-            template,
-            &[
-                ("{ID}", &id),
-                ("{TITLE}", &safe_title),
-                ("{TYPE}", &type_str),
-                ("{TAGS}", &tags_yaml),
-                ("{RELATED}", "[]"),
-                ("{DATE}", &date_str),
-            ],
-        );
-
-        let items_dir = self.item_dir(&IdPrefix::Note).join("items");
-        fs::create_dir_all(&items_dir)?;
-        let path = items_dir.join(format!("{}.md", id));
-        write_new_file(&path, &content)?;
 
         let note = Note {
             id,
@@ -433,6 +368,20 @@ impl Project {
             created: today,
             updated: today,
         };
+
+        let template = match note.note_type {
+            NoteType::Research => templates::NOTE_RESEARCH_TEMPLATE,
+            NoteType::Analysis => templates::NOTE_ANALYSIS_TEMPLATE,
+            _ => templates::NOTE_GENERIC_TEMPLATE,
+        };
+        let body = render_template(template, &[("{TITLE}", title)]);
+        let doc = MarkplaneDocument { frontmatter: &note, body };
+        let content = write_frontmatter(&doc)?;
+
+        let items_dir = self.item_dir(&IdPrefix::Note).join("items");
+        fs::create_dir_all(&items_dir)?;
+        let path = items_dir.join(format!("{}.md", note.id));
+        write_new_file(&path, &content)?;
 
         Ok(note)
     }
@@ -935,15 +884,6 @@ impl Project {
     }
 }
 
-/// Escape a string for safe inclusion in YAML double-quoted values.
-/// Escapes `\`, `"`, and newlines.
-fn sanitize_yaml_string(s: &str) -> String {
-    s.replace('\\', "\\\\")
-        .replace('"', "\\\"")
-        .replace('\n', "\\n")
-        .replace('\r', "\\r")
-}
-
 /// Validate that a title does not exceed the maximum length.
 fn validate_title_length(title: &str) -> Result<()> {
     let char_count = title.chars().count();
@@ -955,23 +895,6 @@ fn validate_title_length(title: &str) -> Result<()> {
         )));
     }
     Ok(())
-}
-
-/// Format a list of strings as a YAML inline list: `["a", "b", "c"]` or `[]`.
-/// Each value is quoted to prevent YAML injection.
-fn format_yaml_list(items: &[String]) -> String {
-    if items.is_empty() {
-        "[]".to_string()
-    } else {
-        format!(
-            "[{}]",
-            items
-                .iter()
-                .map(|s| format!("\"{}\"", s.replace('"', "\\\"")))
-                .collect::<Vec<_>>()
-                .join(", ")
-        )
-    }
 }
 
 /// Find tasks that are blocked (have unresolved dependencies).
@@ -1266,15 +1189,6 @@ mod tests {
     }
 
     #[test]
-    fn test_format_yaml_list() {
-        assert_eq!(format_yaml_list(&[]), "[]");
-        assert_eq!(
-            format_yaml_list(&["a".to_string(), "b".to_string()]),
-            "[\"a\", \"b\"]"
-        );
-    }
-
-    #[test]
     fn test_save_and_load_config() {
         let (_tmp, project) = setup_project();
         let mut config = project.load_config().unwrap();
@@ -1283,6 +1197,66 @@ mod tests {
 
         let reloaded = project.load_config().unwrap();
         assert_eq!(reloaded.project.name, "Updated Name");
+    }
+
+    // ── Create→roundtrip byte-identity ────────────────────────────────
+
+    #[test]
+    fn test_create_roundtrip_byte_identical() {
+        let (_tmp, project) = setup_project();
+
+        // Task with tags, epic, special chars
+        let epic = project.create_epic("Phase 1", Priority::High).unwrap();
+        let task = project
+            .create_task(
+                "Fix \"login\" bug's edge-case",
+                ItemType::Bug,
+                Priority::High,
+                Effort::Small,
+                Some(epic.id.clone()),
+                vec!["auth".to_string(), "urgent".to_string()],
+            )
+            .unwrap();
+
+        let path = project.item_path(&task.id).unwrap();
+        let original = fs::read_to_string(&path).unwrap();
+
+        // Read and immediately write back — should produce identical bytes
+        let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
+        project.write_item(&task.id, &doc).unwrap();
+        let after_roundtrip = fs::read_to_string(&path).unwrap();
+
+        assert_eq!(original, after_roundtrip, "create output must be byte-identical to read→write roundtrip");
+
+        // Same for epic
+        let epic_path = project.item_path(&epic.id).unwrap();
+        let epic_original = fs::read_to_string(&epic_path).unwrap();
+        let epic_doc: MarkplaneDocument<Epic> = project.read_item(&epic.id).unwrap();
+        project.write_item(&epic.id, &epic_doc).unwrap();
+        let epic_after = fs::read_to_string(&epic_path).unwrap();
+        assert_eq!(epic_original, epic_after);
+
+        // Plan with implements list
+        let plan = project
+            .create_plan("Plan A", vec![task.id.clone()], Some(epic.id.clone()))
+            .unwrap();
+        let plan_path = project.item_path(&plan.id).unwrap();
+        let plan_original = fs::read_to_string(&plan_path).unwrap();
+        let plan_doc: MarkplaneDocument<Plan> = project.read_item(&plan.id).unwrap();
+        project.write_item(&plan.id, &plan_doc).unwrap();
+        let plan_after = fs::read_to_string(&plan_path).unwrap();
+        assert_eq!(plan_original, plan_after);
+
+        // Note with tags
+        let note = project
+            .create_note("Research", NoteType::Research, vec!["perf".to_string()])
+            .unwrap();
+        let note_path = project.item_path(&note.id).unwrap();
+        let note_original = fs::read_to_string(&note_path).unwrap();
+        let note_doc: MarkplaneDocument<Note> = project.read_item(&note.id).unwrap();
+        project.write_item(&note.id, &note_doc).unwrap();
+        let note_after = fs::read_to_string(&note_path).unwrap();
+        assert_eq!(note_original, note_after);
     }
 
     // ── Status updates for Epic, Plan, Note types ────────────────────────
@@ -1417,19 +1391,6 @@ mod tests {
         assert!(blocked.is_empty()); // No longer blocked
     }
 
-    // ── UTF-8 truncate safety (bug fix verification) ─────────────────────
-
-    #[test]
-    fn test_format_yaml_list_with_special_chars() {
-        // Tags with quotes should be escaped properly
-        let tags = vec!["c++".to_string(), "it's".to_string(), "key\"value".to_string()];
-        let result = format_yaml_list(&tags);
-        assert!(result.contains("c++"));
-        assert!(result.contains("it's"));
-        // Double-quote inside should be escaped
-        assert!(result.contains("key\\\"value"));
-    }
-
     #[test]
     fn test_create_task_with_emoji_title() {
         let (_tmp, project) = setup_project();
@@ -1467,16 +1428,6 @@ mod tests {
     fn test_validate_title_length_at_limit() {
         let title = "x".repeat(500);
         assert!(validate_title_length(&title).is_ok());
-    }
-
-    // ── sanitize_yaml_string ─────────────────────────────────────────────
-
-    #[test]
-    fn test_sanitize_yaml_string() {
-        assert_eq!(sanitize_yaml_string("hello"), "hello");
-        assert_eq!(sanitize_yaml_string("it's \"fine\""), "it's \\\"fine\\\"");
-        assert_eq!(sanitize_yaml_string("line\nbreak"), "line\\nbreak");
-        assert_eq!(sanitize_yaml_string("back\\slash"), "back\\\\slash");
     }
 
     // ── update_body ────────────────────────────────────────────────────
