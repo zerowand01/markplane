@@ -13,14 +13,17 @@ depends_on: []
 
 ## Objective
 
-Evolve the core data model to support team customization and time-boxed work planning. Currently statuses, priorities, and effort sizes are hardcoded Rust enums, and there's no concept of sprints or iterations. Configurable workflows let teams tailor Markplane to their process; sprints add a time-boxed planning layer for teams that want it.
+Harden the foundation and evolve the core data model. This epic has two themes: **reliability** — making concurrent CLI/MCP usage safe and providing a migration path for data format changes — and **flexibility** — letting teams customize workflows and optionally adopt time-boxed planning. Both are prerequisites for Markplane being trustworthy in multi-user, long-lived project scenarios.
 
 ## Key Results
 
+- [x] Web API uses core update and link methods (no inline read-modify-write)
+- [ ] Atomic file writes and advisory locking prevent data loss from concurrent CLI + MCP access
+- [ ] `markplane migrate` provides a reliable upgrade path for data format changes between versions
 - [ ] Statuses, priorities, and effort sizes are defined in `config.yaml` and validated at runtime
 - [ ] Default config matches current hardcoded values (zero migration burden)
 - [ ] Sprint entity type available as an optional time-boxed container for tasks
 
 ## Notes
 
-These are the two largest architectural changes on the roadmap. Configurable workflows (TASK-us45u) touches models, serialization, validation, CLI, and MCP — it's a deep refactor. Sprints (TASK-b54gy) adds a new entity type. Both should be designed carefully and likely deserve implementation plans before coding begins. Sprints should remain optional — many teams prefer continuous flow.
+The reliability work ([[TASK-2tags]], [[TASK-4ed4i]]) should come before the flexibility work ([[TASK-us45u]], [[TASK-b54gy]]). Concurrency safety and migration framework are preconditions — configurable workflows will be the first migration that exercises the framework. Sprints remain optional; many teams prefer continuous flow. The larger tasks here deserve implementation plans before coding begins.

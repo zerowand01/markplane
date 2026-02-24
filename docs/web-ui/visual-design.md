@@ -4,7 +4,7 @@
 **Created**: 2026-02-12
 **Updated**: 2026-02-21
 **Stack**: React, Next.js, Tailwind CSS, shadcn/ui
-**Related**: [[TASK-017]], [[PLAN-001]]
+**Related**: [[TASK-ur5hw]], [[PLAN-f79x3]]
 
 ---
 
@@ -34,7 +34,7 @@ The airplane is a **playful counterpoint** to an otherwise serious tool. Use it 
 | **Body** | Geist Sans | 400 (Regular) | 14px / 0.875rem | 1.6 | Default text, descriptions |
 | **Small** | Geist Sans | 400 (Regular) | 12px / 0.75rem | 1.5 | Metadata, timestamps, captions |
 | **Caption** | Geist Sans | 500 (Medium) | 11px / 0.6875rem | 1.4 | Badges, labels, keyboard shortcuts |
-| **Mono** | Geist Mono | 400 (Regular) | 13px / 0.8125rem | 1.5 | IDs (TASK-042), code, frontmatter |
+| **Mono** | Geist Mono | 400 (Regular) | 13px / 0.8125rem | 1.5 | IDs (TASK-rm6d3), code, frontmatter |
 | **Mono Small** | Geist Mono | 400 (Regular) | 11px / 0.6875rem | 1.4 | Inline code in metadata |
 
 **Fallback stacks**:
@@ -282,12 +282,12 @@ A compact, information-dense card that lives in kanban columns. Optimized for sc
 
 ```
 ┌─────────────────────────────────┐
-│ ● TASK-042                  [M] │  <- Priority dot + ID (mono) + effort badge
+│ ● TASK-rm6d3                  [M] │  <- Priority dot + ID (mono) + effort badge
 │                                 │
 │ Add dark mode support to the    │  <- Title (body weight, max 2 lines)
 │ main dashboard                  │
 │                                 │
-│ ◆ EPIC-003  ·  #ui  #theming   │  <- Epic chip + tags
+│ ◆ EPIC-gc8t5  ·  #ui  #theming   │  <- Epic chip + tags
 │                                 │
 │ @daniel              2d ago  ▸  │  <- Assignee + updated + drag handle
 └─────────────────────────────────┘
@@ -317,7 +317,7 @@ A compact, information-dense card that lives in kanban columns. Optimized for sc
 A single-row variant for table/list views:
 
 ```
-○ ●  TASK-042  Add dark mode support to dashboard  ◆ EPIC-003  #ui  @daniel  backlog  2d
+○ ●  TASK-rm6d3  Add dark mode support to dashboard  ◆ EPIC-gc8t5  #ui  @daniel  backlog  2d
 ```
 
 - Checkbox (left), priority dot, ID (mono), title, epic chip, tags, assignee, status badge, relative date
@@ -361,7 +361,7 @@ In table views and metadata panels, the indicator appears beside a text label. O
 A horizontal progress bar showing epic completion, used in the roadmap view and epic detail pages.
 
 ```
-◆ EPIC-003  Core Architecture  ████████░░░░░░░░  4/12 tasks  33%
+◆ EPIC-gc8t5  Core Architecture  ████████░░░░░░░░  4/12 tasks  33%
 ```
 
 **Visual details**:
@@ -388,7 +388,7 @@ The rendered markdown body of a task, plan, or note. This is the reading experie
 
 **Links**: `accent-default` color, no underline by default, underline on hover. External links get a tiny `↗` icon suffix.
 
-**Cross-reference links** (`[[TASK-042]]`): Rendered as interactive chips with entity type color background (12% opacity), entity icon, and the ID in mono font. Clicking navigates to the item. Hover shows a tooltip preview card with title, status, and priority.
+**Cross-reference links** (`[[TASK-rm6d3]]`): Rendered as interactive chips with entity type color background (12% opacity), entity icon, and the ID in mono font. Clicking navigates to the item. Hover shows a tooltip preview card with title, status, and priority.
 
 **Code blocks**:
 - Inline: `bg-surface-inset` background, 2px horizontal padding, `mono` font, `text-primary`, rounded 4px
@@ -416,9 +416,9 @@ A spotlight-style overlay triggered by `Cmd+K` (or `Ctrl+K`). This is the primar
 │                                                       │
 ├───────────────────────────────────────────────────────┤
 │  RECENT                                               │
-│  ☐ TASK-042  Add dark mode support           backlog  │
-│  ◆ EPIC-003  Core Architecture               active   │
-│  ↗ PLAN-012  Dark mode implementation        draft    │
+│  ☐ TASK-rm6d3  Add dark mode support           backlog  │
+│  ◆ EPIC-gc8t5  Core Architecture               active   │
+│  ↗ PLAN-rj9d4  Dark mode implementation        draft    │
 ├───────────────────────────────────────────────────────┤
 │  NAVIGATION                                           │
 │  ▣ Go to Dashboard                            g d     │
@@ -453,7 +453,7 @@ When clicking a task from the kanban or list view, a detail panel slides in from
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  ← Back    TASK-042    ⚙ ···                    │  <- Header bar
+│  ← Back    TASK-rm6d3    ⚙ ···                    │  <- Header bar
 ├──────────────────────────────┬──────────────────┤
 │                              │                  │
 │  # Add dark mode support     │  STATUS          │
@@ -463,7 +463,7 @@ When clicking a task from the kanban or list view, a detail panel slides in from
 │  Implement system-aware      │  ● High       ▾  │
 │  dark mode for the main      │                  │
 │  dashboard. Should respect   │  EPIC            │
-│  OS preference...            │  ◆ EPIC-003   ▾  │
+│  OS preference...            │  ◆ EPIC-gc8t5   ▾  │
 │                              │                  │
 │  ## Acceptance Criteria      │  ASSIGNEE        │
 │                              │  @daniel      ▾  │
@@ -475,13 +475,13 @@ When clicking a task from the kanban or list view, a detail panel slides in from
 │  ## Notes                    │  #ui #theming    │
 │                              │                  │
 │  Design system already has   │  DEPENDS ON      │
-│  CSS custom properties...    │  ☐ TASK-038      │
+│  CSS custom properties...    │  ☐ TASK-wp7v2      │
 │                              │                  │
 │  ## References               │  BLOCKS          │
-│                              │  ☐ TASK-045      │
-│  - Epic: [[EPIC-003]]       │                  │
-│  - Depends: [[TASK-038]]    │  PLAN            │
-│                              │  ↗ PLAN-012      │
+│                              │  ☐ TASK-bg8t1      │
+│  - Epic: [[EPIC-gc8t5]]       │                  │
+│  - Depends: [[TASK-wp7v2]]    │  PLAN            │
+│                              │  ↗ PLAN-rj9d4      │
 │                              │                  │
 │                              │  CREATED         │
 │                              │  2026-01-15      │
@@ -523,30 +523,30 @@ The landing page. Provides a high-level overview of the project, designed for a 
 │ VIEWS      │                                                               │
 │ 📊 Deps    │  ACTIVE WORK                                                 │
 │ 📈 Metrics │  ┌─────────────────────────┐ ┌─────────────────────────┐     │
-│            │  │ ● TASK-042     in-prog  │ │ ● TASK-055     in-prog  │     │
+│            │  │ ● TASK-rm6d3     in-prog  │ │ ● TASK-sk2h8     in-prog  │     │
 │            │  │ Add dark mode support   │ │ API response caching    │     │
-│            │  │ ◆ EPIC-003 · @daniel    │ │ ◆ EPIC-005 · @daniel    │     │
+│            │  │ ◆ EPIC-gc8t5 · @daniel    │ │ ◆ EPIC-ve6m1 · @daniel    │     │
 │            │  │ ████████░░░░ 50%        │ │ ███░░░░░░░░░ 25%        │     │
 │            │  └─────────────────────────┘ └─────────────────────────┘     │
 │            │                                                               │
 │            │  BLOCKED ITEMS                                      View all →│
 │            │  ┌─────────────────────────────────────────────────────────┐  │
-│            │  │ ⚠ TASK-045  Themed email templates                     │  │
-│            │  │   Blocked by: TASK-042 (in-progress, @daniel)          │  │
+│            │  │ ⚠ TASK-bg8t1  Themed email templates                     │  │
+│            │  │   Blocked by: TASK-rm6d3 (in-progress, @daniel)          │  │
 │            │  └─────────────────────────────────────────────────────────┘  │
 │            │                                                               │
 │            │  EPIC PROGRESS                                                │
 │            │  ┌─────────────────────────────────────────────────────────┐  │
-│            │  │ ◆ EPIC-003  Core Architecture     ████████░░░░  4/12   │  │
-│            │  │ ◆ EPIC-005  Platform & Ecosystem   ██░░░░░░░░░  1/5    │  │
-│            │  │ ◆ EPIC-002  Developer Experience   ░░░░░░░░░░░  0/2    │  │
+│            │  │ ◆ EPIC-gc8t5  Core Architecture     ████████░░░░  4/12   │  │
+│            │  │ ◆ EPIC-ve6m1  Platform & Ecosystem   ██░░░░░░░░░  1/5    │  │
+│            │  │ ◆ EPIC-kb4n9  Developer Experience   ░░░░░░░░░░░  0/2    │  │
 │            │  └─────────────────────────────────────────────────────────┘  │
 │            │                                                               │
 │            │  RECENT ACTIVITY                                              │
-│            │  ─ TASK-006 marked done                         2 hours ago  │
-│            │  ─ TASK-005 marked done                         3 hours ago  │
-│            │  ─ PLAN-012 created                            yesterday     │
-│            │  ─ EPIC-001 completed (6/6 tasks)              yesterday     │
+│            │  ─ TASK-mp3v8 marked done                         2 hours ago  │
+│            │  ─ TASK-jt9w4 marked done                         3 hours ago  │
+│            │  ─ PLAN-rj9d4 created                            yesterday     │
+│            │  ─ EPIC-xa7r2 completed (6/6 tasks)              yesterday     │
 │            │                                                               │
 │ ⚙ Settings │                                                               │
 │ ☾ Theme   │                                                               │
@@ -600,28 +600,28 @@ The primary work management screen. A kanban board with columns matching the wor
 │            │  IN PROGRESS (2)    PLANNED (3)       BACKLOG (15)    DRAFT (8)│
 │            │  ─────────────     ─────────────     ─────────────   ─────────│
 │            │  ┌───────────┐    ┌───────────┐    ┌───────────┐   ┌────────┐│
-│            │  │● TASK-042 │    │● TASK-043 │    │● TASK-046 │   │✎ TASK- ││
+│            │  │● TASK-rm6d3 │    │● TASK-cy9k5 │    │● TASK-nx3p6 │   │✎ TASK- ││
 │            │  │           │    │           │    │           │   │  060   ││
 │            │  │Add dark   │    │Add search │    │Optimize   │   │Custom  ││
 │            │  │mode       │    │to dash    │    │DB queries │   │avatar  ││
 │            │  │           │    │           │    │           │   │upload  ││
-│            │  │◆E-003 #ui │    │◆E-003     │    │◆E-005     │   │◆E-003  ││
+│            │  │◆E-gc8t5 #ui │    │◆E-gc8t5     │    │◆E-ve6m1     │   │◆E-gc8t5  ││
 │            │  │@dan  2d ▸ │    │         ▸ │    │         ▸ │   │      ▸ ││
 │            │  └───────────┘    └───────────┘    └───────────┘   └────────┘│
 │            │  ┌───────────┐    ┌───────────┐    ┌───────────┐            │
-│            │  │● TASK-055 │    │● TASK-044 │    │● TASK-047 │            │
+│            │  │● TASK-sk2h8 │    │● TASK-lf2n7 │    │● TASK-pw4s8 │            │
 │            │  │           │    │           │    │           │            │
 │            │  │API resp   │    │Export CSV │    │User prof  │            │
 │            │  │caching    │    │reports    │    │custom     │            │
 │            │  │           │    │           │    │           │            │
-│            │  │◆E-005     │    │◆E-005     │    │          │            │
+│            │  │◆E-ve6m1     │    │◆E-ve6m1     │    │          │            │
 │            │  │@dan  1d ▸ │    │         ▸ │    │         ▸ │            │
 │            │  └───────────┘    └───────────┘    └───────────┘            │
 │            │                   ┌───────────┐    │  ...more  │            │
-│            │                   │● TASK-048 │    │           │            │
+│            │                   │● TASK-ew5m9 │    │           │            │
 │            │                   │Form valid │                             │
 │            │                   │enhancements│                             │
-│            │                   │◆E-003     │                             │
+│            │                   │◆E-gc8t5     │                             │
 │            │                   └───────────┘                              │
 │            │                                                               │
 │            │  ┌─ + Add task ─┐  ┌─ + Add ─────┐  ┌─ + Add ─────┐        │
@@ -668,13 +668,13 @@ A compact, sortable table for users who prefer density over visual organization.
 │            │                                                                    │
 │            │  ☑  ○  PRIO  ID         TITLE                     EPIC    STATUS  │
 │            │  ─────────────────────────────────────────────────────────────────  │
-│            │  □  ●   H    TASK-042   Add dark mode support     E-003   ◐ prog  │
-│            │  □  ●   M    TASK-055   API response caching      E-005   ◐ prog  │
-│            │  □  ●   H    TASK-043   Add search to dashboard   E-003   ◉ plan  │
-│            │  □  ●   H    TASK-044   Export reports to CSV     E-005   ◉ plan  │
-│            │  □  ◐   M    TASK-048   Form validation enhanc.   E-003   ◉ plan  │
-│            │  □  ◐   M    TASK-046   Optimize database quer.   E-005   ○ back  │
-│            │  □  ○   L    TASK-047   User profile customiz.    —       ○ back  │
+│            │  □  ●   H    TASK-rm6d3   Add dark mode support     E-gc8t5   ◐ prog  │
+│            │  □  ●   M    TASK-sk2h8   API response caching      E-ve6m1   ◐ prog  │
+│            │  □  ●   H    TASK-cy9k5   Add search to dashboard   E-gc8t5   ◉ plan  │
+│            │  □  ●   H    TASK-lf2n7   Export reports to CSV     E-ve6m1   ◉ plan  │
+│            │  □  ◐   M    TASK-ew5m9   Form validation enhanc.   E-gc8t5   ◉ plan  │
+│            │  □  ◐   M    TASK-nx3p6   Optimize database quer.   E-ve6m1   ○ back  │
+│            │  □  ○   L    TASK-pw4s8   User profile customiz.    —       ○ back  │
 │            │  ...                                                                │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -691,7 +691,7 @@ For deep editing and reading, available via direct navigation or "Open full page
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ [Sidebar] │  ← Backlog / TASK-042                           [Edit] [···]   │
+│ [Sidebar] │  ← Backlog / TASK-rm6d3                           [Edit] [···]   │
 │           │                                                                  │
 │           │  ┌──────────────────────────────────┬───────────────────────┐   │
 │           │  │                                  │                       │   │
@@ -707,7 +707,7 @@ For deep editing and reading, available via direct navigation or "Open full page
 │           │  │  Theme variables are already     │                       │   │
 │           │  │  defined in the design system    │  EPIC                 │   │
 │           │  │  but not wired up to component   │  ┌─────────────────┐ │   │
-│           │  │  library.                        │  │ ◆ EPIC-003    ▾ │ │   │
+│           │  │  library.                        │  │ ◆ EPIC-gc8t5    ▾ │ │   │
 │           │  │                                  │  └─────────────────┘ │   │
 │           │  │  ## Acceptance Criteria          │                       │   │
 │           │  │                                  │  TYPE                 │   │
@@ -725,18 +725,18 @@ For deep editing and reading, available via direct navigation or "Open full page
 │           │  │  themes. Main work is wiring     │  └────┘ └────────┘  │   │
 │           │  │  the toggle and auditing         │                       │   │
 │           │  │  component-level overrides.      │  DEPENDS ON           │   │
-│           │  │                                  │  ☐ TASK-038 ↗        │   │
+│           │  │                                  │  ☐ TASK-wp7v2 ↗        │   │
 │           │  │  ## References                   │                       │   │
 │           │  │                                  │  BLOCKS               │   │
-│           │  │  - Epic: [[EPIC-003]]            │  ☐ TASK-045 ↗        │   │
-│           │  │  - Depends: [[TASK-038]]         │                       │   │
-│           │  │  - Blocks: [[TASK-045]]          │  LINKED PLAN          │   │
-│           │  │                                  │  ↗ PLAN-012 ↗        │   │
+│           │  │  - Epic: [[EPIC-gc8t5]]            │  ☐ TASK-bg8t1 ↗        │   │
+│           │  │  - Depends: [[TASK-wp7v2]]         │                       │   │
+│           │  │  - Blocks: [[TASK-bg8t1]]          │  LINKED PLAN          │   │
+│           │  │                                  │  ↗ PLAN-rj9d4 ↗        │   │
 │           │  │                                  │                       │   │
 │           │  │                                  │  ─────────────────── │   │
 │           │  │                                  │  Created: 2026-01-15 │   │
 │           │  │                                  │  Updated: 2d ago     │   │
-│           │  │                                  │  File: TASK-042.md   │   │
+│           │  │                                  │  File: TASK-rm6d3.md   │   │
 │           │  └──────────────────────────────────┴───────────────────────┘   │
 │           │                                                                  │
 │           │  ACTIVITY                                                        │
@@ -747,7 +747,7 @@ For deep editing and reading, available via direct navigation or "Open full page
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Breadcrumb**: `← Backlog / TASK-042` — "← Backlog" is a clickable back link. ID in mono font.
+**Breadcrumb**: `← Backlog / TASK-rm6d3` — "← Backlog" is a clickable back link. ID in mono font.
 
 **Edit button**: Toggles the markdown body into edit mode (CodeMirror/Monaco textarea with markdown syntax highlighting). Changes save on blur or Cmd+S.
 
@@ -772,7 +772,7 @@ Shows a single epic with its objective, linked tasks, and progress.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ [Sidebar] │  ← Roadmap / EPIC-003                                          │
+│ [Sidebar] │  ← Roadmap / EPIC-gc8t5                                          │
 │           │                                                                  │
 │           │  ◆ Core Architecture                              active        │
 │           │  ████████████████░░░░░░░░░░░░░░░░░░  4/12 tasks  33%           │
@@ -791,18 +791,18 @@ Shows a single epic with its objective, linked tasks, and progress.
 │           │                                                                  │
 │           │  ## Tasks                                                        │
 │           │  ┌──────────────────────────────────────────────────────────┐   │
-│           │  │ ●  TASK-042  Add dark mode support          ◐ in-prog  │   │
-│           │  │ ●  TASK-043  Add search to dashboard        ◉ planned  │   │
-│           │  │ ●  TASK-048  Form validation enhancements   ◉ planned  │   │
-│           │  │ ◐  TASK-046  Optimize database queries      ○ backlog  │   │
-│           │  │ ✎  TASK-060  Custom avatar upload           ✎ draft    │   │
+│           │  │ ●  TASK-rm6d3  Add dark mode support          ◐ in-prog  │   │
+│           │  │ ●  TASK-cy9k5  Add search to dashboard        ◉ planned  │   │
+│           │  │ ●  TASK-ew5m9  Form validation enhancements   ◉ planned  │   │
+│           │  │ ◐  TASK-nx3p6  Optimize database queries      ○ backlog  │   │
+│           │  │ ✎  TASK-qv6r3  Custom avatar upload           ✎ draft    │   │
 │           │  │ ...                                                      │   │
 │           │  └──────────────────────────────────────────────────────────┘   │
 │           │                                                                  │
 │           │  ## Notes                                                        │
 │           │                                                                  │
 │           │  This phase depends on completing the DX improvements from      │
-│           │  EPIC-002 first, particularly the configurable workflows.       │
+│           │  EPIC-kb4n9 first, particularly the configurable workflows.       │
 │           │                                                                  │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -833,14 +833,14 @@ A high-level view of all epics with their task progress. Two sub-views: **Progre
 │           │  ACTIVE EPICS                                                    │
 │           │                                                                  │
 │           │  ┌────────────────────────────────────────────────────────────┐  │
-│           │  │ ◆ EPIC-003  Core Architecture                    active   │  │
+│           │  │ ◆ EPIC-gc8t5  Core Architecture                    active   │  │
 │           │  │ ████████████████░░░░░░░░░░░░░░░░  4/12 tasks     33%     │  │
 │           │  │                                                            │  │
 │           │  │  ◐ 2 in-progress  ◉ 3 planned  ○ 7 backlog               │  │
 │           │  └────────────────────────────────────────────────────────────┘  │
 │           │                                                                  │
 │           │  ┌────────────────────────────────────────────────────────────┐  │
-│           │  │ ◆ EPIC-005  Platform & Ecosystem                 active   │  │
+│           │  │ ◆ EPIC-ve6m1  Platform & Ecosystem                 active   │  │
 │           │  │ ████░░░░░░░░░░░░░░░░░░░░░░░░░░░  1/5 tasks      20%     │  │
 │           │  │                                                            │  │
 │           │  │  ◐ 1 in-progress  ○ 4 backlog                             │  │
@@ -849,17 +849,17 @@ A high-level view of all epics with their task progress. Two sub-views: **Progre
 │           │  PLANNED EPICS                                                   │
 │           │                                                                  │
 │           │  ┌────────────────────────────────────────────────────────────┐  │
-│           │  │ ◆ EPIC-002  Developer Experience                 planned  │  │
+│           │  │ ◆ EPIC-kb4n9  Developer Experience                 planned  │  │
 │           │  │ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0/2 tasks      0%      │  │
 │           │  └────────────────────────────────────────────────────────────┘  │
 │           │                                                                  │
 │           │  ┌────────────────────────────────────────────────────────────┐  │
-│           │  │ ◆ EPIC-004  Context & AI Integration             planned  │  │
+│           │  │ ◆ EPIC-pd3w7  Context & AI Integration             planned  │  │
 │           │  │ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0/3 tasks      0%      │  │
 │           │  └────────────────────────────────────────────────────────────┘  │
 │           │                                                                  │
 │           │  COMPLETED                                                       │
-│           │  ✓ EPIC-001  MCP Protocol Improvements  ████████████  6/6  100% │
+│           │  ✓ EPIC-xa7r2  MCP Protocol Improvements  ████████████  6/6  100% │
 │           │                                                                  │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -876,11 +876,11 @@ A horizontal swimlane chart with epics as rows and time as the x-axis. Useful wh
 ```
          Jan          Feb          Mar          Apr
           |            |            |            |
-EPIC-001  ████████████ ✓
-EPIC-003              ████████████████████░░░░░░░░
-EPIC-005              ███████░░░░░░░░░░░░░░░░░░░░░░░░
-EPIC-002                        ░░░░░░░░░░░░░░░░░░
-EPIC-004                           ░░░░░░░░░░░░░░░░░░░░░
+EPIC-xa7r2  ████████████ ✓
+EPIC-gc8t5              ████████████████████░░░░░░░░
+EPIC-ve6m1              ███████░░░░░░░░░░░░░░░░░░░░░░░░
+EPIC-kb4n9                        ░░░░░░░░░░░░░░░░░░
+EPIC-pd3w7                           ░░░░░░░░░░░░░░░░░░░░░
           |            |            |            |
                        ▲ Today
 ```
@@ -899,13 +899,13 @@ An interactive node graph showing relationships between items.
 │ [Sidebar] │  Dependencies                          [All] [Blocked] [Epic ▾] │
 │           │                                                                  │
 │           │                    ┌──────────┐                                  │
-│           │                    │ EPIC-003 │                                  │
+│           │                    │ EPIC-gc8t5 │                                  │
 │           │                    │ Core Arch│                                  │
 │           │                    └────┬─────┘                                  │
 │           │               ┌────────┼────────┐                               │
 │           │               ▼        ▼        ▼                               │
 │           │          ┌─────────┐ ┌──────┐ ┌──────┐                          │
-│           │          │TASK-038 │ │T-042 │ │T-043 │                          │
+│           │          │TASK-wp7v2 │ │T-042 │ │T-043 │                          │
 │           │          │Design   │ │Dark  │ │Search│                          │
 │           │          │tokens   │ │mode  │ │dash  │                          │
 │           │          │  ✓ done │ │◐ prog│ │◉ plan│                          │
@@ -915,7 +915,7 @@ An interactive node graph showing relationships between items.
 │           │                         │ blocks                                 │
 │           │                         ▼                                        │
 │           │                    ┌─────────┐                                   │
-│           │                    │TASK-045 │                                   │
+│           │                    │TASK-bg8t1 │                                   │
 │           │                    │Themed   │                                   │
 │           │                    │emails   │                                   │
 │           │                    │⚠ blocked│                                   │
@@ -966,20 +966,20 @@ Full-text search with faceted filtering, accessible via `Cmd+K` (quick) or the d
 │           │  3 results for "dark mode"                                       │
 │           │                                                                  │
 │           │  ┌──────────────────────────────────────────────────────────┐   │
-│           │  │ ☐ TASK-042  Add **dark mode** support to dashboard      │   │
-│           │  │   ● High · ◐ In Progress · ◆ EPIC-003 · @daniel        │   │
+│           │  │ ☐ TASK-rm6d3  Add **dark mode** support to dashboard      │   │
+│           │  │   ● High · ◐ In Progress · ◆ EPIC-gc8t5 · @daniel        │   │
 │           │  │   "...Implement system-aware **dark mode** for the      │   │
 │           │  │   main dashboard. Should respect OS preference..."       │   │
 │           │  └──────────────────────────────────────────────────────────┘   │
 │           │  ┌──────────────────────────────────────────────────────────┐   │
-│           │  │ ↗ PLAN-012  **Dark mode** implementation plan           │   │
-│           │  │   Draft · ◆ EPIC-003                                     │   │
+│           │  │ ↗ PLAN-rj9d4  **Dark mode** implementation plan           │   │
+│           │  │   Draft · ◆ EPIC-gc8t5                                     │   │
 │           │  │   "...Phase 1: Wire CSS custom properties to the         │   │
 │           │  │   component library **dark mode** toggle..."             │   │
 │           │  └──────────────────────────────────────────────────────────┘   │
 │           │  ┌──────────────────────────────────────────────────────────┐   │
-│           │  │ ☐ TASK-045  Themed email templates                      │   │
-│           │  │   ◐ Medium · ⚠ Blocked · ◆ EPIC-003                     │   │
+│           │  │ ☐ TASK-bg8t1  Themed email templates                      │   │
+│           │  │   ◐ Medium · ⚠ Blocked · ◆ EPIC-gc8t5                     │   │
 │           │  │   "...Requires **dark mode** to be complete before       │   │
 │           │  │   email templates can respect user theme..."             │   │
 │           │  └──────────────────────────────────────────────────────────┘   │
@@ -1037,9 +1037,9 @@ Full-text search with faceted filtering, accessible via `Cmd+K` (quick) or the d
 - **Style**: `bg-surface-overlay`, `border-default` border, `shadow-md`
 
 **Examples**:
-- `✓ TASK-042 moved to in-progress` (success, green icon)
-- `⚠ TASK-045 is now blocked by TASK-042` (warning, amber icon)
-- `✗ Failed to save TASK-042 — file locked` (error, red icon)
+- `✓ TASK-rm6d3 moved to in-progress` (success, green icon)
+- `⚠ TASK-bg8t1 is now blocked by TASK-rm6d3` (warning, amber icon)
+- `✗ Failed to save TASK-rm6d3 — file locked` (error, red icon)
 - `ℹ Sync complete — 3 files updated` (info, blue icon)
 
 ### Empty States

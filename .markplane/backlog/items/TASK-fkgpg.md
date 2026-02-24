@@ -2,7 +2,7 @@
 id: TASK-fkgpg
 title: Swap serde_yaml to serde_yaml_ng
 status: backlog
-priority: low
+priority: someday
 type: chore
 effort: small
 tags:
@@ -12,9 +12,9 @@ plan: null
 depends_on: []
 blocks: []
 assignee: null
-position: a1
+position: a0
 created: 2026-02-10
-updated: 2026-02-10
+updated: 2026-02-23
 ---
 
 # Swap serde_yaml to serde_yaml_ng

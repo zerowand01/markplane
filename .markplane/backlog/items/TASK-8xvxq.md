@@ -1,8 +1,8 @@
 ---
 id: TASK-8xvxq
 title: Create Homebrew tap for markplane
-status: draft
-priority: medium
+status: backlog
+priority: low
 type: chore
 effort: medium
 tags:
@@ -14,9 +14,9 @@ depends_on:
 - TASK-gpxpw
 blocks: []
 assignee: null
-position: a0
+position: ZzV
 created: 2026-02-13
-updated: 2026-02-13
+updated: 2026-02-23
 ---
 
 # Create Homebrew tap for markplane

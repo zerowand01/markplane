@@ -1,7 +1,7 @@
 ---
 id: TASK-ydj7q
 title: Publish markplane-core to crates.io
-status: draft
+status: backlog
 priority: low
 type: chore
 effort: small
@@ -14,7 +14,7 @@ blocks: []
 assignee: null
 position: a0
 created: 2026-02-13
-updated: 2026-02-13
+updated: 2026-02-23
 ---
 
 # Publish markplane-core to crates.io

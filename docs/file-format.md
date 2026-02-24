@@ -4,30 +4,30 @@
 
 ```
 .markplane/
-├── config.yaml              # Project configuration and ID counters
+├── config.yaml              # Project configuration
 ├── INDEX.md                 # Root navigation index (auto-generated)
 ├── roadmap/
 │   ├── INDEX.md             # Epic listing (auto-generated)
 │   ├── items/               # Epic files
-│   │   ├── EPIC-001.md
-│   │   └── EPIC-002.md
+│   │   ├── EPIC-xa7r2.md
+│   │   └── EPIC-kb4n9.md
 │   └── archive/             # Completed epics
 ├── backlog/
 │   ├── INDEX.md             # Backlog listing by status/priority/epic (auto-generated)
 │   ├── items/               # Task files
-│   │   ├── TASK-001.md
-│   │   └── TASK-002.md
+│   │   ├── TASK-fq2x8.md
+│   │   └── TASK-d4p7m.md
 │   └── archive/             # Done/cancelled items
 ├── plans/
 │   ├── INDEX.md             # Plan listing (auto-generated)
 │   ├── items/               # Plan files
-│   │   └── PLAN-001.md
+│   │   └── PLAN-ya8v2.md
 │   ├── templates/           # Plan-specific templates
 │   └── archive/             # Completed plans
 ├── notes/
 │   ├── INDEX.md             # Note listing (auto-generated)
 │   ├── items/               # Note files
-│   │   └── NOTE-001.md
+│   │   └── NOTE-vt3k8.md
 │   ├── ideas.md             # Quick idea capture (special file)
 │   ├── decisions.md         # Decision log (special file)
 │   └── archive/             # Archived notes
@@ -51,17 +51,17 @@ Every item file uses YAML frontmatter delimited by `---`:
 
 ```markdown
 ---
-id: TASK-042
+id: TASK-rm6d3
 title: "Add dark mode"
 status: in-progress
 priority: high
 type: feature
 effort: medium
 tags: ["ui", "theming"]
-epic: EPIC-003
+epic: EPIC-gc8t5
 plan: null
-depends_on: [TASK-038]
-blocks: [TASK-045]
+depends_on: [TASK-wp7v2]
+blocks: [TASK-bg8t1]
 assignee: daniel
 created: 2026-01-15
 updated: 2026-02-09
@@ -82,15 +82,15 @@ Titles are always double-quoted in the YAML to safely handle special characters.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `id` | string | yes | Unique identifier, e.g. `TASK-042` |
+| `id` | string | yes | Unique identifier, e.g. `TASK-rm6d3` |
 | `title` | string | yes | Item title (max 500 characters) |
 | `status` | enum | yes | Current workflow status |
 | `priority` | enum | yes | Priority level |
 | `type` | enum | yes | Item classification |
 | `effort` | enum | yes | Effort estimate |
 | `tags` | string[] | no | Categorization tags (default: `[]`) |
-| `epic` | string? | no | Parent epic ID, e.g. `EPIC-003` (default: `null`) |
-| `plan` | string? | no | Linked plan ID, e.g. `PLAN-012` (default: `null`) |
+| `epic` | string? | no | Parent epic ID, e.g. `EPIC-gc8t5` (default: `null`) |
+| `plan` | string? | no | Linked plan ID, e.g. `PLAN-rj9d4` (default: `null`) |
 | `depends_on` | string[] | no | IDs this item depends on (default: `[]`) |
 | `blocks` | string[] | no | IDs this item blocks (default: `[]`) |
 | `assignee` | string? | no | Assigned user (default: `null`) |
@@ -101,7 +101,7 @@ Titles are always double-quoted in the YAML to safely handle special characters.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `id` | string | yes | Unique identifier, e.g. `EPIC-003` |
+| `id` | string | yes | Unique identifier, e.g. `EPIC-gc8t5` |
 | `title` | string | yes | Epic title (max 500 characters) |
 | `status` | enum | yes | Current workflow status |
 | `priority` | enum | yes | Priority level |
@@ -114,7 +114,7 @@ Titles are always double-quoted in the YAML to safely handle special characters.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `id` | string | yes | Unique identifier, e.g. `PLAN-012` |
+| `id` | string | yes | Unique identifier, e.g. `PLAN-rj9d4` |
 | `title` | string | yes | Plan title (max 500 characters) |
 | `status` | enum | yes | Current workflow status |
 | `implements` | string[] | no | Task IDs this plan implements (default: `[]`) |
@@ -126,7 +126,7 @@ Titles are always double-quoted in the YAML to safely handle special characters.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `id` | string | yes | Unique identifier, e.g. `NOTE-007` |
+| `id` | string | yes | Unique identifier, e.g. `NOTE-dq6m1` |
 | `title` | string | yes | Note title (max 500 characters) |
 | `type` | enum | yes | Note classification |
 | `status` | enum | yes | Current workflow status |
@@ -185,35 +185,36 @@ Values: `research`, `analysis`, `idea`, `decision`, `meeting`
 
 ## ID System
 
-IDs follow the format `PREFIX-NNN` where:
+IDs follow the format `PREFIX-RANDOM` where:
 - **PREFIX** is one of: `EPIC`, `TASK`, `PLAN`, `NOTE`
-- **NNN** is a zero-padded sequential number (e.g., `001`, `042`, `100`)
+- **RANDOM** is a 5-character random alphanumeric suffix (e.g., `4ed4i`, `k7x9m`, `rm6d3`)
+
+The random suffix uses a reduced 32-character alphabet (a-z, 0-9 minus ambiguous chars `0`, `o`, `1`, `l`), giving ~33 million combinations per prefix.
 
 Rules:
 - IDs are **permanent** — once assigned, never reused
-- IDs are **sequential** — managed by counters in `config.yaml`
+- IDs are **randomly generated** — no shared counter, safe for concurrent processes and parallel git branches
 - The prefix determines the **directory**: `EPIC` → `roadmap/`, `TASK` → `backlog/`, `PLAN` → `plans/`, `NOTE` → `notes/`
-- The filename is always `{ID}.md` (e.g., `TASK-042.md`)
-- ID parsing is case-insensitive (`task-042` resolves to `TASK-042`)
-
-Counter management uses file locking (`fs2`) on `config.yaml` to prevent duplicate IDs from concurrent processes.
+- The filename is always `{ID}.md` (e.g., `TASK-rm6d3.md`)
+- ID parsing is case-insensitive (`task-rm6d3` resolves to `TASK-rm6d3`)
+- New IDs are collision-checked against existing items before assignment
 
 ## Cross-Reference Syntax
 
 Use double-bracket wiki-link syntax to reference items:
 
 ```markdown
-This feature depends on [[TASK-038]] and relates to [[EPIC-003]].
-See [[PLAN-012]] for the implementation plan.
+This feature depends on [[TASK-wp7v2]] and relates to [[EPIC-gc8t5]].
+See [[PLAN-rj9d4]] for the implementation plan.
 ```
 
 References work in both the markdown body and are also extracted from frontmatter fields (`epic`, `plan`, `depends_on`, `blocks`, `implements`, `related`).
 
 Reference rules:
-- Must contain a valid ID matching `PREFIX-NUMBER` format
+- Must contain a valid ID matching `PREFIX-RANDOM` format (e.g. `TASK-4ed4i`)
 - Cannot span newlines
 - Only the four valid prefixes (`EPIC`, `TASK`, `PLAN`, `NOTE`) are recognized
-- Invalid references (e.g., `[[INVALID-001]]`) are ignored during extraction
+- Invalid references (e.g., `[[INVALID-x7k2f]]`) are ignored during extraction
 
 Use `markplane check` to validate all references and `markplane check --orphans` to find items with no incoming references.
 
@@ -224,11 +225,6 @@ version: 1
 project:
   name: "My Project"
   description: "Project description"
-counters:
-  EPIC: 3        # Last assigned EPIC number
-  TASK: 42       # Last assigned TASK number
-  PLAN: 12       # Last assigned PLAN number
-  NOTE: 7        # Last assigned NOTE number
 context:
   token_budget: 1000      # Target token budget for summary
   recent_days: 7          # Days to consider "recent" for completions
@@ -237,7 +233,24 @@ documentation_paths:            # Paths to project docs (relative to repo root)
   - docs                        # Scanned for *.md files; linked in INDEX and .context/
 ```
 
-The `counters` map tracks the highest assigned number for each prefix. When a new item is created, the counter increments and the new value is used. Counters never decrease.
+IDs are randomly generated (no counter in config). See [ID System](#id-system) for details.
+
+### documentation_paths
+
+Bridges Markplane's navigation and AI context layer to your repo's existing documentation (architecture docs, API references, user guides, etc.).
+
+```yaml
+documentation_paths:
+  - docs
+  - design/specs
+```
+
+Paths are relative to the repo root. Each path is scanned for `*.md` files during `markplane sync`, which then:
+
+- Adds a **"Project Documentation"** section to the root `INDEX.md` with links to each discovered file
+- Adds a **"Key Documentation"** section to `.context/summary.md` so AI coding tools see your docs alongside project state
+
+This keeps technical documentation in its conventional repo location (`docs/`, etc.) while making it discoverable through Markplane. Markplane handles PM concerns (epics, tasks, plans, notes); `documentation_paths` connects everything else without moving files around.
 
 ## Template System
 
@@ -247,7 +260,7 @@ Templates are embedded in the `markplane-core` binary as Rust string constants. 
 
 | Placeholder | Used In | Description |
 |-------------|---------|-------------|
-| `{ID}` | All | Item ID (e.g., `TASK-042`) |
+| `{ID}` | All | Item ID (e.g., `TASK-rm6d3`) |
 | `{TITLE}` | All | Sanitized title string |
 | `{DATE}` | All | Current date (`YYYY-MM-DD`) |
 | `{STATUS}` | Backlog | Initial status value |
@@ -277,9 +290,13 @@ Unreplaced placeholders remain as-is in the output (no error is raised).
 
 ## INDEX.md Files
 
-INDEX.md files are auto-generated by `markplane sync`. They contain a `<!-- Generated by markplane sync -->` header comment. Each directory has an index:
+INDEX.md files are auto-generated by `markplane sync`. They contain a `<!-- Generated by markplane sync -->` header comment. They are **gitignored** within `.markplane/` (along with `.context/`) because they are fully derived from source files — regenerating them after a merge or clone is instant via `markplane sync`. This prevents merge conflicts on derived data.
 
-- **Root INDEX.md**: Quick navigation table with active item counts, ID counters, last sync date
+Sync runs automatically on `markplane init`, `markplane mcp` startup, and `markplane serve` startup, so these files are always available when needed.
+
+Each directory has an index:
+
+- **Root INDEX.md**: Quick navigation table with active item counts, last sync date
 - **backlog/INDEX.md**: Prioritized kanban view (In Progress, Blocked, Planned, Backlog, Drafts)
 - **roadmap/INDEX.md**: Epics (active, planned) with nested task tables and progress
 - **plans/INDEX.md**: Active and completed plans with their implements links

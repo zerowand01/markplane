@@ -33,7 +33,7 @@ markplane add <TITLE> [OPTIONS]
 | `--type <TYPE>` | `feature` | Item type: `feature`, `bug`, `enhancement`, `chore`, `research`, `spike` |
 | `--priority <PRIORITY>` | `medium` | Priority: `critical`, `high`, `medium`, `low`, `someday` |
 | `--effort <EFFORT>` | `medium` | Effort estimate: `xs`, `small`, `medium`, `large`, `xl` |
-| `--epic <EPIC_ID>` | — | Parent epic ID (e.g. `EPIC-001`) |
+| `--epic <EPIC_ID>` | — | Parent epic ID (e.g. `EPIC-xa7r2`) |
 | `--tags <TAGS>` | — | Comma-separated tags (e.g. `auth,backend`) |
 
 New items are created with status `draft`.
@@ -41,8 +41,8 @@ New items are created with status `draft`.
 **Example:**
 
 ```bash
-markplane add "Implement dark mode" --type feature --priority high --effort large --epic EPIC-003 --tags "ui,theming"
-# Created TASK-001 — Implement dark mode
+markplane add "Implement dark mode" --type feature --priority high --effort large --epic EPIC-gc8t5 --tags "ui,theming"
+# Created TASK-fq2x8 — Implement dark mode
 ```
 
 ---
@@ -59,7 +59,7 @@ markplane archive [ID] [OPTIONS]
 
 | Argument | Description |
 |----------|-------------|
-| `<ID>` | Item ID to archive (e.g. `TASK-042`, `EPIC-001`) |
+| `<ID>` | Item ID to archive (e.g. `TASK-rm6d3`, `EPIC-xa7r2`) |
 
 **Options:**
 
@@ -76,14 +76,14 @@ Archived items retain their status (no "archived" status) and remain resolvable 
 
 ```bash
 # Archive a single item
-markplane archive TASK-001
-# ✓ Archived TASK-001
+markplane archive TASK-fq2x8
+# ✓ Archived TASK-fq2x8
 
 # Preview batch archive
 markplane archive --all-done --dry-run
 # → Would archive 2 item(s):
-#   TASK-001 Implement login page (done)
-#   TASK-005 Remove deprecated API (done)
+#   TASK-fq2x8 Implement login page (done)
+#   TASK-jt9w4 Remove deprecated API (done)
 
 # Batch archive all completed items
 markplane archive --all-done
@@ -104,15 +104,15 @@ markplane unarchive <ID>
 
 | Argument | Description |
 |----------|-------------|
-| `<ID>` | Item ID to restore (e.g. `TASK-042`) |
+| `<ID>` | Item ID to restore (e.g. `TASK-rm6d3`) |
 
 Moves the item from `archive/` back to `items/`. Works with all entity types.
 
 **Example:**
 
 ```bash
-markplane unarchive TASK-001
-# ✓ Restored TASK-001
+markplane unarchive TASK-fq2x8
+# ✓ Restored TASK-fq2x8
 ```
 
 ---
@@ -131,7 +131,7 @@ markplane check [OPTIONS]
 |--------|---------|-------------|
 | `--orphans` | `false` | Also show orphan items (items with no incoming references) |
 
-Scans all markdown files for `[[ITEM-NNN]]` references and verifies that each referenced item exists. Exits with a non-zero status if broken references are found.
+Scans all markdown files for `[[ITEM-xxxxx]]` references and verifies that each referenced item exists. Exits with a non-zero status if broken references are found.
 
 **Example:**
 
@@ -142,7 +142,7 @@ markplane check
 markplane check --orphans
 # ✓ No broken references found.
 # ! 1 orphan item(s) (no incoming references):
-#   TASK-007
+#   TASK-nq5w2
 ```
 
 ---
@@ -182,7 +182,7 @@ When `--item` is specified, prints the item along with its linked epic, plan, an
 markplane context
 # ✓ Context files regenerated in .context/
 
-markplane context --item TASK-001
+markplane context --item TASK-fq2x8
 # Prints item details, linked epic, plan, and dependencies
 ```
 
@@ -210,7 +210,7 @@ markplane dashboard
 # ══════════════════════════════════════════════════════
 #
 # In Progress
-#   TASK-002 Set up JWT handling (high @alice)
+#   TASK-d4p7m Set up JWT handling (high @alice)
 #
 # 3 open items | 1 in-progress | 0 blocked | 1 critical
 ```
@@ -229,15 +229,15 @@ markplane done <ID>
 
 | Argument | Description |
 |----------|-------------|
-| `<ID>` | Item ID (e.g. `TASK-042`, `PLAN-001`) |
+| `<ID>` | Item ID (e.g. `TASK-rm6d3`, `PLAN-ya8v2`) |
 
 Works with tasks, epics, plans, and notes. Sets the status to `done`.
 
 **Example:**
 
 ```bash
-markplane done TASK-001
-# TASK-001 → done
+markplane done TASK-fq2x8
+# TASK-fq2x8 → done
 ```
 
 ---
@@ -268,7 +268,7 @@ New epics are created with status `planned`.
 
 ```bash
 markplane epic "Phase 2: API Layer" --priority high
-# Created EPIC-002 — Phase 2: API Layer
+# Created EPIC-kb4n9 — Phase 2: API Layer
 ```
 
 ---
@@ -285,7 +285,7 @@ markplane graph <ID> [OPTIONS]
 
 | Argument | Description |
 |----------|-------------|
-| `<ID>` | Item ID (e.g. `TASK-042`) |
+| `<ID>` | Item ID (e.g. `TASK-rm6d3`) |
 
 **Options:**
 
@@ -298,15 +298,15 @@ Displays outgoing references (dependencies) as an indented tree and incoming ref
 **Example:**
 
 ```bash
-markplane graph TASK-004 --depth 2
-# Dependency graph for TASK-004
+markplane graph TASK-sv8r2 --depth 2
+# Dependency graph for TASK-sv8r2
 #
-# TASK-004
-#   └─ TASK-002
-#     └─ TASK-001
+# TASK-sv8r2
+#   └─ TASK-d4p7m
+#     └─ TASK-fq2x8
 #
 # Referenced by:
-#   TASK-006 → TASK-004
+#   TASK-mp3v8 → TASK-sv8r2
 ```
 
 ---
@@ -376,19 +376,19 @@ Self-links are rejected. Invalid source/target type combinations return an error
 
 ```bash
 # Task dependency
-markplane link TASK-003 TASK-001 -r depends-on
+markplane link TASK-hn5k3 TASK-fq2x8 -r depends-on
 
 # Task blocks another task
-markplane link TASK-002 TASK-005 -r blocks
+markplane link TASK-d4p7m TASK-jt9w4 -r blocks
 
 # Assign a task to an epic
-markplane link TASK-001 EPIC-002 -r epic
+markplane link TASK-fq2x8 EPIC-kb4n9 -r epic
 
 # Link a task to a plan (bidirectional)
-markplane link TASK-001 PLAN-003 -r plan
+markplane link TASK-fq2x8 PLAN-wk7n1 -r plan
 
 # Remove a link
-markplane link TASK-003 TASK-001 -r depends-on --remove
+markplane link TASK-hn5k3 TASK-fq2x8 -r depends-on --remove
 ```
 
 ---
@@ -428,7 +428,7 @@ markplane ls [KIND] [OPTIONS]
 markplane ls
 markplane ls --status in-progress,planned
 markplane ls --priority critical,high --tags auth
-markplane ls --epic EPIC-001
+markplane ls --epic EPIC-xa7r2
 markplane ls epics
 markplane ls plans
 markplane ls notes
@@ -511,7 +511,7 @@ New notes are created with status `draft`.
 
 ```bash
 markplane note "Evaluate caching strategies" --type research --tags "performance,cache"
-# Created NOTE-001 — Evaluate caching strategies
+# Created NOTE-vt3k8 — Evaluate caching strategies
 ```
 
 ---
@@ -528,7 +528,7 @@ markplane plan <ID> [OPTIONS]
 
 | Argument | Description |
 |----------|-------------|
-| `<ID>` | Task ID (e.g. `TASK-042`) |
+| `<ID>` | Task ID (e.g. `TASK-rm6d3`) |
 
 **Options:**
 
@@ -538,18 +538,18 @@ markplane plan <ID> [OPTIONS]
 
 Creates a plan that references the task via `implements` and links the plan back to the item's `plan` field. Inherits the item's epic.
 
-Only works with tasks (`TASK-NNN`).
+Only works with tasks (`TASK-xxxxx`).
 
 **Example:**
 
 ```bash
-markplane plan TASK-001
-# Created PLAN-001 — Implementation plan for Implement login page
-# Linked to TASK-001
+markplane plan TASK-4ed4i
+# Created PLAN-r9m2b — Implementation plan for Implement login page
+# Linked to TASK-4ed4i
 
-markplane plan TASK-002 --title "JWT architecture design"
-# Created PLAN-002 — JWT architecture design
-# Linked to TASK-002
+markplane plan TASK-d4p7m --title "JWT architecture design"
+# Created PLAN-mf5t9 — JWT architecture design
+# Linked to TASK-d4p7m
 ```
 
 ---
@@ -566,7 +566,7 @@ markplane promote <ID> [OPTIONS]
 
 | Argument | Description |
 |----------|-------------|
-| `<ID>` | Note ID (e.g. `NOTE-007`) |
+| `<ID>` | Note ID (e.g. `NOTE-dq6m1`) |
 
 **Options:**
 
@@ -575,13 +575,13 @@ markplane promote <ID> [OPTIONS]
 | `--priority <PRIORITY>` | `medium` | Priority for the new task |
 | `--effort <EFFORT>` | `medium` | Effort estimate for the new task |
 
-Creates a new task with the note's title and tags, using item type `feature`. Only works with notes (`NOTE-NNN`).
+Creates a new task with the note's title and tags, using item type `feature`. Only works with notes (`NOTE-xxxxx`).
 
 **Example:**
 
 ```bash
-markplane promote NOTE-001 --priority high --effort small
-# Promoted NOTE-001 → TASK-003 — Evaluate caching strategies
+markplane promote NOTE-vt3k8 --priority high --effort small
+# Promoted NOTE-vt3k8 → TASK-hn5k3 — Evaluate caching strategies
 ```
 
 ---
@@ -633,7 +633,7 @@ markplane show <ID>
 
 | Argument | Description |
 |----------|-------------|
-| `<ID>` | Item ID (e.g. `TASK-042`, `EPIC-001`, `PLAN-003`, `NOTE-007`) |
+| `<ID>` | Item ID (e.g. `TASK-rm6d3`, `EPIC-xa7r2`, `PLAN-wk7n1`, `NOTE-dq6m1`) |
 
 Displays all metadata fields and the markdown body. Works with all item types. Also finds archived items.
 
@@ -662,7 +662,7 @@ markplane stale --days 14
 # ! 2 item(s) not updated in 14 days:
 #
 #  ID       | Title            | Status  | Last Updated | Days Stale
-#  TASK-003 | Fix password ... | draft   | 2026-01-20   | 20
+#  TASK-hn5k3 | Fix password ... | draft   | 2026-01-20   | 20
 ```
 
 ---
@@ -679,7 +679,7 @@ markplane start <ID> [OPTIONS]
 
 | Argument | Description |
 |----------|-------------|
-| `<ID>` | Item ID (e.g. `TASK-042`) |
+| `<ID>` | Item ID (e.g. `TASK-rm6d3`) |
 
 **Options:**
 
@@ -692,11 +692,11 @@ For tasks, sets both status and assignee. For other item types, only updates sta
 **Example:**
 
 ```bash
-markplane start TASK-001
-# TASK-001 → in-progress (assigned to daniel)
+markplane start TASK-fq2x8
+# TASK-fq2x8 → in-progress (assigned to daniel)
 
-markplane start TASK-002 --user alice
-# TASK-002 → in-progress (assigned to alice)
+markplane start TASK-d4p7m --user alice
+# TASK-d4p7m → in-progress (assigned to alice)
 ```
 
 ---
@@ -713,7 +713,7 @@ markplane status <ID> <NEW_STATUS>
 
 | Argument | Description |
 |----------|-------------|
-| `<ID>` | Item ID (e.g. `TASK-042`) |
+| `<ID>` | Item ID (e.g. `TASK-rm6d3`) |
 | `<NEW_STATUS>` | New status value |
 
 **Valid statuses by type:**
@@ -728,11 +728,11 @@ markplane status <ID> <NEW_STATUS>
 **Example:**
 
 ```bash
-markplane status TASK-001 in-progress
-# TASK-001 → in-progress
+markplane status TASK-fq2x8 in-progress
+# TASK-fq2x8 → in-progress
 
-markplane status EPIC-001 active
-# EPIC-001 → active
+markplane status EPIC-xa7r2 active
+# EPIC-xa7r2 → active
 ```
 
 ---
@@ -742,15 +742,30 @@ markplane status EPIC-001 active
 Regenerate INDEX.md files and `.context/` summaries.
 
 ```
-markplane sync
+markplane sync [OPTIONS]
 ```
 
-Updates all INDEX.md routing files and regenerates AI context summaries in `.context/`. Run this after making bulk changes.
+**Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--normalize` | `false` | Also normalize task position keys (rewrites source files) |
+
+Updates all INDEX.md routing files and regenerates AI context summaries in `.context/`. These are derived files, gitignored within `.markplane/`. Run this after making bulk changes or after a fresh clone.
+
+Sync also runs automatically on `markplane init`, `markplane mcp` startup, and `markplane serve` startup.
+
+The `--normalize` flag rewrites fractional position keys (generated by drag-and-drop reordering) into clean sequential ones (`a0`, `a1`, `a2`). This is cosmetic — fractional keys work correctly for ordering. Normalization modifies task frontmatter (source files), which is why it's opt-in rather than automatic.
 
 **Example:**
 
 ```bash
 markplane sync
+# Syncing...
+# ✓ All INDEX.md files and .context/ summaries regenerated.
+
+markplane sync --normalize
+# Normalizing positions...
 # Syncing...
 # ✓ All INDEX.md files and .context/ summaries regenerated.
 ```
@@ -769,7 +784,7 @@ markplane update <ID> [OPTIONS]
 
 | Argument | Description |
 |----------|-------------|
-| `<ID>` | Item ID (e.g. `TASK-042`, `EPIC-001`, `PLAN-003`, `NOTE-007`) |
+| `<ID>` | Item ID (e.g. `TASK-rm6d3`, `EPIC-xa7r2`, `PLAN-wk7n1`, `NOTE-dq6m1`) |
 
 **Options:**
 
@@ -798,23 +813,23 @@ Fields that don't apply to the item's entity type are rejected with an error. Mu
 
 ```bash
 # Update effort and priority on a task
-markplane update TASK-001 --effort large --priority high
+markplane update TASK-fq2x8 --effort large --priority high
 
 # Assign and add tags
-markplane update TASK-001 --assignee @daniel --add-tag "ui,frontend"
+markplane update TASK-fq2x8 --assignee @daniel --add-tag "ui,frontend"
 
 # Remove a tag and change type
-markplane update TASK-001 --remove-tag wip --type bug
+markplane update TASK-fq2x8 --remove-tag wip --type bug
 
 # Clear assignee
-markplane update TASK-001 --clear-assignee
+markplane update TASK-fq2x8 --clear-assignee
 
 # Rename a task
-markplane update TASK-001 --title "New title"
+markplane update TASK-fq2x8 --title "New title"
 
 # Set epic dates
-markplane update EPIC-001 --started 2026-02-20 --target 2026-06-01
+markplane update EPIC-xa7r2 --started 2026-02-20 --target 2026-06-01
 
 # Change a note's type
-markplane update NOTE-001 --note-type decision --add-tag arch
+markplane update NOTE-vt3k8 --note-type decision --add-tag arch
 ```

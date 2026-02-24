@@ -174,10 +174,10 @@ The server exposes 7 resources via the `resources/list` method. All resources re
 
 | URI Template | Name | Description |
 |--------------|------|-------------|
-| `markplane://task/{id}` | Task | Full content of a task by ID (e.g. `markplane://task/TASK-042`) |
-| `markplane://epic/{id}` | Epic | Full content of an epic by ID (e.g. `markplane://epic/EPIC-001`) |
-| `markplane://plan/{id}` | Plan | Full content of an implementation plan by ID (e.g. `markplane://plan/PLAN-001`) |
-| `markplane://note/{id}` | Note | Full content of a note by ID (e.g. `markplane://note/NOTE-001`) |
+| `markplane://task/{id}` | Task | Full content of a task by ID (e.g. `markplane://task/TASK-rm6d3`) |
+| `markplane://epic/{id}` | Epic | Full content of an epic by ID (e.g. `markplane://epic/EPIC-xa7r2`) |
+| `markplane://plan/{id}` | Plan | Full content of an implementation plan by ID (e.g. `markplane://plan/PLAN-ya8v2`) |
+| `markplane://note/{id}` | Note | Full content of a note by ID (e.g. `markplane://note/NOTE-vt3k8`) |
 
 ## JSON-RPC Examples
 
@@ -228,7 +228,7 @@ The `instructions` field contains dynamic guidance built from the project's `con
       "type": "feature",
       "priority": "high",
       "effort": "medium",
-      "epic": "EPIC-001",
+      "epic": "EPIC-xa7r2",
       "tags": ["ui", "theming"]
     }
   }
@@ -244,7 +244,7 @@ The `instructions` field contains dynamic guidance built from the project's `con
     "content": [
       {
         "type": "text",
-        "text": "{\"id\":\"TASK-001\",\"title\":\"Add dark mode support\"}"
+        "text": "{\"id\":\"TASK-fq2x8\",\"title\":\"Add dark mode support\"}"
       }
     ]
   }
@@ -278,7 +278,7 @@ The `instructions` field contains dynamic guidance built from the project's `con
     "content": [
       {
         "type": "text",
-        "text": "[\n  {\n    \"id\": \"TASK-001\",\n    \"title\": \"Add dark mode support\",\n    \"status\": \"in-progress\",\n    \"priority\": \"high\",\n    \"effort\": \"medium\"\n  }\n]"
+        "text": "[\n  {\n    \"id\": \"TASK-fq2x8\",\n    \"title\": \"Add dark mode support\",\n    \"status\": \"in-progress\",\n    \"priority\": \"high\",\n    \"effort\": \"medium\"\n  }\n]"
       }
     ]
   }
@@ -296,7 +296,7 @@ The `instructions` field contains dynamic guidance built from the project's `con
   "params": {
     "name": "markplane_show",
     "arguments": {
-      "id": "TASK-001"
+      "id": "TASK-fq2x8"
     }
   }
 }
@@ -311,7 +311,7 @@ The `instructions` field contains dynamic guidance built from the project's `con
     "content": [
       {
         "type": "text",
-        "text": "---\nid: TASK-001\ntitle: \"Add dark mode support\"\nstatus: in-progress\npriority: high\ntype: feature\n...\n---\n\n# Add dark mode support\n\n## Description\n..."
+        "text": "---\nid: TASK-fq2x8\ntitle: \"Add dark mode support\"\nstatus: in-progress\npriority: high\ntype: feature\n...\n---\n\n# Add dark mode support\n\n## Description\n..."
       }
     ]
   }
@@ -337,7 +337,7 @@ The server uses standard JSON-RPC error codes:
   "id": 5,
   "error": {
     "code": -32603,
-    "message": "Item TASK-999 not found in backlog or its archive"
+    "message": "Item TASK-zz9x1 not found in backlog or its archive"
   }
 }
 ```

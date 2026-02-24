@@ -41,7 +41,7 @@ The default backlog view shows tasks organized in status columns: In Progress, P
 
 Click any task to open its detail panel. The panel shows:
 
-- **Markdown body** rendered with syntax highlighting and clickable `[[TASK-042]]` wiki-link chips
+- **Markdown body** rendered with syntax highlighting and clickable `[[TASK-rm6d3]]` wiki-link chips
 - **Metadata sidebar** with editable fields: status, priority, effort, type, epic, tags, assignee, dependencies
 - Click any metadata field to edit it inline via dropdown
 
@@ -51,7 +51,7 @@ An interactive node graph built with React Flow showing `blocks` and `depends_on
 
 - Nodes are color-coded by entity type and show status
 - Pan, zoom, and click nodes to navigate
-- Use `?focus=TASK-042` to center the graph on a specific item
+- Use `?focus=TASK-rm6d3` to center the graph on a specific item
 - MiniMap in the corner for orientation
 
 ### Command Palette (`Cmd+K`)
@@ -71,7 +71,7 @@ The dashboard includes an AI Context panel showing the `.context/summary.md` con
 The web UI stays in sync with changes made from any source:
 
 - Edit a `.markplane/` file in your editor
-- Run a CLI command (`markplane status TASK-001 done`)
+- Run a CLI command (`markplane status TASK-fq2x8 done`)
 - Use the MCP server from an AI coding tool
 
 All changes are detected via filesystem watching and pushed to the browser over WebSocket within ~100ms. No manual refresh needed.
@@ -209,7 +209,7 @@ All list endpoints (`/api/tasks`, `/api/epics`, `/api/plans`, `/api/notes`) acce
 Connect to `ws://localhost:4200/ws` for real-time updates:
 
 ```json
-{ "type": "file_changed", "entity": "task", "id": "TASK-001", "action": "modified" }
+{ "type": "file_changed", "entity": "task", "id": "TASK-fq2x8", "action": "modified" }
 { "type": "config_changed" }
 { "type": "sync_complete" }
 { "type": "connected", "version": "0.1.0" }

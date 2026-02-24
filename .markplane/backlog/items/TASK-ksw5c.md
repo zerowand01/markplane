@@ -1,19 +1,22 @@
 ---
 id: TASK-ksw5c
-title: "Debounced auto-sync in server mode after API mutations and file changes"
+title: Debounced auto-sync in server mode after API mutations and file changes
 status: draft
 priority: someday
 type: enhancement
 effort: medium
-tags: ["sync", "serve", "architecture"]
-epic: null
+tags:
+- sync
+- serve
+- architecture
+epic: EPIC-z8tdz
 plan: null
 depends_on: []
 blocks: []
 assignee: null
 position: a2
 created: 2026-02-20
-updated: 2026-02-20
+updated: 2026-02-21
 ---
 
 # Debounced auto-sync in server mode after API mutations and file changes

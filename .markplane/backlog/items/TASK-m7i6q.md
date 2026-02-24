@@ -9,7 +9,7 @@ tags:
 - cli
 - mcp
 - core
-epic: null
+epic: EPIC-6zdf4
 plan: null
 depends_on: []
 blocks:

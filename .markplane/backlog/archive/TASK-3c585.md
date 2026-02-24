@@ -1,7 +1,7 @@
 ---
 id: TASK-3c585
 title: Add domain-focused context generation
-status: backlog
+status: cancelled
 priority: medium
 type: feature
 effort: medium
@@ -15,7 +15,7 @@ blocks: []
 assignee: null
 position: a6
 created: 2026-02-10
-updated: 2026-02-10
+updated: 2026-02-23
 ---
 
 # Add domain-focused context generation
@@ -38,3 +38,7 @@ For example, `markplane context --tag mcp` would produce a summary of only MCP-r
 ## Notes
 
 This builds on the existing `QueryFilter` infrastructure used by `markplane ls`. The context generation functions in `context.rs` already accept filtered item lists — the main work is adding CLI flags, wiring them through, and ensuring the output is coherent when scoped (e.g., blocked-items should only show blockers relevant to the filtered domain, not all blocked items project-wide).
+
+## Cancellation Reason
+
+`markplane_query` already supports filtering by tag, epic, status, priority, and assignee — returning the matching items. AI agents compose domain-scoped context naturally by calling `query` with filters, then `show` on relevant results. A pre-formatted narrative summary of filtered results adds marginal value over the structured query output, especially since agents read the actual items anyway. The filter combinations are also unbounded (`--tag X --epic Y --status Z`), so these can't be pre-generated — making them effectively a reformatted `query`, not a true context artifact like the `.context/` files.

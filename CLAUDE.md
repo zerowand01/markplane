@@ -6,92 +6,57 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Markplane is an AI-native, markdown-first project management system. "Mark" (markdown) + "plane" (control plane). The repo itself is the project manager — no database, no SaaS. Files are the source of truth, git is the changelog.
 
-**Status**: Design phase. The complete specification lives in `docs/ai-native-pm-system-design.md`. No source code has been written yet.
+**Tech stack**: Rust CLI binary with integrated MCP server (`markplane mcp` subcommand) wrapping a shared core library. React + Tailwind web UI via `markplane serve`.
 
-**Planned tech stack**: Rust CLI binary with integrated MCP server (`markplane mcp` subcommand) wrapping a shared core library. Optional React + Tailwind web UI.
+## Build & Test
 
-## Architecture
-
-The system is structured around a `.markplane/` directory that lives inside any repository:
-
-```
-CLI binary (markplane) ──→ Core Library (Rust)
-  ├── CLI subcommands           │
-  └── MCP server (markplane mcp)│
-                          .markplane/ (markdown files)
-```
-
-### Key architectural concepts
-
-- **Filesystem as database**: Each work item is an individual markdown file with YAML frontmatter. No SQL database.
-- **INDEX.md router pattern**: Every directory has an INDEX.md that serves as a routing layer. AI reads the index (~200 tokens), then loads only relevant files.
-- **AI context layer**: `.context/` directory contains generated summaries compressing project state for AI consumption (~1000 tokens for full project state).
-- **ID system**: `{PREFIX}-{NUMBER}` — `EPIC-NNN`, `TASK-NNN`, `PLAN-NNN`, `NOTE-NNN`. IDs are permanent, sequential, never reused. Prefix determines directory location.
-- **Cross-references**: `[[TASK-042]]` wiki-style syntax. Prefix resolves to type and directory.
-
-### Directory modules (within `.markplane/`)
-
-| Directory | Purpose | Entity prefix |
-|-----------|---------|---------------|
-| `roadmap/` | Strategic epics & phases | `EPIC` |
-| `backlog/` | Work items (primary) | `TASK` |
-| `plans/` | Implementation details | `PLAN` |
-| `notes/` | Research, ideas, decisions | `NOTE` |
-| `templates/` | Document templates | — |
-| `.context/` | Generated AI summaries | — |
-
-### Status workflows
-
-- **Tasks**: `draft → backlog → planned → in-progress → done → archive` (also `cancelled`)
-- **Epics**: `planned → active → done`
-- **Plans**: `draft → approved → in-progress → done → archive`
-
-### Lifecycle flow
-
-```
-ideas.md / NOTE-xxx → TASK-xxx → PLAN-xxx → Done → Archive
-```
-
-## Build & Development
-
-No build system exists yet. When implemented:
-
-- **Language**: Rust (for CLI speed, single binary distribution)
-- **Crates**: `pulldown-cmark` or `comrak` (markdown), `serde_yaml` (YAML), `notify` (file watching)
-- **Distribution**: `brew install markplane`, `cargo install markplane`, or as a project dev dependency
-
-### Planned CLI commands
+Requires Rust 1.93.0+ (edition 2024). Web UI also requires Node.js 18+.
 
 ```bash
-markplane init                         # Scaffold .markplane/ structure
-markplane add "title" --type --priority  # Create task
-markplane show TASK-042                # View item
-markplane ls --status in-progress      # List/filter items
-markplane status TASK-042 in-progress  # Update status
-markplane sync                         # Regenerate INDEX.md files + .context/
-markplane context --item TASK-042      # Generate focused AI context bundle
-markplane check                        # Validate cross-references
-markplane promote NOTE-007             # Note → task
-markplane plan TASK-042                # Create linked implementation plan
+cargo build --workspace              # Build all crates
+cargo test --workspace               # Run all tests
+cargo clippy --workspace             # Lint (must be warning-free)
 ```
 
-### MCP server
+Web UI (optional):
+```bash
+cd crates/markplane-web/ui && npm install && npm run build   # Build frontend
+cargo install --path crates/markplane-cli --features embed-ui # Single binary with embedded UI
+```
 
-The MCP server is integrated into the CLI as `markplane mcp`. It exposes typed tools (`markplane_summary`, `markplane_query`, `markplane_show`, `markplane_add`, `markplane_update`, `markplane_start`, `markplane_done`, `markplane_sync`, etc.) providing structured API access for AI coding tools over JSON-RPC stdio. Configured via `~/.claude/mcp.json` or `.cursor/mcp.json`.
+After code changes, `cargo install --path crates/markplane-cli` to update the local `markplane` binary.
 
-## File Conventions
+## Workspace Structure
 
-- Individual files stay under ~2,000 tokens (AI-optimized)
-- YAML frontmatter for all structured metadata (`id`, `title`, `status`, `priority`, `type`, `effort`, `tags`, `epic`, `depends_on`, `blocks`, etc.)
-- Config in YAML (`config.yaml`), not JSON
-- Archive subdirectories preserve completed items (not deleted)
-- Special non-ID files: `notes/ideas.md` (quick capture), `notes/decisions.md` (decision log)
+| Crate | Type | Role |
+|-------|------|------|
+| `markplane-core` | Library | Data models, CRUD, sync, references, context generation |
+| `markplane-cli` | Binary (`markplane`) | 25 CLI commands, MCP server (`markplane mcp`), web server (`markplane serve`) |
+| `markplane-web/ui` | Next.js app | React + Tailwind frontend (static export, optionally embedded via `rust-embed`) |
 
-## Agent Teams
+## Key Conventions
 
-Experimental agent teams are enabled via `.claude/settings.json` (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`).
+- **Error handling**: `thiserror`/`MarkplaneError` in core, `anyhow` in CLI, `Result<String, String>` in MCP tool handlers
+- **No regex**: Reference extraction (`[[ID]]`) uses manual byte scanning
+- **`serde_yaml 0.9`**: Deprecated but kept — `serde_yml` is too immature
+- **Integration tests**: Use `cargo_bin_cmd!()` macro (not deprecated `Command::cargo_bin()`)
+- **Derived files**: INDEX.md and `.context/` are gitignored within `.markplane/` — fully regenerated by `markplane sync`
+- **Auto-sync**: Runs on `markplane init`, `markplane mcp` startup, and `markplane serve` startup
+- **ID system**: `{PREFIX}-{RANDOM}` with 5-char alphanumeric suffix (no sequential counters)
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed patterns, error handling, code style, and how to add new commands/tools.
+
+## Documentation
+
+- [Architecture](docs/architecture.md) — System design, data model, crate responsibilities
+- [File Format](docs/file-format.md) — Directory structure, YAML schema, ID system, cross-references
+- [CLI Reference](docs/cli-reference.md) — All 25 commands with examples
+- [MCP Setup](docs/mcp-setup.md) — AI tool integration, tool/resource catalog
+- [Web UI Guide](docs/web-ui-guide.md) — Dashboard usage and development workflow
+- [Getting Started](docs/getting-started.md) — Step-by-step tutorial
 
 ## Project Management
+
 This project uses Markplane for project management. Key files:
 - `.markplane/INDEX.md` - Navigation entry point
 - `.markplane/.context/summary.md` - Current project state

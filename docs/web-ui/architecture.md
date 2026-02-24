@@ -3,7 +3,7 @@
 **Status**: Implemented
 **Created**: 2026-02-12
 **Updated**: 2026-02-21
-**Related**: [[TASK-017]], [[PLAN-001]]
+**Related**: [[TASK-ur5hw]], [[PLAN-f79x3]]
 
 ---
 
@@ -76,7 +76,7 @@ The ~9KB bundle size difference (SWR ~4KB vs TQ ~13KB) is acceptable given TQ's 
 
 TanStack Query handles all server state (API data, caching, revalidation). For client-only state:
 - **React Context**: Theme preference (next-themes), sidebar collapsed state (shadcn SidebarProvider)
-- **URL search params**: Active detail sheet (e.g., `?task=TASK-042`), view mode (kanban/list)
+- **URL search params**: Active detail sheet (e.g., `?task=TASK-rm6d3`), view mode (kanban/list)
 
 ### Why Static Export?
 
@@ -218,7 +218,7 @@ Since the Next.js app is statically exported, **all data fetching happens client
                     │                      │
                     │  GET /api/tasks      │──→ markplane_core::list_tasks()
                     │  GET /api/tasks/:id  │──→ markplane_core::read_item()
-                    │  PATCH /api/tasks/:id│──→ markplane_core::update_status()
+                    │  PATCH /api/tasks/:id│──→ markplane_core::update_task()
                     │  POST /api/tasks     │──→ markplane_core::create_task()
                     │  GET /api/epics      │──→ markplane_core::list_epics()
                     │  GET /api/summary    │──→ .context/summary.md
@@ -241,13 +241,13 @@ The Rust HTTP server exposes a REST API that mirrors `markplane-core` operations
 | `GET` | `/api/tasks` | List tasks with filters | `list_tasks(filter)` |
 | `GET` | `/api/tasks/:id` | Get task detail | `read_item(id)` |
 | `POST` | `/api/tasks` | Create task | `create_task(...)` |
-| `PATCH` | `/api/tasks/:id` | Update task fields (status, priority, body, etc.) | `update_item()` |
+| `PATCH` | `/api/tasks/:id` | Update task fields (status, priority, body, etc.) | `update_task()` + `link_items()` + `update_body()` |
 | `DELETE` | `/api/tasks/:id` | Archive task | `archive_item(id)` |
 
 **Query parameters for `GET /api/tasks`:**
 - `status` — comma-separated: `in-progress,planned`
 - `priority` — comma-separated: `critical,high`
-- `epic` — epic ID: `EPIC-001`
+- `epic` — epic ID: `EPIC-xa7r2`
 - `tags` — comma-separated: `ui,backend`
 - `assignee` — assignee name
 - `type` — item type: `bug,feature`
@@ -485,7 +485,7 @@ All mutation hooks use TanStack Query's `useMutation` with `onMutate`/`onError`/
 
 ### URL Design
 
-Item detail views use Sheet slide-over panels driven by URL query parameters (e.g., `/backlog?task=TASK-042`). This avoids full-page navigation for quick viewing/editing while keeping URLs shareable. The command palette (`Cmd+K` or `?`) provides full-text search across all entities.
+Item detail views use Sheet slide-over panels driven by URL query parameters (e.g., `/backlog?task=TASK-rm6d3`). This avoids full-page navigation for quick viewing/editing while keeping URLs shareable. The command palette (`Cmd+K` or `?`) provides full-text search across all entities.
 
 ---
 
@@ -570,7 +570,7 @@ Item detail views use Sheet slide-over panels driven by URL query parameters (e.
 
 Two components handle markdown:
 
-- **`MarkdownRenderer`** (read-only): Uses `react-markdown` + `remark-gfm` to render markdown body content. `[[TASK-042]]` wiki-links are pre-processed and transformed into entity-colored `<WikiLinkChip>` components with click-to-navigate behavior.
+- **`MarkdownRenderer`** (read-only): Uses `react-markdown` + `remark-gfm` to render markdown body content. `[[TASK-rm6d3]]` wiki-links are pre-processed and transformed into entity-colored `<WikiLinkChip>` components with click-to-navigate behavior.
 
 - **`MarkdownEditor`** (editing): Uses TipTap (`@tiptap/react`) with a dual-mode interface:
   - **Rich text mode**: WYSIWYG editing with formatting toolbar (bold, italic, strikethrough, headings, lists, task lists, code blocks, blockquotes, links). Uses `@tiptap/starter-kit`, `@tiptap/extension-task-list`, `@tiptap/extension-task-item`, `@tiptap/extension-link`.
@@ -800,7 +800,7 @@ type WsEvent =
 
 The `useWebSocket()` hook at the app root listens for events and triggers TanStack Query invalidation for affected resources. This means:
 - User edits a file in their editor → Rust detects change → WS event → TanStack Query refetches active observers → UI updates
-- CLI runs `markplane status TASK-001 done` → file change → UI updates
+- CLI runs `markplane status TASK-fq2x8 done` → file change → UI updates
 - MCP server creates a task → file change → UI updates
 
 Debouncing: File watcher events are debounced at 100ms to batch rapid changes (e.g., `markplane sync` writes multiple files).
@@ -824,21 +824,21 @@ Debouncing: File watcher events are debounced at 100ms to batch rapid changes (e
 │  Plans     │                                              │
 │  Notes     │  ┌─────────────────────────────────────┐    │
 │  Graph     │  │ Active Work                          │    │
-│  Search    │  │ ▸ TASK-015 Implement user auth  high │    │
-│            │  │ ▸ TASK-017 Add search to...    med  │    │
-│            │  │ ▸ TASK-018 Fix pagination      high │    │
+│  Search    │  │ ▸ TASK-hj6r9 Implement user auth  high │    │
+│            │  │ ▸ TASK-nt6j4 Add search to...    med  │    │
+│            │  │ ▸ TASK-kp2m5 Fix pagination      high │    │
 │            │  └─────────────────────────────────────┘    │
 │            │                                              │
 │            │  ┌─────────────────┐ ┌─────────────────┐    │
 │            │  │ Blocked Items    │ │ Recent Done      │    │
-│            │  │ TASK-012 ←TASK-8│ │ ✓ TASK-014 (2d) │    │
+│            │  │ TASK-vn8k4 ←T-vn8k4│ │ ✓ TASK-gt3w7 (2d) │    │
 │            │  └─────────────────┘ └─────────────────┘    │
 │            │                                              │
 │            │  ┌─────────────────────────────────────┐    │
 │            │  │ Epic Progress                        │    │
-│            │  │ EPIC-001 Core CLI     ████████░░ 80%│    │
-│            │  │ EPIC-002 MCP Server   ██████░░░░ 60%│    │
-│            │  │ EPIC-003 Web UI       ██░░░░░░░░ 20%│    │
+│            │  │ EPIC-xa7r2 Core CLI     ████████░░ 80%│    │
+│            │  │ EPIC-kb4n9 MCP Server   ██████░░░░ 60%│    │
+│            │  │ EPIC-gc8t5 Web UI       ██░░░░░░░░ 20%│    │
 │            │  └─────────────────────────────────────┘    │
 │            │                                              │
 │            │  ┌─────────────────────────────────────┐    │
@@ -868,12 +868,12 @@ The **AI Context** panel surfaces the `.context/summary.md` content — Markplan
 │            │                                              │
 │            │  In Progress(3)  Planned(5)   Backlog(12)   │
 │            │  ┌──────────┐   ┌──────────┐  ┌──────────┐ │
-│            │  │ TASK-015 │   │ TASK-020 │  │ TASK-025 │ │
+│            │  │ TASK-hj6r9 │   │ TASK-wq4t8 │  │ TASK-bm9v6 │ │
 │            │  │ User auth│   │ CSV exp  │  │ Dark mode│ │
 │            │  │ 🔴 high  │   │ 🟡 med   │  │ 🟡 med   │ │
-│            │  │ EPIC-001 │   │ EPIC-002 │  │ EPIC-003 │ │
+│            │  │ EPIC-xa7r2 │   │ EPIC-kb4n9 │  │ EPIC-gc8t5 │ │
 │            │  ├──────────┤   ├──────────┤  ├──────────┤ │
-│            │  │ TASK-017 │   │ TASK-021 │  │ TASK-026 │ │
+│            │  │ TASK-nt6j4 │   │ TASK-xr7n3 │  │ TASK-cs5k2 │ │
 │            │  │ Search   │   │ Form val │  │ Profile  │ │
 │            │  │ 🟡 med   │   │ 🟢 low   │  │ 🟢 low   │ │
 │            │  └──────────┘   └──────────┘  └──────────┘ │
@@ -884,11 +884,11 @@ The **AI Context** panel surfaces the `.context/summary.md` content — Markplan
 - Filter bar persists state in URL query params for shareability
 - List view alternative uses `<DataTable>` with sortable columns
 
-### 9.3 Task Detail (Sheet slide-over, e.g., `/backlog?task=TASK-042`)
+### 9.3 Task Detail (Sheet slide-over, e.g., `/backlog?task=TASK-rm6d3`)
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ [Sidebar]  │  Backlog > TASK-042                         │
+│ [Sidebar]  │  Backlog > TASK-rm6d3                         │
 │            │                                              │
 │            │  ┌──────────────────────┐ ┌──────────────┐  │
 │            │  │                      │ │ Status       │  │
@@ -904,16 +904,16 @@ The **AI Context** panel surfaces the `.context/summary.md` content — Markplan
 │            │  │ - [ ] WCAG 2.2 AA   │ │ [feature]    │  │
 │            │  │                      │ │              │  │
 │            │  │ ## References        │ │ Epic         │  │
-│            │  │ → EPIC-003           │ │ [EPIC-003] → │  │
-│            │  │ ← TASK-038           │ │              │  │
-│            │  │ → TASK-045           │ │ Tags         │  │
+│            │  │ → EPIC-gc8t5           │ │ [EPIC-gc8t5] → │  │
+│            │  │ ← TASK-wp7v2           │ │              │  │
+│            │  │ → TASK-bg8t1           │ │ Tags         │  │
 │            │  │                      │ │ [ui][theming]│  │
 │            │  │                      │ │              │  │
 │            │  │                      │ │ Depends On   │  │
-│            │  │                      │ │ TASK-038 →   │  │
+│            │  │                      │ │ TASK-wp7v2 →   │  │
 │            │  │                      │ │              │  │
 │            │  │                      │ │ Blocks       │  │
-│            │  │                      │ │ TASK-045 →   │  │
+│            │  │                      │ │ TASK-bg8t1 →   │  │
 │            │  └──────────────────────┘ └──────────────┘  │
 └─────────────────────────────────────────────────────────┘
 ```

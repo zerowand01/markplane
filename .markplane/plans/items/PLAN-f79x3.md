@@ -124,7 +124,7 @@ updated: 2026-02-13
    - Custom `ItemNode` component: ID, title, status color, entity-colored border
    - Animated edges: blocks (red), depends_on (blue)
    - MiniMap + Controls (zoom, fit, fullscreen)
-   - Focus mode: `/graph?focus=TASK-042` centers on a specific item
+   - Focus mode: `/graph?focus=TASK-rm6d3` centers on a specific item
    - API: `GET /api/graph/:id`, `GET /api/graph`
 
 3. **Command palette** (Cmd+K)

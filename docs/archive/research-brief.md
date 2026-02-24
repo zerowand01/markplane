@@ -3,7 +3,7 @@
 **Status**: Reference
 **Created**: 2026-02-12
 **Updated**: 2026-02-12
-**Related**: [[TASK-017]], [[PLAN-001]]
+**Related**: [[TASK-ur5hw]], [[PLAN-f79x3]]
 
 > Comprehensive research into modern PM tools, developer dashboards, markdown-first UIs, and design trends (2025-2026) to inform Markplane's web UI design.
 
@@ -538,7 +538,7 @@ Brand Accent (Markplane Blue):
 - Interactive: zoom, pan, node drag, hover details with entity preview
 - Color-coded nodes by status, entity-colored borders by type
 - Edge arrows showing dependency direction with animated flow indicators
-- WikiLinkChip integration: `[[TASK-042]]` renders as clickable entity-colored chip
+- WikiLinkChip integration: `[[TASK-rm6d3]]` renders as clickable entity-colored chip
 
 **Recommended:** `@xyflow/react` (React Flow) with Dagre layout — purpose-built for node-based DAGs, better than force-directed for dependency graphs
 

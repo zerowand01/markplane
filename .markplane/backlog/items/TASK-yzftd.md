@@ -16,20 +16,21 @@ blocks:
 assignee: null
 position: a1
 created: 2026-02-13
-updated: 2026-02-19
+updated: 2026-02-21
 ---
 
 # Set up GitHub Actions CI pipeline
 
 ## Description
 
-Create a GitHub Actions CI workflow that runs on every push and PR. Should validate the full stack: Rust (all 3 crates) and the Next.js frontend. This is the foundation for the release workflow — we need confidence that the build is clean before cutting releases.
+Create a GitHub Actions CI workflow that runs on every push and PR. Should validate the full stack: both Rust workspace crates (`markplane-core`, `markplane-cli`) and the Next.js frontend (`crates/markplane-web/ui/`). This is the foundation for the release workflow — we need confidence that the build is clean before cutting releases.
 
 ## Acceptance Criteria
 
 - [ ] Workflow triggers on push to main and on PRs
+- [ ] Runs `cargo fmt --check` (formatting gate)
 - [ ] Runs `cargo clippy --all-targets --all-features -- -D warnings`
-- [ ] Runs `cargo test --workspace` (all 230 tests)
+- [ ] Runs `cargo test --workspace`
 - [ ] Runs `npm install && npm run build` in `crates/markplane-web/ui/`
 - [ ] Runs on ubuntu-latest (Linux), optionally macOS for cross-platform validation
 - [ ] Uses Rust toolchain caching for fast CI times

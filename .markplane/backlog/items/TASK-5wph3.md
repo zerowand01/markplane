@@ -8,14 +8,14 @@ effort: medium
 tags:
 - templates
 - ai-guidance
-epic: null
+epic: EPIC-a5vs9
 plan: null
 depends_on: []
 blocks: []
 assignee: null
 position: a0V
 created: 2026-02-20
-updated: 2026-02-20
+updated: 2026-02-21
 ---
 
 # Enhance plan and task templates with AI authoring guidance
@@ -52,7 +52,7 @@ Add new sections to the plan body:
 Enhance existing sections:
 
 - **Phases** — Each phase ends with a checkpoint statement defining what must be true when the phase is complete (e.g., "service starts, health checks pass, API responds with empty list").
-- **Cross-plan contract convention** — If a plan defines an interface consumed by other plans, mark it as `## Cross-Plan Contract: [Name]` — this is the canonical definition. Other plans consuming that contract reference it via wiki-link (`> **Contract source**: [[PLAN-NNN]] §Section Name`), never redefine it.
+- **Cross-plan contract convention** — If a plan defines an interface consumed by other plans, mark it as `## Cross-Plan Contract: [Name]` — this is the canonical definition. Other plans consuming that contract reference it via wiki-link (`> **Contract source**: [[PLAN-xxxxx]] §Section Name`), never redefine it.
 
 The refactor template gets the same enhancements adapted for refactor context. In particular, Ground Truth verifies that the Current State section actually matches the codebase rather than being written from assumption.
 

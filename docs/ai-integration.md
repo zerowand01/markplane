@@ -94,7 +94,7 @@ Markplane targets ~1000 tokens for full project state via context files. Individ
 
 2. **Read the relevant `INDEX.md`** for item listings. If working on a task, read `.markplane/backlog/INDEX.md`. If exploring epics, read `.markplane/roadmap/INDEX.md`.
 
-3. **Load specific items** as needed. Use the IDs from the index to read individual files: `TASK-042.md`, `PLAN-012.md`, etc.
+3. **Load specific items** as needed. Use the IDs from the index to read individual files: `TASK-rm6d3.md`, `PLAN-rj9d4.md`, etc.
 
 4. **Use MCP tools** for structured access. Instead of reading raw files, AI tools with MCP support can call `markplane_query`, `markplane_show`, `markplane_context`, etc. See [MCP Setup Guide](mcp-setup.md).
 
@@ -105,12 +105,12 @@ Markplane targets ~1000 tokens for full project state via context files. Individ
 2. markplane_query             -> find relevant tasks
    { status: ["in-progress"], priority: ["critical", "high"] }
 3. markplane_show              -> read full details of the target item
-   { id: "TASK-042" }
+   { id: "TASK-rm6d3" }
 4. markplane_context           -> get focused context including dependencies
-   { item: "TASK-042" }
+   { item: "TASK-rm6d3" }
 5. (implement the feature)
 6. markplane_done              -> mark the item complete
-   { id: "TASK-042" }
+   { id: "TASK-rm6d3" }
 7. markplane_sync              -> regenerate indexes and context files
 ```
 
@@ -121,11 +121,11 @@ The create-then-edit workflow uses `markplane_add` to scaffold the item, then th
 ```
 1. markplane_add               -> create the item (scaffolded from template)
    { title: "Add caching layer", priority: "high" }
-   returns: { id: "TASK-043" }
+   returns: { id: "TASK-cy9k5" }
 2. Edit file directly           -> fill in the free-form markdown body
-   .markplane/backlog/items/TASK-043.md (edit below frontmatter)
+   .markplane/backlog/items/TASK-cy9k5.md (edit below frontmatter)
 3. markplane_update            -> move from draft to backlog once fully defined
-   { id: "TASK-043", status: "backlog" }
+   { id: "TASK-cy9k5", status: "backlog" }
 ```
 
 Total context consumed: ~2000-3000 tokens for the project management layer, leaving the rest of the context window for code.
@@ -141,7 +141,7 @@ Items reference each other using `[[ID]]` wiki-style syntax. The ID prefix deter
 | `PLAN` | Plan | `plans/` |
 | `NOTE` | Note | `notes/` |
 
-For example, `[[TASK-042]]` resolves to `.markplane/backlog/items/TASK-042.md`.
+For example, `[[TASK-rm6d3]]` resolves to `.markplane/backlog/items/TASK-rm6d3.md`.
 
 ## The Sync Command
 

@@ -9,7 +9,7 @@ tags:
 - web-ui
 - core
 - refactor
-epic: null
+epic: EPIC-c5uem
 plan: null
 depends_on:
 - TASK-m7i6q

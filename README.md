@@ -9,7 +9,7 @@ Markplane stores all project management data as markdown files with YAML frontma
 - **Filesystem as database** — Every work item is an individual markdown file. Browse, edit, and grep your project data with standard tools.
 - **Markdown + YAML frontmatter** — Structured metadata (status, priority, effort, tags) in YAML; free-form details in markdown.
 - **AI-optimized context layer** — Generated `.context/` summaries compress full project state into ~1000 tokens for AI consumption.
-- **Cross-references** — `[[TASK-042]]` wiki-style links between items, with validation via `markplane check`.
+- **Cross-references** — `[[TASK-rm6d3]]` wiki-style links between items, with validation via `markplane check`.
 - **INDEX.md router pattern** — Each directory has an INDEX.md that lets AI agents load only what they need (~200 tokens per index).
 - **Web UI** — Local dashboard with kanban board, dependency graph, markdown rendering, real-time updates, and dark/light themes via `markplane serve`.
 - **MCP server** — Structured tool access for AI coding assistants (Claude, Cursor, etc.) via JSON-RPC over stdio.
@@ -48,15 +48,15 @@ markplane init --name "My Project"
 
 # Create work items
 markplane epic "Phase 1: Core Features" --priority high
-markplane add "Implement user auth" --type feature --priority high --epic EPIC-001
+markplane add "Implement user auth" --type feature --priority high --epic EPIC-xa7r2
 markplane add "Fix login redirect" --type bug --priority critical --tags "auth,urgent"
 
 # View and manage
 markplane ls                            # List tasks
 markplane ls epics                      # List epics
-markplane show TASK-001                 # View item details
-markplane start TASK-001                # Set to in-progress + assign to you
-markplane done TASK-001                 # Mark as done
+markplane show TASK-fq2x8                 # View item details
+markplane start TASK-fq2x8                # Set to in-progress + assign to you
+markplane done TASK-fq2x8                 # Mark as done
 
 # Keep things organized
 markplane sync                          # Regenerate INDEX.md + .context/
@@ -71,12 +71,12 @@ After `markplane init`, your repo gets a `.markplane/` directory:
 
 ```
 .markplane/
-├── config.yaml           # Project settings and ID counters
+├── config.yaml           # Project settings
 ├── INDEX.md              # Root navigation
-├── roadmap/              # Epics (EPIC-NNN)
-├── backlog/              # Work items (TASK-NNN)
-├── plans/                # Implementation plans (PLAN-NNN)
-├── notes/                # Research, ideas, decisions (NOTE-NNN)
+├── roadmap/              # Epics — strategic goals and phases (EPIC-xxxxx)
+├── backlog/              # Tasks — the "what" to do (TASK-xxxxx)
+├── plans/                # Plans — the "how" to do it (PLAN-xxxxx)
+├── notes/                # Notes — research, ideas, decisions (NOTE-xxxxx)
 ├── templates/            # Document templates
 └── .context/             # AI-generated summaries
 ```
@@ -104,7 +104,7 @@ The web UI provides:
 - **Dashboard** — Summary metrics, active work, blocked items, epic progress, AI context panel
 - **Kanban board** — Drag-and-drop task management with status columns, filters, and WIP limits
 - **List and table views** — Sortable, filterable alternatives to the kanban
-- **Task and epic detail** — Markdown rendering with clickable `[[TASK-042]]` wiki-links, inline status/priority editing
+- **Task and epic detail** — Markdown rendering with clickable `[[TASK-rm6d3]]` wiki-links, inline status/priority editing
 - **Dependency graph** — Interactive node graph (React Flow) showing blocks/depends_on relationships
 - **Command palette** — `Cmd+K` to search and navigate anywhere
 - **Full-text search** — Search across all items with highlighted matches
@@ -119,7 +119,7 @@ See the [Web UI Guide](docs/web-ui-guide.md) for development workflow, keyboard 
 - [CLI Reference](docs/cli-reference.md) — Complete command documentation
 - [Web UI Guide](docs/web-ui-guide.md) — Web dashboard usage and development
 - [MCP Setup Guide](docs/mcp-setup.md) — AI tool integration
-- [Design Specification](docs/ai-native-pm-system-design.md) — Full architecture and design
+- [Architecture](docs/architecture.md) — System design and crate structure
 
 ## MCP Integration
 

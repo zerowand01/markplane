@@ -2,7 +2,7 @@
 id: TASK-v5b6b
 title: Add file watching for real-time MCP updates
 status: backlog
-priority: low
+priority: someday
 type: feature
 effort: medium
 tags:
@@ -12,9 +12,9 @@ plan: null
 depends_on: []
 blocks: []
 assignee: null
-position: a5
+position: a1V
 created: 2026-02-10
-updated: 2026-02-10
+updated: 2026-02-23
 ---
 
 # Add file watching for real-time MCP updates
@@ -35,6 +35,22 @@ This becomes important when users edit markdown files directly (in their editor)
 - [ ] File watching is optional and can be disabled via config or flag
 - [ ] Integration test verifies notification delivery after file modification
 
+## Assessment
+
+**Current merit: Low.** The MCP spec defines `notifications/resources/updated` but today's MCP clients (Claude Code, Cursor) don't visibly act on server-initiated notifications. Since `markplane-core` has no caching layer — it reads from disk on every request — queries already return fresh data. The "stale data" problem this solves doesn't exist for typical AI assistant usage.
+
+**When to implement:**
+
+- **MCP clients start consuming resource notifications.** Once Claude Code, Cursor, or other clients use `notifications/resources/updated` to refresh state, this becomes an immediate quick win.
+- **A caching layer is added to core.** If `markplane-core` starts caching data in memory for performance, notifications become essential for cache invalidation. This task shifts from "nice to have" to "required."
+- **A real-time MCP dashboard exists.** If any client builds a live view that subscribes to resource updates, file watching is the enabler.
+
+**Why keep in backlog:** The feature is well-scoped, technically trivial (~100 lines), and the implementation pattern is already proven in the web server (`serve.rs` file watcher + `notify-debouncer-mini`). All dependencies are in `Cargo.toml`. It's a zero-cost option — ready to pick up whenever the demand side catches up.
+
+## Implementation Approach
+
+**Recommended: Queue-based (not async refactor).** Spawn a file watcher thread reusing the web server's `run_file_watcher()` pattern. Collect notifications in a `crossbeam::channel`, flush them between JSON-RPC responses in the existing sync MCP loop. No changes to `markplane-core` required.
+
 ## Notes
 
-The `notify` crate (already mentioned in CLAUDE.md as a planned dependency) provides cross-platform file watching. Use `notify::RecommendedWatcher` with debouncing. The main complexity is mapping file paths back to MCP resource URIs (e.g., `.markplane/backlog/items/TASK-eduur.md` → `markplane://task/TASK-eduur`). File watching requires an async runtime or a background thread since the MCP server's main loop reads stdin synchronously.
+The `notify` crate provides cross-platform file watching. Use `notify::RecommendedWatcher` with debouncing. The main complexity is mapping file paths back to MCP resource URIs (e.g., `.markplane/backlog/items/TASK-eduur.md` → `markplane://task/TASK-eduur`). File watching requires a background thread since the MCP server's main loop reads stdin synchronously.

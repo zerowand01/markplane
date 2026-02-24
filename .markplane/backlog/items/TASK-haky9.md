@@ -1,41 +1,56 @@
 ---
 id: TASK-haky9
-title: Implement rich context bundles for individual items
+title: 'Clean up context command: remove --item, fix --focus'
 status: backlog
 priority: medium
-type: feature
-effort: medium
+type: chore
+effort: small
 tags:
 - context
-- ai-integration
+- cleanup
 epic: EPIC-a5vs9
 plan: null
 depends_on: []
 blocks: []
 assignee: null
-position: a5
+position: Zzz
 created: 2026-02-10
-updated: 2026-02-10
+updated: 2026-02-23
 ---
 
-# Implement rich context bundles for individual items
+# Clean up context command: remove --item, fix --focus
 
 ## Description
 
-The `markplane context` command currently generates project-wide summaries (summary.md, active-work.md, blocked-items.md, metrics.md). There is no way to generate a focused context bundle for a single item — gathering the item itself, its parent epic, linked plan, dependencies, blockers, and related notes into one coherent document. This is exactly what an LLM needs when starting work on a specific task: all relevant context in one place, without loading the entire project.
+Two issues with the `context` command:
 
-The design spec describes `markplane context --item TASK-042` as a key feature for AI-assisted development workflows.
+**1. `--item` is redundant and should be removed.** The MCP tool version literally just reads the file — identical to `markplane_show`. The CLI version does a slightly richer display (item + epic + plan + deps) but nothing that `show` + `graph` don't already cover. AI agents naturally compose context by calling `show` on the items they need, guided by `graph` for discovery.
+
+**2. `--focus` is broken on CLI and should be fixed.** The MCP tool's `--focus` parameter works correctly — it generates and returns a specific context view (active-work, blocked, metrics, or summary). But the CLI `--focus` flag silently ignores its value and regenerates all context files, same as calling `context` with no flags. The CLI should match MCP behavior: generate and print the requested context view to stdout.
+
+The `context` command should focus on its actual job: generating and displaying `.context/` views (summary, active-work, blocked, metrics).
 
 ## Acceptance Criteria
 
-- [ ] `markplane context --item TASK-042` generates a focused context bundle
-- [ ] Bundle includes: the item's full content, parent epic summary, linked plan (if any), items it depends on, items it blocks
-- [ ] Bundle includes cross-referenced items found via `[[ID]]` syntax in the body
-- [ ] Output is a single markdown document optimized for LLM consumption (~2000 tokens target)
-- [ ] Works for all entity types (passing an epic ID shows the epic + all its tasks)
-- [ ] MCP resource or tool exposes item context bundles
-- [ ] Context bundle respects the 2000-token-per-file design constraint
+### Remove --item
+- [ ] Remove `--item` flag from CLI `context` command (clap definition + handler)
+- [ ] Remove `generate_item_context()` from `commands/context.rs`
+- [ ] Remove `item` parameter from `markplane_context` MCP tool schema and handler
+- [ ] Remove CLI integration test `test_context_for_item`
+- [ ] Remove MCP integration test `test_tool_context_for_item`
+- [ ] Update `markplane_context` tool description (remove "or a specific item")
+
+### Fix --focus on CLI
+- [ ] `markplane context --focus active-work` generates and prints active-work context to stdout
+- [ ] `markplane context --focus blocked` generates and prints blocked-items context to stdout
+- [ ] `markplane context --focus metrics` generates and prints metrics context to stdout
+- [ ] `markplane context --focus summary` generates and prints summary context to stdout
+- [ ] `markplane context` (no flags) regenerates all `.context/` files (existing behavior, unchanged)
+- [ ] Add/update CLI integration tests for `--focus` variants
+
+### Docs
+- [ ] Update cli-reference.md, mcp-setup.md, getting-started.md
 
 ## Notes
 
-The existing `extract_references()` function in core already parses `[[ID]]` references from markdown bodies — use this to discover related items. The challenge is building the dependency graph without circular references (A depends on B depends on A). Consider a depth limit (e.g., 1 level of transitive dependencies). Output format should be markdown with clear section headers so the LLM can parse the structure.
+Repurposed from the original "rich context bundles" task. Analysis showed the bundling feature isn't needed — `markplane_show` + `markplane_graph` already give AI agents everything they need with better precision and less wasted tokens. The `--focus` fix aligns the CLI with the MCP tool, which already works correctly.

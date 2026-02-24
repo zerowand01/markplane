@@ -12,9 +12,9 @@ plan: null
 depends_on: []
 blocks: []
 assignee: null
-position: a3
+position: Zzt
 created: 2026-02-10
-updated: 2026-02-10
+updated: 2026-02-23
 ---
 
 # Add markplane edit command to open items in editor

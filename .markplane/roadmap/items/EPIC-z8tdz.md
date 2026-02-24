@@ -13,15 +13,16 @@ depends_on: []
 
 ## Objective
 
-Expand Markplane beyond CLI and MCP into a broader platform — migration tooling for adoption, real-time file watching, SSE transport for web clients, a visual web UI, and a plugin system for external integrations. These features transform Markplane from a developer tool into a platform that serves teams with diverse needs and workflows.
+Expand Markplane's reach beyond the current CLI + MCP + web UI stack. The core product is functional — this epic is about adoption and extensibility: tooling to import existing work items, real-time file watching for live MCP updates, SSE transport for remote/browser MCP clients, auto-sync for derived files, and a plugin system for community-built integrations. These features take Markplane from "works for the author" to "works for teams."
 
 ## Key Results
 
 - [ ] Teams can import existing work items from GitHub Issues, CSV, or markdown directories
+- [ ] MCP server detects file changes and pushes real-time notifications to clients
 - [ ] MCP server supports SSE transport for browser-based and remote clients
-- [ ] A web dashboard provides visual project overview and item management
+- [ ] Derived files (INDEX.md, .context/) auto-regenerate after mutations in server mode
 - [ ] Plugin system enables community-built integrations without modifying core
 
 ## Notes
 
-This is the most ambitious and lowest-priority epic — all items here are future work that should only be tackled once the core system (EPIC-ji4z3 through EPIC-a5vs9) is mature and stable. The web UI (TASK-ur5hw) and plugin system (TASK-2u963) are particularly large efforts. SSE transport (TASK-7jei5) is a prerequisite for the web UI. File watching (TASK-v5b6b) improves the MCP experience but isn't blocking anything.
+This is the most ambitious and lowest-priority epic. All items here are future work for after the core system ([[EPIC-a5vs9]], [[EPIC-c5uem]], [[EPIC-bb6pe]]) is mature. The plugin system ([[TASK-2u963]]) is the largest single task on the roadmap. Import tooling ([[TASK-divg5]]) becomes important for adoption once Markplane is stable enough for real-world use. File watching ([[TASK-v5b6b]]) and auto-sync ([[TASK-ksw5c]]) are incremental server improvements. SSE transport ([[TASK-7jei5]]) enables new deployment models but isn't blocking current workflows.

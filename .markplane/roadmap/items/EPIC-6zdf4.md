@@ -1,6 +1,6 @@
 ---
 id: EPIC-6zdf4
-title: "Developer Experience"
+title: CLI & Developer Experience
 status: planned
 priority: medium
 started: null
@@ -9,18 +9,20 @@ tags: []
 depends_on: []
 ---
 
-# Developer Experience
+# CLI & Developer Experience
 
 ## Objective
 
-Improve the day-to-day experience of using Markplane from the command line. The CLI works but has friction points — there's no `edit` command to open items in `$EDITOR`, and the deprecated `serde_yaml` dependency should be swapped before it becomes a security liability. These are quality-of-life improvements that make Markplane feel polished.
+Polish the day-to-day experience of using Markplane across CLI and MCP interfaces. The tool works, but has friction points — non-deterministic INDEX.md output, no `edit` command, AI agents can't reorder tasks without computing fractional indices, and a deprecated YAML dependency. This epic covers the quality-of-life improvements that make Markplane feel complete and professional.
 
 ## Key Results
 
-- [ ] Users can open any item in their editor with `markplane edit TASK-eduur`
+- [x] Update and link commands support all property fields and cross-type entity linking
+- [ ] AI agents can reorder tasks via a high-level `markplane_move` MCP tool without manual position math
+- [ ] Generated INDEX.md sections sort deterministically (by date, priority, ID)
+- [ ] Users can open any item in their editor with `markplane edit TASK-xxx`
 - [ ] `serde_yaml` replaced with `serde_yaml_ng` (maintained fork, identical API)
-- [ ] All existing tests continue to pass after dependency swap
 
 ## Notes
 
-Both items in this epic are small, independent tasks. The `edit` command is the more user-facing improvement; the serde_yaml swap is invisible maintenance. Neither has external dependencies or blocks other work.
+This epic spans both user-facing polish (edit command, deterministic output) and AI-agent ergonomics (move tool). The common thread is reducing friction for anyone interacting with Markplane — whether human or AI. Tasks range from xs to small effort, making this a good epic for incremental progress between larger efforts.

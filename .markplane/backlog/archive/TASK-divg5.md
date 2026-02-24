@@ -1,7 +1,7 @@
 ---
 id: TASK-divg5
 title: Build migration tooling for importing from existing docs
-status: backlog
+status: cancelled
 priority: low
 type: feature
 effort: large
@@ -15,7 +15,7 @@ blocks: []
 assignee: null
 position: a4
 created: 2026-02-10
-updated: 2026-02-10
+updated: 2026-02-23
 ---
 
 # Build migration tooling for importing from existing docs
@@ -40,3 +40,7 @@ This is an ecosystem feature that becomes important once Markplane is mature eno
 ## Notes
 
 Start with the simplest format (CSV or markdown directory) and add GitHub/Jira later. GitHub import could use the `gh` CLI or GitHub API via `reqwest`. Jira export is typically CSV or JSON. Consider making importers pluggable so community contributors can add new sources. The import should create items in `draft` status so users can review before promoting to `backlog`.
+
+## Cancelled
+
+Superseded by [[TASK-f65s9]] (Seed markplane init with starter content and onboarding plan). That task takes an AI-native approach to migration: instead of building and maintaining rigid importers for each source format, it seeds `markplane init` with an onboarding plan containing migration guidance that any AI assistant can read and act on. This delivers ~80% of the value with near-zero maintenance, making dedicated import tooling unnecessary.

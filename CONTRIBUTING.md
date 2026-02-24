@@ -40,11 +40,9 @@ The CLI binary depends on `markplane-core` for all business logic. It provides t
 cargo test --workspace
 
 # By crate
-cargo test -p markplane-core     # 145 unit tests
-cargo test -p markplane-cli      # 51 CLI + 39 MCP integration tests
+cargo test -p markplane-core     # Unit tests
+cargo test -p markplane-cli      # CLI, MCP, and serve integration tests
 ```
-
-Total: **235 tests** across the workspace.
 
 Integration tests use `assert_cmd` with the `cargo_bin_cmd!()` macro (not the deprecated `Command::cargo_bin()`). MCP integration tests live in `crates/markplane-cli/tests/mcp_integration.rs`.
 
@@ -76,7 +74,7 @@ Each crate uses a different error strategy appropriate to its role:
 
 - **Templates**: Document templates use `{PLACEHOLDER}` tokens (e.g., `{ID}`, `{TITLE}`, `{DATE}`) replaced by `render_template()` at creation time.
 - **YAML safety**: Titles are sanitized via `sanitize_yaml_string()` (escapes `\`, `"`, `\n`, `\r`) before template substitution. Tags are quoted in YAML lists via `format_yaml_list()`. Title length is capped at 500 characters.
-- **File locking**: `next_id()` uses `fs2` advisory file locks on `config.yaml` to prevent concurrent ID conflicts.
+- **Random IDs**: `next_id()` generates random 5-char alphanumeric IDs and checks for collisions — no shared counter or file locking needed.
 - **Frontmatter parsing**: Custom `---\nyaml\n---\nbody` splitter (not a full markdown parser) plus `serde_yaml` for deserialization.
 
 ## Adding a New CLI Command
