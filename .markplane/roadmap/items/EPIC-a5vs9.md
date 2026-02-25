@@ -1,7 +1,7 @@
 ---
 id: EPIC-a5vs9
-title: "Context and AI Integration"
-status: later
+title: Context and AI Integration
+status: now
 priority: medium
 started: null
 target: null

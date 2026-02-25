@@ -37,6 +37,12 @@ The default backlog view shows tasks organized in status columns: In Progress, P
 - **Filters**: Filter by status, priority, epic, tags, and assignee. Active filters are shown as removable pills. Filter state is preserved in the URL.
 - **View toggle**: Switch between Kanban, List, and Table views using the toggle in the header. The selection is preserved in the URL (`?view=list`).
 
+### Roadmap (`/roadmap`)
+
+Epics are displayed in three columns — Now, Next, and Later — with graduated card density (Now cards show the most detail, Later cards are compact).
+
+- **Drag-and-drop**: Drag epic cards between columns to change status. Updates are optimistic. The Done section is not droppable — use the "Mark done" action from the detail sheet instead.
+
 ### Task Detail
 
 Click any task to open its detail panel. The panel shows:

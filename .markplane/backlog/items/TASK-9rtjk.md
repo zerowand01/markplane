@@ -1,7 +1,7 @@
 ---
 id: TASK-9rtjk
 title: Add drag-and-drop for epics between Now/Next/Later columns on roadmap page
-status: backlog
+status: done
 priority: medium
 type: enhancement
 effort: medium
@@ -15,7 +15,7 @@ blocks: []
 assignee: null
 position: a8
 created: 2026-02-24
-updated: 2026-02-24
+updated: 2026-02-25
 ---
 
 # Add drag-and-drop for epics between Now/Next/Later columns on roadmap page

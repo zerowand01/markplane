@@ -1,7 +1,7 @@
 ---
 id: TASK-wd79a
 title: Sort "Recently Done" section by completion date in backlog INDEX
-status: backlog
+status: planned
 priority: low
 type: bug
 effort: xs
@@ -15,7 +15,7 @@ blocks: []
 assignee: null
 position: Zz
 created: 2026-02-12
-updated: 2026-02-23
+updated: 2026-02-25
 ---
 
 # Sort "Recently Done" section by completion date in backlog INDEX

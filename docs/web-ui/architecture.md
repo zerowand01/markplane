@@ -51,7 +51,7 @@ Browser (React + Next.js)
 | Markdown reading | `react-markdown` + `remark-gfm` | Runtime rendering of arbitrary `.md` content (not page-based MDX); supports GFM tables, checkboxes |
 | Markdown editing | TipTap (`@tiptap/react`) | Rich text editor with markdown source view, task lists, wiki-link syntax support |
 | Graph visualization | `@xyflow/react` (React Flow) + `elkjs` | React Flow for interactive canvas; ELK.js for hierarchical/orthogonal auto-layout (better than Dagre for complex dependency graphs) |
-| Drag-and-drop | `@dnd-kit/core` + `@dnd-kit/sortable` | Lightweight, accessible drag-and-drop for kanban board |
+| Drag-and-drop | `@dnd-kit/core` + `@dnd-kit/sortable` | Lightweight, accessible drag-and-drop for kanban board and roadmap |
 | Icons | `lucide-react` | Already bundled with shadcn/ui, consistent, tree-shakeable |
 | Toasts | `sonner` | Lightweight toast notifications for mutation feedback |
 | Command palette | `cmdk` (via shadcn Command) | Keyboard-first navigation and search |
@@ -1049,6 +1049,6 @@ These are explicitly out of scope for v1 but inform the architecture:
 All phases are complete:
 
 - **Foundation**: Next.js 16 + shadcn/ui + Tailwind v4 scaffolded. Axum HTTP server with 22 API endpoints. Sidebar layout, routing, theme system. Dashboard with project summary.
-- **Core Views**: Backlog kanban with dnd-kit drag-and-drop + fractional indexing. Sheet slide-over detail panels for all entity types. TipTap markdown editor with rich text + source modes. Epic roadmap with progress bars.
+- **Core Views**: Backlog kanban with dnd-kit drag-and-drop + fractional indexing. Sheet slide-over detail panels for all entity types. TipTap markdown editor with rich text + source modes. Epic roadmap with progress bars and drag-and-drop between Now/Next/Later columns.
 - **Advanced Features**: WebSocket file watching with auto-reconnect. React Flow + ELK dependency graph with layer toggles and multi-filter system. Full-text search via command palette. Keyboard chord navigation (g+letter).
 - **Polish**: Loading skeletons, error boundaries, toast notifications. Mobile responsive layout. `rust-embed` integration behind `embed-ui` feature flag. Archive view with batch archive support.

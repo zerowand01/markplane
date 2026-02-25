@@ -1,7 +1,7 @@
 ---
 id: EPIC-4bjs9
-title: "Web UI Polish & Features"
-status: later
+title: Web UI Polish & Features
+status: now
 priority: medium
 started: null
 target: null
