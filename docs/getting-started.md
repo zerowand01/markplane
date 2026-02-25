@@ -354,10 +354,10 @@ You can also regenerate just the context files:
 markplane context
 ```
 
-Or generate focused context for a specific item (includes linked epic, plan, and dependencies):
+Or generate and print a specific context view to stdout:
 
 ```bash
-markplane context --item TASK-fq2x8
+markplane context --focus active-work
 ```
 
 ## 12. Validate Cross-References

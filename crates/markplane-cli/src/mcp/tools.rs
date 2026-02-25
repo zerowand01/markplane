@@ -255,14 +255,10 @@ pub fn list_tools() -> Value {
             },
             {
                 "name": "markplane_context",
-                "description": "Generate a context summary for the project or a specific item.",
+                "description": "Generate a context summary for the project.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "item": {
-                            "type": "string",
-                            "description": "Optional item ID to generate focused context for"
-                        },
                         "focus": {
                             "type": "string",
                             "description": "Optional focus area (e.g. 'active-work', 'blocked', 'metrics')"
@@ -843,47 +839,23 @@ fn handle_sync(project: &Project) -> Result<String, String> {
 }
 
 fn handle_context(project: &Project, args: &Value) -> Result<String, String> {
-    let item_id = args.get("item").and_then(|v| v.as_str());
     let focus = args.get("focus").and_then(|v| v.as_str());
 
-    if let Some(id) = item_id {
-        // Return the raw content of a specific item as context
-        let path = project.item_path(id).map_err(|e| e.to_string())?;
-        return fs::read_to_string(&path).map_err(|e| e.to_string());
-    }
-
-    // Generate and return a context file based on focus
-    match focus {
-        Some("active-work") => {
-            project
-                .generate_context_active_work()
-                .map_err(|e| e.to_string())?;
-            let path = project.root().join(".context/active-work.md");
-            fs::read_to_string(&path).map_err(|e| e.to_string())
+    let (generate, filename): (fn(&Project) -> markplane_core::Result<()>, &str) = match focus {
+        Some("active-work") => (Project::generate_context_active_work, "active-work.md"),
+        Some("blocked") => (Project::generate_context_blocked, "blocked-items.md"),
+        Some("metrics") => (Project::generate_context_metrics, "metrics.md"),
+        None | Some("summary") => (Project::generate_context_summary, "summary.md"),
+        Some(other) => {
+            return Err(format!(
+                "Unknown focus area: {}. Expected active-work, blocked, metrics, or summary",
+                other
+            ));
         }
-        Some("blocked") => {
-            project
-                .generate_context_blocked()
-                .map_err(|e| e.to_string())?;
-            let path = project.root().join(".context/blocked-items.md");
-            fs::read_to_string(&path).map_err(|e| e.to_string())
-        }
-        Some("metrics") => {
-            project
-                .generate_context_metrics()
-                .map_err(|e| e.to_string())?;
-            let path = project.root().join(".context/metrics.md");
-            fs::read_to_string(&path).map_err(|e| e.to_string())
-        }
-        _ => {
-            // Default: generate full summary
-            project
-                .generate_context_summary()
-                .map_err(|e| e.to_string())?;
-            let path = project.root().join(".context/summary.md");
-            fs::read_to_string(&path).map_err(|e| e.to_string())
-        }
-    }
+    };
+    generate(project).map_err(|e| e.to_string())?;
+    let path = project.root().join(format!(".context/{}", filename));
+    fs::read_to_string(&path).map_err(|e| e.to_string())
 }
 
 fn handle_graph(project: &Project, args: &Value) -> Result<String, String> {

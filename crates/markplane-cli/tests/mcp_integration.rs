@@ -886,22 +886,8 @@ fn test_tool_context_default() {
 }
 
 #[test]
-fn test_tool_context_for_item() {
+fn test_tool_context_focus_active_work() {
     let tmp = setup_project();
-    let add_response = send_request(
-        &tmp,
-        &json!({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/call",
-            "params": {
-                "name": "markplane_add",
-                "arguments": { "title": "Context target" }
-            }
-        }),
-    );
-    let task_id = extract_id_from_response(&add_response);
-
     let response = send_request(
         &tmp,
         &json!({
@@ -910,15 +896,14 @@ fn test_tool_context_for_item() {
             "method": "tools/call",
             "params": {
                 "name": "markplane_context",
-                "arguments": { "item": task_id }
+                "arguments": { "focus": "active-work" }
             }
         }),
     );
 
     assert!(response["error"].is_null());
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
-    assert!(text.contains(&task_id));
-    assert!(text.contains("Context target"));
+    assert!(text.contains("Active Work"));
 }
 
 // ── Tool: markplane_check ────────────────────────────────────────────────

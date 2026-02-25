@@ -279,10 +279,7 @@ pub enum Commands {
 
     /// Regenerate .context/ files
     Context {
-        /// Generate focused context for a specific item
-        #[arg(long)]
-        item: Option<String>,
-        /// Generate focused context for a domain/tag
+        /// Focus on a specific context view (active-work, blocked, metrics, summary)
         #[arg(long)]
         focus: Option<String>,
     },
@@ -386,7 +383,7 @@ pub fn execute(cmd: Commands) -> anyhow::Result<()> {
         Commands::Stale { days } => stale::run(days),
         Commands::Archive { id, all_done, dry_run } => archive::run(id, all_done, dry_run),
         Commands::Unarchive { id } => unarchive::run(id),
-        Commands::Context { item, focus } => context::run(item, focus),
+        Commands::Context { focus } => context::run(focus),
         Commands::Metrics => metrics::run(),
         Commands::Graph { id, depth } => graph::run(id, depth),
         Commands::ClaudeMd => claude_md::run(),

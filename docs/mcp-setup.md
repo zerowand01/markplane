@@ -116,7 +116,7 @@ The server exposes 17 tools via the `tools/list` method.
 | Tool | Description | Required Params | Optional Params |
 |------|-------------|-----------------|-----------------|
 | `markplane_summary` | Get project state summary. Returns a text overview of the project. | *(none)* | *(none)* |
-| `markplane_context` | Generate a context summary for the project or a specific item. | *(none)* | `item` (string): item ID for focused context; `focus` (string): area like `active-work`, `blocked`, `metrics` |
+| `markplane_context` | Generate a context summary for the project. | *(none)* | `focus` (string): area like `active-work`, `blocked`, `metrics` |
 
 ### Query & Search
 

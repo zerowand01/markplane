@@ -1,7 +1,7 @@
 ---
 id: TASK-haky9
 title: 'Clean up context command: remove --item, fix --focus'
-status: backlog
+status: done
 priority: medium
 type: chore
 effort: small
@@ -15,7 +15,7 @@ blocks: []
 assignee: null
 position: Zzz
 created: 2026-02-10
-updated: 2026-02-23
+updated: 2026-02-25
 ---
 
 # Clean up context command: remove --item, fix --focus
@@ -54,3 +54,5 @@ The `context` command should focus on its actual job: generating and displaying 
 ## Notes
 
 Repurposed from the original "rich context bundles" task. Analysis showed the bundling feature isn't needed — `markplane_show` + `markplane_graph` already give AI agents everything they need with better precision and less wasted tokens. The `--focus` fix aligns the CLI with the MCP tool, which already works correctly.
+
+**Implementation note:** The MCP handler previously had a `_ =>` catch-all that silently returned summary for unknown focus values. Changed to return an explicit error for invalid values, matching the established pattern in `handle_query`, `handle_move`, etc. `None` still defaults to summary.

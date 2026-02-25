@@ -165,7 +165,7 @@ Prints a markdown snippet pointing AI assistants to relevant Markplane files. Ad
 
 ## context
 
-Regenerate `.context/` files or generate focused context for a specific item.
+Regenerate `.context/` files or print a specific context view.
 
 ```
 markplane context [OPTIONS]
@@ -175,10 +175,9 @@ markplane context [OPTIONS]
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `--item <ID>` | — | Generate focused context for a specific item |
-| `--focus <TAG>` | — | Generate context focused on a domain/tag |
+| `--focus <AREA>` | — | Generate and print a specific context view (`active-work`, `blocked`, `metrics`, `summary`) |
 
-When `--item` is specified, prints the item along with its linked epic, plan, and dependencies. Otherwise, regenerates all `.context/` summary files.
+With no flags, regenerates all `.context/` summary files. With `--focus`, generates the requested view and prints it to stdout.
 
 **Example:**
 
@@ -186,8 +185,11 @@ When `--item` is specified, prints the item along with its linked epic, plan, an
 markplane context
 # ✓ Context files regenerated in .context/
 
-markplane context --item TASK-fq2x8
-# Prints item details, linked epic, plan, and dependencies
+markplane context --focus active-work
+# Prints active work context to stdout
+
+markplane context --focus metrics
+# Prints project metrics to stdout
 ```
 
 ---

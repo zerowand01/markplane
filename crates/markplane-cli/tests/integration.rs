@@ -1436,23 +1436,58 @@ fn test_context_regenerate() {
 }
 
 #[test]
-fn test_context_for_item() {
+fn test_context_focus_active_work() {
     let tmp = setup_project();
-    let output = cmd()
-        .current_dir(tmp.path())
-        .args(["add", "Context item", "--priority", "high"])
-        .output()
-        .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
-    let task_id = extract_id(&output.stdout);
-
     cmd()
         .current_dir(tmp.path())
-        .args(["context", "--item", &task_id])
+        .args(["context", "--focus", "active-work"])
         .assert()
         .success()
-        .stdout(predicate::str::contains(&task_id))
-        .stdout(predicate::str::contains("Context item"));
+        .stdout(predicate::str::contains("Active Work"));
+}
+
+#[test]
+fn test_context_focus_blocked() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["context", "--focus", "blocked"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Blocked"));
+}
+
+#[test]
+fn test_context_focus_metrics() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["context", "--focus", "metrics"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Metrics"));
+}
+
+#[test]
+fn test_context_focus_summary() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["context", "--focus", "summary"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Test Project"));
+}
+
+#[test]
+fn test_context_focus_invalid() {
+    let tmp = setup_project();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["context", "--focus", "bogus"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Unknown focus area"));
 }
 
 // ── Error Cases ──────────────────────────────────────────────────────────
