@@ -8,7 +8,8 @@ import { CreateDialog } from "@/components/domain/create-dialog";
 import { Button } from "@/components/ui/button";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { NOTE_STATUS_CONFIG, NOTE_TYPE_CONFIG } from "@/lib/constants";
+import { NOTE_TYPE_CONFIG } from "@/lib/constants";
+import { GenericStatusBadge } from "@/components/domain/status-badge";
 import { PageTransition } from "@/components/domain/page-transition";
 import { EmptyState } from "@/components/domain/empty-state";
 import { Plus } from "lucide-react";
@@ -82,64 +83,52 @@ function NotesContent() {
                   {NOTE_TYPE_CONFIG[type]?.label ?? type} ({items.length})
                 </h2>
                 <div className="space-y-2">
-                  {items.map((note) => (
-                    <div
-                      key={note.id}
-                      className="rounded-lg border bg-card p-4 cursor-pointer hover:border-ring transition-colors"
-                      onClick={() => {
-                        const params = new URLSearchParams(searchParams);
-                        params.set("note", note.id);
-                        router.push(`/notes?${params.toString()}`);
-                      }}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span
-                              className="font-mono text-sm"
-                              style={{ color: "var(--entity-note)" }}
-                            >
-                              {note.id}
-                            </span>
-                            <span className="text-xs px-2 py-0.5 rounded bg-secondary text-secondary-foreground uppercase">
-                              {note.type}
-                            </span>
-                            <span
-                              className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded"
-                              style={{
-                                backgroundColor: `color-mix(in oklch, var(--status-${note.status}) 15%, transparent)`,
-                                color: `var(--status-${note.status})`,
-                              }}
-                            >
-                              {(() => {
-                                const Icon = NOTE_STATUS_CONFIG[note.status]?.icon;
-                                return Icon ? <Icon className="size-3 text-current" /> : null;
-                              })()}{" "}
-                              {NOTE_STATUS_CONFIG[note.status]?.label}
-                            </span>
-                          </div>
-                          <h3 className="text-base font-medium">
+                  {items.map((note) => {
+                    const isDraft = note.status === "draft";
+                    return (
+                      <div
+                        key={note.id}
+                        className={`rounded-md border px-3 py-2 cursor-pointer transition-colors hover:border-muted-foreground/30 ${
+                          isDraft
+                            ? "bg-amber-50 border-amber-200/60 dark:bg-amber-950/30 dark:border-amber-800/40"
+                            : "bg-card"
+                        }`}
+                        onClick={() => {
+                          const params = new URLSearchParams(searchParams);
+                          params.set("note", note.id);
+                          router.push(`/notes?${params.toString()}`);
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="font-mono text-sm shrink-0"
+                            style={{ color: "var(--entity-note)" }}
+                          >
+                            {note.id}
+                          </span>
+                          {isDraft && <GenericStatusBadge status="draft" />}
+                          <span className="text-base font-medium truncate flex-1">
                             {note.title}
-                          </h3>
+                          </span>
                           {note.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1.5">
+                            <div className="flex gap-1 shrink-0">
                               {note.tags.map((tag) => (
                                 <span
                                   key={tag}
-                                  className="text-sm text-muted-foreground"
+                                  className="text-xs text-muted-foreground"
                                 >
                                   #{tag}
                                 </span>
                               ))}
                             </div>
                           )}
+                          <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                            {note.updated}
+                          </span>
                         </div>
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          {note.updated}
-                        </span>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )

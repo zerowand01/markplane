@@ -1,7 +1,7 @@
 ---
 id: TASK-9eqv8
 title: Toast-based undo for mutations
-status: planned
+status: in-progress
 priority: medium
 type: feature
 effort: medium
