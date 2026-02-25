@@ -40,6 +40,22 @@ function highlightMatch(text: string, query: string): ReactNode {
   );
 }
 
+const NAVIGATION_ITEMS = [
+  { label: "Go to Dashboard", path: "/dashboard", shortcut: "g d" },
+  { label: "Go to Backlog", path: "/backlog", shortcut: "g b" },
+  { label: "Go to Roadmap", path: "/roadmap", shortcut: "g r" },
+  { label: "Go to Plans", path: "/plans", shortcut: "g p" },
+  { label: "Go to Notes", path: "/notes", shortcut: "g n" },
+  { label: "Go to Graph", path: "/graph", shortcut: "g g" },
+];
+
+const CREATE_ITEMS = [
+  { label: "New Task", kind: "task" },
+  { label: "New Epic", kind: "epic" },
+  { label: "New Note", kind: "note" },
+  { label: "New Plan", kind: "plan" },
+];
+
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -62,6 +78,20 @@ export function CommandPalette() {
   const searchResults = searchData?.data ?? [];
 
   const isSearchMode = debouncedQuery.length >= 2;
+
+  // Client-side filtering for action items during search mode.
+  // In browse mode, cmdk handles filtering via shouldFilter={true}.
+  const queryLower = query.toLowerCase();
+  const filteredNavItems = isSearchMode
+    ? NAVIGATION_ITEMS.filter((item) => item.label.toLowerCase().includes(queryLower))
+    : NAVIGATION_ITEMS;
+  const filteredCreateItems = isSearchMode
+    ? CREATE_ITEMS.filter((item) => item.label.toLowerCase().includes(queryLower))
+    : CREATE_ITEMS;
+  const showSyncAction = !isSearchMode || "sync project".includes(queryLower);
+  const hasActionMatches = filteredNavItems.length > 0 || filteredCreateItems.length > 0 || showSyncAction;
+  // Show separator above action groups only when there's content above them
+  const showActionSeparator = !isSearchMode || isSearching || searchResults.length > 0;
 
   // Debounce the query for server-side search
   useEffect(() => {
@@ -114,6 +144,11 @@ export function CommandPalette() {
     queryClient.invalidateQueries();
   }, [queryClient]);
 
+  const createItem = useCallback((kind: string) => {
+    setOpen(false);
+    window.dispatchEvent(new CustomEvent("create-item", { detail: { kind } }));
+  }, []);
+
   function resultRoute(result: SearchResult) {
     const prefix = result.id.split("-")[0];
     const config = PREFIX_CONFIG[prefix];
@@ -156,9 +191,7 @@ export function CommandPalette() {
               <div className="py-6 text-center text-sm text-muted-foreground">
                 Searching...
               </div>
-            ) : searchResults.length === 0 ? (
-              <CommandEmpty>No results found.</CommandEmpty>
-            ) : (
+            ) : searchResults.length > 0 ? (
               <CommandGroup
                 heading={`${searchResults.length} result${searchResults.length !== 1 ? "s" : ""}`}
               >
@@ -208,7 +241,11 @@ export function CommandPalette() {
                   );
                 })}
               </CommandGroup>
-            )}
+            ) : !hasActionMatches ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                No results found.
+              </div>
+            ) : null}
           </>
         ) : (
           <>
@@ -305,67 +342,41 @@ export function CommandPalette() {
                 ))}
               </CommandGroup>
             )}
+          </>
+        )}
 
-            <CommandSeparator />
-
+        {filteredNavItems.length > 0 && (
+          <>
+            {showActionSeparator && <CommandSeparator />}
             <CommandGroup heading="Navigation">
-              <CommandItem onSelect={() => navigate("/dashboard")}>
-                Go to Dashboard
-                <span className="ml-auto text-xs text-muted-foreground">
-                  g d
-                </span>
-              </CommandItem>
-              <CommandItem onSelect={() => navigate("/backlog")}>
-                Go to Backlog
-                <span className="ml-auto text-xs text-muted-foreground">
-                  g b
-                </span>
-              </CommandItem>
-              <CommandItem onSelect={() => navigate("/roadmap")}>
-                Go to Roadmap
-                <span className="ml-auto text-xs text-muted-foreground">
-                  g r
-                </span>
-              </CommandItem>
-              <CommandItem onSelect={() => navigate("/plans")}>
-                Go to Plans
-                <span className="ml-auto text-xs text-muted-foreground">
-                  g p
-                </span>
-              </CommandItem>
-              <CommandItem onSelect={() => navigate("/notes")}>
-                Go to Notes
-                <span className="ml-auto text-xs text-muted-foreground">
-                  g n
-                </span>
-              </CommandItem>
-              <CommandItem onSelect={() => navigate("/graph")}>
-                Go to Graph
-                <span className="ml-auto text-xs text-muted-foreground">
-                  g g
-                </span>
-              </CommandItem>
+              {filteredNavItems.map((item) => (
+                <CommandItem key={item.path} onSelect={() => navigate(item.path)}>
+                  {item.label}
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {item.shortcut}
+                  </span>
+                </CommandItem>
+              ))}
             </CommandGroup>
+          </>
+        )}
 
-            <CommandSeparator />
-
+        {filteredCreateItems.length > 0 && (
+          <>
+            {(showActionSeparator || filteredNavItems.length > 0) && <CommandSeparator />}
             <CommandGroup heading="Create">
-              <CommandItem onSelect={() => { setOpen(false); window.dispatchEvent(new CustomEvent("create-item", { detail: { kind: "task" } })); }}>
-                New Task
-              </CommandItem>
-              <CommandItem onSelect={() => { setOpen(false); window.dispatchEvent(new CustomEvent("create-item", { detail: { kind: "epic" } })); }}>
-                New Epic
-              </CommandItem>
-              <CommandItem onSelect={() => { setOpen(false); window.dispatchEvent(new CustomEvent("create-item", { detail: { kind: "note" } })); }}>
-                New Note
-              </CommandItem>
-              <CommandItem onSelect={() => { setOpen(false); window.dispatchEvent(new CustomEvent("create-item", { detail: { kind: "plan" } })); }}>
-                New Plan
-              </CommandItem>
+              {filteredCreateItems.map((item) => (
+                <CommandItem key={item.kind} onSelect={() => createItem(item.kind)}>
+                  {item.label}
+                </CommandItem>
+              ))}
             </CommandGroup>
+          </>
+        )}
 
-            <CommandSeparator />
-
+        {showSyncAction && (
+          <>
+            {(showActionSeparator || filteredNavItems.length > 0 || filteredCreateItems.length > 0) && <CommandSeparator />}
             <CommandGroup heading="Actions">
               <CommandItem onSelect={() => triggerSync()}>
                 Sync project

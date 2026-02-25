@@ -1,7 +1,7 @@
 ---
 id: TASK-4qegx
 title: Filter command palette actions during search
-status: in-progress
+status: done
 priority: medium
 type: enhancement
 effort: small
