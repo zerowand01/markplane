@@ -1,7 +1,7 @@
 ---
 id: TASK-7f8ev
 title: Web UI visual polish
-status: backlog
+status: done
 priority: medium
 type: enhancement
 effort: xs
@@ -14,7 +14,7 @@ blocks: []
 assignee: null
 position: Zzd
 created: 2026-02-23
-updated: 2026-02-23
+updated: 2026-02-25
 ---
 
 # Web UI visual polish

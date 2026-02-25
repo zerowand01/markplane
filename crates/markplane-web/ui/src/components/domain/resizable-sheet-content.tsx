@@ -6,8 +6,11 @@ import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "markplane-sheet-width";
 const MIN_WIDTH = 480;
-const MAX_WIDTH = 960;
 const DEFAULT_WIDTH = 680;
+
+function getMaxWidth() {
+  return Math.min(1400, window.innerWidth * 0.8);
+}
 
 export function ResizableSheetContent({
   children,
@@ -23,7 +26,7 @@ export function ResizableSheetContent({
     if (stored) {
       const parsed = parseInt(stored, 10);
       if (!isNaN(parsed)) {
-        const clamped = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, parsed));
+        const clamped = Math.max(MIN_WIDTH, Math.min(getMaxWidth(), parsed));
         setWidth(clamped);
         widthRef.current = clamped;
       }
@@ -37,7 +40,7 @@ export function ResizableSheetContent({
     document.body.style.userSelect = "none";
 
     const handlePointerMove = (ev: PointerEvent) => {
-      const newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, window.innerWidth - ev.clientX));
+      const newWidth = Math.max(MIN_WIDTH, Math.min(getMaxWidth(), window.innerWidth - ev.clientX));
       widthRef.current = newWidth;
       setWidth(newWidth);
     };

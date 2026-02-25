@@ -13,9 +13,9 @@ plan: null
 depends_on: []
 blocks: []
 assignee: null
-position: Zzl
+position: aA
 created: 2026-02-21
-updated: 2026-02-23
+updated: 2026-02-25
 ---
 
 # Seed markplane init with starter content and onboarding plan

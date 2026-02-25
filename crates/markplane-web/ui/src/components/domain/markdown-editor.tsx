@@ -98,7 +98,7 @@ export function MarkdownEditor({
     editorProps: {
       attributes: {
         class:
-          "prose dark:prose-invert max-w-none prose-headings:text-foreground prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-p:text-foreground/90 prose-a:text-primary prose-strong:text-foreground prose-code:text-foreground prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-muted prose-pre:border prose-blockquote:border-primary/30 prose-li:marker:text-muted-foreground min-h-[120px] outline-none px-3 py-2",
+          "prose dark:prose-invert max-w-none prose-headings:text-foreground prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-p:text-foreground/90 prose-a:text-primary prose-strong:text-foreground prose-code:text-foreground prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono prose-code:border prose-code:border-border/50 prose-code:before:content-[''] prose-code:after:content-[''] prose-pre:bg-muted prose-pre:border prose-blockquote:border-primary/30 prose-li:marker:text-muted-foreground min-h-[120px] outline-none px-3 py-2",
       },
     },
   });
