@@ -1032,12 +1032,13 @@ Full-text search with faceted filtering, accessible via `Cmd+K` (quick) or the d
 
 - **Position**: Bottom-right corner, 24px from edges
 - **Stack**: Up to 3 visible, oldest auto-dismissed after 5 seconds
-- **Anatomy**: Icon (success/warning/error/info color) + message text + optional action link + dismiss `×`
+- **Anatomy**: Icon (success/warning/error/info color) + message text + optional action button (e.g., "Undo") + dismiss `×`
 - **Width**: 360px max
 - **Style**: `bg-surface-overlay`, `border-default` border, `shadow-md`
 
 **Examples**:
-- `✓ TASK-rm6d3 moved to in-progress` (success, green icon)
+- `✓ Status updated [Undo]` (success, green icon, 5s undo window)
+- `✓ Archived TASK-rm6d3 [Undo]` (success, green icon, 5s undo window)
 - `⚠ TASK-bg8t1 is now blocked by TASK-rm6d3` (warning, amber icon)
 - `✗ Failed to save TASK-rm6d3 — file locked` (error, red icon)
 - `ℹ Sync complete — 3 files updated` (info, blue icon)

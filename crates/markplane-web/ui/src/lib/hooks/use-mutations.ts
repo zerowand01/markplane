@@ -5,6 +5,78 @@ import { patchJson, postJson, postAction } from "@/lib/api";
 import { toast } from "sonner";
 import type { Task, Epic, Plan, Note, CreateTaskRequest, CreateEpicRequest, CreatePlanRequest, CreateNoteRequest, UpdateTaskRequest, UpdateEpicRequest, UpdatePlanRequest, UpdateNoteRequest } from "@/lib/types";
 
+// Ordered by display priority — first match wins when multiple fields change
+const TASK_FIELD_LABELS: [string, string][] = [
+  ["status", "Status"],
+  ["priority", "Priority"],
+  ["effort", "Effort"],
+  ["type", "Type"],
+  ["title", "Title"],
+  ["tags", "Tags"],
+  ["epic", "Epic"],
+  ["assignee", "Assignee"],
+  ["position", "Position"],
+  ["body", "Content"],
+];
+const EPIC_FIELD_LABELS: [string, string][] = [
+  ["status", "Status"],
+  ["priority", "Priority"],
+  ["title", "Title"],
+  ["tags", "Tags"],
+  ["started", "Start date"],
+  ["target", "Target date"],
+  ["body", "Content"],
+];
+const PLAN_FIELD_LABELS: [string, string][] = [
+  ["status", "Status"],
+  ["title", "Title"],
+  ["body", "Content"],
+];
+const NOTE_FIELD_LABELS: [string, string][] = [
+  ["status", "Status"],
+  ["type", "Type"],
+  ["title", "Title"],
+  ["tags", "Tags"],
+  ["related", "Related"],
+  ["body", "Content"],
+];
+
+// Fields that support toast-based undo (discrete property changes, not body/title)
+const TASK_UNDO_FIELDS = ["status", "priority", "effort", "type", "assignee", "tags", "epic", "position"];
+const EPIC_UNDO_FIELDS = ["status", "priority", "tags", "started", "target"];
+const PLAN_UNDO_FIELDS = ["status"];
+const NOTE_UNDO_FIELDS = ["status", "type", "tags"];
+
+// Nullable fields where the server requires "" (not null) to clear the value.
+// Sending JSON null maps to Patch::Unchanged (no-op); "" maps to Patch::Clear.
+const NULLABLE_FIELDS = new Set(["assignee", "epic", "position", "started", "target"]);
+
+function detectField(
+  updates: Record<string, unknown>,
+  labels: [string, string][],
+  fallback: string,
+): string {
+  return labels.find(([k]) => k in updates)?.[1] ?? fallback;
+}
+
+function buildUndoPayload(
+  previous: Record<string, unknown> | undefined,
+  changes: Record<string, unknown>,
+  undoableFields: string[],
+): Record<string, unknown> | null {
+  if (!previous) return null;
+  const payload: Record<string, unknown> = {};
+  let count = 0;
+  for (const field of undoableFields) {
+    if (field in changes && changes[field] !== undefined) {
+      const prev = previous[field];
+      payload[field] = (prev == null && NULLABLE_FIELDS.has(field)) ? "" : prev;
+      count++;
+    }
+  }
+  return count > 0 ? payload : null;
+}
+
 export function useUpdateTask() {
   const queryClient = useQueryClient();
 
@@ -46,27 +118,38 @@ export function useUpdateTask() {
 
       return { previousQueries, previousTask, id };
     },
-    onSuccess: (_data, variables) => {
-      const field = variables.status
-        ? "Status"
-        : variables.priority
-          ? "Priority"
-          : variables.effort
-            ? "Effort"
-            : variables.type
-              ? "Type"
-              : variables.title
-                ? "Title"
-                : variables.tags
-                  ? "Tags"
-                  : variables.epic !== undefined
-                    ? "Epic"
-                    : variables.assignee !== undefined
-                      ? "Assignee"
-                      : variables.body !== undefined
-                        ? "Content"
-                        : "Task";
-      toast.success(`${field} updated`);
+    onSuccess: (_data, variables, context) => {
+      const { id, ...updates } = variables;
+      const field = detectField(updates as Record<string, unknown>, TASK_FIELD_LABELS, "Task");
+
+      const prev = context?.previousTask ??
+        context?.previousQueries
+          ?.flatMap(([, d]) => d?.data ?? [])
+          .find((t) => t.id === id);
+      const undoPayload = buildUndoPayload(
+        prev as Record<string, unknown> | undefined,
+        updates as Record<string, unknown>,
+        TASK_UNDO_FIELDS,
+      );
+
+      if (undoPayload) {
+        toast.success(`${field} updated`, {
+          action: { label: "Undo", onClick: () => {
+            patchJson<Task>(`/api/tasks/${id}`, undoPayload)
+              .then(() => {
+                toast.success("Undone");
+                queryClient.invalidateQueries({ queryKey: ["tasks"] });
+                queryClient.invalidateQueries({ queryKey: ["summary"] });
+              })
+              .catch((err: Error) => {
+                toast.error("Undo failed", { description: err.message });
+              });
+          }},
+          duration: 5000,
+        });
+      } else {
+        toast.success(`${field} updated`);
+      }
     },
     onError: (err, _vars, context) => {
       toast.error("Failed to update task", { description: err.message });
@@ -191,23 +274,38 @@ export function useUpdateEpic() {
       }
       return { previousQueries, previousEpic, id };
     },
-    onSuccess: (_data, variables) => {
-      const field = variables.status
-        ? "Status"
-        : variables.priority
-          ? "Priority"
-          : variables.title
-            ? "Title"
-            : variables.tags
-              ? "Tags"
-              : variables.started !== undefined
-                ? "Start date"
-                : variables.target !== undefined
-                  ? "Target date"
-                  : variables.body !== undefined
-                    ? "Content"
-                    : "Epic";
-      toast.success(`${field} updated`);
+    onSuccess: (_data, variables, context) => {
+      const { id, ...updates } = variables;
+      const field = detectField(updates as Record<string, unknown>, EPIC_FIELD_LABELS, "Epic");
+
+      const prev = context?.previousEpic ??
+        context?.previousQueries
+          ?.flatMap(([, d]) => d?.data ?? [])
+          .find((e) => e.id === id);
+      const undoPayload = buildUndoPayload(
+        prev as Record<string, unknown> | undefined,
+        updates as Record<string, unknown>,
+        EPIC_UNDO_FIELDS,
+      );
+
+      if (undoPayload) {
+        toast.success(`${field} updated`, {
+          action: { label: "Undo", onClick: () => {
+            patchJson<Epic>(`/api/epics/${id}`, undoPayload)
+              .then(() => {
+                toast.success("Undone");
+                queryClient.invalidateQueries({ queryKey: ["epics"] });
+                queryClient.invalidateQueries({ queryKey: ["summary"] });
+              })
+              .catch((err: Error) => {
+                toast.error("Undo failed", { description: err.message });
+              });
+          }},
+          duration: 5000,
+        });
+      } else {
+        toast.success(`${field} updated`);
+      }
     },
     onError: (err, _vars, context) => {
       toast.error("Failed to update epic", { description: err.message });
@@ -241,15 +339,33 @@ export function useUpdatePlan() {
       }
       return { previousPlan, id };
     },
-    onSuccess: (_data, variables) => {
-      const field = variables.status
-        ? "Status"
-        : variables.title
-          ? "Title"
-          : variables.body !== undefined
-            ? "Content"
-            : "Plan";
-      toast.success(`${field} updated`);
+    onSuccess: (_data, variables, context) => {
+      const { id, ...updates } = variables;
+      const field = detectField(updates as Record<string, unknown>, PLAN_FIELD_LABELS, "Plan");
+
+      const undoPayload = buildUndoPayload(
+        context?.previousPlan as Record<string, unknown> | undefined,
+        updates as Record<string, unknown>,
+        PLAN_UNDO_FIELDS,
+      );
+
+      if (undoPayload) {
+        toast.success(`${field} updated`, {
+          action: { label: "Undo", onClick: () => {
+            patchJson<Plan>(`/api/plans/${id}`, undoPayload)
+              .then(() => {
+                toast.success("Undone");
+                queryClient.invalidateQueries({ queryKey: ["plans"] });
+              })
+              .catch((err: Error) => {
+                toast.error("Undo failed", { description: err.message });
+              });
+          }},
+          duration: 5000,
+        });
+      } else {
+        toast.success(`${field} updated`);
+      }
     },
     onError: (err, _vars, context) => {
       toast.error("Failed to update plan", { description: err.message });
@@ -277,21 +393,33 @@ export function useUpdateNote() {
       }
       return { previousNote, id };
     },
-    onSuccess: (_data, variables) => {
-      const field = variables.status
-        ? "Status"
-        : variables.type
-          ? "Type"
-          : variables.title
-            ? "Title"
-            : variables.tags
-              ? "Tags"
-              : variables.related
-                ? "Related"
-                : variables.body !== undefined
-                  ? "Content"
-                  : "Note";
-      toast.success(`${field} updated`);
+    onSuccess: (_data, variables, context) => {
+      const { id, ...updates } = variables;
+      const field = detectField(updates as Record<string, unknown>, NOTE_FIELD_LABELS, "Note");
+
+      const undoPayload = buildUndoPayload(
+        context?.previousNote as Record<string, unknown> | undefined,
+        updates as Record<string, unknown>,
+        NOTE_UNDO_FIELDS,
+      );
+
+      if (undoPayload) {
+        toast.success(`${field} updated`, {
+          action: { label: "Undo", onClick: () => {
+            patchJson<Note>(`/api/notes/${id}`, undoPayload)
+              .then(() => {
+                toast.success("Undone");
+                queryClient.invalidateQueries({ queryKey: ["notes"] });
+              })
+              .catch((err: Error) => {
+                toast.error("Undo failed", { description: err.message });
+              });
+          }},
+          duration: 5000,
+        });
+      } else {
+        toast.success(`${field} updated`);
+      }
     },
     onError: (err, _vars, context) => {
       toast.error("Failed to update note", { description: err.message });
@@ -305,19 +433,36 @@ export function useUpdateNote() {
   });
 }
 
+function invalidateAllEntities(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: ["tasks"] });
+  queryClient.invalidateQueries({ queryKey: ["epics"] });
+  queryClient.invalidateQueries({ queryKey: ["plans"] });
+  queryClient.invalidateQueries({ queryKey: ["notes"] });
+  queryClient.invalidateQueries({ queryKey: ["archived"] });
+  queryClient.invalidateQueries({ queryKey: ["summary"] });
+}
+
 export function useArchiveItem() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (id: string) => postAction<{ id: string; status: string }>(`/api/items/${id}/archive`),
     onSuccess: (data) => {
-      toast.success("Archived", { description: data.id });
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["epics"] });
-      queryClient.invalidateQueries({ queryKey: ["plans"] });
-      queryClient.invalidateQueries({ queryKey: ["notes"] });
-      queryClient.invalidateQueries({ queryKey: ["archived"] });
-      queryClient.invalidateQueries({ queryKey: ["summary"] });
+      invalidateAllEntities(queryClient);
+      toast.success("Archived", {
+        description: data.id,
+        action: { label: "Undo", onClick: () => {
+          postAction(`/api/items/${data.id}/unarchive`)
+            .then(() => {
+              toast.success("Undone");
+              invalidateAllEntities(queryClient);
+            })
+            .catch((err: Error) => {
+              toast.error("Undo failed", { description: err.message });
+            });
+        }},
+        duration: 5000,
+      });
     },
     onError: (err) => {
       toast.error("Failed to archive", { description: err.message });
@@ -335,14 +480,21 @@ export function useBatchArchive() {
       );
       return results;
     },
-    onSuccess: (data) => {
-      toast.success(`Archived ${data.length} item${data.length === 1 ? "" : "s"}`);
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["epics"] });
-      queryClient.invalidateQueries({ queryKey: ["plans"] });
-      queryClient.invalidateQueries({ queryKey: ["notes"] });
-      queryClient.invalidateQueries({ queryKey: ["archived"] });
-      queryClient.invalidateQueries({ queryKey: ["summary"] });
+    onSuccess: (data, variables) => {
+      invalidateAllEntities(queryClient);
+      toast.success(`Archived ${data.length} item${data.length === 1 ? "" : "s"}`, {
+        action: { label: "Undo", onClick: () => {
+          Promise.all(variables.map((id) => postAction(`/api/items/${id}/unarchive`)))
+            .then(() => {
+              toast.success("Undone");
+              invalidateAllEntities(queryClient);
+            })
+            .catch((err: Error) => {
+              toast.error("Undo failed", { description: err.message });
+            });
+        }},
+        duration: 5000,
+      });
     },
     onError: (err) => {
       toast.error("Failed to archive items", { description: err.message });
@@ -357,12 +509,7 @@ export function useUnarchiveItem() {
     mutationFn: (id: string) => postAction<{ id: string; status: string }>(`/api/items/${id}/unarchive`),
     onSuccess: (data) => {
       toast.success("Restored from archive", { description: data.id });
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["epics"] });
-      queryClient.invalidateQueries({ queryKey: ["plans"] });
-      queryClient.invalidateQueries({ queryKey: ["notes"] });
-      queryClient.invalidateQueries({ queryKey: ["archived"] });
-      queryClient.invalidateQueries({ queryKey: ["summary"] });
+      invalidateAllEntities(queryClient);
     },
     onError: (err) => {
       toast.error("Failed to restore", { description: err.message });

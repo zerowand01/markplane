@@ -474,7 +474,7 @@ interface GraphEdge {
 | `useKeyboardNav()` | `use-keyboard-nav.ts` | Keyboard chord navigation (`g`+letter) + `?` for command palette |
 | `useMobile()` | `hooks/use-mobile.ts` | Mobile viewport detection |
 
-All mutation hooks use TanStack Query's `useMutation` with `onMutate`/`onError`/`onSettled` lifecycle for optimistic updates with rollback on failure, plus `sonner` toast notifications for success/error feedback.
+All mutation hooks use TanStack Query's `useMutation` with `onMutate`/`onError`/`onSettled` lifecycle for optimistic updates with rollback on failure, plus `sonner` toast notifications for success/error feedback. Update and archive mutations show a toast with an "Undo" action button (5-second window) that reverts the change via a second API call.
 
 ---
 
