@@ -171,6 +171,7 @@ export interface SearchResult {
   priority?: string;
   snippet: string;
   score: number;
+  archived: boolean;
 }
 
 export type WsEvent =

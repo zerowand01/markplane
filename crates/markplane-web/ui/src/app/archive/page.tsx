@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageTransition } from "@/components/domain/page-transition";
 import { EmptyState } from "@/components/domain/empty-state";
-import { ArchiveRestore } from "lucide-react";
+import { ArchiveRestore, Search, X } from "lucide-react";
 import type { Task, Epic, Plan, Note } from "@/lib/types";
 
 type EntityTab = "all" | "tasks" | "epics" | "plans" | "notes";
@@ -85,6 +85,7 @@ const TYPE_COLOR: Record<string, string> = {
 
 function ArchiveContent() {
   const [tab, setTab] = useState<EntityTab>("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: tasks = [], isLoading: loadingTasks } = useArchivedTasks();
   const { data: epics = [], isLoading: loadingEpics } = useArchivedEpics();
@@ -99,10 +100,16 @@ function ArchiveContent() {
     [tasks, epics, plans, notes],
   );
 
-  const filteredItems = useMemo(
-    () => (tab === "all" ? allItems : allItems.filter((i) => i.type === tab)),
-    [allItems, tab],
-  );
+  const filteredItems = useMemo(() => {
+    let items = tab === "all" ? allItems : allItems.filter((i) => i.type === tab);
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      items = items.filter(
+        (i) => i.title.toLowerCase().includes(q) || i.id.toLowerCase().includes(q),
+      );
+    }
+    return items;
+  }, [allItems, tab, searchQuery]);
 
   const counts = useMemo(
     () => ({
@@ -141,12 +148,12 @@ function ArchiveContent() {
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold">Archive</h1>
           <span className="text-sm text-muted-foreground">
-            ({counts.all} {counts.all === 1 ? "item" : "items"})
+            ({filteredItems.length} {filteredItems.length === 1 ? "item" : "items"})
           </span>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-4 border-b">
+        {/* Tabs + Search */}
+        <div className="flex items-center gap-4 border-b">
           {tabs.map((t) => (
             <button
               key={t.key}
@@ -165,14 +172,40 @@ function ArchiveContent() {
               )}
             </button>
           ))}
+          <div className="relative ml-auto w-56 shrink-0 mb-1.5">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Filter by title or ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-md border bg-background pl-8 pr-8 py-1 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Items */}
         {filteredItems.length === 0 ? (
-          <EmptyState
-            title="Archive is empty"
-            description="Completed items will appear here when archived"
-          />
+          allItems.length === 0 ? (
+            <EmptyState
+              title="Archive is empty"
+              description="Completed items will appear here when archived"
+            />
+          ) : (
+            <EmptyState
+              title="No matches"
+              description="No archived items match your search"
+            />
+          )
         ) : (
           <div className="space-y-1">
             {filteredItems.map((item) => (

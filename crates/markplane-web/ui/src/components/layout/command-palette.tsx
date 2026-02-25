@@ -19,9 +19,10 @@ import { useSearch } from "@/lib/hooks/use-search";
 import { postAction } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { PREFIX_CONFIG } from "@/lib/constants";
-import { StatusBadge } from "@/components/domain/status-badge";
+import { GenericStatusBadge } from "@/components/domain/status-badge";
 import { PriorityIndicator } from "@/components/domain/priority-indicator";
-import type { SearchResult, Priority, TaskStatus } from "@/lib/types";
+import { Archive } from "lucide-react";
+import type { SearchResult, Priority } from "@/lib/types";
 
 function highlightMatch(text: string, query: string): ReactNode {
   if (!query) return text;
@@ -43,6 +44,7 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [includeArchived, setIncludeArchived] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -51,7 +53,7 @@ export function CommandPalette() {
   const { data: epicsData } = useEpics();
   const { data: plansData } = usePlans();
   const { data: notesData } = useNotes();
-  const { data: searchData, isLoading: isSearching } = useSearch(debouncedQuery);
+  const { data: searchData, isLoading: isSearching } = useSearch(debouncedQuery, { includeArchived });
 
   const tasks = tasksData ?? [];
   const epics = epicsData ?? [];
@@ -75,6 +77,7 @@ export function CommandPalette() {
     if (!open) {
       setQuery("");
       setDebouncedQuery("");
+      setIncludeArchived(false);
     }
   }, [open]);
 
@@ -125,11 +128,27 @@ export function CommandPalette() {
       shouldFilter={!isSearchMode}
       className="sm:max-w-3xl"
     >
-      <CommandInput
-        placeholder="Search items, commands, or navigate..."
-        value={query}
-        onValueChange={setQuery}
-      />
+      <div className="relative">
+        <CommandInput
+          placeholder="Search items, commands, or navigate..."
+          value={query}
+          onValueChange={setQuery}
+        />
+        {isSearchMode && (
+          <button
+            type="button"
+            onClick={() => setIncludeArchived((v) => !v)}
+            className={`absolute right-12 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-md transition-colors ${
+              includeArchived
+                ? "bg-primary/10 text-primary font-medium"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            }`}
+          >
+            <Archive className="size-3.5" />
+            Include archived
+          </button>
+        )}
+      </div>
       <CommandList>
         {isSearchMode ? (
           <>
@@ -173,12 +192,17 @@ export function CommandPalette() {
                         )}
                       </div>
                       <div className="flex items-center gap-2 ml-2 shrink-0">
+                        {result.archived && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">
+                            Archived
+                          </span>
+                        )}
                         {result.priority && (
                           <PriorityIndicator
                             priority={result.priority as Priority}
                           />
                         )}
-                        <StatusBadge status={result.status as TaskStatus} />
+                        <GenericStatusBadge status={result.status} />
                       </div>
                     </CommandItem>
                   );

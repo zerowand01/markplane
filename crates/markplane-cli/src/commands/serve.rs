@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -1395,6 +1395,8 @@ async fn post_link(
 #[derive(Deserialize)]
 struct SearchParams {
     q: String,
+    #[serde(default)]
+    include_archived: bool,
 }
 
 #[derive(Serialize)]
@@ -1406,6 +1408,7 @@ struct SearchResultResponse {
     priority: Option<String>,
     snippet: String,
     score: f64,
+    archived: bool,
 }
 
 async fn get_search(
@@ -1423,10 +1426,19 @@ async fn get_search(
     let mut results: Vec<SearchResultResponse> = Vec::new();
 
     // Search tasks
-    let tasks = state
+    let mut tasks = state
         .project
         .list_tasks(&QueryFilter::default())
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+    let archived_task_ids: HashSet<String> = if params.include_archived {
+        let archived = state.project.list_tasks(&QueryFilter { archived: true, ..Default::default() })
+            .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+        let ids = archived.iter().map(|d| d.frontmatter.id.clone()).collect();
+        tasks.extend(archived);
+        ids
+    } else {
+        HashSet::new()
+    };
     for doc in &tasks {
         let fm = &doc.frontmatter;
         let id_match = fm.id.to_lowercase().contains(&query);
@@ -1445,15 +1457,25 @@ async fn get_search(
                 priority: Some(fm.priority.to_string()),
                 snippet,
                 score,
+                archived: archived_task_ids.contains(&fm.id),
             });
         }
     }
 
     // Search epics
-    let epics = state
+    let mut epics = state
         .project
         .list_epics()
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+    let archived_epic_ids: HashSet<String> = if params.include_archived {
+        let archived = state.project.list_epics_filtered(true)
+            .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+        let ids = archived.iter().map(|d| d.frontmatter.id.clone()).collect();
+        epics.extend(archived);
+        ids
+    } else {
+        HashSet::new()
+    };
     for doc in &epics {
         let fm = &doc.frontmatter;
         let id_match = fm.id.to_lowercase().contains(&query);
@@ -1471,15 +1493,25 @@ async fn get_search(
                 priority: Some(fm.priority.to_string()),
                 snippet,
                 score,
+                archived: archived_epic_ids.contains(&fm.id),
             });
         }
     }
 
     // Search plans
-    let plans = state
+    let mut plans = state
         .project
         .list_plans()
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+    let archived_plan_ids: HashSet<String> = if params.include_archived {
+        let archived = state.project.list_plans_filtered(true)
+            .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+        let ids = archived.iter().map(|d| d.frontmatter.id.clone()).collect();
+        plans.extend(archived);
+        ids
+    } else {
+        HashSet::new()
+    };
     for doc in &plans {
         let fm = &doc.frontmatter;
         let id_match = fm.id.to_lowercase().contains(&query);
@@ -1496,15 +1528,25 @@ async fn get_search(
                 priority: None,
                 snippet,
                 score,
+                archived: archived_plan_ids.contains(&fm.id),
             });
         }
     }
 
     // Search notes
-    let notes = state
+    let mut notes = state
         .project
         .list_notes()
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+    let archived_note_ids: HashSet<String> = if params.include_archived {
+        let archived = state.project.list_notes_filtered(true)
+            .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+        let ids = archived.iter().map(|d| d.frontmatter.id.clone()).collect();
+        notes.extend(archived);
+        ids
+    } else {
+        HashSet::new()
+    };
     for doc in &notes {
         let fm = &doc.frontmatter;
         let id_match = fm.id.to_lowercase().contains(&query);
@@ -1522,6 +1564,7 @@ async fn get_search(
                 priority: None,
                 snippet,
                 score,
+                archived: archived_note_ids.contains(&fm.id),
             });
         }
     }
