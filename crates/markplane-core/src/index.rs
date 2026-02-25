@@ -211,14 +211,18 @@ impl Project {
             content.push('\n');
         }
 
-        // --- Recently Done (completed within recent_days) ---
-        let recently_done: Vec<_> = items
+        // --- Recently Done (completed within recent_days, sorted by completion date desc) ---
+        let mut recently_done: Vec<_> = items
             .iter()
             .filter(|i| {
                 i.frontmatter.status == TaskStatus::Done
                     && i.frontmatter.updated >= recent_cutoff
             })
             .collect();
+        recently_done.sort_by(|a, b| {
+            b.frontmatter.updated.cmp(&a.frontmatter.updated)
+                .then_with(|| a.frontmatter.id.cmp(&b.frontmatter.id))
+        });
         if !recently_done.is_empty() {
             content.push_str(&format!(
                 "## Recently Done ({})\n\n",
@@ -740,6 +744,125 @@ mod tests {
         assert!(content.contains(&format!("[{}](items/{}.md)", done_task.id, done_task.id)));
         // The open item should be in Drafts, not in Recently Done
         assert!(content.contains("## Drafts (1)"));
+    }
+
+    #[test]
+    fn test_generate_backlog_index_recently_done_sorted_by_completion_date() {
+        let (_tmp, project) = setup_project();
+        // Create three tasks and mark them all done
+        let task_a = project
+            .create_task(
+                "Task A",
+                ItemType::Feature,
+                Priority::High,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap();
+        let task_b = project
+            .create_task(
+                "Task B",
+                ItemType::Feature,
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap();
+        let task_c = project
+            .create_task(
+                "Task C",
+                ItemType::Feature,
+                Priority::Low,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap();
+
+        // Mark all done
+        project.update_status(&task_a.id, "done").unwrap();
+        project.update_status(&task_b.id, "done").unwrap();
+        project.update_status(&task_c.id, "done").unwrap();
+
+        // Set different updated dates: B newest, C middle, A oldest
+        let today = chrono::Local::now().date_naive();
+        let mut doc_a: MarkplaneDocument<Task> = project.read_item(&task_a.id).unwrap();
+        doc_a.frontmatter.updated = today - chrono::Duration::days(2);
+        project.write_item(&task_a.id, &doc_a).unwrap();
+
+        let mut doc_c: MarkplaneDocument<Task> = project.read_item(&task_c.id).unwrap();
+        doc_c.frontmatter.updated = today - chrono::Duration::days(1);
+        project.write_item(&task_c.id, &doc_c).unwrap();
+
+        // task_b keeps today's date (newest)
+
+        project.generate_backlog_index().unwrap();
+        let content = fs::read_to_string(project.root().join("backlog/INDEX.md")).unwrap();
+        assert!(content.contains("## Recently Done (3)"));
+
+        // Should be sorted: B (newest) → C → A (oldest)
+        let pos_b = content.find(&format!("[{}]", task_b.id)).unwrap();
+        let pos_c = content.find(&format!("[{}]", task_c.id)).unwrap();
+        let pos_a = content.find(&format!("[{}]", task_a.id)).unwrap();
+        assert!(
+            pos_b < pos_c && pos_c < pos_a,
+            "Recently Done should be sorted by updated date descending: B({}) < C({}) < A({})",
+            pos_b, pos_c, pos_a
+        );
+    }
+
+    #[test]
+    fn test_generate_backlog_index_recently_done_stable_tiebreaker() {
+        let (_tmp, project) = setup_project();
+        // Create two tasks that will share the same updated date
+        let task_1 = project
+            .create_task(
+                "Task 1",
+                ItemType::Feature,
+                Priority::Low,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap();
+        let task_2 = project
+            .create_task(
+                "Task 2",
+                ItemType::Feature,
+                Priority::High,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap();
+        project.update_status(&task_1.id, "done").unwrap();
+        project.update_status(&task_2.id, "done").unwrap();
+
+        // Both tasks have the same updated date (today), so ID ascending is tiebreaker
+        project.generate_backlog_index().unwrap();
+        let content = fs::read_to_string(project.root().join("backlog/INDEX.md")).unwrap();
+        assert!(content.contains("## Recently Done (2)"));
+
+        let pos_1 = content.find(&format!("[{}]", task_1.id)).unwrap();
+        let pos_2 = content.find(&format!("[{}]", task_2.id)).unwrap();
+        // IDs are random but deterministic — the lexicographically smaller ID should come first
+        if task_1.id < task_2.id {
+            assert!(pos_1 < pos_2, "ID tiebreaker: {} should come before {}", task_1.id, task_2.id);
+        } else {
+            assert!(pos_2 < pos_1, "ID tiebreaker: {} should come before {}", task_2.id, task_1.id);
+        }
+
+        // Verify stability: regenerating produces the same order
+        project.generate_backlog_index().unwrap();
+        let content2 = fs::read_to_string(project.root().join("backlog/INDEX.md")).unwrap();
+        assert_eq!(content, content2, "Sort order should be stable across repeated syncs");
     }
 
     #[test]

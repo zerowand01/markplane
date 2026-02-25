@@ -1,7 +1,7 @@
 ---
 id: TASK-wd79a
 title: Sort "Recently Done" section by completion date in backlog INDEX
-status: planned
+status: done
 priority: low
 type: bug
 effort: xs
