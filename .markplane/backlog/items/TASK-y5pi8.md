@@ -1,7 +1,7 @@
 ---
 id: TASK-y5pi8
 title: Fix backlog drag-and-drop bugs
-status: backlog
+status: done
 priority: high
 type: bug
 effort: small
@@ -14,7 +14,7 @@ blocks: []
 assignee: null
 position: a0x
 created: 2026-02-23
-updated: 2026-02-23
+updated: 2026-02-25
 ---
 
 # Fix backlog drag-and-drop bugs

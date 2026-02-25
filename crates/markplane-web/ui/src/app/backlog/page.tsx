@@ -6,11 +6,12 @@ import {
   DndContext,
   DragOverlay,
   closestCorners,
+  rectIntersection,
   PointerSensor,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import type { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
+import type { DragStartEvent, DragEndEvent, CollisionDetection } from "@dnd-kit/core";
 import {
   SortableContext,
   useSortable,
@@ -81,6 +82,23 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "effort", label: "Effort" },
   { key: "epic", label: "Epic" },
 ];
+
+// Kanban collision detection: only consider column droppables, not individual
+// card sortables. This ensures dragging to an empty column (e.g. In Progress)
+// correctly resolves to that column instead of a card in an adjacent column.
+const KANBAN_COLUMN_IDS = new Set<string>(KANBAN_COLUMNS.map((c) => c.status));
+
+const kanbanCollisionDetection: CollisionDetection = (args) => {
+  const columnOnly = {
+    ...args,
+    droppableContainers: args.droppableContainers.filter((c) =>
+      KANBAN_COLUMN_IDS.has(c.id as string)
+    ),
+  };
+  const collisions = rectIntersection(columnOnly);
+  if (collisions.length > 0) return collisions;
+  return closestCorners(columnOnly);
+};
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 
@@ -376,6 +394,16 @@ function KanbanView({
   const batchArchive = useBatchArchive();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
+  // Optimistic local state — updated synchronously on drop so the card
+  // appears in the target column before the async mutation fires.
+  const [pendingUpdate, setPendingUpdate] = useState<Task[] | null>(null);
+  const displayTasks = pendingUpdate ?? tasks;
+
+  // Clear optimistic state when server data arrives
+  useEffect(() => {
+    setPendingUpdate(null);
+  }, [tasks]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
@@ -388,7 +416,7 @@ function KanbanView({
       map.set(col.status, []);
       totals.set(col.status, 0);
     }
-    for (const task of tasks) {
+    for (const task of displayTasks) {
       if (task.status === "cancelled") {
         cancelled.push(task);
         continue;
@@ -400,7 +428,7 @@ function KanbanView({
       }
     }
     return { tasksByStatus: map, totalsByStatus: totals, cancelledTasks: cancelled };
-  }, [tasks]);
+  }, [displayTasks]);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const task = event.active.data.current?.task as Task | undefined;
@@ -414,38 +442,30 @@ function KanbanView({
       if (!over) return;
 
       const taskId = active.id as string;
-      // The over target is either a column (droppable) or another card (sortable)
       const overId = over.id as string;
 
-      // Determine target status
-      let targetStatus: TaskStatus | null = null;
-      // Check if dropped on a column directly
-      const col = KANBAN_COLUMNS.find((c) => c.status === overId);
-      if (col) {
-        targetStatus = col.status;
-      } else {
-        // Dropped on a card — find which column that card belongs to
-        const overTask = tasks.find((t) => t.id === overId);
-        if (overTask) {
-          targetStatus = overTask.status;
-        }
-      }
-
-      if (!targetStatus) return;
+      // Custom collision detection ensures over is always a column
+      if (!KANBAN_COLUMN_IDS.has(overId)) return;
+      const targetStatus = overId as TaskStatus;
 
       // Only update if status actually changed
-      const currentTask = tasks.find((t) => t.id === taskId);
+      const currentTask = displayTasks.find((t) => t.id === taskId);
       if (currentTask && currentTask.status !== targetStatus) {
+        setPendingUpdate(
+          displayTasks.map((t) =>
+            t.id === taskId ? { ...t, status: targetStatus } : t
+          )
+        );
         updateTask.mutate({ id: taskId, status: targetStatus });
       }
     },
-    [tasks, updateTask]
+    [displayTasks, updateTask]
   );
 
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={kanbanCollisionDetection}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
@@ -486,9 +506,7 @@ function KanbanView({
 
       <DragOverlay>
         {activeTask ? (
-          <div className="w-[300px] opacity-90">
-            <TaskCard task={activeTask} />
-          </div>
+          <TaskCard task={activeTask} isOverlay />
         ) : null}
       </DragOverlay>
     </DndContext>
@@ -556,37 +574,32 @@ function KanbanColumn({
         )}
       </div>
 
-      <SortableContext
-        items={tasks.map((t) => t.id)}
-        strategy={verticalListSortingStrategy}
-      >
-        <div className="space-y-2 min-h-[60px]">
-          {tasks.map((task) => (
-            <div key={task.id} className="group/card relative">
-              <TaskCard
-                task={task}
-                onClick={() => onTaskClick(task.id)}
-                onArchive={onArchive}
-              />
-              {onDemote && (
-                <button
-                  title="Send to Backlog"
-                  className="absolute top-2 right-2 size-6 flex items-center justify-center rounded opacity-0 group-hover/card:opacity-100 transition-opacity text-muted-foreground hover:text-primary hover:bg-primary/10 bg-card/80"
-                  onClick={(e) => { e.stopPropagation(); onDemote(task.id); }}
-                  onPointerDown={(e) => e.stopPropagation()}
-                >
-                  <ArrowDownLeft className="size-3.5" />
-                </button>
-              )}
-            </div>
-          ))}
-          {tasks.length === 0 && !cancelledTasks?.length && (
-            <div className="rounded-lg border border-dashed p-6 text-center">
-              <p className="text-xs text-muted-foreground">No tasks</p>
-            </div>
-          )}
-        </div>
-      </SortableContext>
+      <div className="space-y-2 min-h-[60px]">
+        {tasks.map((task) => (
+          <div key={task.id} className="group/card relative">
+            <TaskCard
+              task={task}
+              onClick={() => onTaskClick(task.id)}
+              onArchive={onArchive}
+            />
+            {onDemote && (
+              <button
+                title="Send to Backlog"
+                className="absolute top-2 right-2 size-6 flex items-center justify-center rounded opacity-0 group-hover/card:opacity-100 transition-opacity text-muted-foreground hover:text-primary hover:bg-primary/10 bg-card/80"
+                onClick={(e) => { e.stopPropagation(); onDemote(task.id); }}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <ArrowDownLeft className="size-3.5" />
+              </button>
+            )}
+          </div>
+        ))}
+        {tasks.length === 0 && !cancelledTasks?.length && (
+          <div className="rounded-lg border border-dashed p-6 text-center">
+            <p className="text-xs text-muted-foreground">No tasks</p>
+          </div>
+        )}
+      </div>
 
       {cancelledTasks && cancelledTasks.length > 0 && (
         <div className="mt-4">
@@ -718,8 +731,10 @@ function BacklogListView({
       const taskId = active.id as string;
       const overId = over.id as string;
 
-      // Check if dropped on the promote zone
+      // Check if dropped on the promote zone — immediately remove from local
+      // state so the card disappears without a snap-back animation.
       if (overId === "promote-to-board") {
+        setPendingReorder(displayTasks.filter((t) => t.id !== taskId));
         updateTask.mutate({ id: taskId, status: "planned" });
         return;
       }

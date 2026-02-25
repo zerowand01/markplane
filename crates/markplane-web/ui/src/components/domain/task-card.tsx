@@ -1,7 +1,6 @@
 "use client";
 
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { useDraggable } from "@dnd-kit/core";
 import { Archive } from "lucide-react";
 import { PriorityIndicator } from "./priority-indicator";
 import type { Task } from "@/lib/types";
@@ -10,32 +9,38 @@ export function TaskCard({
   task,
   onClick,
   onArchive,
+  isOverlay,
 }: {
   task: Task;
   onClick?: () => void;
   onArchive?: (id: string) => void;
+  isOverlay?: boolean;
 }) {
   const {
     attributes,
     listeners,
     setNodeRef,
-    transform,
-    transition,
     isDragging,
-  } = useSortable({ id: task.id, data: { task } });
+  } = useDraggable({ id: task.id, data: { task } });
 
+  // With DragOverlay, the original card stays in place — no transform needed.
+  // Only reduce opacity to indicate it's being dragged.
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
     opacity: isDragging ? 0.5 : 1,
   };
 
   const hasMetadata = task.epic || task.tags.length > 0;
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div
+      ref={isOverlay ? undefined : setNodeRef}
+      style={isOverlay ? undefined : style}
+      {...(isOverlay ? {} : { ...attributes, ...listeners })}
+    >
       <div
-        className="rounded-lg border bg-card p-3 space-y-1 hover:border-muted-foreground/30 transition-colors cursor-pointer"
+        className={`rounded-lg border bg-card p-3 space-y-1 hover:border-muted-foreground/30 transition-colors cursor-pointer ${
+          isOverlay ? "shadow-lg border-primary/50" : ""
+        }`}
         onClick={onClick}
       >
         <div className="flex items-center gap-2">
@@ -43,7 +48,7 @@ export function TaskCard({
           <span className="font-mono text-sm text-muted-foreground shrink-0">
             {task.id}
           </span>
-          {onArchive && (
+          {onArchive && !isOverlay && (
             <button
               title="Archive"
               className="size-6 flex items-center justify-center rounded opacity-0 group-hover/card:opacity-100 transition-opacity text-muted-foreground hover:text-primary hover:bg-primary/10 cursor-pointer"
