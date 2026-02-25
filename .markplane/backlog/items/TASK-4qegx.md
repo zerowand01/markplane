@@ -1,7 +1,7 @@
 ---
 id: TASK-4qegx
 title: Filter command palette actions during search
-status: backlog
+status: planned
 priority: medium
 type: enhancement
 effort: small
@@ -14,7 +14,7 @@ blocks: []
 assignee: null
 position: ZzV
 created: 2026-02-23
-updated: 2026-02-23
+updated: 2026-02-25
 ---
 
 # Filter command palette actions during search
