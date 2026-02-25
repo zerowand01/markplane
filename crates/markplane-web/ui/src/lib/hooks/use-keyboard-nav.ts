@@ -59,7 +59,7 @@ export function useKeyboardNav() {
       // ? opens command palette (Cmd+K)
       if (e.key === "?") {
         e.preventDefault();
-        window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
+        window.dispatchEvent(new Event("open-command-palette"));
         return;
       }
 

@@ -49,6 +49,14 @@ export const NOTE_STATUS_CONFIG: Record<string, { label: string; icon: LucideIco
   archived: { label: "Archived", icon: Archive },
 };
 
+export const NOTE_TYPE_CONFIG: Record<string, { label: string }> = {
+  research: { label: "Research" },
+  analysis: { label: "Analysis" },
+  idea: { label: "Idea" },
+  decision: { label: "Decision" },
+  meeting: { label: "Meeting" },
+};
+
 export const PREFIX_CONFIG: Record<string, { route: string; apiPath: string; color: string }> = {
   TASK: { route: "/backlog", apiPath: "tasks", color: "var(--entity-task)" },
   EPIC: { route: "/roadmap", apiPath: "epics", color: "var(--entity-epic)" },

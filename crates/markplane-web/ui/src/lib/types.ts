@@ -146,7 +146,9 @@ export interface UpdatePlanRequest {
 export interface UpdateNoteRequest {
   title?: string;
   status?: NoteStatus;
+  type?: NoteType;
   tags?: string[];
+  related?: string[];
   body?: string;
 }
 

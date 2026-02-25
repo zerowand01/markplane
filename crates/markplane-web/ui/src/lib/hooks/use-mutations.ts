@@ -280,13 +280,17 @@ export function useUpdateNote() {
     onSuccess: (_data, variables) => {
       const field = variables.status
         ? "Status"
-        : variables.title
-          ? "Title"
-          : variables.tags
-            ? "Tags"
-            : variables.body !== undefined
-              ? "Content"
-              : "Note";
+        : variables.type
+          ? "Type"
+          : variables.title
+            ? "Title"
+            : variables.tags
+              ? "Tags"
+              : variables.related
+                ? "Related"
+                : variables.body !== undefined
+                  ? "Content"
+                  : "Note";
       toast.success(`${field} updated`);
     },
     onError: (err, _vars, context) => {

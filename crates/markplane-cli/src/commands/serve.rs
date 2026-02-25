@@ -626,8 +626,12 @@ fn note_to_response(doc: &MarkplaneDocument<Note>) -> NoteResponse {
 struct UpdateNoteRequest {
     title: Option<String>,
     status: Option<String>,
+    #[serde(rename = "type")]
+    note_type: Option<String>,
     #[serde(default)]
     tags: Option<Vec<String>>,
+    #[serde(default)]
+    related: Option<Vec<String>>,
     body: Option<String>,
 }
 
@@ -1444,28 +1448,46 @@ async fn update_note(
     parse_id(&id)
         .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
 
-    // Diff tags if provided
+    // Read current state for diffing tags and links
+    let current: MarkplaneDocument<Note> = state.project.read_item(&id).map_err(map_core_error)?;
+    let fm = &current.frontmatter;
+
+    // ── Properties → NoteUpdate ──────────────────────────────────────
     let (add_tags, remove_tags) = if let Some(ref desired_tags) = body.tags {
-        let current: MarkplaneDocument<Note> = state.project.read_item(&id).map_err(map_core_error)?;
-        diff_vec(&current.frontmatter.tags, desired_tags)
+        diff_vec(&fm.tags, desired_tags)
     } else {
         (vec![], vec![])
     };
 
-    // Properties
     let has_properties = body.title.is_some() || body.status.is_some()
+        || body.note_type.is_some()
         || !add_tags.is_empty() || !remove_tags.is_empty();
     if has_properties {
         state.project.update_note(&id, &NoteUpdate {
             title: body.title,
             status: body.status,
-            note_type: None,
+            note_type: body.note_type,
             add_tags,
             remove_tags,
         }).map_err(map_core_error)?;
     }
 
-    // Body
+    // ── Links → link_items() per change ──────────────────────────────
+
+    // related (array): diff
+    if let Some(ref desired_related) = body.related {
+        let (to_add, to_remove) = diff_vec(&fm.related, desired_related);
+        for rel in &to_remove {
+            state.project.link_items(&id, rel, LinkRelation::Related, LinkAction::Remove)
+                .map_err(map_core_error)?;
+        }
+        for rel in &to_add {
+            state.project.link_items(&id, rel, LinkRelation::Related, LinkAction::Add)
+                .map_err(map_core_error)?;
+        }
+    }
+
+    // ── Body ─────────────────────────────────────────────────────────
     if let Some(ref new_body) = body.body {
         state.project.update_body(&id, new_body).map_err(map_core_error)?;
     }

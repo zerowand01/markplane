@@ -8,7 +8,7 @@ import { CreateDialog } from "@/components/domain/create-dialog";
 import { Button } from "@/components/ui/button";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { NOTE_STATUS_CONFIG } from "@/lib/constants";
+import { NOTE_STATUS_CONFIG, NOTE_TYPE_CONFIG } from "@/lib/constants";
 import { PageTransition } from "@/components/domain/page-transition";
 import { EmptyState } from "@/components/domain/empty-state";
 import { Plus } from "lucide-react";
@@ -24,9 +24,11 @@ function NotesContent() {
   const notes = data ?? [];
 
   const grouped = {
-    active: notes.filter((n) => n.status === "active"),
-    draft: notes.filter((n) => n.status === "draft"),
-    archived: notes.filter((n) => n.status === "archived"),
+    research: notes.filter((n) => n.type === "research"),
+    analysis: notes.filter((n) => n.type === "analysis"),
+    idea: notes.filter((n) => n.type === "idea"),
+    decision: notes.filter((n) => n.type === "decision"),
+    meeting: notes.filter((n) => n.type === "meeting"),
   };
 
   if (error) {
@@ -73,11 +75,11 @@ function NotesContent() {
         />
       ) : (
         Object.entries(grouped).map(
-          ([status, items]) =>
+          ([type, items]) =>
             items.length > 0 && (
-              <div key={status} className="space-y-3">
+              <div key={type} className="space-y-3">
                 <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                  {NOTE_STATUS_CONFIG[status]?.label ?? status} ({items.length})
+                  {NOTE_TYPE_CONFIG[type]?.label ?? type} ({items.length})
                 </h2>
                 <div className="space-y-2">
                   {items.map((note) => (

@@ -1,14 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { useNote } from "@/lib/hooks/use-notes";
+import { useNote, useNotes } from "@/lib/hooks/use-notes";
+import { useTasks } from "@/lib/hooks/use-tasks";
+import { useEpics } from "@/lib/hooks/use-epics";
+import { usePlans } from "@/lib/hooks/use-plans";
 import { useUpdateNote, useArchiveItem } from "@/lib/hooks/use-mutations";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { MarkdownEditor } from "./markdown-editor";
-import { WikiLinkChip } from "./wiki-link-chip";
+import { EntityRefEditor } from "./entity-ref-editor";
 import { InlineEdit } from "./inline-edit";
 import { TagEditor } from "./tag-editor";
-import { FieldRow, EmptyValue } from "./field-row";
+import { FieldRow } from "./field-row";
 import {
   Sheet,
   SheetHeader,
@@ -25,10 +28,11 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Pencil, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { NOTE_STATUS_CONFIG } from "@/lib/constants";
-import type { NoteStatus } from "@/lib/types";
+import { NOTE_STATUS_CONFIG, NOTE_TYPE_CONFIG } from "@/lib/constants";
+import type { NoteStatus, NoteType } from "@/lib/types";
 
 const ALL_NOTE_STATUSES: NoteStatus[] = ["draft", "active", "archived"];
+const ALL_NOTE_TYPES: NoteType[] = ["research", "analysis", "idea", "decision", "meeting"];
 
 export function NoteDetailSheet({
   noteId,
@@ -45,6 +49,17 @@ export function NoteDetailSheet({
   });
   const updateNote = useUpdateNote();
   const archiveItem = useArchiveItem();
+  const { data: allTasks } = useTasks();
+  const { data: allNotes } = useNotes();
+  const { data: epics } = useEpics();
+  const { data: plans } = usePlans();
+
+  const relatedOptions = [
+    ...(allTasks?.map((t) => ({ id: t.id, title: t.title })) ?? []),
+    ...(epics?.map((e) => ({ id: e.id, title: e.title })) ?? []),
+    ...(plans?.map((p) => ({ id: p.id, title: p.title })) ?? []),
+    ...(allNotes?.filter((n) => n.id !== noteId).map((n) => ({ id: n.id, title: n.title })) ?? []),
+  ];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -136,8 +151,26 @@ export function NoteDetailSheet({
                   </DropdownMenu>
                 </FieldRow>
 
-                <FieldRow label="Type">
-                  <span className="text-sm uppercase">{note.type}</span>
+                <FieldRow label="Type" editable>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="cursor-pointer">
+                      <span className="text-sm uppercase">
+                        {NOTE_TYPE_CONFIG[note.type]?.label ?? note.type}
+                      </span>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {ALL_NOTE_TYPES.map((t) => (
+                        <DropdownMenuItem
+                          key={t}
+                          onClick={() =>
+                            updateNote.mutate({ id: note.id, type: t })
+                          }
+                        >
+                          {NOTE_TYPE_CONFIG[t]?.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </FieldRow>
 
                 <FieldRow label="Tags" editable>
@@ -149,16 +182,23 @@ export function NoteDetailSheet({
                   />
                 </FieldRow>
 
-                <FieldRow label="Related">
-                  {note.related.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {note.related.map((id) => (
-                        <WikiLinkChip key={id} id={id} />
-                      ))}
-                    </div>
-                  ) : (
-                    <EmptyValue />
-                  )}
+                <FieldRow label="Related" editable>
+                  <EntityRefEditor
+                    ids={note.related}
+                    options={relatedOptions}
+                    onAdd={(id) =>
+                      updateNote.mutate({
+                        id: note.id,
+                        related: [...note.related, id],
+                      })
+                    }
+                    onRemove={(id) =>
+                      updateNote.mutate({
+                        id: note.id,
+                        related: note.related.filter((r) => r !== id),
+                      })
+                    }
+                  />
                 </FieldRow>
 
                 <FieldRow label="Created">
