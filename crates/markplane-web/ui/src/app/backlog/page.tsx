@@ -238,7 +238,7 @@ function BacklogContent() {
           {(["board", "backlog"] as const).map((v) => (
             <button
               key={v}
-              className={`capitalize text-base pb-2 -mb-px transition-colors ${
+              className={`capitalize text-base pb-2 -mb-px transition-colors focus-visible:outline-none ${
                 view === v
                   ? "text-primary border-b-2 border-primary font-semibold"
                   : "text-muted-foreground hover:text-foreground"
