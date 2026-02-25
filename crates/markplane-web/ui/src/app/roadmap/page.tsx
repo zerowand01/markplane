@@ -12,6 +12,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PriorityIndicator } from "@/components/domain/priority-indicator";
 import { PageTransition } from "@/components/domain/page-transition";
 import { EmptyState } from "@/components/domain/empty-state";
+import { CreateDialog } from "@/components/domain/create-dialog";
+import { Plus } from "lucide-react";
 import type { Epic, Task, Priority, TaskStatus } from "@/lib/types";
 
 const PRIORITY_RANK: Record<Priority, number> = {
@@ -165,6 +167,7 @@ function RoadmapContent() {
   const { data: epicsData, isLoading: epicsLoading, error, refetch } = useEpics();
   const { data: tasksData } = useTasks();
   const [showDone, setShowDone] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   const selectedEpicId = searchParams.get("epic");
@@ -200,6 +203,22 @@ function RoadmapContent() {
   return (
     <PageTransition>
       <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-semibold">Roadmap</h1>
+          <Button
+            variant="outline"
+            className="text-xs gap-1 cursor-pointer"
+            style={{
+              color: "var(--entity-epic)",
+              borderColor: "var(--entity-epic)",
+              backgroundColor: "color-mix(in oklch, var(--entity-epic) 8%, transparent)",
+            }}
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus className="size-3.5" /> New Epic
+          </Button>
+        </div>
+
         {epicsLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -337,6 +356,13 @@ function RoadmapContent() {
           onOpenChange={(open) => {
             if (!open) setSelectedTaskId(null);
           }}
+        />
+
+        <CreateDialog
+          kind="epic"
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          onCreated={(id) => openEpic(id)}
         />
       </div>
     </PageTransition>

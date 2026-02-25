@@ -1,9 +1,10 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { usePlans } from "@/lib/hooks/use-plans";
 import { PlanDetailSheet } from "@/components/domain/plan-detail-sheet";
+import { CreateDialog } from "@/components/domain/create-dialog";
 import { Button } from "@/components/ui/button";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,11 +12,13 @@ import { PLAN_STATUS_CONFIG } from "@/lib/constants";
 import { WikiLinkChip } from "@/components/domain/wiki-link-chip";
 import { PageTransition } from "@/components/domain/page-transition";
 import { EmptyState } from "@/components/domain/empty-state";
+import { Plus } from "lucide-react";
 
 function PlansContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { data, isLoading, error, refetch } = usePlans();
+  const [createOpen, setCreateOpen] = useState(false);
 
   const selectedPlanId = searchParams.get("plan");
 
@@ -43,6 +46,22 @@ function PlansContent() {
   return (
     <PageTransition>
     <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold">Plans</h1>
+        <Button
+          variant="outline"
+          className="text-xs gap-1 cursor-pointer"
+          style={{
+            color: "var(--entity-plan)",
+            borderColor: "var(--entity-plan)",
+            backgroundColor: "color-mix(in oklch, var(--entity-plan) 8%, transparent)",
+          }}
+          onClick={() => setCreateOpen(true)}
+        >
+          <Plus className="size-3.5" /> New Plan
+        </Button>
+      </div>
+
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -131,6 +150,17 @@ function PlansContent() {
             params.delete("plan");
             router.push(`/plans?${params.toString()}`);
           }
+        }}
+      />
+
+      <CreateDialog
+        kind="plan"
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={(id) => {
+          const params = new URLSearchParams(searchParams);
+          params.set("plan", id);
+          router.push(`/plans?${params.toString()}`);
         }}
       />
     </div>

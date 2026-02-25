@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { useTask, useTasks } from "@/lib/hooks/use-tasks";
 import { useEpics } from "@/lib/hooks/use-epics";
+import { usePlans } from "@/lib/hooks/use-plans";
 import { useUpdateTask, useArchiveItem } from "@/lib/hooks/use-mutations";
+import { CreateDialog } from "./create-dialog";
 import { PriorityIndicator } from "./priority-indicator";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { MarkdownEditor } from "./markdown-editor";
@@ -11,8 +13,7 @@ import { InlineEdit } from "./inline-edit";
 import { TagEditor } from "./tag-editor";
 import { EntityCombobox } from "./entity-combobox";
 import { EntityRefEditor } from "./entity-ref-editor";
-import { WikiLinkChip } from "./wiki-link-chip";
-import { FieldRow, EmptyValue } from "./field-row";
+import { FieldRow } from "./field-row";
 import {
   Sheet,
   SheetHeader,
@@ -73,6 +74,7 @@ export function TaskDetailSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const [isEditingBody, setIsEditingBody] = useState(false);
+  const [createPlanOpen, setCreatePlanOpen] = useState(false);
   const { data: task, isLoading } = useTask(taskId || "", {
     enabled: !isEditingBody,
   });
@@ -80,6 +82,7 @@ export function TaskDetailSheet({
   const archiveItem = useArchiveItem();
   const { data: epics } = useEpics();
   const { data: allTasks } = useTasks();
+  const { data: plans } = usePlans();
 
   const epicOptions =
     epics?.map((e) => ({ id: e.id, title: e.title })) ?? [];
@@ -87,6 +90,8 @@ export function TaskDetailSheet({
     allTasks
       ?.filter((t) => t.id !== taskId)
       .map((t) => ({ id: t.id, title: t.title })) ?? [];
+  const planOptions =
+    plans?.map((p) => ({ id: p.id, title: p.title })) ?? [];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -274,12 +279,19 @@ export function TaskDetailSheet({
                   />
                 </FieldRow>
 
-                <FieldRow label="Plan">
-                  {task.plan ? (
-                    <WikiLinkChip id={task.plan} />
-                  ) : (
-                    <EmptyValue>No plan</EmptyValue>
-                  )}
+                <FieldRow label="Plan" editable>
+                  <EntityCombobox
+                    value={task.plan}
+                    options={planOptions}
+                    onSelect={(id) =>
+                      updateTask.mutate({ id: task.id, plan: id ?? "" })
+                    }
+                    placeholder="No plan"
+                    emptyLabel="No plan"
+                    linkValue
+                    onCreateNew={() => setCreatePlanOpen(true)}
+                    createNewLabel="Create new plan"
+                  />
                 </FieldRow>
 
                 <FieldRow label="Depends on" editable>
@@ -366,6 +378,15 @@ export function TaskDetailSheet({
               )}
             </div>
           </>
+        )}
+
+        {task && (
+          <CreateDialog
+            kind="plan"
+            taskId={task.id}
+            open={createPlanOpen}
+            onOpenChange={setCreatePlanOpen}
+          />
         )}
       </ResizableSheetContent>
     </Sheet>

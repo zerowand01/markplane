@@ -38,7 +38,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PageTransition } from "@/components/domain/page-transition";
-import { ArrowUpRight, ArrowDownLeft, Archive } from "lucide-react";
+import { ArrowUpRight, ArrowDownLeft, Archive, Plus } from "lucide-react";
+import { CreateDialog } from "@/components/domain/create-dialog";
 import { generateKeyBetween } from "fractional-indexing";
 import type { Task, TaskStatus, Priority, Effort } from "@/lib/types";
 
@@ -126,6 +127,7 @@ function BacklogContent() {
   const [filterAssignee, setFilterAssignee] = useState<string>("all");
   const [filterTag, setFilterTag] = useState<string>("all");
   const [sortKey, setSortKey] = useState<SortKey>("manual");
+  const [createOpen, setCreateOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(
     searchParams.get("task")
   );
@@ -237,6 +239,19 @@ function BacklogContent() {
         </div>
 
         <div className="flex-1" />
+
+        <Button
+          variant="outline"
+          className="text-xs gap-1 cursor-pointer"
+          style={{
+            color: "var(--entity-task)",
+            borderColor: "var(--entity-task)",
+            backgroundColor: "color-mix(in oklch, var(--entity-task) 8%, transparent)",
+          }}
+          onClick={() => setCreateOpen(true)}
+        >
+          <Plus className="size-3.5" /> New Task
+        </Button>
 
         {/* Filters */}
         <div className="flex items-center gap-1.5">
@@ -374,6 +389,13 @@ function BacklogContent() {
         onOpenChange={(open) => {
           if (!open) closeTask();
         }}
+      />
+
+      <CreateDialog
+        kind="task"
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={(id) => openTask(id)}
       />
     </div>
     </PageTransition>

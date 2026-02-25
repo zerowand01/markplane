@@ -1,20 +1,23 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useNotes } from "@/lib/hooks/use-notes";
 import { NoteDetailSheet } from "@/components/domain/note-detail-sheet";
+import { CreateDialog } from "@/components/domain/create-dialog";
 import { Button } from "@/components/ui/button";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { NOTE_STATUS_CONFIG } from "@/lib/constants";
 import { PageTransition } from "@/components/domain/page-transition";
 import { EmptyState } from "@/components/domain/empty-state";
+import { Plus } from "lucide-react";
 
 function NotesContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { data, isLoading, error, refetch } = useNotes();
+  const [createOpen, setCreateOpen] = useState(false);
 
   const selectedNoteId = searchParams.get("note");
 
@@ -41,6 +44,22 @@ function NotesContent() {
   return (
     <PageTransition>
     <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold">Notes</h1>
+        <Button
+          variant="outline"
+          className="text-xs gap-1 cursor-pointer"
+          style={{
+            color: "var(--entity-note)",
+            borderColor: "var(--entity-note)",
+            backgroundColor: "color-mix(in oklch, var(--entity-note) 8%, transparent)",
+          }}
+          onClick={() => setCreateOpen(true)}
+        >
+          <Plus className="size-3.5" /> New Note
+        </Button>
+      </div>
+
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -134,6 +153,17 @@ function NotesContent() {
             params.delete("note");
             router.push(`/notes?${params.toString()}`);
           }
+        }}
+      />
+
+      <CreateDialog
+        kind="note"
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={(id) => {
+          const params = new URLSearchParams(searchParams);
+          params.set("note", id);
+          router.push(`/notes?${params.toString()}`);
         }}
       />
     </div>

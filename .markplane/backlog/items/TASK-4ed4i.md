@@ -13,9 +13,9 @@ plan: null
 depends_on: []
 blocks: []
 assignee: null
-position: a0z
+position: a3
 created: 2026-02-20
-updated: 2026-02-23
+updated: 2026-02-25
 ---
 
 # Migration framework for markplane version upgrades

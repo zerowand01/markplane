@@ -349,6 +349,23 @@ export function CommandPalette() {
 
             <CommandSeparator />
 
+            <CommandGroup heading="Create">
+              <CommandItem onSelect={() => { setOpen(false); window.dispatchEvent(new CustomEvent("create-item", { detail: { kind: "task" } })); }}>
+                New Task
+              </CommandItem>
+              <CommandItem onSelect={() => { setOpen(false); window.dispatchEvent(new CustomEvent("create-item", { detail: { kind: "epic" } })); }}>
+                New Epic
+              </CommandItem>
+              <CommandItem onSelect={() => { setOpen(false); window.dispatchEvent(new CustomEvent("create-item", { detail: { kind: "note" } })); }}>
+                New Note
+              </CommandItem>
+              <CommandItem onSelect={() => { setOpen(false); window.dispatchEvent(new CustomEvent("create-item", { detail: { kind: "plan" } })); }}>
+                New Plan
+              </CommandItem>
+            </CommandGroup>
+
+            <CommandSeparator />
+
             <CommandGroup heading="Actions">
               <CommandItem onSelect={() => triggerSync()}>
                 Sync project

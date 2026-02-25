@@ -130,12 +130,14 @@ crates/markplane-web/ui/               # Next.js project root
 │   │   │   │
 │   │   │   ├── layout/
 │   │   │   │   ├── app-sidebar.tsx      # App sidebar navigation + theme toggle
-│   │   │   │   ├── command-palette.tsx  # Cmd+K / ? command palette
+│   │   │   │   ├── command-palette.tsx  # Cmd+K / ? command palette (includes create actions)
 │   │   │   │   ├── command-palette-wrapper.tsx  # Keyboard shortcut handler
+│   │   │   │   ├── global-create-dialog.tsx  # Handles create-item events from command palette
 │   │   │   │   ├── mobile-header.tsx    # Mobile responsive header
 │   │   │   │   └── providers.tsx        # React Query + Next Themes providers
 │   │   │   │
-│   │   │   ├── domain/              # Markplane-specific compound components (25 files)
+│   │   │   ├── domain/              # Markplane-specific compound components
+│   │   │   │   ├── create-dialog.tsx        # Reusable creation dialog (task/epic/plan/note)
 │   │   │   │   ├── task-detail-sheet.tsx     # Task slide-over panel
 │   │   │   │   ├── epic-detail-sheet.tsx     # Epic slide-over panel
 │   │   │   │   ├── plan-detail-sheet.tsx     # Plan slide-over panel
@@ -259,6 +261,7 @@ The Rust HTTP server exposes a REST API that mirrors `markplane-core` operations
 |--------|------|-------------|
 | `GET` | `/api/epics` | List all epics with progress metrics |
 | `GET` | `/api/epics/:id` | Get epic detail with linked task summary |
+| `POST` | `/api/epics` | Create epic |
 | `PATCH` | `/api/epics/:id` | Update epic fields (title, status, priority, dates, tags, body) |
 
 #### Plans & Notes
@@ -267,9 +270,11 @@ The Rust HTTP server exposes a REST API that mirrors `markplane-core` operations
 |--------|------|-------------|
 | `GET` | `/api/plans` | List plans |
 | `GET` | `/api/plans/:id` | Get plan detail |
+| `POST` | `/api/plans` | Create plan (optionally linked to a task) |
 | `PATCH` | `/api/plans/:id` | Update plan fields (title, status, body) |
 | `GET` | `/api/notes` | List notes |
 | `GET` | `/api/notes/:id` | Get note detail |
+| `POST` | `/api/notes` | Create note |
 | `PATCH` | `/api/notes/:id` | Update note fields (title, status, tags, body) |
 
 #### Archive
@@ -450,6 +455,9 @@ interface GraphEdge {
 | Hook | Purpose |
 |------|---------|
 | `useCreateTask()` | Create new task |
+| `useCreateEpic()` | Create new epic |
+| `useCreatePlan()` | Create new plan (optionally linked to a task) |
+| `useCreateNote()` | Create new note |
 | `useUpdateTask()` | Update task properties (optimistic + rollback) |
 | `useUpdateEpic()` | Update epic properties |
 | `useUpdatePlan()` | Update plan properties |

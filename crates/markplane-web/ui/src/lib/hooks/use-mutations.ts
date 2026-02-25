@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { patchJson, postJson, postAction } from "@/lib/api";
 import { toast } from "sonner";
-import type { Task, Epic, Plan, Note, CreateTaskRequest, UpdateTaskRequest, UpdateEpicRequest, UpdatePlanRequest, UpdateNoteRequest } from "@/lib/types";
+import type { Task, Epic, Plan, Note, CreateTaskRequest, CreateEpicRequest, CreatePlanRequest, CreateNoteRequest, UpdateTaskRequest, UpdateEpicRequest, UpdatePlanRequest, UpdateNoteRequest } from "@/lib/types";
 
 export function useUpdateTask() {
   const queryClient = useQueryClient();
@@ -102,6 +102,57 @@ export function useCreateTask() {
     },
     onError: (err) => {
       toast.error("Failed to create task", { description: err.message });
+    },
+  });
+}
+
+export function useCreateEpic() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: CreateEpicRequest) =>
+      postJson<Epic>("/api/epics", body),
+    onSuccess: (data) => {
+      toast.success("Epic created", { description: `${data.id}: ${data.title}` });
+      queryClient.invalidateQueries({ queryKey: ["epics"] });
+      queryClient.invalidateQueries({ queryKey: ["summary"] });
+    },
+    onError: (err) => {
+      toast.error("Failed to create epic", { description: err.message });
+    },
+  });
+}
+
+export function useCreatePlan() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: CreatePlanRequest) =>
+      postJson<Plan>("/api/plans", body),
+    onSuccess: (data) => {
+      toast.success("Plan created", { description: `${data.id}: ${data.title}` });
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["summary"] });
+    },
+    onError: (err) => {
+      toast.error("Failed to create plan", { description: err.message });
+    },
+  });
+}
+
+export function useCreateNote() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: CreateNoteRequest) =>
+      postJson<Note>("/api/notes", body),
+    onSuccess: (data) => {
+      toast.success("Note created", { description: `${data.id}: ${data.title}` });
+      queryClient.invalidateQueries({ queryKey: ["notes"] });
+    },
+    onError: (err) => {
+      toast.error("Failed to create note", { description: err.message });
     },
   });
 }

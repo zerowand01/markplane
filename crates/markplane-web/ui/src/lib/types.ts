@@ -95,6 +95,22 @@ export interface CreateTaskRequest {
   tags?: string[];
 }
 
+export interface CreateEpicRequest {
+  title: string;
+  priority?: Priority;
+}
+
+export interface CreatePlanRequest {
+  title: string;
+  task_id?: string;
+}
+
+export interface CreateNoteRequest {
+  title: string;
+  type?: NoteType;
+  tags?: string[];
+}
+
 export interface UpdateTaskRequest {
   title?: string;
   status?: TaskStatus;

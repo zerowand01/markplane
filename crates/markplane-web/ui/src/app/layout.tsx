@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { CommandPaletteWrapper } from "@/components/layout/command-palette-wrapper";
+import { GlobalCreateDialog } from "@/components/layout/global-create-dialog";
 import { ErrorBoundary } from "@/components/domain/error-boundary";
 import { MobileHeader } from "@/components/layout/mobile-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -44,6 +45,7 @@ export default function RootLayout({
               </main>
             </SidebarInset>
             <CommandPaletteWrapper />
+            <GlobalCreateDialog />
           </SidebarProvider>
           <Toaster position="bottom-right" />
         </Providers>

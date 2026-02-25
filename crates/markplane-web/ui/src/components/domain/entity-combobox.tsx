@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronsUpDown, Pencil } from "lucide-react";
+import { Check, ChevronsUpDown, Pencil, Plus } from "lucide-react";
 import { WikiLinkChip } from "./wiki-link-chip";
 import {
   Command,
@@ -10,6 +10,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandSeparator,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -32,6 +33,9 @@ interface EntityComboboxProps {
   entityColor?: string;
   /** When true, renders the selected value as a navigable WikiLinkChip with an edit trigger beside it. */
   linkValue?: boolean;
+  /** When provided, renders a "Create new" action at the bottom of the dropdown. */
+  onCreateNew?: () => void;
+  createNewLabel?: string;
 }
 
 export function EntityCombobox({
@@ -42,6 +46,8 @@ export function EntityCombobox({
   emptyLabel = "None",
   entityColor,
   linkValue,
+  onCreateNew,
+  createNewLabel = "Create new",
 }: EntityComboboxProps) {
   const [open, setOpen] = useState(false);
 
@@ -91,6 +97,22 @@ export function EntityCombobox({
             </CommandItem>
           ))}
         </CommandGroup>
+        {onCreateNew && (
+          <>
+            <CommandSeparator />
+            <CommandGroup>
+              <CommandItem
+                onSelect={() => {
+                  setOpen(false);
+                  onCreateNew();
+                }}
+              >
+                <Plus className="mr-2 size-4" />
+                {createNewLabel}
+              </CommandItem>
+            </CommandGroup>
+          </>
+        )}
       </CommandList>
     </Command>
   );

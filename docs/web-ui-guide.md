@@ -42,8 +42,9 @@ The default backlog view shows tasks organized in status columns: In Progress, P
 Click any task to open its detail panel. The panel shows:
 
 - **Markdown body** rendered with syntax highlighting and clickable `[[TASK-rm6d3]]` wiki-link chips
-- **Metadata sidebar** with editable fields: status, priority, effort, type, epic, tags, assignee, dependencies
+- **Metadata sidebar** with editable fields: status, priority, effort, type, epic, plan, tags, assignee, dependencies
 - Click any metadata field to edit it inline via dropdown
+- **Plan field**: Search and link an existing plan, or create a new one directly from the dropdown
 
 ### Dependency Graph (`/graph`)
 
@@ -60,6 +61,7 @@ Press `Cmd+K` (or `Ctrl+K`) to open the command palette. It provides:
 
 - Fuzzy search across all tasks, epics, plans, and notes
 - Navigation shortcuts to any page
+- Creation actions: New Task, New Epic, New Note, New Plan
 - Quick actions like triggering a sync
 
 ### AI Context Panel
@@ -166,7 +168,7 @@ Browser (Next.js static export)
 ```
 
 - **Frontend**: Next.js 16 with Tailwind v4 and shadcn/ui, statically exported
-- **Backend**: axum HTTP server with 19 REST endpoints + WebSocket
+- **Backend**: axum HTTP server with REST API + WebSocket
 - **State management**: TanStack Query for server state, URL params for view state
 - **File watching**: `notify` crate with 100ms debouncing via `notify-debouncer-mini`
 
@@ -190,10 +192,13 @@ Error:             { "error": { "code": string, "message": string } }
 | DELETE | `/api/tasks/:id` | Archive task (deprecated, use POST below) |
 | GET | `/api/epics` | List epics with progress and status breakdown |
 | GET | `/api/epics/:id` | Epic detail with linked tasks |
+| POST | `/api/epics` | Create epic |
 | GET | `/api/plans` | List plans |
 | GET | `/api/plans/:id` | Plan detail |
+| POST | `/api/plans` | Create plan (optionally linked to a task) |
 | GET | `/api/notes` | List notes |
 | GET | `/api/notes/:id` | Note detail |
+| POST | `/api/notes` | Create note |
 | POST | `/api/link` | Link/unlink two items: `{from, to, relation, remove?}` |
 | POST | `/api/sync` | Trigger markplane sync |
 | GET | `/api/search?q=...` | Full-text search |

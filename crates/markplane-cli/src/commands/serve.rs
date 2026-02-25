@@ -20,8 +20,8 @@ use tower_http::services::ServeDir;
 
 use markplane_core::{
     Effort, Epic, EpicStatus, EpicUpdate, ItemType, LinkAction, LinkRelation,
-    MarkplaneDocument, MarkplaneError, Note, NoteUpdate, Patch, Plan, PlanUpdate, Priority,
-    Project, QueryFilter, Task, TaskStatus, TaskUpdate, find_blocked_items, parse_id,
+    MarkplaneDocument, MarkplaneError, Note, NoteType, NoteUpdate, Patch, Plan, PlanUpdate,
+    Priority, Project, QueryFilter, Task, TaskStatus, TaskUpdate, find_blocked_items, parse_id,
 };
 
 #[cfg(feature = "embed-ui")]
@@ -66,11 +66,11 @@ pub async fn run(port: u16, open: bool, dev: bool) -> anyhow::Result<()> {
             "/api/tasks/{id}",
             get(get_task).patch(update_task).delete(delete_task),
         )
-        .route("/api/epics", get(get_epics))
+        .route("/api/epics", get(get_epics).post(create_epic))
         .route("/api/epics/{id}", get(get_epic).patch(update_epic))
-        .route("/api/plans", get(get_plans))
+        .route("/api/plans", get(get_plans).post(create_plan))
         .route("/api/plans/{id}", get(get_plan).patch(update_plan))
-        .route("/api/notes", get(get_notes))
+        .route("/api/notes", get(get_notes).post(create_note))
         .route("/api/notes/{id}", get(get_note).patch(update_note))
         .route("/api/items/{id}/archive", post(post_archive_item))
         .route("/api/items/{id}/unarchive", post(post_unarchive_item))
@@ -432,6 +432,33 @@ fn default_priority() -> String {
 }
 fn default_effort() -> String {
     "medium".to_string()
+}
+
+#[derive(Deserialize)]
+struct CreateEpicRequest {
+    title: String,
+    #[serde(default = "default_priority")]
+    priority: String,
+}
+
+#[derive(Deserialize)]
+struct CreatePlanRequest {
+    title: String,
+    #[serde(default)]
+    task_id: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct CreateNoteRequest {
+    title: String,
+    #[serde(rename = "type", default = "default_note_type")]
+    note_type: String,
+    #[serde(default)]
+    tags: Vec<String>,
+}
+
+fn default_note_type() -> String {
+    "research".to_string()
 }
 
 #[derive(Deserialize)]
@@ -848,6 +875,141 @@ async fn create_task(
         StatusCode::CREATED,
         Json(ApiResponse {
             data: task_to_response(&doc),
+        }),
+    ))
+}
+
+async fn create_epic(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<CreateEpicRequest>,
+) -> Result<(StatusCode, Json<ApiResponse<EpicResponse>>), (StatusCode, Json<ApiError>)> {
+    let priority: Priority = body
+        .priority
+        .parse()
+        .map_err(|e: MarkplaneError| {
+            error_response(StatusCode::BAD_REQUEST, "invalid_priority", &e.to_string())
+        })?;
+
+    let epic = state
+        .project
+        .create_epic(&body.title, priority, None)
+        .map_err(|e| {
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "create_error",
+                &e.to_string(),
+            )
+        })?;
+
+    let doc: MarkplaneDocument<Epic> = state
+        .project
+        .read_item(&epic.id)
+        .map_err(|e| {
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "read_error",
+                &e.to_string(),
+            )
+        })?;
+
+    // New epic has no tasks yet
+    let tasks: Vec<MarkplaneDocument<Task>> = vec![];
+    Ok((
+        StatusCode::CREATED,
+        Json(ApiResponse {
+            data: epic_to_response(&doc, &tasks),
+        }),
+    ))
+}
+
+async fn create_plan(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<CreatePlanRequest>,
+) -> Result<(StatusCode, Json<ApiResponse<PlanResponse>>), (StatusCode, Json<ApiError>)> {
+    let implements = match &body.task_id {
+        Some(id) => vec![id.clone()],
+        None => vec![],
+    };
+
+    let plan = state
+        .project
+        .create_plan(&body.title, implements, None, None)
+        .map_err(|e| {
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "create_error",
+                &e.to_string(),
+            )
+        })?;
+
+    // If task_id provided, link the plan back to the task
+    if let Some(ref task_id) = body.task_id
+        && let Err(e) = state.project.link_items(
+            task_id,
+            &plan.id,
+            LinkRelation::Plan,
+            LinkAction::Add,
+        )
+    {
+        eprintln!("Warning: failed to link plan {} to task {}: {}", plan.id, task_id, e);
+    }
+
+    let doc: MarkplaneDocument<Plan> = state
+        .project
+        .read_item(&plan.id)
+        .map_err(|e| {
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "read_error",
+                &e.to_string(),
+            )
+        })?;
+
+    Ok((
+        StatusCode::CREATED,
+        Json(ApiResponse {
+            data: plan_to_response(&doc),
+        }),
+    ))
+}
+
+async fn create_note(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<CreateNoteRequest>,
+) -> Result<(StatusCode, Json<ApiResponse<NoteResponse>>), (StatusCode, Json<ApiError>)> {
+    let note_type: NoteType = body
+        .note_type
+        .parse()
+        .map_err(|e: MarkplaneError| {
+            error_response(StatusCode::BAD_REQUEST, "invalid_type", &e.to_string())
+        })?;
+
+    let note = state
+        .project
+        .create_note(&body.title, note_type, body.tags, None)
+        .map_err(|e| {
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "create_error",
+                &e.to_string(),
+            )
+        })?;
+
+    let doc: MarkplaneDocument<Note> = state
+        .project
+        .read_item(&note.id)
+        .map_err(|e| {
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "read_error",
+                &e.to_string(),
+            )
+        })?;
+
+    Ok((
+        StatusCode::CREATED,
+        Json(ApiResponse {
+            data: note_to_response(&doc),
         }),
     ))
 }
