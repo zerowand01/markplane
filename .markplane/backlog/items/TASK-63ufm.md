@@ -1,7 +1,7 @@
 ---
 id: TASK-63ufm
 title: Add keyboard shortcut to toggle Board/Backlog view
-status: backlog
+status: done
 priority: low
 type: enhancement
 effort: xs
@@ -35,6 +35,7 @@ Precedent: Linear uses `Cmd+B` for board toggle; Jira uses number keys. We chose
 
 ## Notes
 
-- Implementation lives in `use-keyboard-nav.ts` — add a page-aware handler, or create a local `useEffect` in the backlog page component
-- The `changeView` callback in `backlog/page.tsx` already handles view switching and URL sync
-- Consider showing the shortcut hint on the tab buttons (e.g. a subtle "V" badge) for discoverability
+- Implemented as a local `useEffect` in `BacklogContent` (not in the global `use-keyboard-nav.ts`) — keeps the shortcut page-scoped
+- `isInputFocused()` was exported from `use-keyboard-nav.ts` for reuse
+- Discoverability: decided against inline `<kbd>` badge (visual clutter) and tooltip (distracting on hover). Shortcut will be documented in `docs/web-ui-guide.md` and surfaced via [[TASK-4wi4p]] (docs viewer)
+- Also fixed two stale entries in `docs/web-ui-guide.md` (`g then e`, `g then s`) that didn't exist in code

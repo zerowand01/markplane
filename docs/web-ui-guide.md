@@ -86,13 +86,11 @@ All changes are detected via filesystem watching and pushed to the browser over 
 |----------|--------|
 | `g` then `d` | Go to Dashboard |
 | `g` then `b` | Go to Backlog |
-| `g` then `e` | Go to Epics |
 | `g` then `r` | Go to Roadmap |
 | `g` then `p` | Go to Plans |
 | `g` then `n` | Go to Notes |
 | `g` then `g` | Go to Graph |
 | `g` then `a` | Go to Archive |
-| `g` then `s` | Go to Search |
 
 ### Global
 
@@ -101,6 +99,12 @@ All changes are detected via filesystem watching and pushed to the browser over 
 | `Cmd+K` / `Ctrl+K` | Open command palette |
 | `?` | Open command palette |
 | `Escape` | Close panel/modal |
+
+### Page-specific
+
+| Shortcut | Page | Action |
+|----------|------|--------|
+| `v` | Backlog | Toggle between Board and Backlog views |
 
 ## Themes
 

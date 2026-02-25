@@ -16,7 +16,7 @@ const CHORD_NAV: ChordMap = {
   a: "/archive",
 };
 
-function isInputFocused(): boolean {
+export function isInputFocused(): boolean {
   const el = document.activeElement;
   if (!el) return false;
   const tag = el.tagName;

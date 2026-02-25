@@ -38,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PageTransition } from "@/components/domain/page-transition";
+import { isInputFocused } from "@/lib/hooks/use-keyboard-nav";
 import { ArrowUpRight, ArrowDownLeft, Archive, Plus } from "lucide-react";
 import { CreateDialog } from "@/components/domain/create-dialog";
 import { generateKeyBetween } from "fractional-indexing";
@@ -189,6 +190,17 @@ function BacklogContent() {
     },
     [router, searchParams]
   );
+
+  // "v" keyboard shortcut to toggle between Board and Backlog views
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== "v" || e.metaKey || e.ctrlKey || e.altKey || isInputFocused()) return;
+      e.preventDefault();
+      changeView(view === "board" ? "backlog" : "board");
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [view, changeView]);
 
   if (isLoading) return <BacklogSkeleton />;
 
