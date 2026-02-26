@@ -29,9 +29,8 @@ After creating an item with `markplane add`, users must open the markdown file d
 - [ ] Resolves item ID to file path via `project.item_path()`
 - [ ] Opens the file in `$EDITOR` (falls back to `$VISUAL`, then `vi`)
 - [ ] Works for all entity types (TASK, EPIC, PLAN, NOTE)
-- [ ] Updates the `updated` date in frontmatter after the editor closes (if file was modified)
 - [ ] Prints an error if the item doesn't exist
 
 ## Notes
 
-Consider using `std::process::Command` to spawn the editor. Check file modification time before/after to decide whether to update the `updated` timestamp. The `$EDITOR` / `$VISUAL` fallback chain is a Unix convention worth following.
+Pure convenience command — resolves ID to file path and opens `$EDITOR`. No post-edit processing (no timestamp bumping). Consistent with direct file editing being first-class. Consider using `std::process::Command` to spawn the editor. The `$EDITOR` / `$VISUAL` fallback chain is a Unix convention worth following.

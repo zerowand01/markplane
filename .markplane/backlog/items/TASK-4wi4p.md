@@ -26,12 +26,13 @@ Add a `/docs` page to the web UI that renders a curated set of user-facing markd
 
 Docs stay at their existing paths (README.md, docs/*.md). The viewer reads them from disk via a new API endpoint — no copying, no special directory.
 
-### Included docs (6)
+### Included docs (7)
 
 | Doc | Path | Purpose |
 |-----|------|---------|
 | README | `README.md` | Product overview and installation |
 | Getting Started | `docs/getting-started.md` | Onboarding tutorial |
+| Item Reference | `docs/file-format.md` | Directory structure, frontmatter fields, ID system, cross-references |
 | CLI Reference | `docs/cli-reference.md` | Command lookup reference |
 | MCP Setup | `docs/mcp-setup.md` | AI tool configuration |
 | AI Integration | `docs/ai-integration.md` | Context layer, token budgets, AI workflows |
@@ -40,14 +41,13 @@ Docs stay at their existing paths (README.md, docs/*.md). The viewer reads them 
 ### Excluded docs (not user-facing)
 
 - `docs/architecture.md` — contributor/internal
-- `docs/file-format.md` — internals reference (YAML schemas, ID system)
 - `docs/web-ui/architecture.md`, `docs/web-ui/visual-design.md` — contributor docs
 - `docs/archive/*` — archived design specs
 
 ## Acceptance Criteria
 
 - [ ] `/docs` page accessible from the sidebar navigation
-- [ ] Sidebar doc list showing all 6 docs with titles
+- [ ] Sidebar doc list showing all 7 docs with titles
 - [ ] Rendered markdown content area with syntax highlighting for code blocks
 - [ ] Full-text search across all docs with highlighted matches
 - [ ] Deep-linkable URLs (e.g. `/docs?page=cli-reference`)
@@ -60,7 +60,7 @@ Docs stay at their existing paths (README.md, docs/*.md). The viewer reads them 
 - Docs live at their existing repo paths — no special directory, no copies
 - The curated list could live in config.yaml (e.g. `web_docs` key) or be hardcoded initially
 - TipTap is already in the project for markdown editing; a read-only markdown renderer may be simpler (e.g. react-markdown or reuse the existing rendering pipeline)
-- Search could be client-side fuzzy search given the small corpus (~6 docs)
+- Search could be client-side fuzzy search given the small corpus (~7 docs)
 - The existing `documentation_paths` config and `list_documentation_files()` in core could be extended or a new endpoint added alongside it
 
 ## References

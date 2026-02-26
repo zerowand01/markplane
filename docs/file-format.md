@@ -98,7 +98,7 @@ Titles are always double-quoted in the YAML to safely handle special characters.
 | `blocks` | string[] | no | IDs this item blocks (default: `[]`) |
 | `assignee` | string? | no | Assigned user (default: `null`) |
 | `created` | date | yes | Creation date (`YYYY-MM-DD`) |
-| `updated` | date | yes | Last modification date (`YYYY-MM-DD`) |
+| `updated` | date | yes | Last modification date (`YYYY-MM-DD`, see [Timestamps](#timestamps)) |
 
 ### Epic (prefix: `EPIC`)
 
@@ -187,6 +187,14 @@ Values (smallest to largest): `xs`, `small`, `medium`, `large`, `xl`
 ### NoteType
 
 Values: `research`, `analysis`, `idea`, `decision`, `meeting`
+
+## Timestamps
+
+All items have `created` and `updated` date fields (`YYYY-MM-DD`).
+
+`created` is set once when the item is created and never changes. `updated` is automatically set to today's date by markplane commands — any operation that modifies an item (`update`, `start`, `done`, `link`, `move`, etc.) bumps it. Archive and unarchive do not change timestamps.
+
+Direct file edits (opening a `.md` file in your editor) do **not** auto-update the `updated` field. If you edit an item file manually, update the field yourself. For AI agents, add a project instruction like: *"When editing `.markplane/` item files, set the `updated` field to today's date."*
 
 ## ID System
 
