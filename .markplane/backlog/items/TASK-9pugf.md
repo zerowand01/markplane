@@ -1,7 +1,7 @@
 ---
 id: TASK-9pugf
 title: Add markplane edit command to open items in editor
-status: backlog
+status: planned
 priority: medium
 type: feature
 effort: small
@@ -14,7 +14,7 @@ blocks: []
 assignee: null
 position: Zy
 created: 2026-02-10
-updated: 2026-02-25
+updated: 2026-02-26
 ---
 
 # Add markplane edit command to open items in editor
