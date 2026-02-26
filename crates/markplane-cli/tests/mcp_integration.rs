@@ -602,6 +602,8 @@ fn test_tool_query_epics() {
     assert_eq!(items[0]["title"], "Epic A");
     assert_eq!(items[0]["status"], "later");
     assert_eq!(items[0]["priority"], "high");
+    assert!(items[0]["created"].is_string(), "epic query should include created date");
+    assert!(items[0]["updated"].is_string(), "epic query should include updated date");
 }
 
 #[test]
@@ -1177,7 +1179,7 @@ fn test_tool_link_epic() {
         fs::create_dir_all(&epic_dir).unwrap();
         let id = "EPIC-test1";
         let content = format!(
-            "---\nid: {}\ntitle: Test Epic\nstatus: planned\npriority: medium\ntags: []\ndepends_on: []\n---\n",
+            "---\nid: {}\ntitle: Test Epic\nstatus: planned\npriority: medium\ntags: []\ndepends_on: []\ncreated: 2026-01-01\nupdated: 2026-01-01\n---\n",
             id
         );
         fs::write(epic_dir.join(format!("{}.md", id)), content).unwrap();

@@ -546,6 +546,8 @@ fn handle_query(project: &Project, args: &Value) -> Result<String, String> {
                         "title": fm.title,
                         "status": fm.status.to_string(),
                         "priority": fm.priority.to_string(),
+                        "created": fm.created.to_string(),
+                        "updated": fm.updated.to_string(),
                     })
                 })
                 .collect()

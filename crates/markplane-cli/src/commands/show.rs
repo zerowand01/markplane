@@ -89,6 +89,8 @@ fn show_epic(project: &Project, id: &str) -> anyhow::Result<()> {
     if !fm.depends_on.is_empty() {
         println!("  Depends:  {}", fm.depends_on.join(", "));
     }
+    println!("  Created:  {}", fm.created);
+    println!("  Updated:  {}", fm.updated);
 
     if !doc.body.trim().is_empty() {
         println!();

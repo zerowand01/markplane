@@ -370,6 +370,7 @@ impl Project {
         validate_title_length(title)?;
         let id = self.next_id(&IdPrefix::Epic)?;
 
+        let today = Local::now().date_naive();
         let epic = Epic {
             id,
             title: title.to_string(),
@@ -379,6 +380,8 @@ impl Project {
             target: None,
             tags: vec![],
             depends_on: vec![],
+            created: today,
+            updated: today,
         };
 
         let tmpl = self.resolve_template_body("epic", template, None);
@@ -495,6 +498,7 @@ impl Project {
             IdPrefix::Epic => {
                 let mut doc: MarkplaneDocument<Epic> = self.read_item(id)?;
                 doc.frontmatter.status = new_status.parse()?;
+                doc.frontmatter.updated = today;
                 self.write_item(id, &doc)?;
             }
             IdPrefix::Plan => {
@@ -584,6 +588,7 @@ impl Project {
         if let Some(ref new_body) = u.body {
             doc.body = new_body.clone();
         }
+        fm.updated = Local::now().date_naive();
         self.write_item(id, &doc)
     }
 

@@ -458,6 +458,8 @@ pub struct Epic {
     pub tags: Vec<String>,
     #[serde(default)]
     pub depends_on: Vec<String>,
+    pub created: NaiveDate,
+    pub updated: NaiveDate,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -664,12 +666,16 @@ started: 2026-01-01
 target: null
 tags: [frontend]
 depends_on: [EPIC-001]
+created: 2026-01-01
+updated: 2026-02-09
 "#;
         let epic: Epic = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(epic.id, "EPIC-003");
         assert_eq!(epic.status, EpicStatus::Now);
         assert!(epic.started.is_some());
         assert!(epic.target.is_none());
+        assert_eq!(epic.created, NaiveDate::from_ymd_opt(2026, 1, 1).unwrap());
+        assert_eq!(epic.updated, NaiveDate::from_ymd_opt(2026, 2, 9).unwrap());
     }
 
     #[test]

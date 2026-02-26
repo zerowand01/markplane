@@ -35,6 +35,8 @@ export interface Epic {
   target: string | null;
   tags: string[];
   depends_on: string[];
+  created: string;
+  updated: string;
   body: string;
   task_count: number;
   done_count: number;

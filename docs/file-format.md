@@ -112,6 +112,8 @@ Titles are always double-quoted in the YAML to safely handle special characters.
 | `target` | date? | no | Target completion date (default: `null`) |
 | `tags` | string[] | no | Categorization tags (default: `[]`) |
 | `depends_on` | string[] | no | Epic IDs this depends on (default: `[]`) |
+| `created` | date | yes | Creation date (`YYYY-MM-DD`) |
+| `updated` | date | yes | Last modification date (`YYYY-MM-DD`) |
 
 ### Plan (prefix: `PLAN`)
 

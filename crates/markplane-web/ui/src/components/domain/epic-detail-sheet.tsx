@@ -257,6 +257,14 @@ export function EpicDetailSheet({
                     }
                   />
                 </FieldRow>
+
+                <FieldRow label="Created">
+                  <span className="text-sm text-muted-foreground">{epic.created}</span>
+                </FieldRow>
+
+                <FieldRow label="Updated">
+                  <span className="text-sm text-muted-foreground">{epic.updated}</span>
+                </FieldRow>
               </div>
 
               {/* Status breakdown */}

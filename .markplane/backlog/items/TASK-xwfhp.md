@@ -1,7 +1,7 @@
 ---
 id: TASK-xwfhp
 title: Add created/updated dates to epics
-status: planned
+status: done
 priority: medium
 type: enhancement
 effort: medium

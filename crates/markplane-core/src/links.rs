@@ -172,6 +172,7 @@ impl Project {
                             LinkAction::Add => push_unique(&mut doc.frontmatter.depends_on, to),
                             LinkAction::Remove => remove_value(&mut doc.frontmatter.depends_on, to),
                         }
+                        doc.frontmatter.updated = today;
                         self.write_item(from, &doc)?;
                     }
                     _ => unreachable!(),
