@@ -4,10 +4,13 @@
 /// (Rocicorp). Keys are lexicographically sortable base-62 strings.
 ///
 /// Format: integer part (prefix char + digits) + optional fractional part.
-/// - `a` prefix = 1 digit (values 0–61): a0, a1, ..., az
-/// - `b` prefix = 2 digits (values 62–3905): b00, b01, ..., bzz
+/// - Lowercase prefixes `a`–`z`: a=2 chars, b=3, ..., z=27 (values going up)
+/// - Uppercase prefixes `A`–`Z`: Z=2 chars, Y=3, ..., A=27 (values going down)
 const DIGITS: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 const BASE: usize = 62;
+
+/// Smallest possible integer part: A followed by 26 zeros (27 chars total).
+const SMALLEST_INTEGER: &str = "A00000000000000000000000000";
 
 /// Generate N sequential position keys for sync normalization.
 ///
@@ -45,37 +48,137 @@ fn digit_value(c: u8) -> usize {
     }
 }
 
+/// Get the total length of the integer part (head char + digits) for a given head.
+///
+/// Lowercase `a`–`z`: length = head - 'a' + 2  (a→2, b→3, ..., z→27)
+/// Uppercase `A`–`Z`: length = 'Z' - head + 2  (Z→2, Y→3, ..., A→27)
+fn get_integer_length(head: u8) -> usize {
+    match head {
+        b'a'..=b'z' => (head - b'a' + 2) as usize,
+        b'A'..=b'Z' => (b'Z' - head + 2) as usize,
+        _ => panic!("invalid order key head: {:?}", head as char),
+    }
+}
+
 /// Extract the integer part of a position key (prefix char + integer digits).
 fn get_integer_part(key: &str) -> &str {
-    let prefix = key.as_bytes()[0];
-    let n = (prefix - b'a' + 1) as usize;
-    &key[..1 + n]
+    let head = key.as_bytes()[0];
+    let len = get_integer_length(head);
+    assert!(len <= key.len(), "invalid order key: {}", key);
+    &key[..len]
 }
 
-/// Decode the integer part of a key to its numeric value.
-fn key_to_integer(int_part: &str) -> usize {
-    let bytes = int_part.as_bytes();
-    let prefix = bytes[0];
-    let n = (prefix - b'a' + 1) as usize;
-    let mut val: usize = 0;
-    for &b in &bytes[1..1 + n] {
-        val = val * BASE + digit_value(b);
+/// Validate an order key. Panics if invalid.
+fn validate_order_key(key: &str) {
+    assert!(key.len() >= 2, "invalid order key: {}", key);
+    assert!(key != SMALLEST_INTEGER, "invalid order key: {}", key);
+    let int_part = get_integer_part(key);
+    let frac = &key[int_part.len()..];
+    assert!(
+        !frac.ends_with(DIGITS[0] as char),
+        "invalid order key (trailing zero): {}",
+        key
+    );
+}
+
+/// Increment the integer part by 1. Returns `None` at the ceiling (`z` + max digits).
+fn increment_integer(x: &str) -> Option<String> {
+    debug_assert!(
+        x.len() == get_integer_length(x.as_bytes()[0]),
+        "invalid integer part: {}",
+        x
+    );
+    let bytes = x.as_bytes();
+    let head = bytes[0];
+    let mut digs: Vec<u8> = bytes[1..].to_vec();
+
+    let mut carry = true;
+    for i in (0..digs.len()).rev() {
+        if !carry {
+            break;
+        }
+        let d = digit_value(digs[i]) + 1;
+        if d == BASE {
+            digs[i] = DIGITS[0];
+        } else {
+            digs[i] = DIGITS[d];
+            carry = false;
+        }
     }
-    if prefix == b'b' {
-        val += BASE;
+
+    if carry {
+        if head == b'Z' {
+            // Crossover: uppercase Z → lowercase a
+            return Some(format!("a{}", DIGITS[0] as char));
+        }
+        if head == b'z' {
+            // Ceiling reached
+            return None;
+        }
+        let h = head + 1;
+        if h > b'a' {
+            // Lowercase: growing length — append a digit
+            digs.push(DIGITS[0]);
+        } else {
+            // Uppercase: shrinking length — pop a digit
+            digs.pop();
+        }
+        let digs_str: String = digs.iter().map(|&b| b as char).collect();
+        Some(format!("{}{}", h as char, digs_str))
+    } else {
+        let digs_str: String = digs.iter().map(|&b| b as char).collect();
+        Some(format!("{}{}", head as char, digs_str))
     }
-    val
 }
 
-/// Increment the integer part of a key by 1.
-fn increment_integer(int_part: &str) -> String {
-    index_to_key(key_to_integer(int_part) + 1)
-}
+/// Decrement the integer part by 1. Returns `None` at the floor (`A` + min digits).
+fn decrement_integer(x: &str) -> Option<String> {
+    debug_assert!(
+        x.len() == get_integer_length(x.as_bytes()[0]),
+        "invalid integer part: {}",
+        x
+    );
+    let bytes = x.as_bytes();
+    let head = bytes[0];
+    let mut digs: Vec<u8> = bytes[1..].to_vec();
 
-/// Decrement the integer part of a key by 1. Returns `None` if already at 0.
-fn decrement_integer(int_part: &str) -> Option<String> {
-    let val = key_to_integer(int_part);
-    if val == 0 { None } else { Some(index_to_key(val - 1)) }
+    let mut borrow = true;
+    for i in (0..digs.len()).rev() {
+        if !borrow {
+            break;
+        }
+        let d = digit_value(digs[i]) as isize - 1;
+        if d == -1 {
+            digs[i] = DIGITS[BASE - 1];
+        } else {
+            digs[i] = DIGITS[d as usize];
+            borrow = false;
+        }
+    }
+
+    if borrow {
+        if head == b'a' {
+            // Crossover: lowercase a → uppercase Z
+            return Some(format!("Z{}", DIGITS[BASE - 1] as char));
+        }
+        if head == b'A' {
+            // Floor reached
+            return None;
+        }
+        let h = head - 1;
+        if h < b'Z' {
+            // Uppercase: growing length — append a digit
+            digs.push(DIGITS[BASE - 1]);
+        } else {
+            // Lowercase: shrinking length — pop a digit
+            digs.pop();
+        }
+        let digs_str: String = digs.iter().map(|&b| b as char).collect();
+        Some(format!("{}{}", h as char, digs_str))
+    } else {
+        let digs_str: String = digs.iter().map(|&b| b as char).collect();
+        Some(format!("{}{}", head as char, digs_str))
+    }
 }
 
 /// Find a fractional digit string that sorts between `a` and `b`.
@@ -132,8 +235,16 @@ fn midpoint(a: &str, b: Option<&str>) -> String {
 /// - `(None, Some(b))` → key before `b`
 /// - `(Some(a), Some(b))` → key between `a` and `b`
 ///
-/// Returns `None` only when asked to go before the minimum key "a0" (no room).
+/// Returns `None` only at the absolute floor (below `A` + 26 zeros + fractional).
 pub fn generate_key_between(a: Option<&str>, b: Option<&str>) -> Option<String> {
+    if cfg!(debug_assertions) {
+        if let Some(a_key) = a {
+            validate_order_key(a_key);
+        }
+        if let Some(b_key) = b {
+            validate_order_key(b_key);
+        }
+    }
     if let (Some(a_val), Some(b_val)) = (a, b) {
         debug_assert!(a_val < b_val, "generate_key_between: {} >= {}", a_val, b_val);
     }
@@ -143,26 +254,23 @@ pub fn generate_key_between(a: Option<&str>, b: Option<&str>) -> Option<String> 
 
         (None, Some(b_key)) => {
             let int_b = get_integer_part(b_key);
-            if let Some(dec) = decrement_integer(int_b) {
-                Some(dec)
-            } else {
-                // Integer is already "a0" — need fractional sub-key
-                let frac_b = &b_key[int_b.len()..];
-                if !frac_b.is_empty() {
-                    Some(format!("{}{}", int_b, midpoint("", Some(frac_b))))
-                } else {
-                    None // can't go before "a0"
-                }
+            let frac_b = &b_key[int_b.len()..];
+            if int_b == SMALLEST_INTEGER {
+                return Some(format!("{}{}", int_b, midpoint("", Some(frac_b))));
             }
+            // If b has a fractional part, its integer part is a valid key before b
+            if int_b.len() < b_key.len() {
+                return Some(int_b.to_string());
+            }
+            decrement_integer(int_b)
         }
 
         (Some(a_key), None) => {
             let int_a = get_integer_part(a_key);
             let frac_a = &a_key[int_a.len()..];
-            if frac_a.is_empty() {
-                Some(increment_integer(int_a))
-            } else {
-                Some(format!("{}{}", int_a, midpoint(frac_a, None)))
+            match increment_integer(int_a) {
+                Some(inc) => Some(inc),
+                None => Some(format!("{}{}", int_a, midpoint(frac_a, None))),
             }
         }
 
@@ -175,11 +283,9 @@ pub fn generate_key_between(a: Option<&str>, b: Option<&str>) -> Option<String> 
             if int_a == int_b {
                 Some(format!("{}{}", int_a, midpoint(frac_a, Some(frac_b))))
             } else {
-                let inc = increment_integer(int_a);
-                if inc.as_str() < b_key {
-                    Some(inc)
-                } else {
-                    Some(format!("{}{}", int_a, midpoint(frac_a, None)))
+                match increment_integer(int_a) {
+                    Some(inc) if inc.as_str() < b_key => Some(inc),
+                    _ => Some(format!("{}{}", int_a, midpoint(frac_a, None))),
                 }
             }
         }
@@ -256,10 +362,11 @@ mod tests {
 
     #[test]
     fn test_key_between_after_fractional() {
-        // After "a5V" — has fractional part, so extend fractional
-        let key = generate_key_between(Some("a5V"), None).unwrap();
-        assert!(key.as_str() > "a5V", "{} should be > a5V", key);
-        assert!(key.starts_with("a5"), "{} should start with a5", key);
+        // After "a5V" — npm behavior: increment integer part → "a6"
+        assert_eq!(
+            generate_key_between(Some("a5V"), None),
+            Some("a6".to_string())
+        );
     }
 
     #[test]
@@ -273,13 +380,21 @@ mod tests {
     }
 
     #[test]
-    fn test_key_between_before_minimum() {
-        // Before "a0" with no fractional → None (no room)
-        assert_eq!(generate_key_between(None, Some("a0")), None);
-        // Before "a0V" → "a0" + midpoint("", "V")
-        let key = generate_key_between(None, Some("a0V")).unwrap();
-        assert!(key.as_str() < "a0V", "{} should be < a0V", key);
-        assert!(key.starts_with("a0"), "{} should start with a0", key);
+    fn test_key_between_before_a0() {
+        // Before "a0" → decrement crosses over to Z-prefix → "Zz"
+        assert_eq!(
+            generate_key_between(None, Some("a0")),
+            Some("Zz".to_string())
+        );
+    }
+
+    #[test]
+    fn test_key_between_before_a0_fractional() {
+        // Before "a0V" → integer part "a0" < "a0V", so return "a0"
+        assert_eq!(
+            generate_key_between(None, Some("a0V")),
+            Some("a0".to_string())
+        );
     }
 
     #[test]
@@ -340,7 +455,86 @@ mod tests {
         }
     }
 
+    // ── Uppercase prefix tests ──────────────────────────────────────────
+
+    #[test]
+    fn test_key_between_uppercase_prefix() {
+        // Keys produced by the npm package when dragging above the first item
+        // These should not panic and should produce valid results
+        let key = generate_key_between(Some("Zy"), Some("Zz")).unwrap();
+        assert!(key.as_str() > "Zy", "{} should be > Zy", key);
+        assert!(key.as_str() < "Zz", "{} should be < Zz", key);
+    }
+
+    #[test]
+    fn test_key_between_before_uppercase() {
+        // Before a Z-prefix key
+        let key = generate_key_between(None, Some("Zy")).unwrap();
+        assert!(key.as_str() < "Zy", "{} should be < Zy", key);
+    }
+
+    #[test]
+    fn test_key_between_after_uppercase() {
+        // After a Z-prefix key — should produce the next integer
+        assert_eq!(
+            generate_key_between(Some("Zz"), None),
+            Some("a0".to_string())
+        );
+    }
+
+    #[test]
+    fn test_key_between_across_boundary() {
+        // Between uppercase and lowercase range
+        let key = generate_key_between(Some("Zz"), Some("a1")).unwrap();
+        assert!(key.as_str() > "Zz", "{} should be > Zz", key);
+        assert!(key.as_str() < "a1", "{} should be < a1", key);
+    }
+
+    #[test]
+    fn test_regression_uppercase_no_panic() {
+        // Exact scenario that caused the crash: generate_key_between with
+        // uppercase-prefix keys should not panic
+        let _ = generate_key_between(None, Some("Zy"));
+        let _ = generate_key_between(None, Some("Zz"));
+        let _ = generate_key_between(None, Some("Zzx"));
+        let _ = generate_key_between(Some("Zy"), Some("Zz"));
+        let _ = generate_key_between(Some("Zy"), None);
+        let _ = generate_key_between(Some("ZzV"), None);
+    }
+
+    #[test]
+    fn test_uppercase_sorting() {
+        // Verify Z-prefix keys sort before a-prefix keys (lexicographic)
+        assert!("Zy" < "Zz");
+        assert!("Zz" < "a0");
+        assert!("Zzx" < "a0");
+        assert!("ZzV" < "a0");
+    }
+
+    #[test]
+    fn test_key_between_deep_uppercase() {
+        // Repeated insertion before first item should keep producing valid keys
+        let mut hi = "a0".to_string();
+        for _ in 0..10 {
+            let key = generate_key_between(None, Some(&hi)).unwrap();
+            assert!(key.as_str() < hi.as_str(), "{} should be < {}", key, hi);
+            hi = key;
+        }
+    }
+
     // ── Internal helpers ────────────────────────────────────────────────
+
+    #[test]
+    fn test_get_integer_length() {
+        // Lowercase: a=2, b=3, z=27
+        assert_eq!(get_integer_length(b'a'), 2);
+        assert_eq!(get_integer_length(b'b'), 3);
+        assert_eq!(get_integer_length(b'z'), 27);
+        // Uppercase: Z=2, Y=3, A=27
+        assert_eq!(get_integer_length(b'Z'), 2);
+        assert_eq!(get_integer_length(b'Y'), 3);
+        assert_eq!(get_integer_length(b'A'), 27);
+    }
 
     #[test]
     fn test_get_integer_part() {
@@ -348,15 +542,52 @@ mod tests {
         assert_eq!(get_integer_part("a5V"), "a5");
         assert_eq!(get_integer_part("b00"), "b00");
         assert_eq!(get_integer_part("b00V"), "b00");
+        // Uppercase prefixes
+        assert_eq!(get_integer_part("Zz"), "Zz");
+        assert_eq!(get_integer_part("ZzV"), "Zz");
+        assert_eq!(get_integer_part("Zy"), "Zy");
+        assert_eq!(get_integer_part("Yzz"), "Yzz");
+        assert_eq!(get_integer_part("YzzV"), "Yzz");
     }
 
     #[test]
-    fn test_key_integer_roundtrip() {
-        for i in 0..130 {
-            let key = index_to_key(i);
-            let int_part = get_integer_part(&key);
-            assert_eq!(key_to_integer(int_part), i, "roundtrip failed for {}", key);
-        }
+    fn test_increment_decrement_crossover() {
+        // Crossover: Zz → increment → a0
+        assert_eq!(increment_integer("Zz"), Some("a0".to_string()));
+        // Crossover: a0 → decrement → Zz
+        assert_eq!(decrement_integer("a0"), Some("Zz".to_string()));
+    }
+
+    #[test]
+    fn test_increment_decrement_uppercase() {
+        // Within uppercase range
+        assert_eq!(decrement_integer("Zz"), Some("Zy".to_string()));
+        assert_eq!(decrement_integer("Z0"), Some("Yzz".to_string()));
+        assert_eq!(increment_integer("Yzz"), Some("Z0".to_string()));
+        assert_eq!(increment_integer("Zy"), Some("Zz".to_string()));
+    }
+
+    #[test]
+    fn test_increment_decrement_lowercase() {
+        // Within lowercase range
+        assert_eq!(increment_integer("a0"), Some("a1".to_string()));
+        assert_eq!(increment_integer("az"), Some("b00".to_string()));
+        assert_eq!(decrement_integer("b00"), Some("az".to_string()));
+        assert_eq!(decrement_integer("a1"), Some("a0".to_string()));
+    }
+
+    #[test]
+    fn test_increment_ceiling() {
+        // z + max digits → None (ceiling)
+        let max_z = format!("z{}", "z".repeat(26));
+        assert_eq!(increment_integer(&max_z), None);
+    }
+
+    #[test]
+    fn test_decrement_floor() {
+        // A + min digits → None (floor)
+        let min_a = format!("A{}", "0".repeat(26));
+        assert_eq!(decrement_integer(&min_a), None);
     }
 
     #[test]
