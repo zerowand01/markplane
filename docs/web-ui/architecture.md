@@ -262,7 +262,7 @@ The Rust HTTP server exposes a REST API that mirrors `markplane-core` operations
 | `GET` | `/api/epics` | List all epics with progress metrics |
 | `GET` | `/api/epics/:id` | Get epic detail with linked task summary |
 | `POST` | `/api/epics` | Create epic |
-| `PATCH` | `/api/epics/:id` | Update epic fields (title, status, priority, dates, tags, body) |
+| `PATCH` | `/api/epics/:id` | Update epic fields (title, status, priority, dates, tags, depends_on, body) |
 
 #### Plans & Notes
 
@@ -271,7 +271,7 @@ The Rust HTTP server exposes a REST API that mirrors `markplane-core` operations
 | `GET` | `/api/plans` | List plans |
 | `GET` | `/api/plans/:id` | Get plan detail |
 | `POST` | `/api/plans` | Create plan (optionally linked to a task) |
-| `PATCH` | `/api/plans/:id` | Update plan fields (title, status, body) |
+| `PATCH` | `/api/plans/:id` | Update plan fields (title, status, epic, body) |
 | `GET` | `/api/notes` | List notes |
 | `GET` | `/api/notes/:id` | Get note detail |
 | `POST` | `/api/notes` | Create note |

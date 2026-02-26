@@ -25,11 +25,13 @@ const EPIC_FIELD_LABELS: [string, string][] = [
   ["tags", "Tags"],
   ["started", "Start date"],
   ["target", "Target date"],
+  ["depends_on", "Dependencies"],
   ["body", "Content"],
 ];
 const PLAN_FIELD_LABELS: [string, string][] = [
   ["status", "Status"],
   ["title", "Title"],
+  ["epic", "Epic"],
   ["body", "Content"],
 ];
 const NOTE_FIELD_LABELS: [string, string][] = [
@@ -43,8 +45,8 @@ const NOTE_FIELD_LABELS: [string, string][] = [
 
 // Fields that support toast-based undo (discrete property changes, not body/title)
 const TASK_UNDO_FIELDS = ["status", "priority", "effort", "type", "assignee", "tags", "epic", "position"];
-const EPIC_UNDO_FIELDS = ["status", "priority", "tags", "started", "target"];
-const PLAN_UNDO_FIELDS = ["status"];
+const EPIC_UNDO_FIELDS = ["status", "priority", "tags", "started", "target", "depends_on"];
+const PLAN_UNDO_FIELDS = ["status", "epic"];
 const NOTE_UNDO_FIELDS = ["status", "type", "tags"];
 
 // Nullable fields where the server requires "" (not null) to clear the value.

@@ -553,6 +553,8 @@ struct UpdateEpicRequest {
     tags: Option<Vec<String>>,
     started: Option<String>,
     target: Option<String>,
+    #[serde(default)]
+    depends_on: Option<Vec<String>>,
     body: Option<String>,
 }
 
@@ -588,6 +590,7 @@ fn plan_to_response(doc: &MarkplaneDocument<Plan>) -> PlanResponse {
 struct UpdatePlanRequest {
     title: Option<String>,
     status: Option<String>,
+    epic: Option<String>,
     body: Option<String>,
 }
 
@@ -1355,10 +1358,13 @@ async fn update_epic(
     parse_id(&id)
         .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
 
+    // Read current state for diffing tags and links
+    let current: MarkplaneDocument<Epic> = state.project.read_item(&id).map_err(map_core_error)?;
+    let fm = &current.frontmatter;
+
     // Diff tags if provided
     let (add_tags, remove_tags) = if let Some(ref desired_tags) = body.tags {
-        let current: MarkplaneDocument<Epic> = state.project.read_item(&id).map_err(map_core_error)?;
-        diff_vec(&current.frontmatter.tags, desired_tags)
+        diff_vec(&fm.tags, desired_tags)
     } else {
         (vec![], vec![])
     };
@@ -1397,6 +1403,21 @@ async fn update_epic(
         }).map_err(map_core_error)?;
     }
 
+    // ── Links → link_items() per change ──────────────────────────────
+
+    // depends_on (array): diff
+    if let Some(ref desired_deps) = body.depends_on {
+        let (to_add, to_remove) = diff_vec(&fm.depends_on, desired_deps);
+        for dep in &to_remove {
+            state.project.link_items(&id, dep, LinkRelation::DependsOn, LinkAction::Remove)
+                .map_err(map_core_error)?;
+        }
+        for dep in &to_add {
+            state.project.link_items(&id, dep, LinkRelation::DependsOn, LinkAction::Add)
+                .map_err(map_core_error)?;
+        }
+    }
+
     // Body
     if let Some(ref new_body) = body.body {
         state.project.update_body(&id, new_body).map_err(map_core_error)?;
@@ -1419,6 +1440,9 @@ async fn update_plan(
     parse_id(&id)
         .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
 
+    // Read current state for link diffing
+    let current: MarkplaneDocument<Plan> = state.project.read_item(&id).map_err(map_core_error)?;
+
     // Properties
     let has_properties = body.title.is_some() || body.status.is_some();
     if has_properties {
@@ -1426,6 +1450,28 @@ async fn update_plan(
             title: body.title,
             status: body.status,
         }).map_err(map_core_error)?;
+    }
+
+    // ── Links → link_items() per change ──────────────────────────────
+
+    // Epic (scalar): Add overwrites, Remove clears
+    if let Some(ref desired_epic) = body.epic {
+        let desired = if desired_epic.is_empty() { None } else { Some(desired_epic.as_str()) };
+        let current_epic = current.frontmatter.epic.as_deref();
+        if desired != current_epic {
+            match desired {
+                Some(new) => {
+                    state.project.link_items(&id, new, LinkRelation::Epic, LinkAction::Add)
+                        .map_err(map_core_error)?;
+                }
+                None => {
+                    if let Some(old) = current_epic {
+                        state.project.link_items(&id, old, LinkRelation::Epic, LinkAction::Remove)
+                            .map_err(map_core_error)?;
+                    }
+                }
+            }
+        }
     }
 
     // Body

@@ -1,7 +1,7 @@
 ---
 id: TASK-8am45
 title: Add relationship editing to epic and plan detail sheets
-status: backlog
+status: done
 priority: medium
 type: enhancement
 effort: medium

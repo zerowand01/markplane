@@ -134,12 +134,14 @@ export interface UpdateEpicRequest {
   tags?: string[];
   started?: string;
   target?: string;
+  depends_on?: string[];
   body?: string;
 }
 
 export interface UpdatePlanRequest {
   title?: string;
   status?: PlanStatus;
+  epic?: string;
   body?: string;
 }
 

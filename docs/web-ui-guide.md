@@ -52,6 +52,25 @@ Click any task to open its detail panel. The panel shows:
 - Click any metadata field to edit it inline via dropdown
 - **Plan field**: Search and link an existing plan, or create a new one directly from the dropdown
 
+### Epic Detail
+
+Click any epic to open its detail panel. The panel shows:
+
+- **Editable fields**: status, priority, started/target dates, tags, depends_on (inter-epic dependencies)
+- **Depends on**: Add or remove other epics this epic depends on via the inline editor
+- **Progress bar** and status breakdown of linked tasks
+- **Linked tasks table** showing all tasks assigned to the epic
+- **Markdown body** with inline editing
+
+### Plan Detail
+
+Click any plan to open its detail panel. The panel shows:
+
+- **Editable fields**: status, epic
+- **Epic field**: Search and link an epic, or clear the association
+- **Implements**: Read-only list of tasks that link to this plan (managed from the task side)
+- **Markdown body** with inline editing
+
 ### Dependency Graph (`/graph`)
 
 An interactive node graph built with React Flow showing `blocks` and `depends_on` relationships.

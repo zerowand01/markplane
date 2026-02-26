@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { usePlan } from "@/lib/hooks/use-plans";
+import { useEpics } from "@/lib/hooks/use-epics";
 import { useUpdatePlan, useArchiveItem } from "@/lib/hooks/use-mutations";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { MarkdownEditor } from "./markdown-editor";
 import { WikiLinkChip } from "./wiki-link-chip";
+import { EntityCombobox } from "./entity-combobox";
 import { InlineEdit } from "./inline-edit";
 import { FieldRow, EmptyValue } from "./field-row";
 import {
@@ -44,6 +46,10 @@ export function PlanDetailSheet({
   });
   const updatePlan = useUpdatePlan();
   const archiveItem = useArchiveItem();
+  const { data: epics } = useEpics();
+
+  const epicOptions =
+    epics?.map((e) => ({ id: e.id, title: e.title })) ?? [];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -135,12 +141,17 @@ export function PlanDetailSheet({
                   </DropdownMenu>
                 </FieldRow>
 
-                <FieldRow label="Epic">
-                  {plan.epic ? (
-                    <WikiLinkChip id={plan.epic} />
-                  ) : (
-                    <EmptyValue>No epic</EmptyValue>
-                  )}
+                <FieldRow label="Epic" editable>
+                  <EntityCombobox
+                    value={plan.epic}
+                    options={epicOptions}
+                    onSelect={(id) =>
+                      updatePlan.mutate({ id: plan.id, epic: id ?? "" })
+                    }
+                    placeholder="No epic"
+                    emptyLabel="No epic"
+                    linkValue
+                  />
                 </FieldRow>
 
                 <FieldRow label="Implements">

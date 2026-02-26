@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useEpic } from "@/lib/hooks/use-epics";
+import { useEpic, useEpics } from "@/lib/hooks/use-epics";
 import { useUpdateEpic, useArchiveItem } from "@/lib/hooks/use-mutations";
 import { useTasks } from "@/lib/hooks/use-tasks";
 import { EpicProgress } from "./epic-progress";
@@ -11,6 +11,7 @@ import { MarkdownRenderer } from "./markdown-renderer";
 import { MarkdownEditor } from "./markdown-editor";
 import { InlineEdit } from "./inline-edit";
 import { TagEditor } from "./tag-editor";
+import { EntityRefEditor } from "./entity-ref-editor";
 import { FieldRow } from "./field-row";
 import {
   Sheet,
@@ -66,8 +67,13 @@ export function EpicDetailSheet({
   const updateEpic = useUpdateEpic();
   const archiveItem = useArchiveItem();
   const { data: allTasks } = useTasks();
+  const { data: allEpics } = useEpics();
 
   const linkedTasks = allTasks?.filter((t) => t.epic === epicId) || [];
+  const epicOptions =
+    allEpics
+      ?.filter((e) => e.id !== epicId)
+      .map((e) => ({ id: e.id, title: e.title })) ?? [];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -212,6 +218,25 @@ export function EpicDetailSheet({
                     tags={epic.tags}
                     onSave={(tags) =>
                       updateEpic.mutate({ id: epic.id, tags })
+                    }
+                  />
+                </FieldRow>
+
+                <FieldRow label="Depends on" editable>
+                  <EntityRefEditor
+                    ids={epic.depends_on}
+                    options={epicOptions}
+                    onAdd={(id) =>
+                      updateEpic.mutate({
+                        id: epic.id,
+                        depends_on: [...epic.depends_on, id],
+                      })
+                    }
+                    onRemove={(id) =>
+                      updateEpic.mutate({
+                        id: epic.id,
+                        depends_on: epic.depends_on.filter((d) => d !== id),
+                      })
                     }
                   />
                 </FieldRow>
