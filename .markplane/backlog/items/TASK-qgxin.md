@@ -1,7 +1,7 @@
 ---
 id: TASK-qgxin
 title: Remove update_body() and fold body into typed update methods
-status: backlog
+status: done
 priority: medium
 type: enhancement
 effort: small

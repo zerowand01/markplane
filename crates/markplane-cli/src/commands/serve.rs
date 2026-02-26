@@ -1051,11 +1051,12 @@ async fn update_task(
         Some(s) => Patch::Set(s.clone()),
     };
 
-    let has_properties = body.title.is_some() || body.status.is_some()
+    let has_changes = body.title.is_some() || body.status.is_some()
         || body.priority.is_some() || body.effort.is_some() || body.item_type.is_some()
         || !add_tags.is_empty() || !remove_tags.is_empty()
-        || !matches!(assignee, Patch::Unchanged) || !matches!(position, Patch::Unchanged);
-    if has_properties {
+        || !matches!(assignee, Patch::Unchanged) || !matches!(position, Patch::Unchanged)
+        || body.body.is_some();
+    if has_changes {
         state.project.update_task(&id, &TaskUpdate {
             title: body.title,
             status: body.status,
@@ -1066,6 +1067,7 @@ async fn update_task(
             position,
             add_tags,
             remove_tags,
+            body: body.body,
         }).map_err(map_core_error)?;
     }
 
@@ -1140,11 +1142,6 @@ async fn update_task(
             state.project.link_items(&id, blk, LinkRelation::Blocks, LinkAction::Add)
                 .map_err(map_core_error)?;
         }
-    }
-
-    // ── Body ─────────────────────────────────────────────────────────
-    if let Some(ref new_body) = body.body {
-        state.project.update_body(&id, new_body).map_err(map_core_error)?;
     }
 
     // Re-read for response
@@ -1387,11 +1384,12 @@ async fn update_epic(
         ),
     };
 
-    // Properties
-    let has_properties = body.title.is_some() || body.status.is_some() || body.priority.is_some()
+    // Properties + body
+    let has_changes = body.title.is_some() || body.status.is_some() || body.priority.is_some()
         || !add_tags.is_empty() || !remove_tags.is_empty()
-        || !matches!(started, Patch::Unchanged) || !matches!(target, Patch::Unchanged);
-    if has_properties {
+        || !matches!(started, Patch::Unchanged) || !matches!(target, Patch::Unchanged)
+        || body.body.is_some();
+    if has_changes {
         state.project.update_epic(&id, &EpicUpdate {
             title: body.title,
             status: body.status,
@@ -1400,6 +1398,7 @@ async fn update_epic(
             remove_tags,
             started,
             target,
+            body: body.body,
         }).map_err(map_core_error)?;
     }
 
@@ -1416,11 +1415,6 @@ async fn update_epic(
             state.project.link_items(&id, dep, LinkRelation::DependsOn, LinkAction::Add)
                 .map_err(map_core_error)?;
         }
-    }
-
-    // Body
-    if let Some(ref new_body) = body.body {
-        state.project.update_body(&id, new_body).map_err(map_core_error)?;
     }
 
     // Re-read for response
@@ -1443,12 +1437,13 @@ async fn update_plan(
     // Read current state for link diffing
     let current: MarkplaneDocument<Plan> = state.project.read_item(&id).map_err(map_core_error)?;
 
-    // Properties
-    let has_properties = body.title.is_some() || body.status.is_some();
-    if has_properties {
+    // Properties + body
+    let has_changes = body.title.is_some() || body.status.is_some() || body.body.is_some();
+    if has_changes {
         state.project.update_plan(&id, &PlanUpdate {
             title: body.title,
             status: body.status,
+            body: body.body,
         }).map_err(map_core_error)?;
     }
 
@@ -1472,11 +1467,6 @@ async fn update_plan(
                 }
             }
         }
-    }
-
-    // Body
-    if let Some(ref new_body) = body.body {
-        state.project.update_body(&id, new_body).map_err(map_core_error)?;
     }
 
     // Re-read for response
@@ -1505,16 +1495,18 @@ async fn update_note(
         (vec![], vec![])
     };
 
-    let has_properties = body.title.is_some() || body.status.is_some()
+    let has_changes = body.title.is_some() || body.status.is_some()
         || body.note_type.is_some()
-        || !add_tags.is_empty() || !remove_tags.is_empty();
-    if has_properties {
+        || !add_tags.is_empty() || !remove_tags.is_empty()
+        || body.body.is_some();
+    if has_changes {
         state.project.update_note(&id, &NoteUpdate {
             title: body.title,
             status: body.status,
             note_type: body.note_type,
             add_tags,
             remove_tags,
+            body: body.body,
         }).map_err(map_core_error)?;
     }
 
@@ -1531,11 +1523,6 @@ async fn update_note(
             state.project.link_items(&id, rel, LinkRelation::Related, LinkAction::Add)
                 .map_err(map_core_error)?;
         }
-    }
-
-    // ── Body ─────────────────────────────────────────────────────────
-    if let Some(ref new_body) = body.body {
-        state.project.update_body(&id, new_body).map_err(map_core_error)?;
     }
 
     // Re-read for response

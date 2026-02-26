@@ -243,7 +243,7 @@ The Rust HTTP server exposes a REST API that mirrors `markplane-core` operations
 | `GET` | `/api/tasks` | List tasks with filters | `list_tasks(filter)` |
 | `GET` | `/api/tasks/:id` | Get task detail | `read_item(id)` |
 | `POST` | `/api/tasks` | Create task | `create_task(...)` |
-| `PATCH` | `/api/tasks/:id` | Update task fields (status, priority, body, etc.) | `update_task()` + `link_items()` + `update_body()` |
+| `PATCH` | `/api/tasks/:id` | Update task fields (status, priority, body, etc.) | `update_task()` + `link_items()` |
 | `DELETE` | `/api/tasks/:id` | Archive task | `archive_item(id)` |
 
 **Query parameters for `GET /api/tasks`:**

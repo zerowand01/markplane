@@ -41,6 +41,7 @@ pub struct TaskUpdate {
     pub position: Patch<String>,
     pub add_tags: Vec<String>,
     pub remove_tags: Vec<String>,
+    pub body: Option<String>,
 }
 
 /// Fields that can be updated on an Epic.
@@ -53,6 +54,7 @@ pub struct EpicUpdate {
     pub remove_tags: Vec<String>,
     pub started: Patch<NaiveDate>,
     pub target: Patch<NaiveDate>,
+    pub body: Option<String>,
 }
 
 /// Fields that can be updated on a Plan.
@@ -60,6 +62,7 @@ pub struct EpicUpdate {
 pub struct PlanUpdate {
     pub title: Option<String>,
     pub status: Option<String>,
+    pub body: Option<String>,
 }
 
 /// Fields that can be updated on a Note.
@@ -70,6 +73,7 @@ pub struct NoteUpdate {
     pub note_type: Option<String>,
     pub add_tags: Vec<String>,
     pub remove_tags: Vec<String>,
+    pub body: Option<String>,
 }
 
 /// Generic union of all per-type update fields, for MCP/CLI dispatch.
@@ -510,41 +514,6 @@ impl Project {
         Ok(())
     }
 
-    /// Update the markdown body of any item, preserving frontmatter.
-    /// Also updates the `updated` date in frontmatter where applicable.
-    pub fn update_body(&self, id: &str, new_body: &str) -> Result<()> {
-        let (prefix, _) = parse_id(id)?;
-        let today = Local::now().date_naive();
-
-        match prefix {
-            IdPrefix::Task => {
-                let mut doc: MarkplaneDocument<Task> = self.read_item(id)?;
-                doc.frontmatter.updated = today;
-                doc.body = new_body.to_string();
-                self.write_item(id, &doc)?;
-            }
-            IdPrefix::Epic => {
-                let mut doc: MarkplaneDocument<Epic> = self.read_item(id)?;
-                doc.body = new_body.to_string();
-                self.write_item(id, &doc)?;
-            }
-            IdPrefix::Plan => {
-                let mut doc: MarkplaneDocument<Plan> = self.read_item(id)?;
-                doc.frontmatter.updated = today;
-                doc.body = new_body.to_string();
-                self.write_item(id, &doc)?;
-            }
-            IdPrefix::Note => {
-                let mut doc: MarkplaneDocument<Note> = self.read_item(id)?;
-                doc.frontmatter.updated = today;
-                doc.body = new_body.to_string();
-                self.write_item(id, &doc)?;
-            }
-        }
-
-        Ok(())
-    }
-
     // ── Typed Update Methods ──────────────────────────────────────────────
 
     /// Update properties on a Task.
@@ -579,6 +548,9 @@ impl Project {
             Patch::Unchanged => {}
         }
         apply_tag_changes(&mut fm.tags, &u.add_tags, &u.remove_tags);
+        if let Some(ref new_body) = u.body {
+            doc.body = new_body.clone();
+        }
         fm.updated = Local::now().date_naive();
         self.write_item(id, &doc)
     }
@@ -609,6 +581,9 @@ impl Project {
             Patch::Clear => fm.target = None,
             Patch::Unchanged => {}
         }
+        if let Some(ref new_body) = u.body {
+            doc.body = new_body.clone();
+        }
         self.write_item(id, &doc)
     }
 
@@ -623,6 +598,9 @@ impl Project {
         }
         if let Some(ref status) = u.status {
             fm.status = status.parse()?;
+        }
+        if let Some(ref new_body) = u.body {
+            doc.body = new_body.clone();
         }
         fm.updated = Local::now().date_naive();
         self.write_item(id, &doc)
@@ -644,6 +622,9 @@ impl Project {
             fm.note_type = note_type.parse()?;
         }
         apply_tag_changes(&mut fm.tags, &u.add_tags, &u.remove_tags);
+        if let Some(ref new_body) = u.body {
+            doc.body = new_body.clone();
+        }
         fm.updated = Local::now().date_naive();
         self.write_item(id, &doc)
     }
@@ -675,6 +656,7 @@ impl Project {
                     position: fields.position,
                     add_tags: fields.add_tags,
                     remove_tags: fields.remove_tags,
+                    body: None,
                 })
             }
             IdPrefix::Epic => {
@@ -712,6 +694,7 @@ impl Project {
                     remove_tags: fields.remove_tags,
                     started: fields.started,
                     target: fields.target,
+                    body: None,
                 })
             }
             IdPrefix::Plan => {
@@ -751,6 +734,7 @@ impl Project {
                 self.update_plan(id, &PlanUpdate {
                     title: fields.title,
                     status: fields.status,
+                    body: None,
                 })
             }
             IdPrefix::Note => {
@@ -791,6 +775,7 @@ impl Project {
                     note_type: fields.note_type,
                     add_tags: fields.add_tags,
                     remove_tags: fields.remove_tags,
+                    body: None,
                 })
             }
         }
@@ -1678,10 +1663,10 @@ mod tests {
         assert!(validate_title_length(&title).is_ok());
     }
 
-    // ── update_body ────────────────────────────────────────────────────
+    // ── body via typed update methods ──────────────────────────────────
 
     #[test]
-    fn test_update_body_task() {
+    fn test_update_task_body() {
         let (_tmp, project) = setup_project();
         let task = project
             .create_task("Test item", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
@@ -1691,7 +1676,10 @@ mod tests {
         assert!(original.body.contains("[What needs to be done"));
 
         project
-            .update_body(&task.id, "# Test item\n\nActual description here.\n")
+            .update_task(&task.id, &TaskUpdate {
+                body: Some("# Test item\n\nActual description here.\n".into()),
+                ..Default::default()
+            })
             .unwrap();
 
         let updated: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
@@ -1701,12 +1689,15 @@ mod tests {
     }
 
     #[test]
-    fn test_update_body_epic() {
+    fn test_update_epic_body() {
         let (_tmp, project) = setup_project();
         let epic = project.create_epic("Phase 1", Priority::High, None).unwrap();
 
         project
-            .update_body(&epic.id, "# Phase 1\n\n## Objective\n\nBuild the foundation.\n")
+            .update_epic(&epic.id, &EpicUpdate {
+                body: Some("# Phase 1\n\n## Objective\n\nBuild the foundation.\n".into()),
+                ..Default::default()
+            })
             .unwrap();
 
         let updated: MarkplaneDocument<Epic> = project.read_item(&epic.id).unwrap();
@@ -1715,12 +1706,15 @@ mod tests {
     }
 
     #[test]
-    fn test_update_body_plan() {
+    fn test_update_plan_body() {
         let (_tmp, project) = setup_project();
         let plan = project.create_plan("Plan A", vec![], None, None).unwrap();
 
         project
-            .update_body(&plan.id, "# Plan A\n\nDetailed steps.\n")
+            .update_plan(&plan.id, &PlanUpdate {
+                body: Some("# Plan A\n\nDetailed steps.\n".into()),
+                ..Default::default()
+            })
             .unwrap();
 
         let updated: MarkplaneDocument<Plan> = project.read_item(&plan.id).unwrap();
@@ -1728,14 +1722,17 @@ mod tests {
     }
 
     #[test]
-    fn test_update_body_note() {
+    fn test_update_note_body() {
         let (_tmp, project) = setup_project();
         let note = project
             .create_note("Research A", NoteType::Research, vec![], None)
             .unwrap();
 
         project
-            .update_body(&note.id, "# Research A\n\nFindings here.\n")
+            .update_note(&note.id, &NoteUpdate {
+                body: Some("# Research A\n\nFindings here.\n".into()),
+                ..Default::default()
+            })
             .unwrap();
 
         let updated: MarkplaneDocument<Note> = project.read_item(&note.id).unwrap();
@@ -1743,9 +1740,12 @@ mod tests {
     }
 
     #[test]
-    fn test_update_body_nonexistent() {
+    fn test_update_task_body_nonexistent() {
         let (_tmp, project) = setup_project();
-        let result = project.update_body("TASK-zzzzz", "new body");
+        let result = project.update_task("TASK-zzzzz", &TaskUpdate {
+            body: Some("new body".into()),
+            ..Default::default()
+        });
         assert!(result.is_err());
     }
 
@@ -2086,6 +2086,7 @@ mod tests {
         project.update_plan(&plan.id, &PlanUpdate {
             title: Some("Plan A v2".to_string()),
             status: Some("approved".to_string()),
+            ..Default::default()
         }).unwrap();
 
         let doc: MarkplaneDocument<Plan> = project.read_item(&plan.id).unwrap();
