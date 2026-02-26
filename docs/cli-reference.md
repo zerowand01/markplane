@@ -248,6 +248,31 @@ markplane done TASK-fq2x8
 
 ---
 
+## edit
+
+Open an item in your editor.
+
+```
+markplane edit <ID>
+```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `<ID>` | Item ID (e.g. `TASK-rm6d3`, `EPIC-xa7r2`, `PLAN-wk7n1`, `NOTE-dq6m1`) |
+
+Resolves the item ID to its file path and opens it in `$EDITOR` (falls back to `$VISUAL`, then `vi`). Works with all entity types and archived items.
+
+**Example:**
+
+```bash
+markplane edit TASK-fq2x8
+# Opens .markplane/backlog/items/TASK-fq2x8.md in $EDITOR
+```
+
+---
+
 ## epic
 
 Create a new epic.

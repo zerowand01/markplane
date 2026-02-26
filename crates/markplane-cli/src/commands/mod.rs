@@ -1,6 +1,7 @@
 mod init;
 mod add;
 mod show;
+mod edit;
 mod ls;
 mod status;
 mod sync;
@@ -66,6 +67,12 @@ pub enum Commands {
 
     /// Show details of an item
     Show {
+        /// Item ID (e.g. TASK-042)
+        id: String,
+    },
+
+    /// Open an item in $EDITOR
+    Edit {
         /// Item ID (e.g. TASK-042)
         id: String,
     },
@@ -346,6 +353,7 @@ pub fn execute(cmd: Commands) -> anyhow::Result<()> {
             template,
         } => add::run(title, r#type, priority, effort, epic, tags, template),
         Commands::Show { id } => show::run(id),
+        Commands::Edit { id } => edit::run(id),
         Commands::Ls {
             kind,
             status,

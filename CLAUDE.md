@@ -31,7 +31,7 @@ After code changes, `cargo install --path crates/markplane-cli` to update the lo
 | Crate | Type | Role |
 |-------|------|------|
 | `markplane-core` | Library | Data models, CRUD, sync, references, context generation |
-| `markplane-cli` | Binary (`markplane`) | 25 CLI commands, MCP server (`markplane mcp`), web server (`markplane serve`) |
+| `markplane-cli` | Binary (`markplane`) | CLI commands, MCP server (`markplane mcp`), web server (`markplane serve`) |
 | `markplane-web/ui` | Next.js app | React + Tailwind frontend (static export, optionally embedded via `rust-embed`) |
 
 ## Key Conventions
@@ -50,7 +50,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed patterns, error handling, co
 
 - [Architecture](docs/architecture.md) — System design, data model, crate responsibilities
 - [File Format](docs/file-format.md) — Directory structure, YAML schema, ID system, cross-references
-- [CLI Reference](docs/cli-reference.md) — All 25 commands with examples
+- [CLI Reference](docs/cli-reference.md) — All commands with examples
 - [MCP Setup](docs/mcp-setup.md) — AI tool integration, tool/resource catalog
 - [Web UI Guide](docs/web-ui-guide.md) — Dashboard usage and development workflow
 - [Getting Started](docs/getting-started.md) — Step-by-step tutorial

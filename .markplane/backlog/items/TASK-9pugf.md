@@ -1,7 +1,7 @@
 ---
 id: TASK-9pugf
 title: Add markplane edit command to open items in editor
-status: planned
+status: done
 priority: medium
 type: feature
 effort: small
