@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePlan } from "@/lib/hooks/use-plans";
 import { useEpics } from "@/lib/hooks/use-epics";
-import { useUpdatePlan, useArchiveItem } from "@/lib/hooks/use-mutations";
+import { useUpdatePlan, useArchiveItem, useUnarchiveItem } from "@/lib/hooks/use-mutations";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { MarkdownEditor } from "./markdown-editor";
 import { WikiLinkChip } from "./wiki-link-chip";
@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Pencil, Archive } from "lucide-react";
+import { Pencil, Archive, ArchiveRestore } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PLAN_STATUS_CONFIG } from "@/lib/constants";
 import type { PlanStatus } from "@/lib/types";
@@ -35,10 +35,12 @@ export function PlanDetailSheet({
   planId,
   open,
   onOpenChange,
+  archived,
 }: {
   planId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  archived?: boolean;
 }) {
   const [isEditingBody, setIsEditingBody] = useState(false);
   const { data: plan, isLoading } = usePlan(planId || "", {
@@ -46,6 +48,7 @@ export function PlanDetailSheet({
   });
   const updatePlan = useUpdatePlan();
   const archiveItem = useArchiveItem();
+  const unarchiveItem = useUnarchiveItem();
   const { data: epics } = useEpics();
 
   const epicOptions =
@@ -75,7 +78,21 @@ export function PlanDetailSheet({
                   {plan.id}
                 </span>
                 <div className="flex-1" />
-                {plan.status === "done" && (
+                {archived ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                    onClick={() => {
+                      unarchiveItem.mutate(plan.id);
+                      onOpenChange(false);
+                    }}
+                    disabled={unarchiveItem.isPending}
+                  >
+                    <ArchiveRestore className="size-3.5" />
+                    <span className="text-xs">Restore</span>
+                  </Button>
+                ) : plan.status === "done" && (
                   <Button
                     variant="ghost"
                     size="sm"

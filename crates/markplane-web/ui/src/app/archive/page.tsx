@@ -1,11 +1,16 @@
 "use client";
 
-import { Suspense, useState, useMemo } from "react";
+import { Suspense, useState, useMemo, useCallback } from "react";
 import { useArchivedTasks } from "@/lib/hooks/use-tasks";
 import { useArchivedEpics } from "@/lib/hooks/use-epics";
 import { useArchivedPlans } from "@/lib/hooks/use-plans";
 import { useArchivedNotes } from "@/lib/hooks/use-notes";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useUnarchiveItem } from "@/lib/hooks/use-mutations";
+import { TaskDetailSheet } from "@/components/domain/task-detail-sheet";
+import { EpicDetailSheet } from "@/components/domain/epic-detail-sheet";
+import { PlanDetailSheet } from "@/components/domain/plan-detail-sheet";
+import { NoteDetailSheet } from "@/components/domain/note-detail-sheet";
 import { StatusBadge, EpicStatusBadge } from "@/components/domain/status-badge";
 import { PriorityIndicator } from "@/components/domain/priority-indicator";
 import { Button } from "@/components/ui/button";
@@ -83,9 +88,47 @@ const TYPE_COLOR: Record<string, string> = {
   notes: "var(--entity-note)",
 };
 
+const PARAM_KEY: Record<string, string> = {
+  tasks: "task",
+  epics: "epic",
+  plans: "plan",
+  notes: "note",
+};
+
 function ArchiveContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   const [tab, setTab] = useState<EntityTab>("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  const selectedTaskId = searchParams.get("task");
+  const selectedEpicId = searchParams.get("epic");
+  const selectedPlanId = searchParams.get("plan");
+  const selectedNoteId = searchParams.get("note");
+  const [secondaryTaskId, setSecondaryTaskId] = useState<string | null>(null);
+
+  const openItem = useCallback(
+    (id: string, type: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const key of Object.values(PARAM_KEY)) {
+        params.delete(key);
+      }
+      const paramKey = PARAM_KEY[type];
+      if (paramKey) params.set(paramKey, id);
+      router.replace(`?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams],
+  );
+
+  const closeItem = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const key of Object.values(PARAM_KEY)) {
+      params.delete(key);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `?${qs}` : "/archive/", { scroll: false });
+  }, [router, searchParams]);
 
   const { data: tasks = [], isLoading: loadingTasks } = useArchivedTasks();
   const { data: epics = [], isLoading: loadingEpics } = useArchivedEpics();
@@ -211,7 +254,16 @@ function ArchiveContent() {
             {filteredItems.map((item) => (
               <div
                 key={item.id}
-                className="group/row flex items-center gap-3 rounded-md border bg-card px-3 py-2.5 transition-colors hover:border-muted-foreground/30"
+                className="group/row flex items-center gap-3 rounded-md border bg-card px-3 py-2.5 transition-colors hover:border-muted-foreground/30 cursor-pointer"
+                role="button"
+                tabIndex={0}
+                onClick={() => openItem(item.id, item.type)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openItem(item.id, item.type);
+                  }
+                }}
               >
                 {/* Type badge */}
                 <span
@@ -268,7 +320,10 @@ function ArchiveContent() {
                   variant="ghost"
                   size="sm"
                   className="opacity-0 group-hover/row:opacity-100 transition-opacity shrink-0 h-7 px-2 gap-1"
-                  onClick={() => unarchive.mutate(item.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    unarchive.mutate(item.id);
+                  }}
                   disabled={unarchive.isPending}
                 >
                   <ArchiveRestore className="size-3.5" />
@@ -279,6 +334,50 @@ function ArchiveContent() {
           </div>
         )}
       </div>
+
+      {/* Detail sheets */}
+      <TaskDetailSheet
+        taskId={selectedTaskId}
+        open={!!selectedTaskId}
+        onOpenChange={(open) => {
+          if (!open) closeItem();
+        }}
+        archived
+      />
+      <EpicDetailSheet
+        epicId={selectedEpicId}
+        open={!!selectedEpicId}
+        onOpenChange={(open) => {
+          if (!open) closeItem();
+        }}
+        onTaskClick={(id) => setSecondaryTaskId(id)}
+        archived
+      />
+      <PlanDetailSheet
+        planId={selectedPlanId}
+        open={!!selectedPlanId}
+        onOpenChange={(open) => {
+          if (!open) closeItem();
+        }}
+        archived
+      />
+      <NoteDetailSheet
+        noteId={selectedNoteId}
+        open={!!selectedNoteId}
+        onOpenChange={(open) => {
+          if (!open) closeItem();
+        }}
+        archived
+      />
+
+      {/* Secondary task sheet for linked tasks from epic detail */}
+      <TaskDetailSheet
+        taskId={secondaryTaskId}
+        open={!!secondaryTaskId}
+        onOpenChange={(open) => {
+          if (!open) setSecondaryTaskId(null);
+        }}
+      />
     </PageTransition>
   );
 }

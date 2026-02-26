@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useEpic, useEpics } from "@/lib/hooks/use-epics";
-import { useUpdateEpic, useArchiveItem } from "@/lib/hooks/use-mutations";
+import { useUpdateEpic, useArchiveItem, useUnarchiveItem } from "@/lib/hooks/use-mutations";
 import { useTasks } from "@/lib/hooks/use-tasks";
 import { EpicProgress } from "./epic-progress";
 import { StatusBadge } from "./status-badge";
@@ -33,7 +33,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Pencil, Archive } from "lucide-react";
+import { Pencil, Archive, ArchiveRestore } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -54,11 +54,13 @@ export function EpicDetailSheet({
   open,
   onOpenChange,
   onTaskClick,
+  archived,
 }: {
   epicId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onTaskClick?: (id: string) => void;
+  archived?: boolean;
 }) {
   const [isEditingBody, setIsEditingBody] = useState(false);
   const { data: epic, isLoading } = useEpic(epicId || "", {
@@ -66,6 +68,7 @@ export function EpicDetailSheet({
   });
   const updateEpic = useUpdateEpic();
   const archiveItem = useArchiveItem();
+  const unarchiveItem = useUnarchiveItem();
   const { data: allTasks } = useTasks();
   const { data: allEpics } = useEpics();
 
@@ -100,7 +103,21 @@ export function EpicDetailSheet({
                   {epic.id}
                 </span>
                 <div className="flex-1" />
-                {epic.status === "done" && (
+                {archived ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                    onClick={() => {
+                      unarchiveItem.mutate(epic.id);
+                      onOpenChange(false);
+                    }}
+                    disabled={unarchiveItem.isPending}
+                  >
+                    <ArchiveRestore className="size-3.5" />
+                    <span className="text-xs">Restore</span>
+                  </Button>
+                ) : epic.status === "done" && (
                   <Button
                     variant="ghost"
                     size="sm"

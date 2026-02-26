@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTask, useTasks } from "@/lib/hooks/use-tasks";
 import { useEpics } from "@/lib/hooks/use-epics";
 import { usePlans } from "@/lib/hooks/use-plans";
-import { useUpdateTask, useArchiveItem } from "@/lib/hooks/use-mutations";
+import { useUpdateTask, useArchiveItem, useUnarchiveItem } from "@/lib/hooks/use-mutations";
 import { CreateDialog } from "./create-dialog";
 import { PriorityIndicator } from "./priority-indicator";
 import { MarkdownRenderer } from "./markdown-renderer";
@@ -36,7 +36,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { STATUS_CONFIG } from "@/lib/constants";
-import { Pencil, Archive } from "lucide-react";
+import { Pencil, Archive, ArchiveRestore } from "lucide-react";
 import type { TaskStatus, Priority, Effort, ItemType } from "@/lib/types";
 
 const ALL_STATUSES: TaskStatus[] = [
@@ -68,10 +68,12 @@ export function TaskDetailSheet({
   taskId,
   open,
   onOpenChange,
+  archived,
 }: {
   taskId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  archived?: boolean;
 }) {
   const [isEditingBody, setIsEditingBody] = useState(false);
   const [createPlanOpen, setCreatePlanOpen] = useState(false);
@@ -80,6 +82,7 @@ export function TaskDetailSheet({
   });
   const updateTask = useUpdateTask();
   const archiveItem = useArchiveItem();
+  const unarchiveItem = useUnarchiveItem();
   const { data: epics } = useEpics();
   const { data: allTasks } = useTasks();
   const { data: plans } = usePlans();
@@ -118,7 +121,21 @@ export function TaskDetailSheet({
                   {task.id}
                 </span>
                 <div className="flex-1" />
-                {(task.status === "done" || task.status === "cancelled") && (
+                {archived ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                    onClick={() => {
+                      unarchiveItem.mutate(task.id);
+                      onOpenChange(false);
+                    }}
+                    disabled={unarchiveItem.isPending}
+                  >
+                    <ArchiveRestore className="size-3.5" />
+                    <span className="text-xs">Restore</span>
+                  </Button>
+                ) : (task.status === "done" || task.status === "cancelled") && (
                   <Button
                     variant="ghost"
                     size="sm"

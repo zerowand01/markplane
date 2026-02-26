@@ -5,7 +5,7 @@ import { useNote, useNotes } from "@/lib/hooks/use-notes";
 import { useTasks } from "@/lib/hooks/use-tasks";
 import { useEpics } from "@/lib/hooks/use-epics";
 import { usePlans } from "@/lib/hooks/use-plans";
-import { useUpdateNote, useArchiveItem } from "@/lib/hooks/use-mutations";
+import { useUpdateNote, useArchiveItem, useUnarchiveItem } from "@/lib/hooks/use-mutations";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { MarkdownEditor } from "./markdown-editor";
 import { EntityRefEditor } from "./entity-ref-editor";
@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Pencil, Archive } from "lucide-react";
+import { Pencil, Archive, ArchiveRestore } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NOTE_STATUS_CONFIG, NOTE_TYPE_CONFIG } from "@/lib/constants";
 import type { NoteStatus, NoteType } from "@/lib/types";
@@ -38,10 +38,12 @@ export function NoteDetailSheet({
   noteId,
   open,
   onOpenChange,
+  archived,
 }: {
   noteId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  archived?: boolean;
 }) {
   const [isEditingBody, setIsEditingBody] = useState(false);
   const { data: note, isLoading } = useNote(noteId || "", {
@@ -49,6 +51,7 @@ export function NoteDetailSheet({
   });
   const updateNote = useUpdateNote();
   const archiveItem = useArchiveItem();
+  const unarchiveItem = useUnarchiveItem();
   const { data: allTasks } = useTasks();
   const { data: allNotes } = useNotes();
   const { data: epics } = useEpics();
@@ -85,7 +88,21 @@ export function NoteDetailSheet({
                   {note.id}
                 </span>
                 <div className="flex-1" />
-                {note.status === "archived" && (
+                {archived ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                    onClick={() => {
+                      unarchiveItem.mutate(note.id);
+                      onOpenChange(false);
+                    }}
+                    disabled={unarchiveItem.isPending}
+                  >
+                    <ArchiveRestore className="size-3.5" />
+                    <span className="text-xs">Restore</span>
+                  </Button>
+                ) : note.status === "archived" && (
                   <Button
                     variant="ghost"
                     size="sm"
