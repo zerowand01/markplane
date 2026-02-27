@@ -49,7 +49,7 @@ Epics are displayed in three columns — Now, Next, and Later — with graduated
 Click any task to open its detail panel. The panel shows:
 
 - **Markdown body** rendered with syntax highlighting and clickable `[[TASK-rm6d3]]` wiki-link chips
-- **Metadata sidebar** with editable fields: status, priority, effort, type, epic, plan, tags, assignee, dependencies
+- **Metadata sidebar** with editable fields: status, priority, effort, type, epic, plan, tags, assignee, dependencies, related items
 - Click any metadata field to edit it inline via dropdown
 - **Plan field**: Search and link an existing plan, or create a new one directly from the dropdown
 
@@ -57,7 +57,7 @@ Click any task to open its detail panel. The panel shows:
 
 Click any epic to open its detail panel. The panel shows:
 
-- **Editable fields**: status, priority, started/target dates, tags, depends_on (inter-epic dependencies)
+- **Editable fields**: status, priority, started/target dates, tags, depends_on (inter-epic dependencies), related items
 - **Depends on**: Add or remove other epics this epic depends on via the inline editor
 - **Progress bar** and status breakdown of linked tasks
 - **Linked tasks table** showing all tasks assigned to the epic
@@ -67,14 +67,14 @@ Click any epic to open its detail panel. The panel shows:
 
 Click any plan to open its detail panel. The panel shows:
 
-- **Editable fields**: status, epic
+- **Editable fields**: status, epic, related items
 - **Epic field**: Search and link an epic, or clear the association
 - **Implements**: Read-only list of tasks that link to this plan (managed from the task side)
 - **Markdown body** with inline editing
 
 ### Dependency Graph (`/graph`)
 
-An interactive node graph built with React Flow showing `blocks` and `depends_on` relationships.
+An interactive node graph built with React Flow showing `blocks`, `depends_on`, and `related` relationships.
 
 - Nodes are color-coded by entity type and show status
 - Pan, zoom, and click nodes to navigate

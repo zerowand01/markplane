@@ -399,7 +399,7 @@ Each relation type has specific source/target type constraints:
 | `epic` | TASK, PLAN | EPIC | Sets `from.epic` to target |
 | `plan` | TASK | PLAN | Sets `from.plan` to target and adds to `plan.implements[]` |
 | `implements` | PLAN | TASK | Adds to `from.implements[]` and sets `task.plan` |
-| `related` | NOTE | any | Adds to `from.related[]` |
+| `related` | any | any | Adds to `from.related[]` and `to.related[]` (bidirectional) |
 
 Self-links are rejected. Invalid source/target type combinations return an error. Adding a duplicate link is a no-op. Removing a non-existent link is a no-op.
 
@@ -417,6 +417,11 @@ markplane link TASK-fq2x8 EPIC-kb4n9 -r epic
 
 # Link a task to a plan (bidirectional)
 markplane link TASK-fq2x8 PLAN-wk7n1 -r plan
+
+# Related links — any type to any type (bidirectional)
+markplane link TASK-fq2x8 NOTE-vt3k8 -r related
+markplane link TASK-hn5k3 TASK-d4p7m -r related
+markplane link EPIC-xa7r2 EPIC-kb4n9 -r related
 
 # Remove a link
 markplane link TASK-hn5k3 TASK-fq2x8 -r depends-on --remove

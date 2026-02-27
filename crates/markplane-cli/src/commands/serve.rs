@@ -388,6 +388,7 @@ struct TaskResponse {
     plan: Option<String>,
     depends_on: Vec<String>,
     blocks: Vec<String>,
+    related: Vec<String>,
     assignee: Option<String>,
     position: Option<String>,
     created: String,
@@ -409,6 +410,7 @@ fn task_to_response(doc: &MarkplaneDocument<Task>) -> TaskResponse {
         plan: fm.plan.clone(),
         depends_on: fm.depends_on.clone(),
         blocks: fm.blocks.clone(),
+        related: fm.related.clone(),
         assignee: fm.assignee.clone(),
         position: fm.position.clone(),
         created: fm.created.to_string(),
@@ -478,6 +480,8 @@ struct UpdateTaskRequest {
     position: Option<String>,
     depends_on: Option<Vec<String>>,
     blocks: Option<Vec<String>>,
+    #[serde(default)]
+    related: Option<Vec<String>>,
     body: Option<String>,
 }
 
@@ -493,6 +497,7 @@ struct EpicResponse {
     target: Option<String>,
     tags: Vec<String>,
     depends_on: Vec<String>,
+    related: Vec<String>,
     created: String,
     updated: String,
     body: String,
@@ -542,6 +547,7 @@ fn epic_to_response(
         target: fm.target.map(|d| d.to_string()),
         tags: fm.tags.clone(),
         depends_on: fm.depends_on.clone(),
+        related: fm.related.clone(),
         created: fm.created.to_string(),
         updated: fm.updated.to_string(),
         body: doc.body.clone(),
@@ -563,6 +569,8 @@ struct UpdateEpicRequest {
     target: Option<String>,
     #[serde(default)]
     depends_on: Option<Vec<String>>,
+    #[serde(default)]
+    related: Option<Vec<String>>,
     body: Option<String>,
 }
 
@@ -575,6 +583,7 @@ struct PlanResponse {
     status: String,
     implements: Vec<String>,
     epic: Option<String>,
+    related: Vec<String>,
     created: String,
     updated: String,
     body: String,
@@ -588,6 +597,7 @@ fn plan_to_response(doc: &MarkplaneDocument<Plan>) -> PlanResponse {
         status: fm.status.to_string(),
         implements: fm.implements.clone(),
         epic: fm.epic.clone(),
+        related: fm.related.clone(),
         created: fm.created.to_string(),
         updated: fm.updated.to_string(),
         body: doc.body.clone(),
@@ -599,6 +609,8 @@ struct UpdatePlanRequest {
     title: Option<String>,
     status: Option<String>,
     epic: Option<String>,
+    #[serde(default)]
+    related: Option<Vec<String>>,
     body: Option<String>,
 }
 
@@ -1224,6 +1236,19 @@ async fn update_task(
         }
     }
 
+    // related (array): diff
+    if let Some(ref desired_related) = body.related {
+        let (to_add, to_remove) = diff_vec(&fm.related, desired_related);
+        for rel in &to_remove {
+            state.project.link_items(&id, rel, LinkRelation::Related, LinkAction::Remove)
+                .map_err(map_core_error)?;
+        }
+        for rel in &to_add {
+            state.project.link_items(&id, rel, LinkRelation::Related, LinkAction::Add)
+                .map_err(map_core_error)?;
+        }
+    }
+
     // Re-read for response
     let doc: MarkplaneDocument<Task> = state.project.read_item(&id).map_err(map_core_error)?;
     Ok(Json(ApiResponse {
@@ -1497,6 +1522,19 @@ async fn update_epic(
         }
     }
 
+    // related (array): diff
+    if let Some(ref desired_related) = body.related {
+        let (to_add, to_remove) = diff_vec(&fm.related, desired_related);
+        for rel in &to_remove {
+            state.project.link_items(&id, rel, LinkRelation::Related, LinkAction::Remove)
+                .map_err(map_core_error)?;
+        }
+        for rel in &to_add {
+            state.project.link_items(&id, rel, LinkRelation::Related, LinkAction::Add)
+                .map_err(map_core_error)?;
+        }
+    }
+
     // Re-read for response
     let doc: MarkplaneDocument<Epic> = state.project.read_item(&id).map_err(map_core_error)?;
     let tasks = state.project.list_tasks(&QueryFilter { scope: ScanScope::All, ..Default::default() }).map_err(map_core_error)?;
@@ -1546,6 +1584,19 @@ async fn update_plan(
                     }
                 }
             }
+        }
+    }
+
+    // related (array): diff
+    if let Some(ref desired_related) = body.related {
+        let (to_add, to_remove) = diff_vec(&current.frontmatter.related, desired_related);
+        for rel in &to_remove {
+            state.project.link_items(&id, rel, LinkRelation::Related, LinkAction::Remove)
+                .map_err(map_core_error)?;
+        }
+        for rel in &to_add {
+            state.project.link_items(&id, rel, LinkRelation::Related, LinkAction::Add)
+                .map_err(map_core_error)?;
         }
     }
 
@@ -2004,6 +2055,13 @@ fn build_graph(
                 relation: "epic".to_string(),
             });
         }
+        for rel in &fm.related {
+            edges.push(GraphEdgeResponse {
+                source: fm.id.clone(),
+                target: rel.clone(),
+                relation: "related".to_string(),
+            });
+        }
     }
 
     // Collect epics
@@ -2026,6 +2084,13 @@ fn build_graph(
                 source: dep.clone(),
                 target: fm.id.clone(),
                 relation: "depends_on".to_string(),
+            });
+        }
+        for rel in &fm.related {
+            edges.push(GraphEdgeResponse {
+                source: fm.id.clone(),
+                target: rel.clone(),
+                relation: "related".to_string(),
             });
         }
     }
@@ -2059,6 +2124,13 @@ fn build_graph(
                 relation: "epic".to_string(),
             });
         }
+        for rel in &fm.related {
+            edges.push(GraphEdgeResponse {
+                source: fm.id.clone(),
+                target: rel.clone(),
+                relation: "related".to_string(),
+            });
+        }
     }
 
     // Collect notes
@@ -2087,6 +2159,21 @@ fn build_graph(
 
     // Only keep edges where both source and target exist as nodes
     edges.retain(|e| nodes_map.contains_key(&e.source) && nodes_map.contains_key(&e.target));
+
+    // Deduplicate symmetric related edges (keep source < target)
+    let mut seen_related: HashSet<(String, String)> = HashSet::new();
+    edges.retain(|e| {
+        if e.relation == "related" {
+            let key = if e.source < e.target {
+                (e.source.clone(), e.target.clone())
+            } else {
+                (e.target.clone(), e.source.clone())
+            };
+            seen_related.insert(key)
+        } else {
+            true
+        }
+    });
 
     // If focused on a specific ID, filter to only reachable nodes within 2 hops
     if let Some(focus) = focus_id {

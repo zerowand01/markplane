@@ -52,6 +52,9 @@ fn show_task(project: &Project, id: &str) -> anyhow::Result<()> {
     if !fm.blocks.is_empty() {
         println!("  Blocks:   {}", fm.blocks.join(", "));
     }
+    if !fm.related.is_empty() {
+        println!("  Related:  {}", fm.related.join(", "));
+    }
     println!("  Created:  {}", fm.created);
     println!("  Updated:  {}", fm.updated);
 
@@ -89,6 +92,9 @@ fn show_epic(project: &Project, id: &str) -> anyhow::Result<()> {
     if !fm.depends_on.is_empty() {
         println!("  Depends:  {}", fm.depends_on.join(", "));
     }
+    if !fm.related.is_empty() {
+        println!("  Related:  {}", fm.related.join(", "));
+    }
     println!("  Created:  {}", fm.created);
     println!("  Updated:  {}", fm.updated);
 
@@ -115,6 +121,9 @@ fn show_plan(project: &Project, id: &str) -> anyhow::Result<()> {
     }
     if let Some(ref epic) = fm.epic {
         println!("  Epic:       {}", epic);
+    }
+    if !fm.related.is_empty() {
+        println!("  Related:    {}", fm.related.join(", "));
     }
     println!("  Created:    {}", fm.created);
     println!("  Updated:    {}", fm.updated);

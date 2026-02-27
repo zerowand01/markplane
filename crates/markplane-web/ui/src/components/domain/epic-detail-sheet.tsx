@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useEpic, useEpics } from "@/lib/hooks/use-epics";
+import { usePlans } from "@/lib/hooks/use-plans";
+import { useNotes } from "@/lib/hooks/use-notes";
 import { useUpdateEpic, useArchiveItem, useUnarchiveItem } from "@/lib/hooks/use-mutations";
 import { useTasks, useArchivedTasks } from "@/lib/hooks/use-tasks";
 import { EpicProgress } from "./epic-progress";
@@ -72,6 +74,8 @@ export function EpicDetailSheet({
   const { data: allTasks } = useTasks();
   const { data: allArchivedTasks } = useArchivedTasks();
   const { data: allEpics } = useEpics();
+  const { data: plans } = usePlans();
+  const { data: notes } = useNotes();
 
   const linkedTasks = allTasks?.filter((t) => t.epic === epicId) || [];
   const archivedLinkedTasks = allArchivedTasks?.filter((t) => t.epic === epicId) || [];
@@ -79,6 +83,12 @@ export function EpicDetailSheet({
     allEpics
       ?.filter((e) => e.id !== epicId)
       .map((e) => ({ id: e.id, title: e.title })) ?? [];
+  const relatedOptions = [
+    ...(allTasks?.map((t) => ({ id: t.id, title: t.title })) ?? []),
+    ...(allEpics?.filter((e) => e.id !== epicId).map((e) => ({ id: e.id, title: e.title })) ?? []),
+    ...(plans?.map((p) => ({ id: p.id, title: p.title })) ?? []),
+    ...(notes?.map((n) => ({ id: n.id, title: n.title })) ?? []),
+  ];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -255,6 +265,25 @@ export function EpicDetailSheet({
                       updateEpic.mutate({
                         id: epic.id,
                         depends_on: epic.depends_on.filter((d) => d !== id),
+                      })
+                    }
+                  />
+                </FieldRow>
+
+                <FieldRow label="Related" editable>
+                  <EntityRefEditor
+                    ids={epic.related}
+                    options={relatedOptions}
+                    onAdd={(id) =>
+                      updateEpic.mutate({
+                        id: epic.id,
+                        related: [...epic.related, id],
+                      })
+                    }
+                    onRemove={(id) =>
+                      updateEpic.mutate({
+                        id: epic.id,
+                        related: epic.related.filter((r) => r !== id),
                       })
                     }
                   />

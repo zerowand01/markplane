@@ -365,6 +365,7 @@ impl Project {
             plan: None,
             depends_on: vec![],
             blocks: vec![],
+            related: vec![],
             assignee: None,
             position: Some(position),
             created: today,
@@ -403,6 +404,7 @@ impl Project {
             target: None,
             tags: vec![],
             depends_on: vec![],
+            related: vec![],
             created: today,
             updated: today,
         };
@@ -438,6 +440,7 @@ impl Project {
             status: PlanStatus::Draft,
             implements,
             epic,
+            related: vec![],
             created: today,
             updated: today,
         };

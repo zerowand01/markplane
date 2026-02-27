@@ -1,7 +1,7 @@
 use std::fmt;
 use std::str::FromStr;
 
-use chrono::Local;
+use chrono::{Local, NaiveDate};
 
 use crate::error::{MarkplaneError, Result};
 use crate::models::*;
@@ -22,7 +22,7 @@ pub enum LinkRelation {
     Plan,
     /// Plan implements Task (reciprocal: task.plan)
     Implements,
-    /// Note is related to any item (no reciprocal)
+    /// Any item can be related to any other item (bidirectional)
     Related,
 }
 
@@ -95,6 +95,56 @@ fn require_prefix(id: &str, actual: &IdPrefix, expected: &[IdPrefix]) -> Result<
             names.join(" or "),
             actual.as_str()
         )));
+    }
+    Ok(())
+}
+
+/// Update the `related` vec on a single item (any entity type).
+fn update_related(
+    project: &Project,
+    id: &str,
+    target: &str,
+    prefix: &IdPrefix,
+    action: LinkAction,
+    today: NaiveDate,
+) -> Result<()> {
+    match prefix {
+        IdPrefix::Task => {
+            let mut doc: MarkplaneDocument<Task> = project.read_item(id)?;
+            match action {
+                LinkAction::Add => push_unique(&mut doc.frontmatter.related, target),
+                LinkAction::Remove => remove_value(&mut doc.frontmatter.related, target),
+            }
+            doc.frontmatter.updated = today;
+            project.write_item(id, &doc)?;
+        }
+        IdPrefix::Epic => {
+            let mut doc: MarkplaneDocument<Epic> = project.read_item(id)?;
+            match action {
+                LinkAction::Add => push_unique(&mut doc.frontmatter.related, target),
+                LinkAction::Remove => remove_value(&mut doc.frontmatter.related, target),
+            }
+            doc.frontmatter.updated = today;
+            project.write_item(id, &doc)?;
+        }
+        IdPrefix::Plan => {
+            let mut doc: MarkplaneDocument<Plan> = project.read_item(id)?;
+            match action {
+                LinkAction::Add => push_unique(&mut doc.frontmatter.related, target),
+                LinkAction::Remove => remove_value(&mut doc.frontmatter.related, target),
+            }
+            doc.frontmatter.updated = today;
+            project.write_item(id, &doc)?;
+        }
+        IdPrefix::Note => {
+            let mut doc: MarkplaneDocument<Note> = project.read_item(id)?;
+            match action {
+                LinkAction::Add => push_unique(&mut doc.frontmatter.related, target),
+                LinkAction::Remove => remove_value(&mut doc.frontmatter.related, target),
+            }
+            doc.frontmatter.updated = today;
+            project.write_item(id, &doc)?;
+        }
     }
     Ok(())
 }
@@ -302,16 +352,9 @@ impl Project {
             }
 
             LinkRelation::Related => {
-                require_prefix(from, &from_prefix, &[IdPrefix::Note])?;
-                // `to` can be any type — no constraint
-
-                let mut doc: MarkplaneDocument<Note> = self.read_item(from)?;
-                match action {
-                    LinkAction::Add => push_unique(&mut doc.frontmatter.related, to),
-                    LinkAction::Remove => remove_value(&mut doc.frontmatter.related, to),
-                }
-                doc.frontmatter.updated = today;
-                self.write_item(from, &doc)?;
+                // Any item can be related to any other — bidirectional
+                update_related(self, from, to, &from_prefix, action, today)?;
+                update_related(self, to, from, &to_prefix, action, today)?;
             }
         }
 
@@ -514,8 +557,11 @@ mod tests {
             .link_items(&n1, &t1, LinkRelation::Related, LinkAction::Add)
             .unwrap();
 
-        let doc: MarkplaneDocument<Note> = project.read_item(&n1).unwrap();
-        assert!(doc.frontmatter.related.contains(&t1));
+        // Bidirectional: both sides should have the link
+        let note_doc: MarkplaneDocument<Note> = project.read_item(&n1).unwrap();
+        let task_doc: MarkplaneDocument<Task> = project.read_item(&t1).unwrap();
+        assert!(note_doc.frontmatter.related.contains(&t1));
+        assert!(task_doc.frontmatter.related.contains(&n1));
     }
 
     #[test]
@@ -700,8 +746,11 @@ mod tests {
             .link_items(&n1, &t1, LinkRelation::Related, LinkAction::Remove)
             .unwrap();
 
-        let doc: MarkplaneDocument<Note> = project.read_item(&n1).unwrap();
-        assert!(!doc.frontmatter.related.contains(&t1));
+        // Bidirectional: both sides should be cleared
+        let note_doc: MarkplaneDocument<Note> = project.read_item(&n1).unwrap();
+        let task_doc: MarkplaneDocument<Task> = project.read_item(&t1).unwrap();
+        assert!(!note_doc.frontmatter.related.contains(&t1));
+        assert!(!task_doc.frontmatter.related.contains(&n1));
     }
 
     #[test]
@@ -753,5 +802,80 @@ mod tests {
         assert_eq!(task_doc.frontmatter.plan, Some(p2.clone()));
         assert!(!old_plan.frontmatter.implements.contains(&t1));
         assert!(new_plan.frontmatter.implements.contains(&t1));
+    }
+
+    #[test]
+    fn test_link_related_task_task() {
+        let (_tmp, project) = setup_project();
+        let t1 = create_task(&project, "Task A");
+        let t2 = create_task(&project, "Task B");
+
+        project
+            .link_items(&t1, &t2, LinkRelation::Related, LinkAction::Add)
+            .unwrap();
+
+        let doc1: MarkplaneDocument<Task> = project.read_item(&t1).unwrap();
+        let doc2: MarkplaneDocument<Task> = project.read_item(&t2).unwrap();
+        assert!(doc1.frontmatter.related.contains(&t2));
+        assert!(doc2.frontmatter.related.contains(&t1));
+    }
+
+    #[test]
+    fn test_link_related_task_epic() {
+        let (_tmp, project) = setup_project();
+        let t1 = create_task(&project, "Task");
+        let e1 = create_epic(&project, "Epic");
+
+        project
+            .link_items(&t1, &e1, LinkRelation::Related, LinkAction::Add)
+            .unwrap();
+
+        let task_doc: MarkplaneDocument<Task> = project.read_item(&t1).unwrap();
+        let epic_doc: MarkplaneDocument<Epic> = project.read_item(&e1).unwrap();
+        assert!(task_doc.frontmatter.related.contains(&e1));
+        assert!(epic_doc.frontmatter.related.contains(&t1));
+    }
+
+    #[test]
+    fn test_link_related_epic_plan() {
+        let (_tmp, project) = setup_project();
+        let e1 = create_epic(&project, "Epic");
+        let t1 = create_task(&project, "Task");
+        let p1 = create_plan(&project, "Plan", &t1);
+
+        project
+            .link_items(&e1, &p1, LinkRelation::Related, LinkAction::Add)
+            .unwrap();
+
+        let epic_doc: MarkplaneDocument<Epic> = project.read_item(&e1).unwrap();
+        let plan_doc: MarkplaneDocument<Plan> = project.read_item(&p1).unwrap();
+        assert!(epic_doc.frontmatter.related.contains(&p1));
+        assert!(plan_doc.frontmatter.related.contains(&e1));
+    }
+
+    #[test]
+    fn test_link_related_idempotent() {
+        let (_tmp, project) = setup_project();
+        let t1 = create_task(&project, "Task");
+        let e1 = create_epic(&project, "Epic");
+
+        project
+            .link_items(&t1, &e1, LinkRelation::Related, LinkAction::Add)
+            .unwrap();
+        // Adding again should be idempotent
+        project
+            .link_items(&t1, &e1, LinkRelation::Related, LinkAction::Add)
+            .unwrap();
+
+        let task_doc: MarkplaneDocument<Task> = project.read_item(&t1).unwrap();
+        let epic_doc: MarkplaneDocument<Epic> = project.read_item(&e1).unwrap();
+        assert_eq!(
+            task_doc.frontmatter.related.iter().filter(|r| *r == &e1).count(),
+            1
+        );
+        assert_eq!(
+            epic_doc.frontmatter.related.iter().filter(|r| *r == &t1).count(),
+            1
+        );
     }
 }

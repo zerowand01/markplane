@@ -377,6 +377,8 @@ pub struct Task {
     #[serde(default)]
     pub blocks: Vec<String>,
     #[serde(default)]
+    pub related: Vec<String>,
+    #[serde(default)]
     pub assignee: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub position: Option<String>,
@@ -398,6 +400,8 @@ pub struct Epic {
     pub tags: Vec<String>,
     #[serde(default)]
     pub depends_on: Vec<String>,
+    #[serde(default)]
+    pub related: Vec<String>,
     pub created: NaiveDate,
     pub updated: NaiveDate,
 }
@@ -411,6 +415,8 @@ pub struct Plan {
     pub implements: Vec<String>,
     #[serde(default)]
     pub epic: Option<String>,
+    #[serde(default)]
+    pub related: Vec<String>,
     pub created: NaiveDate,
     pub updated: NaiveDate,
 }

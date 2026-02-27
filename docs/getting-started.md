@@ -241,9 +241,13 @@ markplane link TASK-d4p7m TASK-sv8r2 -r blocks
 
 Both directions are automatically maintained — adding a `depends-on` link also adds the reverse `blocks` link on the target.
 
-The `link` command supports 6 relation types: `blocks`, `depends-on`, `epic`, `plan`, `implements`, `related`. Use `--remove` to unlink:
+The `link` command supports 6 relation types: `blocks`, `depends-on`, `epic`, `plan`, `implements`, `related`. The `related` type is bidirectional and works between any item types — useful for connecting items without implying a dependency:
 
 ```bash
+# Link related items (any type to any type, bidirectional)
+markplane link TASK-fq2x8 NOTE-vt3k8 -r related
+markplane link TASK-sv8r2 TASK-d4p7m -r related
+
 # Remove a dependency
 markplane link TASK-sv8r2 TASK-d4p7m -r depends-on --remove
 ```

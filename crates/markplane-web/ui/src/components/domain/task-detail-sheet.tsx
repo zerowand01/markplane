@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTask, useTasks } from "@/lib/hooks/use-tasks";
 import { useEpics } from "@/lib/hooks/use-epics";
 import { usePlans } from "@/lib/hooks/use-plans";
+import { useNotes } from "@/lib/hooks/use-notes";
 import { useUpdateTask, useArchiveItem, useUnarchiveItem } from "@/lib/hooks/use-mutations";
 import { CreateDialog } from "./create-dialog";
 import { PriorityIndicator } from "./priority-indicator";
@@ -79,6 +80,7 @@ export function TaskDetailSheet({
   const { data: epics } = useEpics();
   const { data: allTasks } = useTasks();
   const { data: plans } = usePlans();
+  const { data: notes } = useNotes();
   const { data: config } = useConfig();
 
   const epicOptions =
@@ -89,6 +91,12 @@ export function TaskDetailSheet({
       .map((t) => ({ id: t.id, title: t.title })) ?? [];
   const planOptions =
     plans?.map((p) => ({ id: p.id, title: p.title })) ?? [];
+  const relatedOptions = [
+    ...(allTasks?.filter((t) => t.id !== taskId).map((t) => ({ id: t.id, title: t.title })) ?? []),
+    ...(epics?.map((e) => ({ id: e.id, title: e.title })) ?? []),
+    ...(plans?.map((p) => ({ id: p.id, title: p.title })) ?? []),
+    ...(notes?.map((n) => ({ id: n.id, title: n.title })) ?? []),
+  ];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -338,6 +346,25 @@ export function TaskDetailSheet({
                       updateTask.mutate({
                         id: task.id,
                         blocks: task.blocks.filter((b) => b !== id),
+                      })
+                    }
+                  />
+                </FieldRow>
+
+                <FieldRow label="Related" editable>
+                  <EntityRefEditor
+                    ids={task.related}
+                    options={relatedOptions}
+                    onAdd={(id) =>
+                      updateTask.mutate({
+                        id: task.id,
+                        related: [...task.related, id],
+                      })
+                    }
+                    onRemove={(id) =>
+                      updateTask.mutate({
+                        id: task.id,
+                        related: task.related.filter((r) => r !== id),
                       })
                     }
                   />

@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { usePlan } from "@/lib/hooks/use-plans";
+import { usePlan, usePlans } from "@/lib/hooks/use-plans";
 import { useEpics } from "@/lib/hooks/use-epics";
+import { useTasks } from "@/lib/hooks/use-tasks";
+import { useNotes } from "@/lib/hooks/use-notes";
 import { useUpdatePlan, useArchiveItem, useUnarchiveItem } from "@/lib/hooks/use-mutations";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { MarkdownEditor } from "./markdown-editor";
 import { WikiLinkChip } from "./wiki-link-chip";
 import { EntityCombobox } from "./entity-combobox";
+import { EntityRefEditor } from "./entity-ref-editor";
 import { InlineEdit } from "./inline-edit";
 import { FieldRow, EmptyValue } from "./field-row";
 import {
@@ -50,9 +53,18 @@ export function PlanDetailSheet({
   const archiveItem = useArchiveItem();
   const unarchiveItem = useUnarchiveItem();
   const { data: epics } = useEpics();
+  const { data: allTasks } = useTasks();
+  const { data: allPlans } = usePlans();
+  const { data: notes } = useNotes();
 
   const epicOptions =
     epics?.map((e) => ({ id: e.id, title: e.title })) ?? [];
+  const relatedOptions = [
+    ...(allTasks?.map((t) => ({ id: t.id, title: t.title })) ?? []),
+    ...(epics?.map((e) => ({ id: e.id, title: e.title })) ?? []),
+    ...(allPlans?.filter((p) => p.id !== planId).map((p) => ({ id: p.id, title: p.title })) ?? []),
+    ...(notes?.map((n) => ({ id: n.id, title: n.title })) ?? []),
+  ];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -181,6 +193,25 @@ export function PlanDetailSheet({
                   ) : (
                     <EmptyValue />
                   )}
+                </FieldRow>
+
+                <FieldRow label="Related" editable>
+                  <EntityRefEditor
+                    ids={plan.related}
+                    options={relatedOptions}
+                    onAdd={(id) =>
+                      updatePlan.mutate({
+                        id: plan.id,
+                        related: [...plan.related, id],
+                      })
+                    }
+                    onRemove={(id) =>
+                      updatePlan.mutate({
+                        id: plan.id,
+                        related: plan.related.filter((r) => r !== id),
+                      })
+                    }
+                  />
                 </FieldRow>
 
                 <FieldRow label="Created">

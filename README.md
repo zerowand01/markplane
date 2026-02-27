@@ -13,7 +13,7 @@ Markplane stores all project management data as markdown files with YAML frontma
 - **INDEX.md router pattern** — Each directory has an INDEX.md that lets AI agents load only what they need (~200 tokens per index).
 - **Web UI** — Local dashboard with kanban board, dependency graph, markdown rendering, real-time updates, and dark/light themes via `markplane serve`.
 - **MCP server** — Structured tool access for AI coding assistants (Claude, Cursor, etc.) via JSON-RPC over stdio.
-- **Dependency tracking** — `blocks` / `depends_on` relationships with visual dependency graphs.
+- **Dependency tracking** — `blocks` / `depends_on` relationships and bidirectional `related` links with visual dependency graphs.
 - **Archive management** — Archive completed items across all entity types with easy restore.
 - **Built-in workflows** — Status progressions for tasks, epics, plans, and notes.
 

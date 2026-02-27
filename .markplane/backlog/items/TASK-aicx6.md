@@ -1,7 +1,7 @@
 ---
 id: TASK-aicx6
 title: Add universal bidirectional related links for all item types
-status: planned
+status: done
 priority: medium
 type: enhancement
 effort: medium
@@ -15,6 +15,7 @@ depends_on: []
 blocks: []
 assignee: null
 position: a4
+related: []
 created: 2026-02-27
 updated: 2026-02-27
 ---
@@ -44,31 +45,46 @@ The `related` relationship is purely informational — "these things are connect
 ## Acceptance Criteria
 
 ### Core
-- [ ] `Task`, `Epic`, and `Plan` models have `related: Vec<String>` field
-- [ ] `link_items()` with `LinkRelation::Related` works for any item type pair
-- [ ] Related links are bidirectional — both items' `related` fields are updated
-- [ ] Unlinking removes from both sides
-- [ ] Idempotent — adding an existing link is a no-op
-- [ ] Self-link still rejected
+- [x] `Task`, `Epic`, and `Plan` models have `related: Vec<String>` field
+- [x] `link_items()` with `LinkRelation::Related` works for any item type pair
+- [x] Related links are bidirectional — both items' `related` fields are updated
+- [x] Unlinking removes from both sides
+- [x] Idempotent — adding an existing link is a no-op
+- [x] Self-link still rejected
 
 ### CLI
-- [ ] `markplane link TASK-x TASK-y -r related` works (no CLI changes expected — pass-through)
-- [ ] `markplane show` displays related items for all types
+- [x] `markplane link TASK-x TASK-y -r related` works (no CLI changes expected — pass-through)
+- [x] `markplane show` displays related items for all types
 
 ### MCP
-- [ ] `markplane_link` with `relation: "related"` works for any item pair (no MCP changes expected)
-- [ ] `markplane_show` output includes related field for all types
+- [x] `markplane_link` with `relation: "related"` works for any item pair (no MCP changes expected)
+- [x] `markplane_show` output includes related field for all types
 
 ### Web UI
-- [ ] Related items displayed in detail sheets for all item types
-- [ ] Related items can be added/removed from detail sheets
+- [x] Related items displayed in detail sheets for all item types
+- [x] Related items can be added/removed from detail sheets
 
 ### Serialization
-- [ ] Existing items without `related` field deserialize with empty vec (backward compatible)
-- [ ] Templates updated to include `related: []` field
+- [x] Existing items without `related` field deserialize with empty vec (backward compatible)
+- [x] Templates are body-only (no frontmatter) — N/A; `related` is included via struct serialization
 
 ## Notes
 
 The core change is almost entirely in `links.rs` — widen the `LinkRelation::Related` match arm to dispatch on both `from_prefix` and `to_prefix` (same pattern as `DependsOn` handles Task vs Epic). CLI and MCP are thin pass-throughs that already accept `related` as a valid relation string.
+
+### Implementation summary
+
+- **Core**: `update_related()` helper in `links.rs` dispatches on all 4 prefixes; called bidirectionally. `#[serde(default)]` on all `related` fields for backward compat.
+- **Web API**: `related` in all 4 response/request types; PATCH handlers use `diff_vec()` + `link_items()`; graph builder emits related edges with symmetric deduplication.
+- **Web UI**: EntityRefEditor with relatedOptions on all 4 detail sheets; dedicated "Related" graph layer with dashed styling.
+- **Tests**: 6 unit tests (task-task, task-epic, epic-plan, idempotent, link, unlink) + 2 integration tests (CLI, MCP).
+- **Data**: `related: []` added to all 67 existing Task/Epic/Plan files.
+- **Docs**: Updated file-format.md, architecture.md, cli-reference.md, mcp-setup.md, getting-started.md, web-ui-guide.md, README.md.
+
+### Follow-up tasks
+
+- [[TASK-7s7u2]] — Remove `depends_on` from Epic model
+- [[TASK-e4yqc]] — Remove `epic` field from Plan model
+- [[TASK-2j6aa]] — Align frontmatter and UI field ordering (blocked by above two)
 
 ## References

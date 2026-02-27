@@ -65,6 +65,7 @@ epic: EPIC-gc8t5
 plan: null
 depends_on: [TASK-wp7v2]
 blocks: [TASK-bg8t1]
+related: []
 assignee: daniel
 created: 2026-01-15
 updated: 2026-02-09
@@ -96,6 +97,7 @@ Titles are always double-quoted in the YAML to safely handle special characters.
 | `plan` | string? | no | Linked plan ID, e.g. `PLAN-rj9d4` (default: `null`) |
 | `depends_on` | string[] | no | IDs this item depends on (default: `[]`) |
 | `blocks` | string[] | no | IDs this item blocks (default: `[]`) |
+| `related` | string[] | no | Related item IDs, any type (default: `[]`) |
 | `assignee` | string? | no | Assigned user (default: `null`) |
 | `created` | date | yes | Creation date (`YYYY-MM-DD`) |
 | `updated` | date | yes | Last modification date (`YYYY-MM-DD`, see [Timestamps](#timestamps)) |
@@ -112,6 +114,7 @@ Titles are always double-quoted in the YAML to safely handle special characters.
 | `target` | date? | no | Target completion date (default: `null`) |
 | `tags` | string[] | no | Categorization tags (default: `[]`) |
 | `depends_on` | string[] | no | Epic IDs this depends on (default: `[]`) |
+| `related` | string[] | no | Related item IDs, any type (default: `[]`) |
 | `created` | date | yes | Creation date (`YYYY-MM-DD`) |
 | `updated` | date | yes | Last modification date (`YYYY-MM-DD`) |
 
@@ -124,6 +127,7 @@ Titles are always double-quoted in the YAML to safely handle special characters.
 | `status` | enum | yes | Current workflow status |
 | `implements` | string[] | no | Task IDs this plan implements (default: `[]`) |
 | `epic` | string? | no | Parent epic ID (default: `null`) |
+| `related` | string[] | no | Related item IDs, any type (default: `[]`) |
 | `created` | date | yes | Creation date (`YYYY-MM-DD`) |
 | `updated` | date | yes | Last modification date (`YYYY-MM-DD`) |
 

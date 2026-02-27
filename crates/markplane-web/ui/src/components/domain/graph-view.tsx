@@ -56,7 +56,8 @@ const elk = new ELK();
 const LAYERS = [
   { id: "epics", label: "Epics", color: "var(--entity-epic)", relations: ["epic"] },
   { id: "plans", label: "Plans", color: "var(--entity-plan)", relations: ["implements"] },
-  { id: "notes", label: "Notes", color: "var(--entity-note)", relations: ["related"] },
+  { id: "notes", label: "Notes", color: "var(--entity-note)", relations: [] },
+  { id: "related", label: "Related", color: "var(--entity-note)", relations: ["related"] },
 ] as const;
 
 const DEFAULT_LAYERS = new Set(["epics"]);
@@ -67,7 +68,7 @@ const RELATION_TO_LAYER: Record<string, string> = {
   depends_on: "dependencies",
   epic: "epics",
   implements: "plans",
-  related: "notes",
+  related: "related",
 };
 
 // Maps entity ID prefixes to their controlling layer

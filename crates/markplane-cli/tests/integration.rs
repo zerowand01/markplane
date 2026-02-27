@@ -1022,6 +1022,41 @@ fn test_link_remove() {
     assert!(!content.contains(&id2));
 }
 
+#[test]
+fn test_link_related_bidirectional() {
+    let tmp = setup_project();
+    let out1 = cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Task A"])
+        .output()
+        .unwrap();
+    assert!(out1.status.success());
+    let id1 = extract_id(&out1.stdout);
+
+    let out2 = cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Task B"])
+        .output()
+        .unwrap();
+    assert!(out2.status.success());
+    let id2 = extract_id(&out2.stdout);
+
+    // Link with related
+    cmd()
+        .current_dir(tmp.path())
+        .args(["link", &id1, &id2, "--relation", "related"])
+        .assert()
+        .success();
+
+    // Verify both files contain the reciprocal link
+    let content1 =
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", id1))).unwrap();
+    let content2 =
+        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", id2))).unwrap();
+    assert!(content1.contains(&id2), "Task A should have related link to Task B");
+    assert!(content2.contains(&id1), "Task B should have related link to Task A");
+}
+
 // ── Check ────────────────────────────────────────────────────────────────
 
 #[test]

@@ -1338,6 +1338,86 @@ fn test_tool_link_remove() {
     assert!(!task_content.contains(&task2_id));
 }
 
+#[test]
+fn test_tool_link_related_bidirectional() {
+    let tmp = setup_project();
+
+    // Create a task
+    let add_task = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "A task" }
+            }
+        }),
+    );
+    let task_id = extract_id_from_response(&add_task);
+
+    // Create an epic
+    let add_epic = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "An epic", "kind": "epic" }
+            }
+        }),
+    );
+    let epic_id = extract_id_from_response(&add_epic);
+
+    // Link with related
+    let link_resp = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_link",
+                "arguments": {
+                    "from": task_id,
+                    "to": epic_id,
+                    "relation": "related"
+                }
+            }
+        }),
+    );
+    assert!(link_resp["error"].is_null());
+
+    // Verify both files contain the reciprocal link
+    let task_content = std::fs::read_to_string(
+        tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))
+    ).unwrap();
+    let epic_content = std::fs::read_to_string(
+        tmp.path().join(format!(".markplane/roadmap/items/{}.md", epic_id))
+    ).unwrap();
+    assert!(task_content.contains(&epic_id), "Task should have related link to Epic");
+    assert!(epic_content.contains(&task_id), "Epic should have related link to Task");
+
+    // Verify show output includes the related field
+    let show_resp = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_show",
+                "arguments": { "id": task_id }
+            }
+        }),
+    );
+    let show_text = show_resp["result"]["content"][0]["text"].as_str().unwrap();
+    assert!(show_text.contains(&epic_id), "Show output should contain related epic ID");
+}
+
 // ── Unknown tool ─────────────────────────────────────────────────────────
 
 #[test]

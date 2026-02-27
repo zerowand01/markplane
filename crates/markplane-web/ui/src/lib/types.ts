@@ -24,6 +24,7 @@ export interface Task {
   plan: string | null;
   depends_on: string[];
   blocks: string[];
+  related: string[];
   assignee: string | null;
   position: string | null;
   created: string;
@@ -40,6 +41,7 @@ export interface Epic {
   target: string | null;
   tags: string[];
   depends_on: string[];
+  related: string[];
   created: string;
   updated: string;
   body: string;
@@ -55,6 +57,7 @@ export interface Plan {
   status: PlanStatus;
   implements: string[];
   epic: string | null;
+  related: string[];
   created: string;
   updated: string;
   body: string;
@@ -131,6 +134,7 @@ export interface UpdateTaskRequest {
   position?: string;
   depends_on?: string[];
   blocks?: string[];
+  related?: string[];
   body?: string;
 }
 
@@ -142,6 +146,7 @@ export interface UpdateEpicRequest {
   started?: string;
   target?: string;
   depends_on?: string[];
+  related?: string[];
   body?: string;
 }
 
@@ -149,6 +154,7 @@ export interface UpdatePlanRequest {
   title?: string;
   status?: PlanStatus;
   epic?: string;
+  related?: string[];
   body?: string;
 }
 
