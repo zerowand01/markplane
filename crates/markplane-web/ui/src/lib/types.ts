@@ -3,12 +3,12 @@ export type EpicStatus = "now" | "next" | "later" | "done";
 export type PlanStatus = "draft" | "approved" | "in-progress" | "done";
 export type NoteStatus = "draft" | "active" | "archived";
 export type Priority = "critical" | "high" | "medium" | "low" | "someday";
-export type ItemType = string;
+export type TaskType = string;
 export type Effort = "xs" | "small" | "medium" | "large" | "xl";
 export type NoteType = string;
 
 export interface ProjectConfig {
-  item_types: string[];
+  task_types: string[];
   note_types: string[];
 }
 
@@ -17,7 +17,7 @@ export interface Task {
   title: string;
   status: TaskStatus;
   priority: Priority;
-  type: ItemType;
+  type: TaskType;
   effort: Effort;
   tags: string[];
   epic: string | null;
@@ -95,7 +95,7 @@ export interface ProjectSummary {
 
 export interface CreateTaskRequest {
   title: string;
-  type?: ItemType;
+  type?: TaskType;
   priority?: Priority;
   effort?: Effort;
   epic?: string;
@@ -123,7 +123,7 @@ export interface UpdateTaskRequest {
   status?: TaskStatus;
   priority?: Priority;
   effort?: Effort;
-  type?: ItemType;
+  type?: TaskType;
   tags?: string[];
   epic?: string;
   plan?: string;

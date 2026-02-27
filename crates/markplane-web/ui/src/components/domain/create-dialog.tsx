@@ -62,7 +62,7 @@ export function CreateDialog({
   useEffect(() => {
     if (open) {
       setTitle("");
-      setItemType(config?.item_types[0] ?? "feature");
+      setItemType(config?.task_types[0] ?? "feature");
       setPriority("medium");
       setEffort("medium");
       setNoteType(config?.note_types[0] ?? "research");
@@ -154,7 +154,7 @@ export function CreateDialog({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(config?.item_types ?? ["feature", "bug", "enhancement", "chore", "research", "spike"]).map((t) => (
+                      {(config?.task_types ?? ["feature", "bug", "enhancement", "chore", "research", "spike"]).map((t) => (
                         <SelectItem key={t} value={t}>
                           {t.charAt(0).toUpperCase() + t.slice(1)}
                         </SelectItem>

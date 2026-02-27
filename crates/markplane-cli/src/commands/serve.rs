@@ -317,7 +317,7 @@ struct ListMeta {
 
 #[derive(Serialize)]
 struct ConfigResponse {
-    item_types: Vec<String>,
+    task_types: Vec<String>,
     note_types: Vec<String>,
 }
 
@@ -795,7 +795,7 @@ async fn get_config(
 
     Ok(Json(ApiResponse {
         data: ConfigResponse {
-            item_types: config.item_types,
+            task_types: config.task_types,
             note_types: config.note_types,
         },
     }))
@@ -803,7 +803,7 @@ async fn get_config(
 
 #[derive(Deserialize)]
 struct UpdateConfigRequest {
-    item_types: Option<Vec<String>>,
+    task_types: Option<Vec<String>>,
     note_types: Option<Vec<String>>,
 }
 
@@ -838,8 +838,8 @@ async fn patch_config(
         Ok(deduped)
     }
 
-    if let Some(item_types) = body.item_types {
-        config.item_types = validate_types(item_types, "item_types")?;
+    if let Some(task_types) = body.task_types {
+        config.task_types = validate_types(task_types, "task_types")?;
     }
     if let Some(note_types) = body.note_types {
         config.note_types = validate_types(note_types, "note_types")?;
@@ -852,7 +852,7 @@ async fn patch_config(
 
     Ok(Json(ApiResponse {
         data: ConfigResponse {
-            item_types: config.item_types,
+            task_types: config.task_types,
             note_types: config.note_types,
         },
     }))
@@ -924,7 +924,7 @@ async fn create_task(
     let config = state.project.load_config().map_err(|e| {
         error_response(StatusCode::INTERNAL_SERVER_ERROR, "config_error", &e.to_string())
     })?;
-    let item_type = body.item_type.as_deref().unwrap_or(config.default_item_type());
+    let item_type = body.item_type.as_deref().unwrap_or(config.default_task_type());
     let priority: Priority = body
         .priority
         .parse()

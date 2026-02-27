@@ -13,7 +13,7 @@ pub fn run(
 ) -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
     let config = project.load_config()?;
-    let item_type = item_type.as_deref().unwrap_or(config.default_item_type());
+    let item_type = item_type.as_deref().unwrap_or(config.default_task_type());
 
     let priority: Priority = priority.parse()?;
     let effort: Effort = effort.parse()?;

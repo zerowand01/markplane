@@ -45,7 +45,7 @@ pub enum Commands {
     Add {
         /// Title of the item
         title: String,
-        /// Item type (configurable in config.yaml, default: first in item_types list)
+        /// Task type (configurable in config.yaml, default: first in task_types list)
         #[arg(long)]
         r#type: Option<String>,
         /// Priority level

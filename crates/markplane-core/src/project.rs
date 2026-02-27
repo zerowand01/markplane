@@ -304,16 +304,16 @@ impl Project {
 
     // ── Validation ─────────────────────────────────────────────────────────
 
-    /// Validate that an item type is in the configured list.
-    pub fn validate_item_type(&self, item_type: &str) -> Result<()> {
+    /// Validate that a task type is in the configured list.
+    pub fn validate_task_type(&self, item_type: &str) -> Result<()> {
         let config = self.load_config()?;
-        if config.item_types.iter().any(|t| t == item_type) {
+        if config.task_types.iter().any(|t| t == item_type) {
             Ok(())
         } else {
             Err(MarkplaneError::Config(format!(
-                "Unknown item type: '{}'. Valid types: {}",
+                "Unknown task type: '{}'. Valid types: {}",
                 item_type,
-                config.item_types.join(", ")
+                config.task_types.join(", ")
             )))
         }
     }
@@ -347,7 +347,7 @@ impl Project {
         template: Option<&str>,
     ) -> Result<Task> {
         validate_title_length(title)?;
-        self.validate_item_type(item_type)?;
+        self.validate_task_type(item_type)?;
         let id = self.next_id(&IdPrefix::Task)?;
         let today = Local::now().date_naive();
         let position = self.append_position(&priority)?;
@@ -563,7 +563,7 @@ impl Project {
             fm.effort = effort.parse()?;
         }
         if let Some(ref item_type) = u.item_type {
-            self.validate_item_type(item_type)?;
+            self.validate_task_type(item_type)?;
             fm.item_type = item_type.clone();
         }
         match &u.assignee {
@@ -1223,9 +1223,9 @@ mod tests {
         assert_eq!(config.project.name, "Test Project");
         assert_eq!(config.project.description, "A test project");
         assert_eq!(config.version, 1);
-        assert_eq!(config.item_types, default_item_types());
+        assert_eq!(config.task_types, default_task_types());
         assert_eq!(config.note_types, default_note_types());
-        assert_eq!(config.default_item_type(), "feature");
+        assert_eq!(config.default_task_type(), "feature");
         assert_eq!(config.default_note_type(), "research");
     }
 

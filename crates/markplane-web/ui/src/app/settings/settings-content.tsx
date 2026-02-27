@@ -224,8 +224,8 @@ export function SettingsContent() {
           <TypeListEditor
             title="Task Types"
             description="First item is the default for new tasks"
-            items={config.item_types}
-            onUpdate={(item_types) => updateConfig.mutate({ item_types })}
+            items={config.task_types}
+            onUpdate={(task_types) => updateConfig.mutate({ task_types })}
             isPending={updateConfig.isPending}
           />
           <TypeListEditor

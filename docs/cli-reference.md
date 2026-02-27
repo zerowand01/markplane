@@ -30,7 +30,7 @@ markplane add <TITLE> [OPTIONS]
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `--type <TYPE>` | *(first in config)* | Item type (configurable via `config.yaml`, default: first in `item_types` list) |
+| `--type <TYPE>` | *(first in config)* | Task type (configurable via `config.yaml`, default: first in `task_types` list) |
 | `--priority <PRIORITY>` | `medium` | Priority: `critical`, `high`, `medium`, `low`, `someday` |
 | `--effort <EFFORT>` | `medium` | Effort estimate: `xs`, `small`, `medium`, `large`, `xl` |
 | `--epic <EPIC_ID>` | — | Parent epic ID (e.g. `EPIC-xa7r2`) |
@@ -827,7 +827,7 @@ markplane update <ID> [OPTIONS]
 | `--status <STATUS>` | All | New status value |
 | `--priority <PRIORITY>` | Tasks, Epics | New priority |
 | `--effort <EFFORT>` | Tasks | Effort size: `xs`, `small`, `medium`, `large`, `xl` |
-| `--type <TYPE>` | Tasks | Item type (configurable via `config.yaml`) |
+| `--type <TYPE>` | Tasks | Task type (configurable via `config.yaml`) |
 | `--assignee <USER>` | Tasks | Set assignee (leading `@` stripped automatically) |
 | `--clear-assignee` | Tasks | Clear assignee |
 | `--position <KEY>` | Tasks | Set position key for manual ordering |

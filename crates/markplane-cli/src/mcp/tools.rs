@@ -13,15 +13,15 @@ use super::protocol::{JsonRpcResponse, INTERNAL_ERROR, INVALID_PARAMS};
 /// Return the list of available tools with their JSON Schema input descriptions.
 pub fn list_tools(project: &Project) -> Value {
     let config = project.load_config().ok();
-    let item_types_desc = config.as_ref()
-        .map(|c| format!("Item type ({}). Tasks only. Default: {}", c.item_types.join(", "), c.default_item_type()))
-        .unwrap_or_else(|| "Item type (feature, bug, enhancement, chore, research, spike). Tasks only. Default: feature".to_string());
+    let task_types_desc = config.as_ref()
+        .map(|c| format!("Task type ({}). Tasks only. Default: {}", c.task_types.join(", "), c.default_task_type()))
+        .unwrap_or_else(|| "Task type (feature, bug, enhancement, chore, research, spike). Tasks only. Default: feature".to_string());
     let note_types_desc = config.as_ref()
         .map(|c| format!("Note type ({}). Notes only. Default: {}", c.note_types.join(", "), c.default_note_type()))
         .unwrap_or_else(|| "Note type (research, analysis, idea, decision, meeting). Notes only. Default: research".to_string());
     let update_type_desc = config.as_ref()
-        .map(|c| format!("Item type ({}). Tasks only.", c.item_types.join(", ")))
-        .unwrap_or_else(|| "Item type (feature, bug, enhancement, chore, research, spike). Tasks only.".to_string());
+        .map(|c| format!("Task type ({}). Tasks only.", c.task_types.join(", ")))
+        .unwrap_or_else(|| "Task type (feature, bug, enhancement, chore, research, spike). Tasks only.".to_string());
     let update_note_type_desc = config.as_ref()
         .map(|c| format!("Note type ({}). Notes only.", c.note_types.join(", ")))
         .unwrap_or_else(|| "Note type (research, analysis, idea, decision, meeting). Notes only.".to_string());
@@ -107,7 +107,7 @@ pub fn list_tools(project: &Project) -> Value {
                         },
                         "type": {
                             "type": "string",
-                            "description": item_types_desc
+                            "description": task_types_desc
                         },
                         "priority": {
                             "type": "string",
@@ -633,7 +633,7 @@ fn handle_add(project: &Project, args: &Value) -> Result<String, String> {
             let item_type = args
                 .get("type")
                 .and_then(|v| v.as_str())
-                .unwrap_or(config.default_item_type());
+                .unwrap_or(config.default_task_type());
 
             let priority: Priority = args
                 .get("priority")
@@ -985,7 +985,7 @@ fn handle_promote(project: &Project, args: &Value) -> Result<String, String> {
     let item = project
         .create_task(
             &note_doc.frontmatter.title,
-            config.default_item_type(),
+            config.default_task_type(),
             priority,
             effort,
             None,

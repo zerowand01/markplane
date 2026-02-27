@@ -336,7 +336,7 @@ type EpicStatus = 'now' | 'next' | 'later' | 'done';
 type PlanStatus = 'draft' | 'approved' | 'in-progress' | 'done';
 type NoteStatus = 'draft' | 'active' | 'archived';
 type Priority = 'critical' | 'high' | 'medium' | 'low' | 'someday';
-type ItemType = 'feature' | 'bug' | 'enhancement' | 'chore' | 'research' | 'spike';
+type TaskType = string;  // configurable via task_types in config.yaml
 type Effort = 'xs' | 'small' | 'medium' | 'large' | 'xl';
 type NoteType = 'research' | 'analysis' | 'idea' | 'decision' | 'meeting';
 
@@ -345,7 +345,7 @@ interface Task {
   title: string;
   status: TaskStatus;
   priority: Priority;
-  type: ItemType;
+  type: TaskType;
   effort: Effort;
   tags: string[];
   epic: string | null;
@@ -559,7 +559,7 @@ Item detail views use Sheet slide-over panels driven by URL query parameters (e.
 │       ├── <StatusBadge> (dropdown)
 │       ├── <PriorityIndicator> (dropdown)
 │       ├── <EffortBadge> (dropdown)
-│       ├── <ItemType> (dropdown)
+│       ├── <TaskType> (dropdown)
 │       ├── <EpicLink> (EntityCombobox)
 │       ├── <PlanLink> (EntityCombobox)
 │       ├── <TagEditor>

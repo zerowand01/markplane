@@ -8,7 +8,7 @@ context:
   auto_generate: true
 documentation_paths:
 - docs
-item_types:
+task_types:
 - feature
 - bug
 - enhancement

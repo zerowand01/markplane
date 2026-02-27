@@ -163,9 +163,9 @@ fn build_instructions(project: &Project) -> String {
         .map(|c| c.project.name.clone())
         .unwrap_or_else(|| "Unknown".to_string());
 
-    let item_types = config
+    let task_types = config
         .as_ref()
-        .map(|c| c.item_types.join(", "))
+        .map(|c| c.task_types.join(", "))
         .unwrap_or_else(|| "feature, bug, enhancement, chore, research, spike".to_string());
     let note_types = config
         .as_ref()
@@ -183,7 +183,7 @@ Files are the source of truth, git is the changelog.\n\
 - NOTE-NNN: Research notes, ideas, and decisions. Statuses: draft → active → archived\n\
 \n\
 ## Configured Types\n\
-- Task types: {item_types}\n\
+- Task types: {task_types}\n\
 - Note types: {note_types}\n\
 \n\
 ## Recommended Workflow\n\

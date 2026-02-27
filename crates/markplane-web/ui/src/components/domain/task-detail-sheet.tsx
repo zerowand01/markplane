@@ -225,7 +225,7 @@ export function TaskDetailSheet({
                       <span className="text-sm uppercase">{task.type}</span>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                      {(config?.item_types ?? ["feature", "bug", "enhancement", "chore", "research", "spike"]).map((t) => (
+                      {(config?.task_types ?? ["feature", "bug", "enhancement", "chore", "research", "spike"]).map((t) => (
                         <DropdownMenuItem
                           key={t}
                           onClick={() =>

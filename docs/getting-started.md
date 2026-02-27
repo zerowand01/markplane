@@ -103,7 +103,7 @@ markplane add "Add rate limiting to auth endpoints" --type enhancement --priorit
 
 ### Available Options
 
-- **Types**: Configurable in `config.yaml` (`item_types`) or via the web UI Settings page. Defaults: `feature`, `bug`, `enhancement`, `chore`, `research`, `spike`
+- **Types**: Configurable in `config.yaml` (`task_types`) or via the web UI Settings page. Defaults: `feature`, `bug`, `enhancement`, `chore`, `research`, `spike`
 - **Priorities**: `critical`, `high`, `medium`, `low`, `someday`
 - **Effort sizes**: `xs`, `small`, `medium`, `large`, `xl`
 

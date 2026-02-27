@@ -250,8 +250,8 @@ impl FromStr for NoteStatus {
 
 // ── Classification Types ──────────────────────────────────────────────────
 
-/// Default item types when not configured.
-pub fn default_item_types() -> Vec<String> {
+/// Default task types when not configured.
+pub fn default_task_types() -> Vec<String> {
     vec![
         "feature".into(),
         "bug".into(),
@@ -439,16 +439,16 @@ pub struct Config {
     pub context: ContextConfig,
     #[serde(default)]
     pub documentation_paths: Vec<String>,
-    #[serde(default = "default_item_types")]
-    pub item_types: Vec<String>,
+    #[serde(default = "default_task_types")]
+    pub task_types: Vec<String>,
     #[serde(default = "default_note_types")]
     pub note_types: Vec<String>,
 }
 
 impl Config {
-    /// Return the default item type (first in the configured list).
-    pub fn default_item_type(&self) -> &str {
-        self.item_types.first().map(|s| s.as_str()).unwrap_or("feature")
+    /// Return the default task type (first in the configured list).
+    pub fn default_task_type(&self) -> &str {
+        self.task_types.first().map(|s| s.as_str()).unwrap_or("feature")
     }
 
     /// Return the default note type (first in the configured list).
@@ -484,7 +484,7 @@ impl Default for Config {
                 auto_generate: true,
             },
             documentation_paths: Vec::new(),
-            item_types: default_item_types(),
+            task_types: default_task_types(),
             note_types: default_note_types(),
         }
     }

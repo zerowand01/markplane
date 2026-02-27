@@ -19,7 +19,7 @@ pub fn run(id: String, priority: String, effort: String) -> anyhow::Result<()> {
 
     let item = project.create_task(
         &note.title,
-        config.default_item_type(),
+        config.default_task_type(),
         priority,
         effort,
         None,

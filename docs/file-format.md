@@ -176,9 +176,9 @@ draft → active → archived
 
 Values (highest to lowest): `critical`, `high`, `medium`, `low`, `someday`
 
-### ItemType (Task only)
+### TaskType (Task only)
 
-Configurable via `item_types` in `config.yaml` or the web UI [Settings page](/docs/web-ui-guide.md#settings). Default values: `feature`, `bug`, `enhancement`, `chore`, `research`, `spike`. The first value in the list is the default for new tasks.
+Configurable via `task_types` in `config.yaml` or the web UI [Settings page](/docs/web-ui-guide.md#settings). Default values: `feature`, `bug`, `enhancement`, `chore`, `research`, `spike`. The first value in the list is the default for new tasks.
 
 ### Effort (Task only)
 
@@ -244,7 +244,7 @@ context:
   auto_generate: true     # Auto-regenerate context on sync
 documentation_paths:            # Paths to project docs (relative to repo root)
   - docs                        # Scanned for *.md files; linked in INDEX and .context/
-item_types:                     # Configurable task types (first is default)
+task_types:                     # Configurable task types (first is default)
   - feature
   - bug
   - enhancement

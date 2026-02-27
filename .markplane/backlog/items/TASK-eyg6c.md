@@ -139,6 +139,16 @@ Added a web UI Settings page (`/settings`) so users can manage task types and no
 - **Files modified**: `serve.rs` (endpoint + route), `use-mutations.ts` (hook), `app-sidebar.tsx` (nav), `use-keyboard-nav.ts` (shortcut), `sidebar.tsx` (rail cursor fix)
 - **Docs updated**: `web-ui-guide.md`, `web-ui/architecture.md`, `file-format.md`, `getting-started.md`
 
+## Config rename: `item_types` → `task_types` (follow-up)
+
+Renamed the config field from `item_types` to `task_types` for consistency — every user-facing surface already says "Task", not "Item". The singular `item_type` field on the Rust `Task` struct is unchanged since it's internal (serde-renamed to `type` in YAML/JSON) and used in shared code paths (`UpdateFields`, `QueryFilter`).
+
+- **Rust**: `Config.item_types` → `.task_types`, `default_item_types()` → `default_task_types()`, `default_item_type()` → `default_task_type()`, `validate_item_type()` → `validate_task_type()`
+- **API/Web**: `ConfigResponse`, `UpdateConfigRequest`, `ProjectConfig` interface, all component references
+- **MCP**: Tool descriptions and instructions ("Item type" → "Task type")
+- **Config**: `.markplane/config.yaml` field name
+- **Docs**: All 6 doc files updated
+
 ## References
 
 - [[TASK-us45u]] — Related: configurable task statuses (category pattern, separate effort)
