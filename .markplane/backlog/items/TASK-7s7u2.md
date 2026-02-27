@@ -1,7 +1,7 @@
 ---
 id: TASK-7s7u2
 title: Remove depends_on from Epic model
-status: backlog
+status: done
 priority: medium
 type: enhancement
 effort: medium

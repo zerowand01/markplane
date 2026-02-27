@@ -79,10 +79,6 @@ export function EpicDetailSheet({
 
   const linkedTasks = allTasks?.filter((t) => t.epic === epicId) || [];
   const archivedLinkedTasks = allArchivedTasks?.filter((t) => t.epic === epicId) || [];
-  const epicOptions =
-    allEpics
-      ?.filter((e) => e.id !== epicId)
-      .map((e) => ({ id: e.id, title: e.title })) ?? [];
   const relatedOptions = [
     ...(allTasks?.map((t) => ({ id: t.id, title: t.title })) ?? []),
     ...(allEpics?.filter((e) => e.id !== epicId).map((e) => ({ id: e.id, title: e.title })) ?? []),
@@ -247,25 +243,6 @@ export function EpicDetailSheet({
                     tags={epic.tags}
                     onSave={(tags) =>
                       updateEpic.mutate({ id: epic.id, tags })
-                    }
-                  />
-                </FieldRow>
-
-                <FieldRow label="Depends on" editable>
-                  <EntityRefEditor
-                    ids={epic.depends_on}
-                    options={epicOptions}
-                    onAdd={(id) =>
-                      updateEpic.mutate({
-                        id: epic.id,
-                        depends_on: [...epic.depends_on, id],
-                      })
-                    }
-                    onRemove={(id) =>
-                      updateEpic.mutate({
-                        id: epic.id,
-                        depends_on: epic.depends_on.filter((d) => d !== id),
-                      })
                     }
                   />
                 </FieldRow>

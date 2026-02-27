@@ -89,9 +89,6 @@ fn show_epic(project: &Project, id: &str) -> anyhow::Result<()> {
     if !fm.tags.is_empty() {
         println!("  Tags:     {}", fm.tags.join(", "));
     }
-    if !fm.depends_on.is_empty() {
-        println!("  Depends:  {}", fm.depends_on.join(", "));
-    }
     if !fm.related.is_empty() {
         println!("  Related:  {}", fm.related.join(", "));
     }

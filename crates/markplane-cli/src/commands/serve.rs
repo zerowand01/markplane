@@ -496,7 +496,6 @@ struct EpicResponse {
     started: Option<String>,
     target: Option<String>,
     tags: Vec<String>,
-    depends_on: Vec<String>,
     related: Vec<String>,
     created: String,
     updated: String,
@@ -546,7 +545,6 @@ fn epic_to_response(
         started: fm.started.map(|d| d.to_string()),
         target: fm.target.map(|d| d.to_string()),
         tags: fm.tags.clone(),
-        depends_on: fm.depends_on.clone(),
         related: fm.related.clone(),
         created: fm.created.to_string(),
         updated: fm.updated.to_string(),
@@ -567,8 +565,6 @@ struct UpdateEpicRequest {
     tags: Option<Vec<String>>,
     started: Option<String>,
     target: Option<String>,
-    #[serde(default)]
-    depends_on: Option<Vec<String>>,
     #[serde(default)]
     related: Option<Vec<String>>,
     body: Option<String>,
@@ -1509,19 +1505,6 @@ async fn update_epic(
 
     // ── Links → link_items() per change ──────────────────────────────
 
-    // depends_on (array): diff
-    if let Some(ref desired_deps) = body.depends_on {
-        let (to_add, to_remove) = diff_vec(&fm.depends_on, desired_deps);
-        for dep in &to_remove {
-            state.project.link_items(&id, dep, LinkRelation::DependsOn, LinkAction::Remove)
-                .map_err(map_core_error)?;
-        }
-        for dep in &to_add {
-            state.project.link_items(&id, dep, LinkRelation::DependsOn, LinkAction::Add)
-                .map_err(map_core_error)?;
-        }
-    }
-
     // related (array): diff
     if let Some(ref desired_related) = body.related {
         let (to_add, to_remove) = diff_vec(&fm.related, desired_related);
@@ -2079,13 +2062,6 @@ fn build_graph(
                 tags: fm.tags.clone(),
             },
         );
-        for dep in &fm.depends_on {
-            edges.push(GraphEdgeResponse {
-                source: dep.clone(),
-                target: fm.id.clone(),
-                relation: "depends_on".to_string(),
-            });
-        }
         for rel in &fm.related {
             edges.push(GraphEdgeResponse {
                 source: fm.id.clone(),

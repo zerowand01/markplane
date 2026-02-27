@@ -113,7 +113,6 @@ Titles are always double-quoted in the YAML to safely handle special characters.
 | `started` | date? | no | Date work began (default: `null`) |
 | `target` | date? | no | Target completion date (default: `null`) |
 | `tags` | string[] | no | Categorization tags (default: `[]`) |
-| `depends_on` | string[] | no | Epic IDs this depends on (default: `[]`) |
 | `related` | string[] | no | Related item IDs, any type (default: `[]`) |
 | `created` | date | yes | Creation date (`YYYY-MM-DD`) |
 | `updated` | date | yes | Last modification date (`YYYY-MM-DD`) |

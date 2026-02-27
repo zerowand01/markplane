@@ -1,7 +1,7 @@
 ---
 id: TASK-2j6aa
 title: Align frontmatter and UI field ordering across all entity types
-status: backlog
+status: planned
 priority: medium
 type: enhancement
 effort: medium

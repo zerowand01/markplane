@@ -93,8 +93,8 @@ pub struct MarkplaneDocument<T> {
   │ type, effort, │  │ started?,     │  │ epic?,        │  │ tags[],       │
   │ tags[],       │  │ target?,      │  │ related[],    │  │ related[],    │
   │ epic?,        │  │ tags[],       │  │ created,      │  │ created,      │
-  │ plan?,        │  │ depends_on[], │  │ updated       │  │ updated       │
-  │ depends_on[], │  │ related[],    │  │               │  │               │
+  │ plan?,        │  │ related[],    │  │ updated       │  │ updated       │
+  │ depends_on[], │  │               │  │               │  │               │
   │ blocks[],     │  │               │  │               │  │               │
   │ related[],    │  │               │  │               │  │               │
   │ assignee?,    │  │               │  │               │  │               │
@@ -110,7 +110,6 @@ Relationships between entities:
 - `Plan.implements[]` → links to `Task`s it implements
 - `Plan.epic` → links to an `Epic`
 - `*.related[]` → bidirectional links to any item type (all four entity types)
-- `Epic.depends_on[]` → links to other `Epic`s
 
 ## Data Flow
 

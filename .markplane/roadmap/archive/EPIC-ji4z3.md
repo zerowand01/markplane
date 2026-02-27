@@ -6,7 +6,6 @@ priority: high
 started: null
 target: null
 tags: []
-depends_on: []
 related: []
 created: 2026-02-10
 updated: 2026-02-26

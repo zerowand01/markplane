@@ -14,7 +14,7 @@ use crate::project::Project;
 pub enum LinkRelation {
     /// Task blocks Task (reciprocal: depends_on)
     Blocks,
-    /// Task|Epic depends on Task|Epic (reciprocal: blocks only if both Tasks)
+    /// Task depends on Task (reciprocal: blocks)
     DependsOn,
     /// Task|Plan belongs to Epic (no reciprocal)
     Epic,
@@ -202,42 +202,27 @@ impl Project {
             }
 
             LinkRelation::DependsOn => {
-                require_prefix(from, &from_prefix, &[IdPrefix::Task, IdPrefix::Epic])?;
-                require_prefix(to, &to_prefix, &[IdPrefix::Task, IdPrefix::Epic])?;
+                require_prefix(from, &from_prefix, &[IdPrefix::Task])?;
+                require_prefix(to, &to_prefix, &[IdPrefix::Task])?;
 
-                // Update from.depends_on
-                match from_prefix {
-                    IdPrefix::Task => {
-                        let mut doc: MarkplaneDocument<Task> = self.read_item(from)?;
-                        match action {
-                            LinkAction::Add => push_unique(&mut doc.frontmatter.depends_on, to),
-                            LinkAction::Remove => remove_value(&mut doc.frontmatter.depends_on, to),
-                        }
-                        doc.frontmatter.updated = today;
-                        self.write_item(from, &doc)?;
+                let mut from_doc: MarkplaneDocument<Task> = self.read_item(from)?;
+                let mut to_doc: MarkplaneDocument<Task> = self.read_item(to)?;
+
+                match action {
+                    LinkAction::Add => {
+                        push_unique(&mut from_doc.frontmatter.depends_on, to);
+                        push_unique(&mut to_doc.frontmatter.blocks, from);
                     }
-                    IdPrefix::Epic => {
-                        let mut doc: MarkplaneDocument<Epic> = self.read_item(from)?;
-                        match action {
-                            LinkAction::Add => push_unique(&mut doc.frontmatter.depends_on, to),
-                            LinkAction::Remove => remove_value(&mut doc.frontmatter.depends_on, to),
-                        }
-                        doc.frontmatter.updated = today;
-                        self.write_item(from, &doc)?;
+                    LinkAction::Remove => {
+                        remove_value(&mut from_doc.frontmatter.depends_on, to);
+                        remove_value(&mut to_doc.frontmatter.blocks, from);
                     }
-                    _ => unreachable!(),
                 }
 
-                // Reciprocal: to.blocks (only if target is a Task)
-                if to_prefix == IdPrefix::Task {
-                    let mut to_doc: MarkplaneDocument<Task> = self.read_item(to)?;
-                    match action {
-                        LinkAction::Add => push_unique(&mut to_doc.frontmatter.blocks, from),
-                        LinkAction::Remove => remove_value(&mut to_doc.frontmatter.blocks, from),
-                    }
-                    to_doc.frontmatter.updated = today;
-                    self.write_item(to, &to_doc)?;
-                }
+                from_doc.frontmatter.updated = today;
+                to_doc.frontmatter.updated = today;
+                self.write_item(from, &from_doc)?;
+                self.write_item(to, &to_doc)?;
             }
 
             LinkRelation::Epic => {
@@ -432,33 +417,33 @@ mod tests {
     }
 
     #[test]
-    fn test_link_depends_on_epic_epic() {
+    fn test_depends_on_rejects_epic_as_source() {
         let (_tmp, project) = setup_project();
-        let e1 = create_epic(&project, "First");
-        let e2 = create_epic(&project, "Second");
+        let e1 = create_epic(&project, "Epic");
+        let t1 = create_task(&project, "Task");
 
-        project
-            .link_items(&e1, &e2, LinkRelation::DependsOn, LinkAction::Add)
-            .unwrap();
-
-        let doc1: MarkplaneDocument<Epic> = project.read_item(&e1).unwrap();
-        assert!(doc1.frontmatter.depends_on.contains(&e2));
-        // Epic has no blocks field — no reciprocal
+        let result = project.link_items(&e1, &t1, LinkRelation::DependsOn, LinkAction::Add);
+        assert!(result.is_err());
     }
 
     #[test]
-    fn test_link_depends_on_task_epic() {
+    fn test_depends_on_rejects_epic_as_target() {
         let (_tmp, project) = setup_project();
         let t1 = create_task(&project, "Task");
         let e1 = create_epic(&project, "Epic");
 
-        project
-            .link_items(&t1, &e1, LinkRelation::DependsOn, LinkAction::Add)
-            .unwrap();
+        let result = project.link_items(&t1, &e1, LinkRelation::DependsOn, LinkAction::Add);
+        assert!(result.is_err());
+    }
 
-        let doc: MarkplaneDocument<Task> = project.read_item(&t1).unwrap();
-        assert!(doc.frontmatter.depends_on.contains(&e1));
-        // Epic target — no reciprocal blocks
+    #[test]
+    fn test_depends_on_rejects_epic_epic() {
+        let (_tmp, project) = setup_project();
+        let e1 = create_epic(&project, "First");
+        let e2 = create_epic(&project, "Second");
+
+        let result = project.link_items(&e1, &e2, LinkRelation::DependsOn, LinkAction::Add);
+        assert!(result.is_err());
     }
 
     #[test]
@@ -663,20 +648,19 @@ mod tests {
     }
 
     #[test]
-    fn test_unlink_depends_on_epic() {
+    fn test_depends_on_task_task_has_reciprocal() {
         let (_tmp, project) = setup_project();
-        let e1 = create_epic(&project, "First");
-        let e2 = create_epic(&project, "Second");
+        let t1 = create_task(&project, "Dependent");
+        let t2 = create_task(&project, "Dependency");
 
         project
-            .link_items(&e1, &e2, LinkRelation::DependsOn, LinkAction::Add)
-            .unwrap();
-        project
-            .link_items(&e1, &e2, LinkRelation::DependsOn, LinkAction::Remove)
+            .link_items(&t1, &t2, LinkRelation::DependsOn, LinkAction::Add)
             .unwrap();
 
-        let doc1: MarkplaneDocument<Epic> = project.read_item(&e1).unwrap();
-        assert!(!doc1.frontmatter.depends_on.contains(&e2));
+        let doc1: MarkplaneDocument<Task> = project.read_item(&t1).unwrap();
+        let doc2: MarkplaneDocument<Task> = project.read_item(&t2).unwrap();
+        assert!(doc1.frontmatter.depends_on.contains(&t2));
+        assert!(doc2.frontmatter.blocks.contains(&t1));
     }
 
     #[test]

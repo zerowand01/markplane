@@ -45,7 +45,7 @@ const NOTE_FIELD_LABELS: [string, string][] = [
 
 // Fields that support toast-based undo (discrete property changes, not body/title)
 const TASK_UNDO_FIELDS = ["status", "priority", "effort", "type", "assignee", "tags", "epic", "position"];
-const EPIC_UNDO_FIELDS = ["status", "priority", "tags", "started", "target", "depends_on"];
+const EPIC_UNDO_FIELDS = ["status", "priority", "tags", "started", "target"];
 const PLAN_UNDO_FIELDS = ["status", "epic"];
 const NOTE_UNDO_FIELDS = ["status", "type", "tags"];
 

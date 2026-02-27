@@ -395,7 +395,7 @@ Each relation type has specific source/target type constraints:
 | Relation | From | To | Effect |
 |----------|------|----|--------|
 | `blocks` | TASK | TASK | Adds to `from.blocks[]` and `to.depends_on[]` |
-| `depends-on` | TASK, EPIC | TASK, EPIC | Adds to `from.depends_on[]` and reverse `blocks[]` (tasks only) |
+| `depends-on` | TASK | TASK | Adds to `from.depends_on[]` and `to.blocks[]` |
 | `epic` | TASK, PLAN | EPIC | Sets `from.epic` to target |
 | `plan` | TASK | PLAN | Sets `from.plan` to target and adds to `plan.implements[]` |
 | `implements` | PLAN | TASK | Adds to `from.implements[]` and sets `task.plan` |

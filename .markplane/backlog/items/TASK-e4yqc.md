@@ -1,7 +1,7 @@
 ---
 id: TASK-e4yqc
 title: Remove epic field from Plan model
-status: backlog
+status: planned
 priority: medium
 type: enhancement
 effort: medium

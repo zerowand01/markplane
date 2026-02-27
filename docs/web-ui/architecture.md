@@ -265,7 +265,7 @@ The Rust HTTP server exposes a REST API that mirrors `markplane-core` operations
 | `GET` | `/api/epics` | List all epics with progress metrics |
 | `GET` | `/api/epics/:id` | Get epic detail with linked task summary |
 | `POST` | `/api/epics` | Create epic |
-| `PATCH` | `/api/epics/:id` | Update epic fields (title, status, priority, dates, tags, depends_on, body) |
+| `PATCH` | `/api/epics/:id` | Update epic fields (title, status, priority, dates, tags, body) |
 
 #### Plans & Notes
 
@@ -367,7 +367,6 @@ interface Epic {
   started: string | null;
   target: string | null;
   tags: string[];
-  depends_on: string[];
   body: string;
   // Computed by API:
   task_count: number;

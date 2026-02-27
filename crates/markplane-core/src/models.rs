@@ -399,8 +399,6 @@ pub struct Epic {
     #[serde(default)]
     pub tags: Vec<String>,
     #[serde(default)]
-    pub depends_on: Vec<String>,
-    #[serde(default)]
     pub related: Vec<String>,
     pub created: NaiveDate,
     pub updated: NaiveDate,
@@ -606,7 +604,6 @@ priority: high
 started: 2026-01-01
 target: null
 tags: [frontend]
-depends_on: [EPIC-001]
 created: 2026-01-01
 updated: 2026-02-09
 "#;

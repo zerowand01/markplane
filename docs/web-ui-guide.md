@@ -57,8 +57,7 @@ Click any task to open its detail panel. The panel shows:
 
 Click any epic to open its detail panel. The panel shows:
 
-- **Editable fields**: status, priority, started/target dates, tags, depends_on (inter-epic dependencies), related items
-- **Depends on**: Add or remove other epics this epic depends on via the inline editor
+- **Editable fields**: status, priority, started/target dates, tags, related items
 - **Progress bar** and status breakdown of linked tasks
 - **Linked tasks table** showing all tasks assigned to the epic
 - **Markdown body** with inline editing

@@ -403,7 +403,6 @@ impl Project {
             started: None,
             target: None,
             tags: vec![],
-            depends_on: vec![],
             related: vec![],
             created: today,
             updated: today,

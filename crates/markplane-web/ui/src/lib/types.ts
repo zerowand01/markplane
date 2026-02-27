@@ -40,7 +40,6 @@ export interface Epic {
   started: string | null;
   target: string | null;
   tags: string[];
-  depends_on: string[];
   related: string[];
   created: string;
   updated: string;
@@ -145,7 +144,6 @@ export interface UpdateEpicRequest {
   tags?: string[];
   started?: string;
   target?: string;
-  depends_on?: string[];
   related?: string[];
   body?: string;
 }
