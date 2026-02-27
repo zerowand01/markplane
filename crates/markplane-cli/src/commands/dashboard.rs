@@ -1,5 +1,5 @@
 use colored::Colorize;
-use markplane_core::{TaskStatus, Priority, Project, QueryFilter, find_blocked_items};
+use markplane_core::{TaskStatus, Priority, Project, QueryFilter, ScanScope, find_blocked_items};
 
 pub fn run() -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
@@ -60,17 +60,24 @@ pub fn run() -> anyhow::Result<()> {
         println!();
     }
 
-    // Now epics summary
+    // Now epics summary (uses all tasks including archived for accurate progress)
     let now_epics: Vec<_> = epics
         .iter()
         .filter(|e| e.frontmatter.status == markplane_core::EpicStatus::Now)
         .collect();
     if !now_epics.is_empty() {
+        let all_tasks = project.list_tasks(&QueryFilter {
+            scope: ScanScope::All,
+            ..Default::default()
+        })?;
         println!("{}", "Now".bold().cyan());
         for epic in &now_epics {
-            let epic_items: Vec<_> = items
+            let epic_items: Vec<_> = all_tasks
                 .iter()
-                .filter(|i| i.frontmatter.epic.as_deref() == Some(&epic.frontmatter.id))
+                .filter(|i| {
+                    i.frontmatter.epic.as_deref() == Some(&epic.frontmatter.id)
+                        && i.frontmatter.status != TaskStatus::Cancelled
+                })
                 .collect();
             let total = epic_items.len();
             let done_count = epic_items

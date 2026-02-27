@@ -4,7 +4,7 @@ use std::fs;
 use markplane_core::{
     Task, TaskStatus, Effort, ItemType, LinkAction, LinkRelation,
     MarkplaneDocument, MoveDirective, Note, NoteType, Patch, Priority, Project, QueryFilter,
-    UpdateFields, build_reference_graph, validate_references,
+    ScanScope, UpdateFields, build_reference_graph, validate_references,
 };
 use serde_json::{json, Value};
 
@@ -516,7 +516,7 @@ fn handle_query(project: &Project, args: &Value) -> Result<String, String> {
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string()),
                 item_type: None,
-                archived,
+                scope: if archived { ScanScope::Archived } else { ScanScope::Active },
             };
 
             let items = project.list_tasks(&filter).map_err(|e| e.to_string())?;

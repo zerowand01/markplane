@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useEpic, useEpics } from "@/lib/hooks/use-epics";
 import { useUpdateEpic, useArchiveItem, useUnarchiveItem } from "@/lib/hooks/use-mutations";
-import { useTasks } from "@/lib/hooks/use-tasks";
+import { useTasks, useArchivedTasks } from "@/lib/hooks/use-tasks";
 import { EpicProgress } from "./epic-progress";
 import { StatusBadge } from "./status-badge";
 import { PriorityIndicator } from "./priority-indicator";
@@ -70,9 +70,11 @@ export function EpicDetailSheet({
   const archiveItem = useArchiveItem();
   const unarchiveItem = useUnarchiveItem();
   const { data: allTasks } = useTasks();
+  const { data: allArchivedTasks } = useArchivedTasks();
   const { data: allEpics } = useEpics();
 
   const linkedTasks = allTasks?.filter((t) => t.epic === epicId) || [];
+  const archivedLinkedTasks = allArchivedTasks?.filter((t) => t.epic === epicId) || [];
   const epicOptions =
     allEpics
       ?.filter((e) => e.id !== epicId)
@@ -331,12 +333,12 @@ export function EpicDetailSheet({
               )}
 
               {/* Linked tasks table */}
-              {linkedTasks.length > 0 && (
+              {(linkedTasks.length > 0 || archivedLinkedTasks.length > 0) && (
                 <>
                   <Separator />
                   <div>
                     <h3 className="text-sm font-semibold mb-2">
-                      Tasks ({linkedTasks.length})
+                      Tasks ({linkedTasks.length + archivedLinkedTasks.length})
                     </h3>
                     <div className="rounded-md border">
                       <Table>
@@ -373,6 +375,39 @@ export function EpicDetailSheet({
                               </TableCell>
                             </TableRow>
                           ))}
+                          {archivedLinkedTasks.length > 0 && (
+                            <>
+                              <TableRow>
+                                <TableCell
+                                  colSpan={4}
+                                  className="text-xs text-muted-foreground py-1.5 bg-muted/30"
+                                >
+                                  Archived ({archivedLinkedTasks.length})
+                                </TableCell>
+                              </TableRow>
+                              {archivedLinkedTasks.map((task) => (
+                                <TableRow
+                                  key={task.id}
+                                  className="opacity-50"
+                                >
+                                  <TableCell className="font-mono text-xs text-muted-foreground">
+                                    {task.id}
+                                  </TableCell>
+                                  <TableCell className="text-sm font-medium truncate max-w-[200px]">
+                                    {task.title}
+                                  </TableCell>
+                                  <TableCell>
+                                    <StatusBadge status={task.status} />
+                                  </TableCell>
+                                  <TableCell>
+                                    <PriorityIndicator
+                                      priority={task.priority}
+                                    />
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </>
+                          )}
                         </TableBody>
                       </Table>
                     </div>

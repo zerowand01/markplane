@@ -21,7 +21,8 @@ use tower_http::services::ServeDir;
 use markplane_core::{
     Effort, Epic, EpicStatus, EpicUpdate, ItemType, LinkAction, LinkRelation,
     MarkplaneDocument, MarkplaneError, Note, NoteType, NoteUpdate, Patch, Plan, PlanUpdate,
-    Priority, Project, QueryFilter, Task, TaskStatus, TaskUpdate, find_blocked_items, parse_id,
+    Priority, Project, QueryFilter, ScanScope, Task, TaskStatus, TaskUpdate, find_blocked_items,
+    parse_id,
 };
 
 #[cfg(feature = "embed-ui")]
@@ -508,7 +509,10 @@ fn epic_to_response(
     let fm = &doc.frontmatter;
     let epic_tasks: Vec<_> = tasks
         .iter()
-        .filter(|t| t.frontmatter.epic.as_deref() == Some(&fm.id))
+        .filter(|t| {
+            t.frontmatter.epic.as_deref() == Some(&fm.id)
+                && t.frontmatter.status != TaskStatus::Cancelled
+        })
         .collect();
 
     let task_count = epic_tasks.len();
@@ -683,6 +687,10 @@ async fn get_summary(
     let tasks = project
         .list_tasks(&QueryFilter::default())
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+    // All tasks (active + archived) for accurate epic progress
+    let all_tasks = project
+        .list_tasks(&QueryFilter { scope: ScanScope::All, ..Default::default() })
+        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
     let epics = project
         .list_epics()
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
@@ -713,7 +721,7 @@ async fn get_summary(
     let now_epics: Vec<_> = epics
         .iter()
         .filter(|e| e.frontmatter.status == EpicStatus::Now)
-        .map(|e| epic_to_response(e, &tasks))
+        .map(|e| epic_to_response(e, &all_tasks))
         .collect();
 
     let in_progress_tasks: Vec<_> = in_progress.iter().map(|t| task_to_response(t)).collect();
@@ -801,7 +809,7 @@ async fn get_tasks(
         tags: params.tags.map(|s| super::parse_comma_list(&s)),
         assignee: params.assignee,
         item_type: params.item_type.map(|s| super::parse_comma_list(&s)),
-        archived: params.archived,
+        scope: if params.archived { ScanScope::Archived } else { ScanScope::Active },
     };
 
     let tasks = state
@@ -1247,7 +1255,7 @@ async fn get_epics(
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
     let tasks = state
         .project
-        .list_tasks(&QueryFilter::default())
+        .list_tasks(&QueryFilter { scope: ScanScope::All, ..Default::default() })
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
 
     let total = epics.len();
@@ -1273,7 +1281,7 @@ async fn get_epic(
 
     let tasks = state
         .project
-        .list_tasks(&QueryFilter::default())
+        .list_tasks(&QueryFilter { scope: ScanScope::All, ..Default::default() })
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
 
     Ok(Json(ApiResponse {
@@ -1423,7 +1431,7 @@ async fn update_epic(
 
     // Re-read for response
     let doc: MarkplaneDocument<Epic> = state.project.read_item(&id).map_err(map_core_error)?;
-    let tasks = state.project.list_tasks(&QueryFilter::default()).map_err(map_core_error)?;
+    let tasks = state.project.list_tasks(&QueryFilter { scope: ScanScope::All, ..Default::default() }).map_err(map_core_error)?;
 
     Ok(Json(ApiResponse {
         data: epic_to_response(&doc, &tasks),
@@ -1652,7 +1660,7 @@ async fn get_search(
         .list_tasks(&QueryFilter::default())
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
     let archived_task_ids: HashSet<String> = if params.include_archived {
-        let archived = state.project.list_tasks(&QueryFilter { archived: true, ..Default::default() })
+        let archived = state.project.list_tasks(&QueryFilter { scope: ScanScope::Archived, ..Default::default() })
             .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
         let ids = archived.iter().map(|d| d.frontmatter.id.clone()).collect();
         tasks.extend(archived);

@@ -26,8 +26,8 @@ pub struct QueryFilter {
     pub tags: Option<Vec<String>>,
     pub assignee: Option<String>,
     pub item_type: Option<Vec<String>>,
-    /// If true, query archived items instead of active ones.
-    pub archived: bool,
+    /// Which directories to scan: Active (items/), Archived (archive/), or All (both).
+    pub scope: ScanScope,
 }
 
 impl Project {
@@ -38,8 +38,7 @@ impl Project {
         filter: &QueryFilter,
     ) -> Result<Vec<MarkplaneDocument<Task>>> {
         let dir = self.item_dir(&IdPrefix::Task);
-        let scope = if filter.archived { ScanScope::Archived } else { ScanScope::Active };
-        let mut items = scan_directory::<Task>(&dir, scope)?;
+        let mut items = scan_directory::<Task>(&dir, filter.scope)?;
 
         items.retain(|doc| {
             let fm = &doc.frontmatter;
@@ -474,7 +473,7 @@ mod tests {
         project.archive_item(&task2.id).unwrap();
 
         let filter = QueryFilter {
-            archived: true,
+            scope: ScanScope::Archived,
             ..Default::default()
         };
         let items = project.list_tasks(&filter).unwrap();
@@ -504,7 +503,7 @@ mod tests {
         assert_eq!(active.len(), 1);
 
         // Archived: task2 and task3
-        let archived = project.list_tasks(&QueryFilter { archived: true, ..Default::default() }).unwrap();
+        let archived = project.list_tasks(&QueryFilter { scope: ScanScope::Archived, ..Default::default() }).unwrap();
         assert_eq!(archived.len(), 2);
     }
 

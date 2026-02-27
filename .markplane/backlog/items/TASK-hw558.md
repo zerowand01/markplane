@@ -1,7 +1,7 @@
 ---
 id: TASK-hw558
 title: Include archived tasks in epic progress and detail sheets
-status: backlog
+status: done
 priority: medium
 type: bug
 effort: medium
@@ -15,7 +15,7 @@ blocks: []
 assignee: null
 position: Zz
 created: 2026-02-25
-updated: 2026-02-25
+updated: 2026-02-26
 ---
 
 # Include archived tasks in epic progress and detail sheets

@@ -1,4 +1,4 @@
-use markplane_core::{Project, QueryFilter};
+use markplane_core::{Project, QueryFilter, ScanScope};
 use tabled::{Table, Tabled};
 
 use super::{parse_comma_list, LsKind};
@@ -95,7 +95,7 @@ fn list_tasks(
         tags: tags.map(|s| parse_comma_list(&s)),
         assignee,
         item_type: item_type.map(|s| parse_comma_list(&s)),
-        archived,
+        scope: if archived { ScanScope::Archived } else { ScanScope::Active },
     };
 
     let items = project.list_tasks(&filter)?;

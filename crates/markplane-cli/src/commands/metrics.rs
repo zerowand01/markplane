@@ -1,5 +1,5 @@
 use colored::Colorize;
-use markplane_core::{TaskStatus, Priority, Project, QueryFilter};
+use markplane_core::{TaskStatus, Priority, Project, QueryFilter, ScanScope};
 
 pub fn run() -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
@@ -68,13 +68,20 @@ pub fn run() -> anyhow::Result<()> {
     );
     println!();
 
-    // Epic progress
+    // Epic progress (uses all tasks including archived for accurate counts)
     if !epics.is_empty() {
+        let all_tasks = project.list_tasks(&QueryFilter {
+            scope: ScanScope::All,
+            ..Default::default()
+        })?;
         println!("{}", "Epic Progress".bold());
         for epic in &epics {
-            let epic_items: Vec<_> = items
+            let epic_items: Vec<_> = all_tasks
                 .iter()
-                .filter(|i| i.frontmatter.epic.as_deref() == Some(&epic.frontmatter.id))
+                .filter(|i| {
+                    i.frontmatter.epic.as_deref() == Some(&epic.frontmatter.id)
+                        && i.frontmatter.status != TaskStatus::Cancelled
+                })
                 .collect();
             let epic_total = epic_items.len();
             let epic_done = epic_items

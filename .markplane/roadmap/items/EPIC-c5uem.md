@@ -22,10 +22,14 @@ Harden the foundation and evolve the core data model. This epic has two themes: 
 - [x] Web API uses core update and link methods (no inline read-modify-write)
 - [ ] Atomic file writes and advisory locking prevent data loss from concurrent CLI + MCP access
 - [ ] `markplane migrate` provides a reliable upgrade path for data format changes between versions
-- [ ] Statuses, priorities, and effort sizes are defined in `config.yaml` and validated at runtime
+- [ ] Item types and note types are configurable in `config.yaml` ([[TASK-eyg6c]])
+- [ ] Task statuses are configurable with status category pattern ([[TASK-us45u]])
+- [ ] Effort sizes have internal Fibonacci point mapping for aggregation ([[TASK-ict2n]])
 - [ ] Default config matches current hardcoded values (zero migration burden)
 - [ ] Sprint entity type available as an optional time-boxed container for tasks
 
 ## Notes
 
-The reliability work ([[TASK-2tags]], [[TASK-4ed4i]]) should come before the flexibility work ([[TASK-us45u]], [[TASK-b54gy]]). Concurrency safety and migration framework are preconditions — configurable workflows will be the first migration that exercises the framework. Sprints remain optional; many teams prefer continuous flow. The larger tasks here deserve implementation plans before coding begins.
+The reliability work ([[TASK-2tags]], [[TASK-4ed4i]]) should come before the flexibility work. Concurrency safety and migration framework are preconditions — configurable workflows will be the first migration that exercises the framework. Sprints remain optional; many teams prefer continuous flow. The larger tasks here deserve implementation plans before coding begins.
+
+The flexibility work is split into three independent tasks: configurable item/note types ([[TASK-eyg6c]], medium effort — simple label replacement), configurable task statuses with category pattern ([[TASK-us45u]], large effort — architectural), and effort point mapping ([[TASK-ict2n]], small effort — additive). Priority, effort scale, and epic/plan/note statuses remain fixed by design.
