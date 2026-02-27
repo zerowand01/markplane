@@ -287,7 +287,6 @@ pub const ROOT_INDEX_TEMPLATE: &str = r#"# Markplane Project Index
 
 ## System Info
 - Project: {PROJECT_NAME}
-- ID counter: EPIC-000, TASK-000, PLAN-000, NOTE-000
 - Last sync: {DATE}
 - Config: [config.yaml](config.yaml)
 "#;

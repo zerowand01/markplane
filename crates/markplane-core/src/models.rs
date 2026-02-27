@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 
@@ -70,7 +69,6 @@ impl fmt::Display for IdPrefix {
 }
 
 /// Parse an item ID string like "TASK-k7x9m" into its prefix and suffix.
-/// Accepts both random IDs (5 alphanumeric chars) and legacy sequential IDs (digits).
 pub fn parse_id(id: &str) -> Result<(IdPrefix, &str)> {
     let parts: Vec<&str> = id.splitn(2, '-').collect();
     if parts.len() != 2 {
@@ -87,7 +85,7 @@ pub fn parse_id(id: &str) -> Result<(IdPrefix, &str)> {
             id
         )));
     }
-    // Validate suffix: all chars must be alphanumeric (covers both random and legacy formats)
+    // Validate suffix: all chars must be alphanumeric
     if !suffix.bytes().all(|b| b.is_ascii_alphanumeric()) {
         return Err(MarkplaneError::InvalidId(format!(
             "Invalid suffix in ID: {}",
@@ -438,15 +436,7 @@ pub struct Note {
 pub struct Config {
     pub version: u32,
     pub project: ProjectInfo,
-    /// Legacy counter field — silently ignored on read, never written.
-    #[serde(default, skip_serializing)]
-    pub counters: Option<HashMap<String, u32>>,
     pub context: ContextConfig,
-    /// Deprecated: archive is now an explicit operation, not time-based.
-    /// This field is kept for backward compatibility with existing config files
-    /// but silently dropped on next write.
-    #[serde(default, skip_serializing)]
-    pub archive: Option<ArchiveConfig>,
     #[serde(default)]
     pub documentation_paths: Vec<String>,
     #[serde(default = "default_item_types")]
@@ -480,12 +470,6 @@ pub struct ContextConfig {
     pub auto_generate: bool,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ArchiveConfig {
-    pub auto_archive_after_days: u32,
-    pub keep_cancelled: bool,
-}
-
 impl Default for Config {
     fn default() -> Self {
         Config {
@@ -494,13 +478,11 @@ impl Default for Config {
                 name: "My Project".to_string(),
                 description: "Project description".to_string(),
             },
-            counters: None,
             context: ContextConfig {
                 token_budget: 1000,
                 recent_days: 7,
                 auto_generate: true,
             },
-            archive: None,
             documentation_paths: Vec::new(),
             item_types: default_item_types(),
             note_types: default_note_types(),
@@ -531,14 +513,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_id_legacy() {
-        let (prefix, suffix) = parse_id("TASK-042").unwrap();
-        assert_eq!(prefix, IdPrefix::Task);
-        assert_eq!(suffix, "042");
-    }
-
-    #[test]
-    fn test_parse_id_random() {
+    fn test_parse_id() {
         let (prefix, suffix) = parse_id("TASK-k7x9m").unwrap();
         assert_eq!(prefix, IdPrefix::Task);
         assert_eq!(suffix, "k7x9m");
@@ -677,9 +652,7 @@ updated: 2026-02-09
     fn test_config_default() {
         let config = Config::default();
         assert_eq!(config.version, 1);
-        assert!(config.counters.is_none());
         assert_eq!(config.context.token_budget, 1000);
-        assert!(config.archive.is_none());
     }
 
     #[test]

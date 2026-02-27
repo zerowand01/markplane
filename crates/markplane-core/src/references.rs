@@ -6,11 +6,8 @@ use crate::models::{parse_id, IdPrefix};
 use crate::project::Project;
 
 /// Return a glob pattern for scanning .md files in a directory.
-/// Prefers items/ subdirectory if it exists, falls back to flat layout.
 fn scan_pattern(dir: &Path) -> String {
-    let items_dir = dir.join("items");
-    let scan_dir = if items_dir.is_dir() { items_dir } else { dir.to_path_buf() };
-    scan_dir.join("*.md").to_string_lossy().to_string()
+    dir.join("items").join("*.md").to_string_lossy().to_string()
 }
 
 /// A broken reference found during validation.
@@ -198,7 +195,7 @@ fn extract_ids_from_line(line: &str, refs: &mut Vec<String>) {
             let abs_pos = start + pos;
             let id_start = abs_pos;
             let after_prefix = abs_pos + prefix.len();
-            // Collect alphanumeric chars after the prefix (handles both random and legacy IDs)
+            // Collect alphanumeric chars after the prefix
             let suffix_end = line[after_prefix..]
                 .find(|c: char| !c.is_ascii_alphanumeric())
                 .map(|p| after_prefix + p)

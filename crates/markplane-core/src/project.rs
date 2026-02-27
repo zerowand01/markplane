@@ -212,27 +212,19 @@ impl Project {
     }
 
     /// Resolve an item ID to its file path.
-    /// Checks items/ subdirectory first, then archive/, then legacy flat layout.
+    /// Checks items/ subdirectory first, then archive/.
     pub fn item_path(&self, id: &str) -> Result<PathBuf> {
         let (prefix, _) = parse_id(id)?;
         let dir = self.item_dir(&prefix);
 
-        // New layout: items/ subdirectory
         let items_path = dir.join("items").join(format!("{}.md", id));
         if items_path.is_file() {
             return Ok(items_path);
         }
 
-        // Archive directory
         let archive_path = dir.join("archive").join(format!("{}.md", id));
         if archive_path.is_file() {
             return Ok(archive_path);
-        }
-
-        // Legacy fallback: flat directory
-        let legacy_path = dir.join(format!("{}.md", id));
-        if legacy_path.is_file() {
-            return Ok(legacy_path);
         }
 
         Err(MarkplaneError::NotFound(format!(
@@ -1231,7 +1223,6 @@ mod tests {
         assert_eq!(config.project.name, "Test Project");
         assert_eq!(config.project.description, "A test project");
         assert_eq!(config.version, 1);
-        assert!(config.counters.is_none());
         assert_eq!(config.item_types, default_item_types());
         assert_eq!(config.note_types, default_note_types());
         assert_eq!(config.default_item_type(), "feature");
@@ -1876,43 +1867,6 @@ mod tests {
         assert!(!project.is_archived(&task.id).unwrap());
         project.archive_item(&task.id).unwrap();
         assert!(project.is_archived(&task.id).unwrap());
-    }
-
-    // ── Config backward compatibility ──────────────────────────────────
-
-    #[test]
-    fn test_config_without_archive_section() {
-        let (_tmp, project) = setup_project();
-        // Config written by init has no archive section
-        let config = project.load_config().unwrap();
-        assert!(config.archive.is_none());
-
-        // Save and reload — archive should still be None
-        project.save_config(&config).unwrap();
-        let reloaded = project.load_config().unwrap();
-        assert!(reloaded.archive.is_none());
-    }
-
-    #[test]
-    fn test_config_with_legacy_archive_section() {
-        let (_tmp, project) = setup_project();
-        // Simulate a legacy config.yaml with archive section
-        let config_path = project.root().join("config.yaml");
-        let yaml = fs::read_to_string(&config_path).unwrap();
-        let yaml_with_archive = format!(
-            "{}\narchive:\n  auto_archive_after_days: 30\n  keep_cancelled: true\n",
-            yaml
-        );
-        fs::write(&config_path, &yaml_with_archive).unwrap();
-
-        // Should parse without error
-        let config = project.load_config().unwrap();
-        assert!(config.archive.is_some());
-
-        // Save should drop archive section
-        project.save_config(&config).unwrap();
-        let reloaded = project.load_config().unwrap();
-        assert!(reloaded.archive.is_none());
     }
 
     // ── apply_tag_changes ──────────────────────────────────────────────

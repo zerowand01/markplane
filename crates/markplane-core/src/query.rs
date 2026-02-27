@@ -177,7 +177,7 @@ fn scan_dir_entries<T: serde::de::DeserializeOwned>(
 }
 
 /// Scan a directory for `.md` files based on the given scope.
-/// `Active` scans items/ (or flat layout), `Archived` scans archive/, `All` scans both.
+/// `Active` scans items/, `Archived` scans archive/, `All` scans both.
 fn scan_directory<T: serde::de::DeserializeOwned>(
     dir: &std::path::Path,
     scope: ScanScope,
@@ -186,19 +186,16 @@ fn scan_directory<T: serde::de::DeserializeOwned>(
 
     let items_dir = dir.join("items");
     let archive_dir = dir.join("archive");
-    let has_items_dir = items_dir.is_dir();
 
     match scope {
         ScanScope::Active => {
-            let scan_dir = if has_items_dir { &items_dir } else { dir };
-            scan_dir_entries(scan_dir, &mut results);
+            scan_dir_entries(&items_dir, &mut results);
         }
         ScanScope::Archived => {
             scan_dir_entries(&archive_dir, &mut results);
         }
         ScanScope::All => {
-            let scan_dir = if has_items_dir { &items_dir } else { dir };
-            scan_dir_entries(scan_dir, &mut results);
+            scan_dir_entries(&items_dir, &mut results);
             scan_dir_entries(&archive_dir, &mut results);
         }
     }
