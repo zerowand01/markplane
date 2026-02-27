@@ -2,9 +2,22 @@ version: 1
 project:
   name: Markplane
   description: AI-native, markdown-first project management system
-documentation_paths:
-- docs
 context:
   token_budget: 1000
   recent_days: 7
   auto_generate: true
+documentation_paths:
+- docs
+item_types:
+- feature
+- bug
+- enhancement
+- chore
+- research
+- spike
+note_types:
+- research
+- analysis
+- idea
+- decision
+- meeting

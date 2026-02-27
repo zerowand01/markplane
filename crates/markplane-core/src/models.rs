@@ -250,7 +250,30 @@ impl FromStr for NoteStatus {
     }
 }
 
-// ── Classification Enums ───────────────────────────────────────────────────
+// ── Classification Types ──────────────────────────────────────────────────
+
+/// Default item types when not configured.
+pub fn default_item_types() -> Vec<String> {
+    vec![
+        "feature".into(),
+        "bug".into(),
+        "enhancement".into(),
+        "chore".into(),
+        "research".into(),
+        "spike".into(),
+    ]
+}
+
+/// Default note types when not configured.
+pub fn default_note_types() -> Vec<String> {
+    vec![
+        "research".into(),
+        "analysis".into(),
+        "idea".into(),
+        "decision".into(),
+        "meeting".into(),
+    ]
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -292,48 +315,6 @@ impl FromStr for Priority {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum ItemType {
-    Feature,
-    Bug,
-    Enhancement,
-    Chore,
-    Research,
-    Spike,
-}
-
-impl fmt::Display for ItemType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ItemType::Feature => write!(f, "feature"),
-            ItemType::Bug => write!(f, "bug"),
-            ItemType::Enhancement => write!(f, "enhancement"),
-            ItemType::Chore => write!(f, "chore"),
-            ItemType::Research => write!(f, "research"),
-            ItemType::Spike => write!(f, "spike"),
-        }
-    }
-}
-
-impl FromStr for ItemType {
-    type Err = MarkplaneError;
-
-    fn from_str(s: &str) -> Result<Self> {
-        match s {
-            "feature" => Ok(ItemType::Feature),
-            "bug" => Ok(ItemType::Bug),
-            "enhancement" => Ok(ItemType::Enhancement),
-            "chore" => Ok(ItemType::Chore),
-            "research" => Ok(ItemType::Research),
-            "spike" => Ok(ItemType::Spike),
-            _ => Err(MarkplaneError::Config(format!(
-                "Unknown item type: {}",
-                s
-            ))),
-        }
-    }
-}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -375,45 +356,6 @@ impl FromStr for Effort {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum NoteType {
-    Research,
-    Analysis,
-    Idea,
-    Decision,
-    Meeting,
-}
-
-impl fmt::Display for NoteType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            NoteType::Research => write!(f, "research"),
-            NoteType::Analysis => write!(f, "analysis"),
-            NoteType::Idea => write!(f, "idea"),
-            NoteType::Decision => write!(f, "decision"),
-            NoteType::Meeting => write!(f, "meeting"),
-        }
-    }
-}
-
-impl FromStr for NoteType {
-    type Err = MarkplaneError;
-
-    fn from_str(s: &str) -> Result<Self> {
-        match s {
-            "research" => Ok(NoteType::Research),
-            "analysis" => Ok(NoteType::Analysis),
-            "idea" => Ok(NoteType::Idea),
-            "decision" => Ok(NoteType::Decision),
-            "meeting" => Ok(NoteType::Meeting),
-            _ => Err(MarkplaneError::Config(format!(
-                "Unknown note type: {}",
-                s
-            ))),
-        }
-    }
-}
 
 // ── Entity Structs ─────────────────────────────────────────────────────────
 
@@ -424,7 +366,7 @@ pub struct Task {
     pub status: TaskStatus,
     pub priority: Priority,
     #[serde(rename = "type")]
-    pub item_type: ItemType,
+    pub item_type: String,
     pub effort: Effort,
     #[serde(default)]
     pub tags: Vec<String>,
@@ -480,7 +422,7 @@ pub struct Note {
     pub id: String,
     pub title: String,
     #[serde(rename = "type")]
-    pub note_type: NoteType,
+    pub note_type: String,
     pub status: NoteStatus,
     #[serde(default)]
     pub tags: Vec<String>,
@@ -507,6 +449,22 @@ pub struct Config {
     pub archive: Option<ArchiveConfig>,
     #[serde(default)]
     pub documentation_paths: Vec<String>,
+    #[serde(default = "default_item_types")]
+    pub item_types: Vec<String>,
+    #[serde(default = "default_note_types")]
+    pub note_types: Vec<String>,
+}
+
+impl Config {
+    /// Return the default item type (first in the configured list).
+    pub fn default_item_type(&self) -> &str {
+        self.item_types.first().map(|s| s.as_str()).unwrap_or("feature")
+    }
+
+    /// Return the default note type (first in the configured list).
+    pub fn default_note_type(&self) -> &str {
+        self.note_types.first().map(|s| s.as_str()).unwrap_or("research")
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -544,6 +502,8 @@ impl Default for Config {
             },
             archive: None,
             documentation_paths: Vec::new(),
+            item_types: default_item_types(),
+            note_types: default_note_types(),
         }
     }
 }
@@ -642,7 +602,7 @@ updated: 2026-02-09
         let item: Task = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(item.id, "TASK-042");
         assert_eq!(item.status, TaskStatus::InProgress);
-        assert_eq!(item.item_type, ItemType::Feature);
+        assert_eq!(item.item_type, "feature");
         assert_eq!(item.tags, vec!["ui", "theming"]);
         assert_eq!(item.epic, Some("EPIC-003".to_string()));
         assert!(item.plan.is_none());
@@ -709,7 +669,7 @@ updated: 2026-02-09
 "#;
         let note: Note = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(note.id, "NOTE-007");
-        assert_eq!(note.note_type, NoteType::Research);
+        assert_eq!(note.note_type, "research");
         assert_eq!(note.status, NoteStatus::Active);
     }
 

@@ -1,10 +1,10 @@
-use markplane_core::{Effort, ItemType, Priority, Project};
+use markplane_core::{Effort, Priority, Project};
 
 use super::parse_comma_list;
 
 pub fn run(
     title: String,
-    item_type: String,
+    item_type: Option<String>,
     priority: String,
     effort: String,
     epic: Option<String>,
@@ -12,8 +12,9 @@ pub fn run(
     template: Option<String>,
 ) -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
+    let config = project.load_config()?;
+    let item_type = item_type.as_deref().unwrap_or(config.default_item_type());
 
-    let item_type: ItemType = item_type.parse()?;
     let priority: Priority = priority.parse()?;
     let effort: Effort = effort.parse()?;
     let tags = tags.map(|t| parse_comma_list(&t)).unwrap_or_default();

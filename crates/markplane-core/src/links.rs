@@ -332,7 +332,7 @@ mod tests {
 
     fn create_task(project: &Project, title: &str) -> String {
         let task = project
-            .create_task(title, ItemType::Feature, Priority::Medium, Effort::Medium, None, vec![], None)
+            .create_task(title, "feature", Priority::Medium, Effort::Medium, None, vec![], None)
             .unwrap();
         task.id
     }
@@ -351,7 +351,7 @@ mod tests {
 
     fn create_note(project: &Project, title: &str) -> String {
         let note = project
-            .create_note(title, NoteType::Idea, vec![], None)
+            .create_note(title, "idea", vec![], None)
             .unwrap();
         note.id
     }

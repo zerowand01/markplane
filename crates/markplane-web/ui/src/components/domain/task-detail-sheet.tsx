@@ -36,8 +36,9 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { STATUS_CONFIG } from "@/lib/constants";
+import { useConfig } from "@/lib/hooks/use-config";
 import { Pencil, Archive, ArchiveRestore } from "lucide-react";
-import type { TaskStatus, Priority, Effort, ItemType } from "@/lib/types";
+import type { TaskStatus, Priority, Effort } from "@/lib/types";
 
 const ALL_STATUSES: TaskStatus[] = [
   "draft",
@@ -55,14 +56,6 @@ const ALL_PRIORITIES: Priority[] = [
   "someday",
 ];
 const ALL_EFFORTS: Effort[] = ["xs", "small", "medium", "large", "xl"];
-const ALL_TYPES: ItemType[] = [
-  "feature",
-  "bug",
-  "enhancement",
-  "chore",
-  "research",
-  "spike",
-];
 
 export function TaskDetailSheet({
   taskId,
@@ -86,6 +79,7 @@ export function TaskDetailSheet({
   const { data: epics } = useEpics();
   const { data: allTasks } = useTasks();
   const { data: plans } = usePlans();
+  const { data: config } = useConfig();
 
   const epicOptions =
     epics?.map((e) => ({ id: e.id, title: e.title })) ?? [];
@@ -231,7 +225,7 @@ export function TaskDetailSheet({
                       <span className="text-sm uppercase">{task.type}</span>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                      {ALL_TYPES.map((t) => (
+                      {(config?.item_types ?? ["feature", "bug", "enhancement", "chore", "research", "spike"]).map((t) => (
                         <DropdownMenuItem
                           key={t}
                           onClick={() =>

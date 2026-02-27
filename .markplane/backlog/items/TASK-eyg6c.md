@@ -1,7 +1,7 @@
 ---
 id: TASK-eyg6c
 title: Configurable item types and note types
-status: backlog
+status: done
 priority: medium
 type: feature
 effort: medium
@@ -15,7 +15,7 @@ blocks: []
 assignee: null
 position: Zz
 created: 2026-02-26
-updated: 2026-02-26
+updated: 2026-02-27
 ---
 
 # Configurable item types and note types
@@ -36,36 +36,36 @@ The template system already works with arbitrary type strings (`resolve_template
 ## Acceptance Criteria
 
 ### Config schema
-- [ ] `config.yaml` supports `item_types` list defining valid task type values
-- [ ] `config.yaml` supports `note_types` list defining valid note type values
-- [ ] Default config provides the current hardcoded values (backward compatible)
-- [ ] `markplane init` scaffolds the default type lists in config
-- [ ] Each type entry has a `name` (kebab-case string used in frontmatter)
+- [x] `config.yaml` supports `item_types` list defining valid task type values
+- [x] `config.yaml` supports `note_types` list defining valid note type values
+- [x] Default config provides the current hardcoded values (backward compatible)
+- [x] `markplane init` scaffolds the default type lists in config
+- [x] Each type entry has a `name` (kebab-case string used in frontmatter)
 
 ### Core
-- [ ] `ItemType` and `NoteType` enums replaced with `String` fields validated against config
-- [ ] `create_task()` and `update_task()` validate item type against config
-- [ ] `create_note()` and `update_note()` validate note type against config
-- [ ] Validation rejects unknown type values on write with a clear error listing valid options
-- [ ] Reading files with unknown types succeeds (graceful degradation — don't break on stale data)
+- [x] `ItemType` and `NoteType` enums replaced with `String` fields validated against config
+- [x] `create_task()` and `update_task()` validate item type against config
+- [x] `create_note()` and `update_note()` validate note type against config
+- [x] Validation rejects unknown type values on write with a clear error listing valid options
+- [x] Reading files with unknown types succeeds (graceful degradation — don't break on stale data)
 
 ### CLI
-- [ ] CLI `--type` and `--note-type` validation reads from config
-- [ ] Error messages list available types from config
+- [x] CLI `--type` and `--note-type` validation reads from config
+- [x] Error messages list available types from config
 
 ### MCP
-- [ ] MCP tool schemas dynamically list configured type values in descriptions
-- [ ] MCP `instructions` field lists available item types and note types
+- [x] MCP tool schemas dynamically list configured type values in descriptions
+- [x] MCP `instructions` field lists available item types and note types
 
 ### Web UI
-- [ ] New API endpoint exposes configured types (or included in existing config/summary endpoint)
-- [ ] `NoteType` and `ItemType` TypeScript types become `string`
-- [ ] Dropdowns in create dialogs and detail sheets populate from config via API
-- [ ] Hardcoded `NOTE_TYPE_CONFIG` in `constants.ts` replaced with dynamic data
+- [x] New API endpoint exposes configured types (or included in existing config/summary endpoint)
+- [x] `NoteType` and `ItemType` TypeScript types become `string`
+- [x] Dropdowns in create dialogs and detail sheets populate from config via API
+- [x] Hardcoded `NOTE_TYPE_CONFIG` in `constants.ts` replaced with dynamic data
 
 ### Backward compatibility
-- [ ] All existing tests pass with default config values
-- [ ] Projects without type config in `config.yaml` use built-in defaults
+- [x] All existing tests pass with default config values
+- [x] Projects without type config in `config.yaml` use built-in defaults
 
 ## Notes
 
@@ -101,6 +101,43 @@ Simple string lists — no category mapping needed (unlike statuses). The first 
 ### Default inconsistency to fix
 
 Currently the CLI defaults note type to `idea`, MCP defaults to `research`, and the web UI defaults to `research`. This should be unified — the first value in the config list becomes the default everywhere.
+
+**Resolved**: All entry points (CLI, MCP, web API) now use `config.default_item_type()` / `config.default_note_type()` which returns the first value in the configured list.
+
+## Implementation Summary
+
+### Approach
+Replaced `ItemType` and `NoteType` Rust enums with `String` fields validated against `config.yaml` on write. Read path accepts any string (graceful degradation). The first value in each config list is the default everywhere (CLI, MCP, web API).
+
+### Key design decisions
+- **Write-time validation only** — `validate_item_type()` / `validate_note_type()` on `Project` check against config. No validation on read, so stale data never breaks.
+- **Config defaults via serde** — `#[serde(default = "default_item_types")]` ensures backward compatibility for configs without the new fields.
+- **CLI `--type` is Optional** — No compile-time default; resolved from config at runtime. This avoids the previous inconsistency where CLI, MCP, and web had different hardcoded defaults.
+- **Web API `/api/config`** — New endpoint exposes `item_types` and `note_types` to the UI. `useConfig()` hook with 5-minute stale time. WebSocket `config_changed` event invalidates.
+- **`NOTE_TYPE_CONFIG` kept as display helper** — Still maps known types to labels for the UI, but all lookups use `?.label ?? capitalize(type)` fallback so custom types display cleanly.
+
+### Files changed (24)
+**Core**: `models.rs`, `project.rs`, `lib.rs`, `context.rs`, `references.rs`, `index.rs`, `query.rs`, `links.rs`, `frontmatter.rs`
+**CLI**: `commands/mod.rs`, `commands/add.rs`, `commands/note.rs`, `commands/promote.rs`
+**MCP**: `mcp/tools.rs`, `mcp/mod.rs`
+**Web server**: `commands/serve.rs`
+**Web UI**: `lib/types.ts`, `lib/hooks/use-config.ts` (new), `lib/hooks/use-websocket.ts`, `components/domain/create-dialog.tsx`, `components/domain/task-detail-sheet.tsx`, `components/domain/note-detail-sheet.tsx`, `app/notes/notes-content.tsx`
+**Docs**: `file-format.md`, `cli-reference.md`, `getting-started.md`, `mcp-setup.md`, `architecture.md`
+**MCP integration tests**: `tests/mcp_integration.rs`
+
+### Test results
+402 tests passing, clippy clean. Smoke tested: custom types default correctly, invalid types rejected with clear error, backward-compatible with existing configs.
+
+## Settings Page (follow-up)
+
+Added a web UI Settings page (`/settings`) so users can manage task types and note types visually instead of editing `config.yaml` by hand.
+
+- **Backend**: `PATCH /api/config` endpoint with server-side validation (trim, lowercase, dedup, min 1 entry)
+- **Frontend**: `useUpdateConfig()` mutation with optimistic cache updates; `TypeListEditor` component with dnd-kit drag-to-reorder, inline add/remove
+- **Sidebar**: Settings gear icon in footer using `SidebarMenuButton` (same pattern as main nav items), `g+s` keyboard shortcut
+- **Files added**: `settings/page.tsx`, `settings/settings-content.tsx`
+- **Files modified**: `serve.rs` (endpoint + route), `use-mutations.ts` (hook), `app-sidebar.tsx` (nav), `use-keyboard-nav.ts` (shortcut), `sidebar.tsx` (rail cursor fix)
+- **Docs updated**: `web-ui-guide.md`, `web-ui/architecture.md`, `file-format.md`, `getting-started.md`
 
 ## References
 

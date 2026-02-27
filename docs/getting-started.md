@@ -103,7 +103,7 @@ markplane add "Add rate limiting to auth endpoints" --type enhancement --priorit
 
 ### Available Options
 
-- **Types**: `feature`, `bug`, `enhancement`, `chore`, `research`, `spike`
+- **Types**: Configurable in `config.yaml` (`item_types`) or via the web UI Settings page. Defaults: `feature`, `bug`, `enhancement`, `chore`, `research`, `spike`
 - **Priorities**: `critical`, `high`, `medium`, `low`, `someday`
 - **Effort sizes**: `xs`, `small`, `medium`, `large`, `xl`
 
@@ -288,7 +288,7 @@ Output:
 Created NOTE-vt3k8 — Evaluate OAuth providers
 ```
 
-Note types: `research`, `analysis`, `idea`, `decision`, `meeting`.
+Note types are configurable in `config.yaml` (`note_types`) or via the web UI Settings page. Defaults: `research`, `analysis`, `idea`, `decision`, `meeting`.
 
 When a note becomes actionable, promote it to a task:
 

@@ -119,7 +119,7 @@ fn handle_request(project: &Project, request: &JsonRpcRequest) -> Option<JsonRpc
 
     match request.method.as_str() {
         "initialize" => Some(handle_initialize(id, project)),
-        "tools/list" => Some(handle_tools_list(id)),
+        "tools/list" => Some(handle_tools_list(id, project)),
         "tools/call" => Some(handle_tools_call(id, project, &request.params)),
         "resources/list" => Some(handle_resources_list(id)),
         "resources/read" => Some(handle_resources_read(id, project, &request.params)),
@@ -157,10 +157,20 @@ fn handle_initialize(id: Value, project: &Project) -> JsonRpcResponse {
 }
 
 fn build_instructions(project: &Project) -> String {
-    let project_name = project
-        .load_config()
-        .map(|c| c.project.name)
-        .unwrap_or_else(|_| "Unknown".to_string());
+    let config = project.load_config().ok();
+    let project_name = config
+        .as_ref()
+        .map(|c| c.project.name.clone())
+        .unwrap_or_else(|| "Unknown".to_string());
+
+    let item_types = config
+        .as_ref()
+        .map(|c| c.item_types.join(", "))
+        .unwrap_or_else(|| "feature, bug, enhancement, chore, research, spike".to_string());
+    let note_types = config
+        .as_ref()
+        .map(|c| c.note_types.join(", "))
+        .unwrap_or_else(|| "research, analysis, idea, decision, meeting".to_string());
 
     format!(
         "Markplane is an AI-native, markdown-first project management system for the project \"{project_name}\". \
@@ -171,6 +181,10 @@ Files are the source of truth, git is the changelog.\n\
 - EPIC-NNN: Strategic epics grouping related tasks. Statuses: later → next → now → done\n\
 - PLAN-NNN: Implementation plans linked to tasks. Statuses: draft → approved → in-progress → done\n\
 - NOTE-NNN: Research notes, ideas, and decisions. Statuses: draft → active → archived\n\
+\n\
+## Configured Types\n\
+- Task types: {item_types}\n\
+- Note types: {note_types}\n\
 \n\
 ## Recommended Workflow\n\
 1. Use markplane_summary or markplane_query to understand current project state\n\
@@ -198,8 +212,8 @@ The prefix determines the entity type and location."
     )
 }
 
-fn handle_tools_list(id: Value) -> JsonRpcResponse {
-    JsonRpcResponse::success(id, tools::list_tools())
+fn handle_tools_list(id: Value, project: &Project) -> JsonRpcResponse {
+    JsonRpcResponse::success(id, tools::list_tools(project))
 }
 
 fn handle_tools_call(

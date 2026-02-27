@@ -29,10 +29,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Pencil, Archive, ArchiveRestore } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NOTE_STATUS_CONFIG, NOTE_TYPE_CONFIG } from "@/lib/constants";
-import type { NoteStatus, NoteType } from "@/lib/types";
+import { useConfig } from "@/lib/hooks/use-config";
+import type { NoteStatus } from "@/lib/types";
 
 const ALL_NOTE_STATUSES: NoteStatus[] = ["draft", "active", "archived"];
-const ALL_NOTE_TYPES: NoteType[] = ["research", "analysis", "idea", "decision", "meeting"];
 
 export function NoteDetailSheet({
   noteId,
@@ -52,6 +52,7 @@ export function NoteDetailSheet({
   const updateNote = useUpdateNote();
   const archiveItem = useArchiveItem();
   const unarchiveItem = useUnarchiveItem();
+  const { data: config } = useConfig();
   const { data: allTasks } = useTasks();
   const { data: allNotes } = useNotes();
   const { data: epics } = useEpics();
@@ -176,14 +177,14 @@ export function NoteDetailSheet({
                       </span>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                      {ALL_NOTE_TYPES.map((t) => (
+                      {(config?.note_types ?? ["research", "analysis", "idea", "decision", "meeting"]).map((t) => (
                         <DropdownMenuItem
                           key={t}
                           onClick={() =>
                             updateNote.mutate({ id: note.id, type: t })
                           }
                         >
-                          {NOTE_TYPE_CONFIG[t]?.label}
+                          {NOTE_TYPE_CONFIG[t]?.label ?? t.charAt(0).toUpperCase() + t.slice(1)}
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuContent>

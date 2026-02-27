@@ -532,7 +532,7 @@ mod tests {
         project
             .create_task(
                 "Item 1",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Medium,
                 None,
@@ -567,7 +567,7 @@ mod tests {
         let draft_task = project
             .create_task(
                 "Draft item",
-                ItemType::Feature,
+                "feature",
                 Priority::Medium,
                 Effort::Small,
                 None,
@@ -578,7 +578,7 @@ mod tests {
         let progress_task = project
             .create_task(
                 "Progress item",
-                ItemType::Bug,
+                "bug",
                 Priority::High,
                 Effort::Medium,
                 None,
@@ -602,7 +602,7 @@ mod tests {
         let med_task = project
             .create_task(
                 "Medium 1",
-                ItemType::Feature,
+                "feature",
                 Priority::Medium,
                 Effort::Small,
                 None,
@@ -613,7 +613,7 @@ mod tests {
         let high1_task = project
             .create_task(
                 "High 1",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Small,
                 None,
@@ -624,7 +624,7 @@ mod tests {
         project
             .create_task(
                 "High 2",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Small,
                 None,
@@ -654,7 +654,7 @@ mod tests {
         project
             .create_task(
                 "Item in epic",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Medium,
                 Some(epic.id.clone()),
@@ -665,7 +665,7 @@ mod tests {
         project
             .create_task(
                 "Orphan item",
-                ItemType::Feature,
+                "feature",
                 Priority::Medium,
                 Effort::Small,
                 None,
@@ -686,7 +686,7 @@ mod tests {
         let blocker = project
             .create_task(
                 "Blocker",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Small,
                 None,
@@ -697,7 +697,7 @@ mod tests {
         let blocked = project
             .create_task(
                 "Blocked item",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Medium,
                 None,
@@ -725,7 +725,7 @@ mod tests {
         let done_task = project
             .create_task(
                 "Done item",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Small,
                 None,
@@ -736,7 +736,7 @@ mod tests {
         project
             .create_task(
                 "Still open",
-                ItemType::Feature,
+                "feature",
                 Priority::Medium,
                 Effort::Small,
                 None,
@@ -761,7 +761,7 @@ mod tests {
         let task_a = project
             .create_task(
                 "Task A",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Small,
                 None,
@@ -772,7 +772,7 @@ mod tests {
         let task_b = project
             .create_task(
                 "Task B",
-                ItemType::Feature,
+                "feature",
                 Priority::Medium,
                 Effort::Small,
                 None,
@@ -783,7 +783,7 @@ mod tests {
         let task_c = project
             .create_task(
                 "Task C",
-                ItemType::Feature,
+                "feature",
                 Priority::Low,
                 Effort::Small,
                 None,
@@ -831,7 +831,7 @@ mod tests {
         let task_1 = project
             .create_task(
                 "Task 1",
-                ItemType::Feature,
+                "feature",
                 Priority::Low,
                 Effort::Small,
                 None,
@@ -842,7 +842,7 @@ mod tests {
         let task_2 = project
             .create_task(
                 "Task 2",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Small,
                 None,
@@ -879,7 +879,7 @@ mod tests {
         project
             .create_task(
                 "Open item",
-                ItemType::Feature,
+                "feature",
                 Priority::Medium,
                 Effort::Small,
                 None,
@@ -906,7 +906,7 @@ mod tests {
         let task = project
             .create_task(
                 "Item 1",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Medium,
                 Some(now_epic.id.clone()),
@@ -934,7 +934,7 @@ mod tests {
         let task_a = project
             .create_task(
                 "Task A",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Small,
                 Some(epic.id.clone()),
@@ -945,7 +945,7 @@ mod tests {
         let task_b = project
             .create_task(
                 "Task B",
-                ItemType::Bug,
+                "bug",
                 Priority::Medium,
                 Effort::Medium,
                 Some(epic.id.clone()),
@@ -970,7 +970,7 @@ mod tests {
         let task_a = project
             .create_task(
                 "Task A",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Small,
                 Some(done_epic.id.clone()),
@@ -1006,7 +1006,7 @@ mod tests {
             let task = project
                 .create_task(
                     &format!("Done task {}", i),
-                    ItemType::Feature,
+                    "feature",
                     Priority::Medium,
                     Effort::Small,
                     Some(epic.id.clone()),
@@ -1023,7 +1023,7 @@ mod tests {
             project
                 .create_task(
                     &format!("Active task {}", i),
-                    ItemType::Feature,
+                    "feature",
                     Priority::Medium,
                     Effort::Small,
                     Some(epic.id.clone()),
@@ -1060,7 +1060,7 @@ mod tests {
         let task = project
             .create_task(
                 "Some task",
-                ItemType::Feature,
+                "feature",
                 Priority::Medium,
                 Effort::Medium,
                 None,
@@ -1087,10 +1087,10 @@ mod tests {
     fn test_generate_notes_index() {
         let (_tmp, project) = setup_project();
         let note_a = project
-            .create_note("Research A", NoteType::Research, vec!["cache".to_string()], None)
+            .create_note("Research A", "research", vec!["cache".to_string()], None)
             .unwrap();
         project
-            .create_note("Analysis B", NoteType::Analysis, vec![], None)
+            .create_note("Analysis B", "analysis", vec![], None)
             .unwrap();
 
         project.generate_notes_index().unwrap();
@@ -1110,7 +1110,7 @@ mod tests {
         project
             .create_task(
                 "Item 1",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Medium,
                 Some(epic.id.clone()),

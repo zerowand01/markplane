@@ -363,17 +363,17 @@ mod tests {
     fn test_validate_references_all_valid() {
         use tempfile::TempDir;
         use crate::project::Project;
-        use crate::models::{ItemType, Priority, Effort};
+        use crate::models::{Priority, Effort};
 
         let tmp = TempDir::new().unwrap();
         let root = tmp.path().join(".markplane");
         let project = Project::init(root, "Test", "Test").unwrap();
 
         let task_a = project
-            .create_task("Item A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Item A", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
         let task_b = project
-            .create_task("Item B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Item B", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         // Add a valid reference from task_a to task_b in the body
@@ -390,14 +390,14 @@ mod tests {
     fn test_validate_references_broken_ref() {
         use tempfile::TempDir;
         use crate::project::Project;
-        use crate::models::{ItemType, Priority, Effort};
+        use crate::models::{Priority, Effort};
 
         let tmp = TempDir::new().unwrap();
         let root = tmp.path().join(".markplane");
         let project = Project::init(root, "Test", "Test").unwrap();
 
         let task_a = project
-            .create_task("Item A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Item A", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         // Add a broken reference to a non-existent item
@@ -417,17 +417,17 @@ mod tests {
     fn test_find_orphans_all_referenced() {
         use tempfile::TempDir;
         use crate::project::Project;
-        use crate::models::{ItemType, Priority, Effort};
+        use crate::models::{Priority, Effort};
 
         let tmp = TempDir::new().unwrap();
         let root = tmp.path().join(".markplane");
         let project = Project::init(root, "Test", "Test").unwrap();
 
         let task_a = project
-            .create_task("Item A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Item A", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
         let task_b = project
-            .create_task("Item B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Item B", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         // A references B, B references A
@@ -449,17 +449,17 @@ mod tests {
     fn test_find_orphans_with_orphan() {
         use tempfile::TempDir;
         use crate::project::Project;
-        use crate::models::{ItemType, Priority, Effort};
+        use crate::models::{Priority, Effort};
 
         let tmp = TempDir::new().unwrap();
         let root = tmp.path().join(".markplane");
         let project = Project::init(root, "Test", "Test").unwrap();
 
         let task_a = project
-            .create_task("Referenced", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Referenced", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
         let _task_b = project
-            .create_task("Orphan", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Orphan", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         // Neither references the other — both are orphans
@@ -479,17 +479,17 @@ mod tests {
     fn test_build_reference_graph() {
         use tempfile::TempDir;
         use crate::project::Project;
-        use crate::models::{ItemType, Priority, Effort};
+        use crate::models::{Priority, Effort};
 
         let tmp = TempDir::new().unwrap();
         let root = tmp.path().join(".markplane");
         let project = Project::init(root, "Test", "Test").unwrap();
 
         let task_a = project
-            .create_task("A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("A", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
         let task_b = project
-            .create_task("B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("B", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         // A's body references B

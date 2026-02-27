@@ -243,7 +243,7 @@ mod tests {
         project
             .create_task(
                 "Low item",
-                ItemType::Chore,
+                "chore",
                 Priority::Low,
                 Effort::Xs,
                 None,
@@ -254,7 +254,7 @@ mod tests {
         project
             .create_task(
                 "High item",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Medium,
                 None,
@@ -265,7 +265,7 @@ mod tests {
         project
             .create_task(
                 "Critical item",
-                ItemType::Bug,
+                "bug",
                 Priority::Critical,
                 Effort::Small,
                 None,
@@ -290,7 +290,7 @@ mod tests {
         let task1 = project
             .create_task(
                 "Draft item",
-                ItemType::Feature,
+                "feature",
                 Priority::Medium,
                 Effort::Small,
                 None,
@@ -301,7 +301,7 @@ mod tests {
         let task2 = project
             .create_task(
                 "Another draft",
-                ItemType::Bug,
+                "bug",
                 Priority::High,
                 Effort::Medium,
                 None,
@@ -329,7 +329,7 @@ mod tests {
         project
             .create_task(
                 "High",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Small,
                 None,
@@ -340,7 +340,7 @@ mod tests {
         project
             .create_task(
                 "Low",
-                ItemType::Feature,
+                "feature",
                 Priority::Low,
                 Effort::Small,
                 None,
@@ -365,7 +365,7 @@ mod tests {
         project
             .create_task(
                 "UI item",
-                ItemType::Feature,
+                "feature",
                 Priority::Medium,
                 Effort::Small,
                 None,
@@ -376,7 +376,7 @@ mod tests {
         project
             .create_task(
                 "API item",
-                ItemType::Feature,
+                "feature",
                 Priority::Medium,
                 Effort::Small,
                 None,
@@ -427,10 +427,10 @@ mod tests {
         let (_tmp, project) = setup_project();
 
         project
-            .create_note("Research A", NoteType::Research, vec![], None)
+            .create_note("Research A", "research", vec![], None)
             .unwrap();
         project
-            .create_note("Analysis B", NoteType::Analysis, vec![], None)
+            .create_note("Analysis B", "analysis", vec![], None)
             .unwrap();
 
         let notes = project.list_notes().unwrap();
@@ -444,10 +444,10 @@ mod tests {
         let (_tmp, project) = setup_project();
 
         let task1 = project
-            .create_task("Active task", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Active task", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
         let task2 = project
-            .create_task("To archive", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("To archive", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         // Archive one task
@@ -464,10 +464,10 @@ mod tests {
         let (_tmp, project) = setup_project();
 
         project
-            .create_task("Active task", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Active task", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
         let task2 = project
-            .create_task("To archive", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("To archive", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         project.archive_item(&task2.id).unwrap();
@@ -486,13 +486,13 @@ mod tests {
         let (_tmp, project) = setup_project();
 
         project
-            .create_task("Active", ItemType::Feature, Priority::High, Effort::Small, None, vec![], None)
+            .create_task("Active", "feature", Priority::High, Effort::Small, None, vec![], None)
             .unwrap();
         let task2 = project
-            .create_task("Archived", ItemType::Bug, Priority::Low, Effort::Medium, None, vec![], None)
+            .create_task("Archived", "bug", Priority::Low, Effort::Medium, None, vec![], None)
             .unwrap();
         let task3 = project
-            .create_task("Also archived", ItemType::Chore, Priority::Medium, Effort::Xs, None, vec![], None)
+            .create_task("Also archived", "chore", Priority::Medium, Effort::Xs, None, vec![], None)
             .unwrap();
 
         project.archive_item(&task2.id).unwrap();
@@ -546,8 +546,8 @@ mod tests {
     fn test_list_notes_archived() {
         let (_tmp, project) = setup_project();
 
-        project.create_note("Active note", NoteType::Research, vec![], None).unwrap();
-        let note2 = project.create_note("Done note", NoteType::Idea, vec![], None).unwrap();
+        project.create_note("Active note", "research", vec![], None).unwrap();
+        let note2 = project.create_note("Done note", "idea", vec![], None).unwrap();
 
         project.archive_item(&note2.id).unwrap();
 

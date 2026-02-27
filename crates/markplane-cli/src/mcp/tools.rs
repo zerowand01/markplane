@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::fs;
 
 use markplane_core::{
-    Task, TaskStatus, Effort, ItemType, LinkAction, LinkRelation,
-    MarkplaneDocument, MoveDirective, Note, NoteType, Patch, Priority, Project, QueryFilter,
+    Task, TaskStatus, Effort, LinkAction, LinkRelation,
+    MarkplaneDocument, MoveDirective, Note, Patch, Priority, Project, QueryFilter,
     ScanScope, UpdateFields, build_reference_graph, validate_references,
 };
 use serde_json::{json, Value};
@@ -11,7 +11,20 @@ use serde_json::{json, Value};
 use super::protocol::{JsonRpcResponse, INTERNAL_ERROR, INVALID_PARAMS};
 
 /// Return the list of available tools with their JSON Schema input descriptions.
-pub fn list_tools() -> Value {
+pub fn list_tools(project: &Project) -> Value {
+    let config = project.load_config().ok();
+    let item_types_desc = config.as_ref()
+        .map(|c| format!("Item type ({}). Tasks only. Default: {}", c.item_types.join(", "), c.default_item_type()))
+        .unwrap_or_else(|| "Item type (feature, bug, enhancement, chore, research, spike). Tasks only. Default: feature".to_string());
+    let note_types_desc = config.as_ref()
+        .map(|c| format!("Note type ({}). Notes only. Default: {}", c.note_types.join(", "), c.default_note_type()))
+        .unwrap_or_else(|| "Note type (research, analysis, idea, decision, meeting). Notes only. Default: research".to_string());
+    let update_type_desc = config.as_ref()
+        .map(|c| format!("Item type ({}). Tasks only.", c.item_types.join(", ")))
+        .unwrap_or_else(|| "Item type (feature, bug, enhancement, chore, research, spike). Tasks only.".to_string());
+    let update_note_type_desc = config.as_ref()
+        .map(|c| format!("Note type ({}). Notes only.", c.note_types.join(", ")))
+        .unwrap_or_else(|| "Note type (research, analysis, idea, decision, meeting). Notes only.".to_string());
     json!({
         "tools": [
             {
@@ -94,7 +107,7 @@ pub fn list_tools() -> Value {
                         },
                         "type": {
                             "type": "string",
-                            "description": "Item type (feature, bug, enhancement, chore, research, spike). Tasks only. Default: feature"
+                            "description": item_types_desc
                         },
                         "priority": {
                             "type": "string",
@@ -110,7 +123,7 @@ pub fn list_tools() -> Value {
                         },
                         "note_type": {
                             "type": "string",
-                            "description": "Note type (research, analysis, idea, decision, meeting). Notes only. Default: research"
+                            "description": note_types_desc
                         },
                         "tags": {
                             "type": "array",
@@ -153,7 +166,7 @@ pub fn list_tools() -> Value {
                         },
                         "type": {
                             "type": "string",
-                            "description": "Item type (feature, bug, enhancement, chore, research, spike). Tasks only."
+                            "description": update_type_desc
                         },
                         "assignee": {
                             "type": "string",
@@ -183,7 +196,7 @@ pub fn list_tools() -> Value {
                         },
                         "note_type": {
                             "type": "string",
-                            "description": "Note type (research, analysis, idea, decision, meeting). Notes only."
+                            "description": update_note_type_desc
                         }
                     },
                     "required": ["id"]
@@ -616,12 +629,11 @@ fn handle_add(project: &Project, args: &Value) -> Result<String, String> {
 
     match kind {
         "task" => {
-            let item_type: ItemType = args
+            let config = project.load_config().map_err(|e| e.to_string())?;
+            let item_type = args
                 .get("type")
                 .and_then(|v| v.as_str())
-                .unwrap_or("feature")
-                .parse()
-                .map_err(|e: markplane_core::MarkplaneError| e.to_string())?;
+                .unwrap_or(config.default_item_type());
 
             let priority: Priority = args
                 .get("priority")
@@ -670,12 +682,11 @@ fn handle_add(project: &Project, args: &Value) -> Result<String, String> {
             serde_json::to_string(&result).map_err(|e| e.to_string())
         }
         "note" => {
-            let note_type: NoteType = args
+            let config = project.load_config().map_err(|e| e.to_string())?;
+            let note_type = args
                 .get("note_type")
                 .and_then(|v| v.as_str())
-                .unwrap_or("research")
-                .parse()
-                .map_err(|e: markplane_core::MarkplaneError| e.to_string())?;
+                .unwrap_or(config.default_note_type());
 
             let tags: Vec<String> = args
                 .get("tags")
@@ -968,11 +979,13 @@ fn handle_promote(project: &Project, args: &Value) -> Result<String, String> {
     let note_doc: MarkplaneDocument<Note> =
         project.read_item(note_id).map_err(|e| e.to_string())?;
 
+    let config = project.load_config().map_err(|e| e.to_string())?;
+
     // Create a task from the note's title and tags
     let item = project
         .create_task(
             &note_doc.frontmatter.title,
-            ItemType::Feature,
+            config.default_item_type(),
             priority,
             effort,
             None,

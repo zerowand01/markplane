@@ -1,5 +1,5 @@
 use markplane_core::{
-    parse_id, Effort, IdPrefix, ItemType, MarkplaneDocument, Note, Priority, Project,
+    parse_id, Effort, IdPrefix, MarkplaneDocument, Note, Priority, Project,
 };
 
 pub fn run(id: String, priority: String, effort: String) -> anyhow::Result<()> {
@@ -15,10 +15,11 @@ pub fn run(id: String, priority: String, effort: String) -> anyhow::Result<()> {
 
     let priority: Priority = priority.parse()?;
     let effort: Effort = effort.parse()?;
+    let config = project.load_config()?;
 
     let item = project.create_task(
         &note.title,
-        ItemType::Feature,
+        config.default_item_type(),
         priority,
         effort,
         None,

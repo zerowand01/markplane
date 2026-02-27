@@ -122,8 +122,11 @@ crates/markplane-web/ui/               # Next.js project root
 │   │   │   ├── graph/
 │   │   │   │   └── page.tsx         # Dependency graph (React Flow + ELK)
 │   │   │   │
-│   │   │   └── archive/
-│   │   │       └── page.tsx         # Archived items with restore action
+│   │   │   ├── archive/
+│   │   │   │   └── page.tsx         # Archived items with restore action
+│   │   │   │
+│   │   │   └── settings/
+│   │   │       └── page.tsx         # Project settings (type configuration)
 │   │   │
 │   │   ├── components/
 │   │   │   ├── ui/                  # shadcn/ui primitives (22 components)
@@ -303,6 +306,8 @@ The link endpoint accepts `{ from, to, relation, remove? }` where `relation` is 
 | `GET` | `/api/graph` | Full project dependency graph |
 | `POST` | `/api/sync` | Trigger `markplane sync` (regenerate INDEX.md + .context/) |
 | `GET` | `/api/search?q=...` | Full-text search across all items (min 2 chars) |
+| `GET` | `/api/config` | Get project configuration (item types, note types) |
+| `PATCH` | `/api/config` | Update project configuration (validates, trims, lowercases, deduplicates) |
 
 #### Response Format
 
@@ -449,6 +454,7 @@ interface GraphEdge {
 | `useSummary()` | `use-summary.ts` | Dashboard project summary |
 | `useGraph(focusId?)` | `use-graph.ts` | Dependency graph (all or focused on entity) |
 | `useSearch(query)` | `use-search.ts` | Full-text search (min 2 chars) |
+| `useConfig()` | `use-config.ts` | Project configuration (item types, note types) |
 
 **Mutation hooks** (`use-mutations.ts`):
 
@@ -465,6 +471,7 @@ interface GraphEdge {
 | `useArchiveItem()` | Archive a single item |
 | `useBatchArchive()` | Batch archive multiple items |
 | `useUnarchiveItem()` | Restore an archived item |
+| `useUpdateConfig()` | Update project configuration (optimistic + rollback) |
 
 **Infrastructure hooks**:
 
@@ -490,6 +497,7 @@ All mutation hooks use TanStack Query's `useMutation` with `onMutate`/`onError`/
 | `/notes` | Notes | Research, ideas, decisions. Note detail via Sheet slide-over |
 | `/graph` | Dependency Graph | Full project graph (React Flow + ELK layout) |
 | `/archive` | Archive | Archived items with restore action |
+| `/settings` | Settings | Project configuration: task types, note types |
 
 ### URL Design
 

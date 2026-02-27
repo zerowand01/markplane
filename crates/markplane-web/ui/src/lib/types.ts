@@ -3,9 +3,14 @@ export type EpicStatus = "now" | "next" | "later" | "done";
 export type PlanStatus = "draft" | "approved" | "in-progress" | "done";
 export type NoteStatus = "draft" | "active" | "archived";
 export type Priority = "critical" | "high" | "medium" | "low" | "someday";
-export type ItemType = "feature" | "bug" | "enhancement" | "chore" | "research" | "spike";
+export type ItemType = string;
 export type Effort = "xs" | "small" | "medium" | "large" | "xl";
-export type NoteType = "research" | "analysis" | "idea" | "decision" | "meeting";
+export type NoteType = string;
+
+export interface ProjectConfig {
+  item_types: string[];
+  note_types: string[];
+}
 
 export interface Task {
   id: string;

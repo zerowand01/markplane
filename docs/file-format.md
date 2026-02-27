@@ -89,7 +89,7 @@ Titles are always double-quoted in the YAML to safely handle special characters.
 | `title` | string | yes | Item title (max 500 characters) |
 | `status` | enum | yes | Current workflow status |
 | `priority` | enum | yes | Priority level |
-| `type` | enum | yes | Item classification |
+| `type` | string | yes | Item classification (configurable via `config.yaml`) |
 | `effort` | enum | yes | Effort estimate |
 | `tags` | string[] | no | Categorization tags (default: `[]`) |
 | `epic` | string? | no | Parent epic ID, e.g. `EPIC-gc8t5` (default: `null`) |
@@ -133,7 +133,7 @@ Titles are always double-quoted in the YAML to safely handle special characters.
 |-------|------|----------|-------------|
 | `id` | string | yes | Unique identifier, e.g. `NOTE-dq6m1` |
 | `title` | string | yes | Note title (max 500 characters) |
-| `type` | enum | yes | Note classification |
+| `type` | string | yes | Note classification (configurable via `config.yaml`) |
 | `status` | enum | yes | Current workflow status |
 | `tags` | string[] | no | Categorization tags (default: `[]`) |
 | `related` | string[] | no | Related item IDs (default: `[]`) |
@@ -178,7 +178,7 @@ Values (highest to lowest): `critical`, `high`, `medium`, `low`, `someday`
 
 ### ItemType (Task only)
 
-Values: `feature`, `bug`, `enhancement`, `chore`, `research`, `spike`
+Configurable via `item_types` in `config.yaml` or the web UI [Settings page](/docs/web-ui-guide.md#settings). Default values: `feature`, `bug`, `enhancement`, `chore`, `research`, `spike`. The first value in the list is the default for new tasks.
 
 ### Effort (Task only)
 
@@ -186,7 +186,7 @@ Values (smallest to largest): `xs`, `small`, `medium`, `large`, `xl`
 
 ### NoteType
 
-Values: `research`, `analysis`, `idea`, `decision`, `meeting`
+Configurable via `note_types` in `config.yaml` or the web UI [Settings page](/docs/web-ui-guide.md#settings). Default values: `research`, `analysis`, `idea`, `decision`, `meeting`. The first value in the list is the default for new notes.
 
 ## Timestamps
 
@@ -244,6 +244,19 @@ context:
   auto_generate: true     # Auto-regenerate context on sync
 documentation_paths:            # Paths to project docs (relative to repo root)
   - docs                        # Scanned for *.md files; linked in INDEX and .context/
+item_types:                     # Configurable task types (first is default)
+  - feature
+  - bug
+  - enhancement
+  - chore
+  - research
+  - spike
+note_types:                     # Configurable note types (first is default)
+  - research
+  - analysis
+  - idea
+  - decision
+  - meeting
 ```
 
 IDs are randomly generated (no counter in config). See [ID System](#id-system) for details.

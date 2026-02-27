@@ -12,6 +12,7 @@ import {
   Archive,
   PanelLeft,
   Search,
+  Settings,
   Sun,
   Moon,
 } from "lucide-react";
@@ -111,6 +112,17 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-2">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={pathname.startsWith("/settings")} tooltip="Settings" className="text-base">
+              <Link href="/settings">
+                <Settings className="size-5" />
+                <span>Settings</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+        <SidebarSeparator className="mx-0" />
         <div className="flex items-center justify-between group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-1">
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}

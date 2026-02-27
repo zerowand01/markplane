@@ -20,7 +20,8 @@ import {
 import { useCreateTask, useCreateEpic, useCreatePlan, useCreateNote } from "@/lib/hooks/use-mutations";
 import { useEpics } from "@/lib/hooks/use-epics";
 import { useTasks } from "@/lib/hooks/use-tasks";
-import type { Priority, ItemType, Effort, NoteType } from "@/lib/types";
+import { useConfig } from "@/lib/hooks/use-config";
+import type { Priority, Effort } from "@/lib/types";
 
 interface CreateDialogProps {
   kind: "task" | "epic" | "note" | "plan";
@@ -37,11 +38,12 @@ export function CreateDialog({
   taskId,
   onCreated,
 }: CreateDialogProps) {
+  const { data: config } = useConfig();
   const [title, setTitle] = useState("");
-  const [itemType, setItemType] = useState<ItemType>("feature");
+  const [itemType, setItemType] = useState("feature");
   const [priority, setPriority] = useState<Priority>("medium");
   const [effort, setEffort] = useState<Effort>("medium");
-  const [noteType, setNoteType] = useState<NoteType>("research");
+  const [noteType, setNoteType] = useState("research");
   const [epic, setEpic] = useState<string>("none");
   const [planTaskId, setPlanTaskId] = useState<string>("none");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -60,16 +62,16 @@ export function CreateDialog({
   useEffect(() => {
     if (open) {
       setTitle("");
-      setItemType("feature");
+      setItemType(config?.item_types[0] ?? "feature");
       setPriority("medium");
       setEffort("medium");
-      setNoteType("research");
+      setNoteType(config?.note_types[0] ?? "research");
       setEpic("none");
       setPlanTaskId("none");
       // Auto-focus title input
       setTimeout(() => inputRef.current?.focus(), 0);
     }
-  }, [open]);
+  }, [open, config]);
 
   const handleSubmit = () => {
     if (!title.trim() || isPending) return;
@@ -147,17 +149,16 @@ export function CreateDialog({
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Type</label>
-                  <Select value={itemType} onValueChange={(v) => setItemType(v as ItemType)}>
+                  <Select value={itemType} onValueChange={setItemType}>
                     <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="feature">Feature</SelectItem>
-                      <SelectItem value="bug">Bug</SelectItem>
-                      <SelectItem value="enhancement">Enhancement</SelectItem>
-                      <SelectItem value="chore">Chore</SelectItem>
-                      <SelectItem value="research">Research</SelectItem>
-                      <SelectItem value="spike">Spike</SelectItem>
+                      {(config?.item_types ?? ["feature", "bug", "enhancement", "chore", "research", "spike"]).map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {t.charAt(0).toUpperCase() + t.slice(1)}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -234,16 +235,16 @@ export function CreateDialog({
           {kind === "note" && (
             <div className="space-y-2">
               <label className="text-sm font-medium">Type</label>
-              <Select value={noteType} onValueChange={(v) => setNoteType(v as NoteType)}>
+              <Select value={noteType} onValueChange={setNoteType}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="research">Research</SelectItem>
-                  <SelectItem value="analysis">Analysis</SelectItem>
-                  <SelectItem value="idea">Idea</SelectItem>
-                  <SelectItem value="decision">Decision</SelectItem>
-                  <SelectItem value="meeting">Meeting</SelectItem>
+                  {(config?.note_types ?? ["research", "analysis", "idea", "decision", "meeting"]).map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t.charAt(0).toUpperCase() + t.slice(1)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

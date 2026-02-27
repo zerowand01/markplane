@@ -14,6 +14,7 @@ const CHORD_NAV: ChordMap = {
   r: "/roadmap",
   g: "/graph",
   a: "/archive",
+  s: "/settings",
 };
 
 export function isInputFocused(): boolean {

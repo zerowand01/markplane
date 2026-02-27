@@ -1019,7 +1019,7 @@ fn test_tool_promote() {
     let root = tmp.path().join(".markplane");
     let project = markplane_core::Project::new(root);
     let note = project
-        .create_note("Good idea", markplane_core::NoteType::Idea, vec!["cool".to_string()], None)
+        .create_note("Good idea", "idea", vec!["cool".to_string()], None)
         .unwrap();
 
     let response = send_request(
@@ -1471,7 +1471,7 @@ fn test_resource_task_item() {
     let task = project
         .create_task(
             "Resource test",
-            markplane_core::ItemType::Feature,
+            "feature",
             markplane_core::Priority::Medium,
             markplane_core::Effort::Small,
             None,
@@ -1602,7 +1602,7 @@ fn test_resource_plan_wrong_prefix() {
     let task = project
         .create_task(
             "Not a plan",
-            markplane_core::ItemType::Feature,
+            "feature",
             markplane_core::Priority::Medium,
             markplane_core::Effort::Small,
             None,
@@ -1636,7 +1636,7 @@ fn test_resource_note_item() {
     let note = project
         .create_note(
             "Note resource test",
-            markplane_core::NoteType::Research,
+            "research",
             vec![],
             None,
         )
@@ -1668,7 +1668,7 @@ fn test_resource_note_wrong_prefix() {
     let task = project
         .create_task(
             "Not a note",
-            markplane_core::ItemType::Feature,
+            "feature",
             markplane_core::Priority::Medium,
             markplane_core::Effort::Small,
             None,
@@ -1957,7 +1957,7 @@ fn test_tool_update_note_type_and_tags() {
     let root = tmp.path().join(".markplane");
     let project = markplane_core::Project::new(root);
     let note = project
-        .create_note("Note update test", markplane_core::NoteType::Idea, vec!["wip".to_string()], None)
+        .create_note("Note update test", "idea", vec!["wip".to_string()], None)
         .unwrap();
 
     let response = send_request(
@@ -2073,7 +2073,7 @@ fn create_positioned_task(
     let task = project
         .create_task(
             title,
-            markplane_core::ItemType::Feature,
+            "feature",
             priority,
             markplane_core::Effort::Medium,
             None,
@@ -2422,7 +2422,7 @@ fn test_tool_plan_with_template() {
     let task = project
         .create_task(
             "Refactor test",
-            markplane_core::ItemType::Feature,
+            "feature",
             markplane_core::Priority::Medium,
             markplane_core::Effort::Medium,
             None,

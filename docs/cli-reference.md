@@ -30,7 +30,7 @@ markplane add <TITLE> [OPTIONS]
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `--type <TYPE>` | `feature` | Item type: `feature`, `bug`, `enhancement`, `chore`, `research`, `spike` |
+| `--type <TYPE>` | *(first in config)* | Item type (configurable via `config.yaml`, default: first in `item_types` list) |
 | `--priority <PRIORITY>` | `medium` | Priority: `critical`, `high`, `medium`, `low`, `someday` |
 | `--effort <EFFORT>` | `medium` | Effort estimate: `xs`, `small`, `medium`, `large`, `xl` |
 | `--epic <EPIC_ID>` | — | Parent epic ID (e.g. `EPIC-xa7r2`) |
@@ -533,7 +533,7 @@ markplane note <TITLE> [OPTIONS]
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `--type <TYPE>` | `idea` | Note type: `research`, `analysis`, `idea`, `decision`, `meeting` |
+| `--type <TYPE>` | *(first in config)* | Note type (configurable via `config.yaml`, default: first in `note_types` list) |
 | `--tags <TAGS>` | — | Comma-separated tags |
 | `--template <NAME>` | — | Template name override (e.g. `research`, `analysis`). Uses type-based defaults if omitted. |
 
@@ -608,7 +608,7 @@ markplane promote <ID> [OPTIONS]
 | `--priority <PRIORITY>` | `medium` | Priority for the new task |
 | `--effort <EFFORT>` | `medium` | Effort estimate for the new task |
 
-Creates a new task with the note's title and tags, using item type `feature`. Only works with notes (`NOTE-xxxxx`).
+Creates a new task with the note's title and tags, using the default item type from `config.yaml`. Only works with notes (`NOTE-xxxxx`).
 
 **Example:**
 
@@ -827,7 +827,7 @@ markplane update <ID> [OPTIONS]
 | `--status <STATUS>` | All | New status value |
 | `--priority <PRIORITY>` | Tasks, Epics | New priority |
 | `--effort <EFFORT>` | Tasks | Effort size: `xs`, `small`, `medium`, `large`, `xl` |
-| `--type <TYPE>` | Tasks | Item type: `feature`, `bug`, `enhancement`, `chore`, `research`, `spike` |
+| `--type <TYPE>` | Tasks | Item type (configurable via `config.yaml`) |
 | `--assignee <USER>` | Tasks | Set assignee (leading `@` stripped automatically) |
 | `--clear-assignee` | Tasks | Clear assignee |
 | `--position <KEY>` | Tasks | Set position key for manual ordering |
@@ -838,7 +838,7 @@ markplane update <ID> [OPTIONS]
 | `--clear-started` | Epics | Clear started date |
 | `--target <DATE>` | Epics | Set target date (YYYY-MM-DD) |
 | `--clear-target` | Epics | Clear target date |
-| `--note-type <TYPE>` | Notes | Note type: `research`, `analysis`, `idea`, `decision`, `meeting` |
+| `--note-type <TYPE>` | Notes | Note type (configurable via `config.yaml`) |
 
 Fields that don't apply to the item's entity type are rejected with an error. Multiple options can be combined in a single command.
 

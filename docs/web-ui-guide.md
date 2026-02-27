@@ -24,6 +24,7 @@ markplane serve --port 8080  # Custom port
 | Notes | `/notes` | Research notes, ideas, and decisions |
 | Graph | `/graph` | Interactive dependency graph |
 | Archive | `/archive` | Archived items with restore action |
+| Settings | `/settings` | Configure task types, note types, and other project settings |
 | Search | `/search` | Full-text search across all items |
 
 ## Views
@@ -80,6 +81,21 @@ An interactive node graph built with React Flow showing `blocks` and `depends_on
 - Use `?focus=TASK-rm6d3` to center the graph on a specific item
 - MiniMap in the corner for orientation
 
+### Settings (`/settings`)
+
+Manage project configuration visually. The Settings page shows two sections side by side:
+
+- **Task Types** — the list of allowed values for the `type` field on tasks (e.g., `feature`, `bug`, `chore`)
+- **Note Types** — the list of allowed values for the `type` field on notes (e.g., `research`, `idea`, `decision`)
+
+Each section lets you:
+
+- **Add** a new type using the input at the bottom (press Enter or click +)
+- **Remove** a type by clicking the X button (at least one type must remain)
+- **Reorder** types by dragging the grip handle — the first type in the list becomes the default for newly created items
+
+Changes save immediately and are reflected everywhere: create dialogs, detail sheet dropdowns, CLI defaults, and MCP tools. Other browser tabs stay in sync via WebSocket. Under the hood, changes write directly to `.markplane/config.yaml`.
+
 ### Command Palette (`Cmd+K`)
 
 Press `Cmd+K` (or `Ctrl+K`) to open the command palette. It provides:
@@ -116,6 +132,7 @@ All changes are detected via filesystem watching and pushed to the browser over 
 | `g` then `n` | Go to Notes |
 | `g` then `g` | Go to Graph |
 | `g` then `a` | Go to Archive |
+| `g` then `s` | Go to Settings |
 
 ### Global
 
@@ -235,6 +252,8 @@ Error:             { "error": { "code": string, "message": string } }
 | GET | `/api/graph/:id` | Focused graph (2-hop neighborhood) |
 | POST | `/api/items/:id/archive` | Archive any item (task, epic, plan, note) |
 | POST | `/api/items/:id/unarchive` | Restore an archived item |
+| GET | `/api/config` | Get project configuration (item types, note types) |
+| PATCH | `/api/config` | Update project configuration |
 
 All list endpoints (`/api/tasks`, `/api/epics`, `/api/plans`, `/api/notes`) accept an `?archived=true` query parameter to return archived items instead of active ones.
 

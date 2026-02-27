@@ -39,6 +39,7 @@ export function useWebSocket() {
             }
             case "config_changed":
               queryClient.invalidateQueries({ queryKey: ["summary"] });
+              queryClient.invalidateQueries({ queryKey: ["config"] });
               break;
             case "sync_complete":
               queryClient.invalidateQueries();

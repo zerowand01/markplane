@@ -35,7 +35,7 @@ The core library contains all domain logic. It exposes a `Project` struct that r
 
 | Module | Purpose |
 |--------|---------|
-| `models` | Entity structs (`Task`, `Epic`, `Plan`, `Note`), enums (`TaskStatus`, `Priority`, etc.), `Config`, `MarkplaneDocument<T>` wrapper, ID parsing/formatting |
+| `models` | Entity structs (`Task`, `Epic`, `Plan`, `Note`), enums (`TaskStatus`, `Priority`, `Effort`, etc.), `Config` (including configurable `item_types`/`note_types`), `MarkplaneDocument<T>` wrapper, ID parsing/formatting |
 | `project` | `Project` struct — init, config, ID management, CRUD operations, archiving, `find_blocked_items()` |
 | `frontmatter` | Parse and serialize `---\nyaml\n---\nbody` format |
 | `query` | `QueryFilter` struct, `list_tasks()`, `list_epics()`, `list_plans()`, `list_notes()` with filtering and sorting |

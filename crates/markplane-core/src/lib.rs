@@ -13,9 +13,9 @@ pub mod links;
 
 pub use error::{MarkplaneError, Result};
 pub use models::{
-    Task, TaskStatus, Config, Effort, Epic, EpicStatus, IdPrefix, ItemType,
-    MarkplaneDocument, Note, NoteStatus, NoteType, Plan, PlanStatus, Priority,
-    generate_random_id, parse_id,
+    Task, TaskStatus, Config, Effort, Epic, EpicStatus, IdPrefix,
+    MarkplaneDocument, Note, NoteStatus, Plan, PlanStatus, Priority,
+    generate_random_id, parse_id, default_item_types, default_note_types,
 };
 pub use frontmatter::{parse_frontmatter, parse_frontmatter_raw, write_frontmatter};
 pub use project::{

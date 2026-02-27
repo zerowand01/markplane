@@ -571,7 +571,7 @@ mod tests {
         let task1 = project
             .create_task(
                 "In progress item",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Medium,
                 Some(epic.id.clone()),
@@ -584,7 +584,7 @@ mod tests {
         let task2 = project
             .create_task(
                 "Planned item",
-                ItemType::Feature,
+                "feature",
                 Priority::Medium,
                 Effort::Small,
                 None,
@@ -613,21 +613,21 @@ mod tests {
 
         // Create 3 tasks: 2 done+archived, 1 active
         let task1 = project
-            .create_task("Done 1", ItemType::Feature, Priority::Medium, Effort::Small,
+            .create_task("Done 1", "feature", Priority::Medium, Effort::Small,
                 Some(epic.id.clone()), vec![], None)
             .unwrap();
         project.update_status(&task1.id, "done").unwrap();
         project.archive_item(&task1.id).unwrap();
 
         let task2 = project
-            .create_task("Done 2", ItemType::Feature, Priority::Medium, Effort::Small,
+            .create_task("Done 2", "feature", Priority::Medium, Effort::Small,
                 Some(epic.id.clone()), vec![], None)
             .unwrap();
         project.update_status(&task2.id, "done").unwrap();
         project.archive_item(&task2.id).unwrap();
 
         project
-            .create_task("Active", ItemType::Feature, Priority::Medium, Effort::Small,
+            .create_task("Active", "feature", Priority::Medium, Effort::Small,
                 Some(epic.id.clone()), vec![], None)
             .unwrap();
 
@@ -648,7 +648,7 @@ mod tests {
         let blocker = project
             .create_task(
                 "Blocker",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Small,
                 None,
@@ -662,7 +662,7 @@ mod tests {
         let blocked = project
             .create_task(
                 "Blocked item",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Medium,
                 None,
@@ -698,7 +698,7 @@ mod tests {
         let task = project
             .create_task(
                 "Active item",
-                ItemType::Bug,
+                "bug",
                 Priority::Critical,
                 Effort::Small,
                 None,
@@ -731,7 +731,7 @@ mod tests {
         let blocker = project
             .create_task(
                 "Blocker",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Small,
                 None,
@@ -742,7 +742,7 @@ mod tests {
         let blocked = project
             .create_task(
                 "Blocked",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Medium,
                 None,
@@ -769,7 +769,7 @@ mod tests {
         project
             .create_task(
                 "Item 1",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Medium,
                 Some(epic.id.clone()),
@@ -780,7 +780,7 @@ mod tests {
         project
             .create_task(
                 "Item 2",
-                ItemType::Bug,
+                "bug",
                 Priority::Critical,
                 Effort::Small,
                 None,
@@ -808,21 +808,21 @@ mod tests {
 
         // 2 done+archived, 1 active
         let t1 = project
-            .create_task("Done 1", ItemType::Feature, Priority::Medium, Effort::Small,
+            .create_task("Done 1", "feature", Priority::Medium, Effort::Small,
                 Some(epic.id.clone()), vec![], None)
             .unwrap();
         project.update_status(&t1.id, "done").unwrap();
         project.archive_item(&t1.id).unwrap();
 
         let t2 = project
-            .create_task("Done 2", ItemType::Feature, Priority::Medium, Effort::Small,
+            .create_task("Done 2", "feature", Priority::Medium, Effort::Small,
                 Some(epic.id.clone()), vec![], None)
             .unwrap();
         project.update_status(&t2.id, "done").unwrap();
         project.archive_item(&t2.id).unwrap();
 
         project
-            .create_task("Open", ItemType::Feature, Priority::Medium, Effort::Small,
+            .create_task("Open", "feature", Priority::Medium, Effort::Small,
                 Some(epic.id.clone()), vec![], None)
             .unwrap();
 
@@ -855,7 +855,7 @@ mod tests {
         project
             .create_task(
                 "Item 1",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Medium,
                 Some(epic.id.clone()),

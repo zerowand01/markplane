@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { patchJson, postJson, postAction } from "@/lib/api";
 import { toast } from "sonner";
-import type { Task, Epic, Plan, Note, CreateTaskRequest, CreateEpicRequest, CreatePlanRequest, CreateNoteRequest, UpdateTaskRequest, UpdateEpicRequest, UpdatePlanRequest, UpdateNoteRequest } from "@/lib/types";
+import type { Task, Epic, Plan, Note, ProjectConfig, CreateTaskRequest, CreateEpicRequest, CreatePlanRequest, CreateNoteRequest, UpdateTaskRequest, UpdateEpicRequest, UpdatePlanRequest, UpdateNoteRequest } from "@/lib/types";
 
 // Ordered by display priority — first match wins when multiple fields change
 const TASK_FIELD_LABELS: [string, string][] = [
@@ -500,6 +500,35 @@ export function useBatchArchive() {
     },
     onError: (err) => {
       toast.error("Failed to archive items", { description: err.message });
+    },
+  });
+}
+
+export function useUpdateConfig() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: Partial<ProjectConfig>) =>
+      patchJson<ProjectConfig>("/api/config", body),
+    onMutate: async (updates) => {
+      await queryClient.cancelQueries({ queryKey: ["config"] });
+      const previous = queryClient.getQueryData<ProjectConfig>(["config"]);
+      if (previous) {
+        queryClient.setQueryData<ProjectConfig>(["config"], { ...previous, ...updates });
+      }
+      return { previous };
+    },
+    onSuccess: () => {
+      toast.success("Settings updated");
+    },
+    onError: (err, _vars, context) => {
+      toast.error("Failed to update settings", { description: err.message });
+      if (context?.previous) {
+        queryClient.setQueryData(["config"], context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["config"] });
     },
   });
 }

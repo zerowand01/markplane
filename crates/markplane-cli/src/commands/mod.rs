@@ -45,9 +45,9 @@ pub enum Commands {
     Add {
         /// Title of the item
         title: String,
-        /// Item type
-        #[arg(long, default_value = "feature")]
-        r#type: String,
+        /// Item type (configurable in config.yaml, default: first in item_types list)
+        #[arg(long)]
+        r#type: Option<String>,
         /// Priority level
         #[arg(long, default_value = "medium")]
         priority: String,
@@ -173,9 +173,9 @@ pub enum Commands {
     Note {
         /// Note title
         title: String,
-        /// Note type (research, analysis, idea, decision, meeting)
-        #[arg(long, default_value = "idea")]
-        r#type: String,
+        /// Note type (configurable in config.yaml, default: first in note_types list)
+        #[arg(long)]
+        r#type: Option<String>,
         /// Comma-separated tags
         #[arg(long)]
         tags: Option<String>,
@@ -233,7 +233,7 @@ pub enum Commands {
         /// Clear target date
         #[arg(long)]
         clear_target: bool,
-        /// New note type (notes only: research, analysis, idea, decision, meeting)
+        /// New note type (notes only, configurable in config.yaml)
         #[arg(long)]
         note_type: Option<String>,
     },

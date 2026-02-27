@@ -310,6 +310,36 @@ impl Project {
         manifest::builtin_template(kind, &name).to_string()
     }
 
+    // ── Validation ─────────────────────────────────────────────────────────
+
+    /// Validate that an item type is in the configured list.
+    pub fn validate_item_type(&self, item_type: &str) -> Result<()> {
+        let config = self.load_config()?;
+        if config.item_types.iter().any(|t| t == item_type) {
+            Ok(())
+        } else {
+            Err(MarkplaneError::Config(format!(
+                "Unknown item type: '{}'. Valid types: {}",
+                item_type,
+                config.item_types.join(", ")
+            )))
+        }
+    }
+
+    /// Validate that a note type is in the configured list.
+    pub fn validate_note_type(&self, note_type: &str) -> Result<()> {
+        let config = self.load_config()?;
+        if config.note_types.iter().any(|t| t == note_type) {
+            Ok(())
+        } else {
+            Err(MarkplaneError::Config(format!(
+                "Unknown note type: '{}'. Valid types: {}",
+                note_type,
+                config.note_types.join(", ")
+            )))
+        }
+    }
+
     // ── CRUD Operations ───────────────────────────────────────────────────
 
     /// Create a new task.
@@ -317,7 +347,7 @@ impl Project {
     pub fn create_task(
         &self,
         title: &str,
-        item_type: ItemType,
+        item_type: &str,
         priority: Priority,
         effort: Effort,
         epic: Option<String>,
@@ -325,17 +355,18 @@ impl Project {
         template: Option<&str>,
     ) -> Result<Task> {
         validate_title_length(title)?;
+        self.validate_item_type(item_type)?;
         let id = self.next_id(&IdPrefix::Task)?;
         let today = Local::now().date_naive();
         let position = self.append_position(&priority)?;
-        let tmpl = self.resolve_template_body("task", template, Some(&item_type.to_string()));
+        let tmpl = self.resolve_template_body("task", template, Some(item_type));
 
         let task = Task {
             id,
             title: title.to_string(),
             status: TaskStatus::Draft,
             priority,
-            item_type,
+            item_type: item_type.to_string(),
             effort,
             tags,
             epic,
@@ -436,19 +467,20 @@ impl Project {
     pub fn create_note(
         &self,
         title: &str,
-        note_type: NoteType,
+        note_type: &str,
         tags: Vec<String>,
         template: Option<&str>,
     ) -> Result<Note> {
         validate_title_length(title)?;
+        self.validate_note_type(note_type)?;
         let id = self.next_id(&IdPrefix::Note)?;
         let today = Local::now().date_naive();
-        let tmpl = self.resolve_template_body("note", template, Some(&note_type.to_string()));
+        let tmpl = self.resolve_template_body("note", template, Some(note_type));
 
         let note = Note {
             id,
             title: title.to_string(),
-            note_type,
+            note_type: note_type.to_string(),
             status: NoteStatus::Draft,
             tags,
             related: vec![],
@@ -539,7 +571,8 @@ impl Project {
             fm.effort = effort.parse()?;
         }
         if let Some(ref item_type) = u.item_type {
-            fm.item_type = item_type.parse()?;
+            self.validate_item_type(item_type)?;
+            fm.item_type = item_type.clone();
         }
         match &u.assignee {
             Patch::Set(v) => fm.assignee = Some(v.clone()),
@@ -624,7 +657,8 @@ impl Project {
             fm.status = status.parse()?;
         }
         if let Some(ref note_type) = u.note_type {
-            fm.note_type = note_type.parse()?;
+            self.validate_note_type(note_type)?;
+            fm.note_type = note_type.clone();
         }
         apply_tag_changes(&mut fm.tags, &u.add_tags, &u.remove_tags);
         if let Some(ref new_body) = u.body {
@@ -1198,6 +1232,10 @@ mod tests {
         assert_eq!(config.project.description, "A test project");
         assert_eq!(config.version, 1);
         assert!(config.counters.is_none());
+        assert_eq!(config.item_types, default_item_types());
+        assert_eq!(config.note_types, default_note_types());
+        assert_eq!(config.default_item_type(), "feature");
+        assert_eq!(config.default_note_type(), "research");
     }
 
     #[test]
@@ -1229,7 +1267,7 @@ mod tests {
         let item = project
             .create_task(
                 "Fix login bug",
-                ItemType::Bug,
+                "bug",
                 Priority::High,
                 Effort::Small,
                 None,
@@ -1242,7 +1280,7 @@ mod tests {
         assert_eq!(item.title, "Fix login bug");
         assert_eq!(item.status, TaskStatus::Draft);
         assert_eq!(item.priority, Priority::High);
-        assert_eq!(item.item_type, ItemType::Bug);
+        assert_eq!(item.item_type, "bug");
 
         // Verify file exists and is parseable
         let doc: MarkplaneDocument<Task> = project.read_item(&item.id).unwrap();
@@ -1270,7 +1308,7 @@ mod tests {
         let task = project
             .create_task(
                 "Dark mode",
-                ItemType::Feature,
+                "feature",
                 Priority::High,
                 Effort::Medium,
                 None,
@@ -1299,14 +1337,14 @@ mod tests {
         let note = project
             .create_note(
                 "Caching research",
-                NoteType::Research,
+                "research",
                 vec!["cache".to_string(), "performance".to_string()],
                 None,
             )
             .unwrap();
 
         assert!(note.id.starts_with("NOTE-"));
-        assert_eq!(note.note_type, NoteType::Research);
+        assert_eq!(note.note_type, "research");
         assert_eq!(note.status, NoteStatus::Draft);
     }
 
@@ -1316,7 +1354,7 @@ mod tests {
         let task = project
             .create_task(
                 "Test item",
-                ItemType::Feature,
+                "feature",
                 Priority::Medium,
                 Effort::Small,
                 None,
@@ -1337,7 +1375,7 @@ mod tests {
         let task = project
             .create_task(
                 "Test item",
-                ItemType::Feature,
+                "feature",
                 Priority::Medium,
                 Effort::Small,
                 None,
@@ -1356,7 +1394,7 @@ mod tests {
         let task = project
             .create_task(
                 "To archive",
-                ItemType::Chore,
+                "chore",
                 Priority::Low,
                 Effort::Xs,
                 None,
@@ -1405,7 +1443,7 @@ mod tests {
         let task = project
             .create_task(
                 "Original title",
-                ItemType::Feature,
+                "feature",
                 Priority::Medium,
                 Effort::Small,
                 None,
@@ -1446,7 +1484,7 @@ mod tests {
         let task = project
             .create_task(
                 "Fix \"login\" bug's edge-case",
-                ItemType::Bug,
+                "bug",
                 Priority::High,
                 Effort::Small,
                 Some(epic.id.clone()),
@@ -1486,7 +1524,7 @@ mod tests {
 
         // Note with tags
         let note = project
-            .create_note("Research", NoteType::Research, vec!["perf".to_string()], None)
+            .create_note("Research", "research", vec!["perf".to_string()], None)
             .unwrap();
         let note_path = project.item_path(&note.id).unwrap();
         let note_original = fs::read_to_string(&note_path).unwrap();
@@ -1539,7 +1577,7 @@ mod tests {
     fn test_update_status_note() {
         let (_tmp, project) = setup_project();
         let note = project
-            .create_note("Research A", NoteType::Research, vec![], None)
+            .create_note("Research A", "research", vec![], None)
             .unwrap();
 
         project.update_status(&note.id, "active").unwrap();
@@ -1573,10 +1611,10 @@ mod tests {
     fn test_find_blocked_items_none_blocked() {
         let (_tmp, project) = setup_project();
         project
-            .create_task("A", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("A", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
         project
-            .create_task("B", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("B", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         let items = project.list_tasks(&crate::query::QueryFilter::default()).unwrap();
@@ -1588,10 +1626,10 @@ mod tests {
     fn test_find_blocked_items_with_blocked() {
         let (_tmp, project) = setup_project();
         let blocker = project
-            .create_task("Blocker", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Blocker", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
         let blocked_task = project
-            .create_task("Blocked", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Blocked", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         // Set blocked_task to depend on blocker
@@ -1609,10 +1647,10 @@ mod tests {
     fn test_find_blocked_items_resolved_dependency() {
         let (_tmp, project) = setup_project();
         let blocker = project
-            .create_task("Blocker", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Blocker", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
         let blocked_task = project
-            .create_task("Blocked", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Blocked", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         // Set dependency
@@ -1634,7 +1672,7 @@ mod tests {
         let item = project
             .create_task(
                 "Fix login bug 🔥🚀",
-                ItemType::Bug,
+                "bug",
                 Priority::High,
                 Effort::Small,
                 None,
@@ -1674,7 +1712,7 @@ mod tests {
     fn test_update_task_body() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("Test item", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Test item", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         let original: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
@@ -1730,7 +1768,7 @@ mod tests {
     fn test_update_note_body() {
         let (_tmp, project) = setup_project();
         let note = project
-            .create_note("Research A", NoteType::Research, vec![], None)
+            .create_note("Research A", "research", vec![], None)
             .unwrap();
 
         project
@@ -1801,7 +1839,7 @@ mod tests {
     fn test_unarchive_item() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("To archive", ItemType::Chore, Priority::Low, Effort::Xs, None, vec![], None)
+            .create_task("To archive", "chore", Priority::Low, Effort::Xs, None, vec![], None)
             .unwrap();
 
         project.archive_item(&task.id).unwrap();
@@ -1819,7 +1857,7 @@ mod tests {
     fn test_unarchive_not_archived_errors() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("Active item", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Active item", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         let result = project.unarchive_item(&task.id);
@@ -1832,7 +1870,7 @@ mod tests {
     fn test_is_archived() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("Test", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Test", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         assert!(!project.is_archived(&task.id).unwrap());
@@ -1921,7 +1959,7 @@ mod tests {
     fn test_update_task_title() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("Original", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Original", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         project.update_task(&task.id, &TaskUpdate {
@@ -1937,7 +1975,7 @@ mod tests {
     fn test_update_task_multiple_fields() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("Multi", ItemType::Feature, Priority::Low, Effort::Small, None, vec!["old".to_string()], None)
+            .create_task("Multi", "feature", Priority::Low, Effort::Small, None, vec!["old".to_string()], None)
             .unwrap();
 
         project.update_task(&task.id, &TaskUpdate {
@@ -1953,7 +1991,7 @@ mod tests {
         let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
         assert_eq!(doc.frontmatter.priority, Priority::High);
         assert_eq!(doc.frontmatter.effort, Effort::Large);
-        assert_eq!(doc.frontmatter.item_type, ItemType::Bug);
+        assert_eq!(doc.frontmatter.item_type, "bug");
         assert_eq!(doc.frontmatter.assignee, Some("daniel".to_string()));
         assert_eq!(doc.frontmatter.tags, vec!["new"]);
     }
@@ -1962,7 +2000,7 @@ mod tests {
     fn test_update_task_clear_assignee() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("Clear test", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Clear test", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         // Set assignee first
@@ -1986,7 +2024,7 @@ mod tests {
     fn test_update_task_clear_position() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("Pos test", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Pos test", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         // Set position first
@@ -2046,7 +2084,7 @@ mod tests {
     fn test_update_task_invalid_status() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("Bad status", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Bad status", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         let result = project.update_task(&task.id, &TaskUpdate {
@@ -2104,7 +2142,7 @@ mod tests {
     #[test]
     fn test_update_note_fields() {
         let (_tmp, project) = setup_project();
-        let note = project.create_note("Research", NoteType::Idea, vec!["wip".to_string()], None).unwrap();
+        let note = project.create_note("Research", "idea", vec!["wip".to_string()], None).unwrap();
 
         project.update_note(&note.id, &NoteUpdate {
             title: Some("Decision: Use Redis".to_string()),
@@ -2116,7 +2154,7 @@ mod tests {
 
         let doc: MarkplaneDocument<Note> = project.read_item(&note.id).unwrap();
         assert_eq!(doc.frontmatter.title, "Decision: Use Redis");
-        assert_eq!(doc.frontmatter.note_type, NoteType::Decision);
+        assert_eq!(doc.frontmatter.note_type, "decision");
         assert_eq!(doc.frontmatter.tags, vec!["arch"]);
     }
 
@@ -2126,7 +2164,7 @@ mod tests {
     fn test_update_item_task() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("Dispatch test", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Dispatch test", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         project.update_item(&task.id, UpdateFields {
@@ -2161,7 +2199,7 @@ mod tests {
         });
         assert!(result.is_err());
 
-        let note = project.create_note("Note", NoteType::Idea, vec![], None).unwrap();
+        let note = project.create_note("Note", "idea", vec![], None).unwrap();
 
         // assignee is not valid for notes
         let result = project.update_item(&note.id, UpdateFields {
@@ -2175,7 +2213,7 @@ mod tests {
     fn test_update_item_title_too_long() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("Title test", ItemType::Feature, Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task("Title test", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
         let long_title = "x".repeat(501);
@@ -2241,7 +2279,7 @@ mod tests {
         let item = project
             .create_task(
                 "Bug report",
-                ItemType::Bug,
+                "bug",
                 Priority::High,
                 Effort::Small,
                 None,
@@ -2270,7 +2308,7 @@ mod tests {
     fn test_create_note_with_explicit_template() {
         let (_tmp, project) = setup_project();
         let note = project
-            .create_note("Research notes", NoteType::Idea, vec![], Some("research"))
+            .create_note("Research notes", "idea", vec![], Some("research"))
             .unwrap();
 
         let doc: MarkplaneDocument<Note> = project.read_item(&note.id).unwrap();
@@ -2314,7 +2352,7 @@ mod tests {
         let task = project
             .create_task(
                 title,
-                ItemType::Feature,
+                "feature",
                 priority,
                 Effort::Medium,
                 None,
@@ -2427,11 +2465,11 @@ mod tests {
         let (_tmp, project) = setup_project();
         // Create tasks without positions
         let t1 = project
-            .create_task("First", ItemType::Feature, Priority::High, Effort::Small, None, vec![], None)
+            .create_task("First", "feature", Priority::High, Effort::Small, None, vec![], None)
             .unwrap()
             .id;
         let t2 = project
-            .create_task("Second", ItemType::Feature, Priority::High, Effort::Small, None, vec![], None)
+            .create_task("Second", "feature", Priority::High, Effort::Small, None, vec![], None)
             .unwrap()
             .id;
 

@@ -19,8 +19,8 @@ use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 
 use markplane_core::{
-    Effort, Epic, EpicStatus, EpicUpdate, ItemType, LinkAction, LinkRelation,
-    MarkplaneDocument, MarkplaneError, Note, NoteType, NoteUpdate, Patch, Plan, PlanUpdate,
+    Effort, Epic, EpicStatus, EpicUpdate, LinkAction, LinkRelation,
+    MarkplaneDocument, MarkplaneError, Note, NoteUpdate, Patch, Plan, PlanUpdate,
     Priority, Project, QueryFilter, ScanScope, Task, TaskStatus, TaskUpdate, find_blocked_items,
     parse_id,
 };
@@ -76,6 +76,7 @@ pub async fn run(port: u16, open: bool, dev: bool) -> anyhow::Result<()> {
         .route("/api/items/{id}/archive", post(post_archive_item))
         .route("/api/items/{id}/unarchive", post(post_unarchive_item))
         .route("/api/link", post(post_link))
+        .route("/api/config", get(get_config).patch(patch_config))
         .route("/api/sync", post(post_sync))
         .route("/api/search", get(get_search))
         .route("/api/graph", get(get_graph_all))
@@ -315,6 +316,12 @@ struct ListMeta {
 }
 
 #[derive(Serialize)]
+struct ConfigResponse {
+    item_types: Vec<String>,
+    note_types: Vec<String>,
+}
+
+#[derive(Serialize)]
 struct ApiError {
     error: ErrorDetail,
 }
@@ -413,8 +420,8 @@ fn task_to_response(doc: &MarkplaneDocument<Task>) -> TaskResponse {
 #[derive(Deserialize)]
 struct CreateTaskRequest {
     title: String,
-    #[serde(rename = "type", default = "default_item_type")]
-    item_type: String,
+    #[serde(rename = "type")]
+    item_type: Option<String>,
     #[serde(default = "default_priority")]
     priority: String,
     #[serde(default = "default_effort")]
@@ -425,9 +432,6 @@ struct CreateTaskRequest {
     tags: Vec<String>,
 }
 
-fn default_item_type() -> String {
-    "feature".to_string()
-}
 fn default_priority() -> String {
     "medium".to_string()
 }
@@ -452,14 +456,10 @@ struct CreatePlanRequest {
 #[derive(Deserialize)]
 struct CreateNoteRequest {
     title: String,
-    #[serde(rename = "type", default = "default_note_type")]
-    note_type: String,
+    #[serde(rename = "type")]
+    note_type: Option<String>,
     #[serde(default)]
     tags: Vec<String>,
-}
-
-fn default_note_type() -> String {
-    "research".to_string()
 }
 
 #[derive(Deserialize)]
@@ -785,6 +785,79 @@ async fn get_summary(
     Ok(Json(ApiResponse { data: summary }))
 }
 
+async fn get_config(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<ApiResponse<ConfigResponse>>, (StatusCode, Json<ApiError>)> {
+    let config = state
+        .project
+        .load_config()
+        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "config_error", &e.to_string()))?;
+
+    Ok(Json(ApiResponse {
+        data: ConfigResponse {
+            item_types: config.item_types,
+            note_types: config.note_types,
+        },
+    }))
+}
+
+#[derive(Deserialize)]
+struct UpdateConfigRequest {
+    item_types: Option<Vec<String>>,
+    note_types: Option<Vec<String>>,
+}
+
+async fn patch_config(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<UpdateConfigRequest>,
+) -> Result<Json<ApiResponse<ConfigResponse>>, (StatusCode, Json<ApiError>)> {
+    let mut config = state
+        .project
+        .load_config()
+        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "config_error", &e.to_string()))?;
+
+    // Helper: validate a type list — trim, lowercase, reject empty/duplicate, require ≥1
+    fn validate_types(raw: Vec<String>, field_name: &str) -> Result<Vec<String>, (StatusCode, Json<ApiError>)> {
+        let cleaned: Vec<String> = raw
+            .into_iter()
+            .map(|s| s.trim().to_lowercase())
+            .filter(|s| !s.is_empty())
+            .collect();
+        if cleaned.is_empty() {
+            return Err(error_response(
+                StatusCode::BAD_REQUEST,
+                "validation_error",
+                &format!("{field_name} must have at least one entry"),
+            ));
+        }
+        let mut seen = HashSet::new();
+        let deduped: Vec<String> = cleaned
+            .into_iter()
+            .filter(|s| seen.insert(s.clone()))
+            .collect();
+        Ok(deduped)
+    }
+
+    if let Some(item_types) = body.item_types {
+        config.item_types = validate_types(item_types, "item_types")?;
+    }
+    if let Some(note_types) = body.note_types {
+        config.note_types = validate_types(note_types, "note_types")?;
+    }
+
+    state
+        .project
+        .save_config(&config)
+        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "config_error", &e.to_string()))?;
+
+    Ok(Json(ApiResponse {
+        data: ConfigResponse {
+            item_types: config.item_types,
+            note_types: config.note_types,
+        },
+    }))
+}
+
 #[derive(Deserialize)]
 struct TaskQueryParams {
     status: Option<String>,
@@ -848,12 +921,10 @@ async fn create_task(
     State(state): State<Arc<AppState>>,
     Json(body): Json<CreateTaskRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<TaskResponse>>), (StatusCode, Json<ApiError>)> {
-    let item_type: ItemType = body
-        .item_type
-        .parse()
-        .map_err(|e: markplane_core::MarkplaneError| {
-            error_response(StatusCode::BAD_REQUEST, "invalid_type", &e.to_string())
-        })?;
+    let config = state.project.load_config().map_err(|e| {
+        error_response(StatusCode::INTERNAL_SERVER_ERROR, "config_error", &e.to_string())
+    })?;
+    let item_type = body.item_type.as_deref().unwrap_or(config.default_item_type());
     let priority: Priority = body
         .priority
         .parse()
@@ -996,13 +1067,10 @@ async fn create_note(
     State(state): State<Arc<AppState>>,
     Json(body): Json<CreateNoteRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<NoteResponse>>), (StatusCode, Json<ApiError>)> {
-    let note_type: NoteType = body
-        .note_type
-        .parse()
-        .map_err(|e: MarkplaneError| {
-            error_response(StatusCode::BAD_REQUEST, "invalid_type", &e.to_string())
-        })?;
-
+    let config = state.project.load_config().map_err(|e| {
+        error_response(StatusCode::INTERNAL_SERVER_ERROR, "config_error", &e.to_string())
+    })?;
+    let note_type = body.note_type.as_deref().unwrap_or(config.default_note_type());
     let note = state
         .project
         .create_note(&body.title, note_type, body.tags, None)
