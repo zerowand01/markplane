@@ -65,10 +65,10 @@ export function EntityRefEditor({
                       setOpen(false);
                     }}
                   >
-                    <span className="font-mono text-xs text-muted-foreground mr-1.5">
+                    <span className="font-mono text-xs text-muted-foreground mr-1.5 shrink-0">
                       {option.id}
                     </span>
-                    <span className="truncate">{option.title}</span>
+                    <span className="truncate min-w-0">{option.title}</span>
                   </CommandItem>
                 ))}
               </CommandGroup>
