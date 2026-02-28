@@ -5,15 +5,15 @@ status: done
 priority: high
 type: bug
 effort: small
-tags:
-- web-ui
 epic: EPIC-4bjs9
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: a0x
 related: []
+assignee: null
+tags:
+- web-ui
+position: a0x
 created: 2026-02-23
 updated: 2026-02-25
 ---

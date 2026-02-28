@@ -5,19 +5,19 @@ status: done
 priority: high
 type: enhancement
 effort: medium
-tags:
-- web-ui
-- core
-- refactor
 epic: EPIC-c5uem
 plan: null
 depends_on:
 - TASK-m7i6q
 - TASK-736rg
 blocks: []
-assignee: null
-position: a0G
 related: []
+assignee: null
+tags:
+- web-ui
+- core
+- refactor
+position: a0G
 created: 2026-02-20
 updated: 2026-02-21
 ---

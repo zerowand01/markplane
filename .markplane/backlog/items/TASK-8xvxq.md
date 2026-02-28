@@ -5,17 +5,17 @@ status: backlog
 priority: low
 type: chore
 effort: medium
-tags:
-- release
-- homebrew
 epic: EPIC-bb6pe
 plan: null
 depends_on:
 - TASK-gpxpw
 blocks: []
-assignee: null
-position: ZzV
 related: []
+assignee: null
+tags:
+- release
+- homebrew
+position: ZzV
 created: 2026-02-13
 updated: 2026-02-23
 ---

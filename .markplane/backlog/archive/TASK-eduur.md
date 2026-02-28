@@ -5,17 +5,17 @@ status: done
 priority: high
 type: feature
 effort: small
-tags:
-- mcp
-- ai-integration
 epic: EPIC-ji4z3
 plan: null
 depends_on: []
 blocks:
 - TASK-pj4ga
-assignee: null
-position: a4
 related: []
+assignee: null
+tags:
+- mcp
+- ai-integration
+position: a4
 created: 2026-02-10
 updated: 2026-02-11
 ---

@@ -5,10 +5,6 @@ status: done
 priority: medium
 type: enhancement
 effort: medium
-tags:
-- core
-- cli
-- web
 epic: null
 plan: null
 depends_on: []
@@ -16,6 +12,10 @@ blocks:
 - TASK-2j6aa
 related: []
 assignee: null
+tags:
+- core
+- cli
+- web
 position: ZzU
 created: 2026-02-27
 updated: 2026-02-28

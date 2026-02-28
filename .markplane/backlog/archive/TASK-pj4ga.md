@@ -5,18 +5,18 @@ status: done
 priority: medium
 type: enhancement
 effort: small
-tags:
-- mcp
-- documentation
 epic: EPIC-ji4z3
 plan: null
 depends_on:
 - TASK-eduur
 - TASK-7cucf
 blocks: []
-assignee: null
-position: a2
 related: []
+assignee: null
+tags:
+- mcp
+- documentation
+position: a2
 created: 2026-02-10
 updated: 2026-02-11
 ---

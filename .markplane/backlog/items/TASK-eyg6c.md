@@ -5,16 +5,16 @@ status: done
 priority: medium
 type: feature
 effort: medium
-tags:
-- core
-- config
 epic: EPIC-c5uem
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: Zz
 related: []
+assignee: null
+tags:
+- core
+- config
+position: Zz
 created: 2026-02-26
 updated: 2026-02-27
 ---

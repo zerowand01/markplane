@@ -5,18 +5,18 @@ status: done
 priority: high
 type: feature
 effort: large
+epic: null
+plan: null
+depends_on: []
+blocks: []
+related: []
+assignee: null
 tags:
 - architecture
 - git
 - ids
 - sync
-epic: null
-plan: null
-depends_on: []
-blocks: []
-assignee: null
 position: Zz
-related: []
 created: 2026-02-20
 updated: 2026-02-20
 ---

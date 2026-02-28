@@ -5,16 +5,16 @@ status: backlog
 priority: someday
 type: feature
 effort: xl
-tags:
-- plugins
-- integrations
 epic: EPIC-z8tdz
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: a1
 related: []
+assignee: null
+tags:
+- plugins
+- integrations
+position: a1
 created: 2026-02-10
 updated: 2026-02-10
 ---

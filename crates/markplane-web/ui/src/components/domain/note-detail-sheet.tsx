@@ -191,15 +191,6 @@ export function NoteDetailSheet({
                   </DropdownMenu>
                 </FieldRow>
 
-                <FieldRow label="Tags" editable>
-                  <TagEditor
-                    tags={note.tags}
-                    onSave={(tags) =>
-                      updateNote.mutate({ id: note.id, tags })
-                    }
-                  />
-                </FieldRow>
-
                 <FieldRow label="Related" editable>
                   <EntityRefEditor
                     ids={note.related}
@@ -215,6 +206,15 @@ export function NoteDetailSheet({
                         id: note.id,
                         related: note.related.filter((r) => r !== id),
                       })
+                    }
+                  />
+                </FieldRow>
+
+                <FieldRow label="Tags" editable>
+                  <TagEditor
+                    tags={note.tags}
+                    onSave={(tags) =>
+                      updateNote.mutate({ id: note.id, tags })
                     }
                   />
                 </FieldRow>

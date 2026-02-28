@@ -5,16 +5,16 @@ status: done
 priority: low
 type: bug
 effort: xs
-tags:
-- sync
-- index
 epic: EPIC-6zdf4
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: Zz
 related: []
+assignee: null
+tags:
+- sync
+- index
+position: Zz
 created: 2026-02-12
 updated: 2026-02-25
 ---

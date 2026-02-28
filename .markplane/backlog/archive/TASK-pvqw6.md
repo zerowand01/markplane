@@ -5,16 +5,16 @@ status: done
 priority: high
 type: feature
 effort: xl
-tags:
-- web-ui
-- editing
 epic: EPIC-6zdf4
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: a9
 related: []
+assignee: null
+tags:
+- web-ui
+- editing
+position: a9
 created: 2026-02-18
 updated: 2026-02-19
 ---

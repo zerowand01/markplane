@@ -5,16 +5,16 @@ status: backlog
 priority: medium
 type: feature
 effort: medium
-tags:
-- onboarding
-- init
 epic: EPIC-c5uem
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: aA
 related: []
+assignee: null
+tags:
+- onboarding
+- init
+position: aA
 created: 2026-02-21
 updated: 2026-02-25
 ---

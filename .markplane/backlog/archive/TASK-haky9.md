@@ -5,16 +5,16 @@ status: done
 priority: medium
 type: chore
 effort: small
-tags:
-- context
-- cleanup
 epic: EPIC-a5vs9
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: Zzz
 related: []
+assignee: null
+tags:
+- context
+- cleanup
+position: Zzz
 created: 2026-02-10
 updated: 2026-02-25
 ---

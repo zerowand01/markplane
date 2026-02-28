@@ -280,24 +280,6 @@ export function TaskDetailSheet({
                   />
                 </FieldRow>
 
-                <FieldRow label="Assignee" editable>
-                  <AssigneeEditor
-                    value={task.assignee}
-                    onSave={(assignee) =>
-                      updateTask.mutate({ id: task.id, assignee })
-                    }
-                  />
-                </FieldRow>
-
-                <FieldRow label="Tags" editable>
-                  <TagEditor
-                    tags={task.tags}
-                    onSave={(tags) =>
-                      updateTask.mutate({ id: task.id, tags })
-                    }
-                  />
-                </FieldRow>
-
                 <FieldRow label="Plan" editable>
                   <EntityCombobox
                     value={task.plan}
@@ -366,6 +348,24 @@ export function TaskDetailSheet({
                         id: task.id,
                         related: task.related.filter((r) => r !== id),
                       })
+                    }
+                  />
+                </FieldRow>
+
+                <FieldRow label="Assignee" editable>
+                  <AssigneeEditor
+                    value={task.assignee}
+                    onSave={(assignee) =>
+                      updateTask.mutate({ id: task.id, assignee })
+                    }
+                  />
+                </FieldRow>
+
+                <FieldRow label="Tags" editable>
+                  <TagEditor
+                    tags={task.tags}
+                    onSave={(tags) =>
+                      updateTask.mutate({ id: task.id, tags })
                     }
                   />
                 </FieldRow>

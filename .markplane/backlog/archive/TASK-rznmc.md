@@ -5,16 +5,16 @@ status: cancelled
 priority: low
 type: feature
 effort: xs
-tags:
-- cli
-- context
 epic: EPIC-a5vs9
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: a3
 related: []
+assignee: null
+tags:
+- cli
+- context
+position: a3
 created: 2026-02-10
 updated: 2026-02-23
 ---

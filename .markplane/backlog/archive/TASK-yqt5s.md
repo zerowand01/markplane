@@ -5,15 +5,15 @@ status: done
 priority: high
 type: feature
 effort: xs
-tags:
-- mcp
 epic: EPIC-ji4z3
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: a7
 related: []
+assignee: null
+tags:
+- mcp
+position: a7
 created: 2026-02-10
 updated: 2026-02-11
 ---

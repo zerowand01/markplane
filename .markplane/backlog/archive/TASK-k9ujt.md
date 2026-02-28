@@ -5,14 +5,14 @@ status: done
 priority: critical
 type: bug
 effort: medium
-tags: []
 epic: null
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: a0
 related: []
+assignee: null
+tags: []
+position: a0
 created: 2026-02-26
 updated: 2026-02-26
 ---

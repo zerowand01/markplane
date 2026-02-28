@@ -5,16 +5,16 @@ status: cancelled
 priority: low
 type: feature
 effort: large
-tags:
-- cli
-- migration
 epic: EPIC-z8tdz
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: a4
 related: []
+assignee: null
+tags:
+- cli
+- migration
+position: a4
 created: 2026-02-10
 updated: 2026-02-23
 ---

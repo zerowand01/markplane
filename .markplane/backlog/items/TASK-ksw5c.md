@@ -5,17 +5,17 @@ status: draft
 priority: someday
 type: enhancement
 effort: medium
-tags:
-- sync
-- serve
-- architecture
 epic: EPIC-z8tdz
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: a2
 related: []
+assignee: null
+tags:
+- sync
+- serve
+- architecture
+position: a2
 created: 2026-02-20
 updated: 2026-02-21
 ---

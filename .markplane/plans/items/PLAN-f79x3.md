@@ -8,6 +8,7 @@ related: []
 created: 2026-02-12
 updated: 2026-02-13
 ---
+
 # Web UI Implementation Plan
 
 4-phase plan for building the Markplane web dashboard. Each phase produces a usable increment. Phases are sequential — each builds on the previous.

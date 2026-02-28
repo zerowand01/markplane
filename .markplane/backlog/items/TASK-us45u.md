@@ -5,16 +5,16 @@ status: backlog
 priority: medium
 type: feature
 effort: large
-tags:
-- core
-- config
 epic: EPIC-c5uem
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: Zzx
 related: []
+assignee: null
+tags:
+- core
+- config
+position: Zzx
 created: 2026-02-10
 updated: 2026-02-26
 ---

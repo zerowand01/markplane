@@ -367,8 +367,6 @@ pub struct Task {
     pub item_type: String,
     pub effort: Effort,
     #[serde(default)]
-    pub tags: Vec<String>,
-    #[serde(default)]
     pub epic: Option<String>,
     #[serde(default)]
     pub plan: Option<String>,
@@ -380,6 +378,8 @@ pub struct Task {
     pub related: Vec<String>,
     #[serde(default)]
     pub assignee: Option<String>,
+    #[serde(default)]
+    pub tags: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub position: Option<String>,
     pub created: NaiveDate,
@@ -397,9 +397,9 @@ pub struct Epic {
     #[serde(default)]
     pub target: Option<NaiveDate>,
     #[serde(default)]
-    pub tags: Vec<String>,
-    #[serde(default)]
     pub related: Vec<String>,
+    #[serde(default)]
+    pub tags: Vec<String>,
     pub created: NaiveDate,
     pub updated: NaiveDate,
 }
@@ -421,13 +421,13 @@ pub struct Plan {
 pub struct Note {
     pub id: String,
     pub title: String,
+    pub status: NoteStatus,
     #[serde(rename = "type")]
     pub note_type: String,
-    pub status: NoteStatus,
-    #[serde(default)]
-    pub tags: Vec<String>,
     #[serde(default)]
     pub related: Vec<String>,
+    #[serde(default)]
+    pub tags: Vec<String>,
     pub created: NaiveDate,
     pub updated: NaiveDate,
 }
@@ -567,12 +567,14 @@ status: in-progress
 priority: high
 type: feature
 effort: medium
-tags: [ui, theming]
 epic: EPIC-003
 plan: null
 depends_on: [TASK-038]
 blocks: [TASK-045]
+related: []
 assignee: daniel
+tags: [ui, theming]
+position: Zzj
 created: 2026-01-15
 updated: 2026-02-09
 "#;
@@ -601,6 +603,7 @@ status: now
 priority: high
 started: 2026-01-01
 target: null
+related: []
 tags: [frontend]
 created: 2026-01-01
 updated: 2026-02-09
@@ -621,6 +624,7 @@ id: PLAN-012
 title: "Dark mode implementation"
 status: in-progress
 implements: [TASK-042, TASK-043]
+related: []
 created: 2026-02-01
 updated: 2026-02-09
 "#;
@@ -635,10 +639,10 @@ updated: 2026-02-09
         let yaml = r#"
 id: NOTE-007
 title: "Caching strategies research"
-type: research
 status: active
-tags: [cache, performance]
+type: research
 related: [TASK-042, PLAN-012]
+tags: [cache, performance]
 created: 2026-02-05
 updated: 2026-02-09
 "#;

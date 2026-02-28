@@ -5,16 +5,16 @@ status: done
 priority: low
 type: enhancement
 effort: xs
-tags:
-- web-ui
-- keyboard-nav
 epic: EPIC-4bjs9
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: ZzG
 related: []
+assignee: null
+tags:
+- web-ui
+- keyboard-nav
+position: ZzG
 created: 2026-02-25
 updated: 2026-02-25
 ---

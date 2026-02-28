@@ -5,18 +5,18 @@ status: done
 priority: medium
 type: enhancement
 effort: small
-tags:
-- cli
-- core
-- web
 epic: null
 plan: null
 depends_on: []
 blocks:
 - TASK-xwfhp
-assignee: null
-position: Zw
 related: []
+assignee: null
+tags:
+- cli
+- core
+- web
+position: Zw
 created: 2026-02-26
 updated: 2026-02-26
 ---

@@ -150,12 +150,13 @@ status: in-progress
 priority: high
 type: feature
 effort: medium
-tags: [ui]
 epic: null
 plan: null
 depends_on: []
 blocks: []
+related: []
 assignee: null
+tags: [ui]
 created: 2026-01-15
 updated: 2026-02-09
 ---
@@ -179,12 +180,13 @@ status: in-progress
 priority: high
 type: feature
 effort: medium
-tags: [ui]
 epic: null
 plan: null
 depends_on: []
 blocks: []
+related: []
 assignee: null
+tags: [ui]
 created: 2026-01-15
 updated: 2026-02-09
 ---

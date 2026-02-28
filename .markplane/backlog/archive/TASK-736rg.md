@@ -5,18 +5,18 @@ status: done
 priority: high
 type: enhancement
 effort: medium
-tags:
-- cli
-- mcp
-- linking
 epic: EPIC-6zdf4
 plan: null
 depends_on: []
 blocks:
 - TASK-t2hvn
-assignee: null
-position: a0
 related: []
+assignee: null
+tags:
+- cli
+- mcp
+- linking
+position: a0
 created: 2026-02-19
 updated: 2026-02-21
 ---

@@ -5,18 +5,18 @@ status: draft
 priority: high
 type: chore
 effort: large
-tags:
-- ci
-- release
 epic: EPIC-bb6pe
 plan: null
 depends_on:
 - TASK-yzftd
 blocks:
 - TASK-8xvxq
-assignee: null
-position: a2
 related: []
+assignee: null
+tags:
+- ci
+- release
+position: a2
 created: 2026-02-13
 updated: 2026-02-15
 ---

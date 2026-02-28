@@ -238,15 +238,6 @@ export function EpicDetailSheet({
                   />
                 </FieldRow>
 
-                <FieldRow label="Tags" editable>
-                  <TagEditor
-                    tags={epic.tags}
-                    onSave={(tags) =>
-                      updateEpic.mutate({ id: epic.id, tags })
-                    }
-                  />
-                </FieldRow>
-
                 <FieldRow label="Related" editable>
                   <EntityRefEditor
                     ids={epic.related}
@@ -262,6 +253,15 @@ export function EpicDetailSheet({
                         id: epic.id,
                         related: epic.related.filter((r) => r !== id),
                       })
+                    }
+                  />
+                </FieldRow>
+
+                <FieldRow label="Tags" editable>
+                  <TagEditor
+                    tags={epic.tags}
+                    onSave={(tags) =>
+                      updateEpic.mutate({ id: epic.id, tags })
                     }
                   />
                 </FieldRow>

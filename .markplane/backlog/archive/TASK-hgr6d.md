@@ -5,16 +5,16 @@ status: done
 priority: high
 type: enhancement
 effort: small
-tags:
-- mcp
-- positioning
 epic: EPIC-6zdf4
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: a0l
 related: []
+assignee: null
+tags:
+- mcp
+- positioning
+position: a0l
 created: 2026-02-20
 updated: 2026-02-24
 ---

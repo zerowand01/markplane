@@ -5,16 +5,16 @@ status: backlog
 priority: high
 type: feature
 effort: medium
-tags:
-- architecture
-- migration
 epic: EPIC-c5uem
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: a3
 related: []
+assignee: null
+tags:
+- architecture
+- migration
+position: a3
 created: 2026-02-20
 updated: 2026-02-25
 ---

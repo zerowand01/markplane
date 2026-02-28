@@ -5,16 +5,16 @@ status: done
 priority: high
 type: enhancement
 effort: medium
-tags:
-- templates
-- ai-guidance
 epic: EPIC-a5vs9
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: a0V
 related: []
+assignee: null
+tags:
+- templates
+- ai-guidance
+position: a0V
 created: 2026-02-20
 updated: 2026-02-24
 ---

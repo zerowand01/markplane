@@ -5,15 +5,15 @@ status: backlog
 priority: low
 type: chore
 effort: small
-tags:
-- release
 epic: EPIC-bb6pe
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: a0
 related: []
+assignee: null
+tags:
+- release
+position: a0
 created: 2026-02-13
 updated: 2026-02-24
 ---

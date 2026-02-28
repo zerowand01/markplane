@@ -5,16 +5,16 @@ status: done
 priority: medium
 type: bug
 effort: medium
-tags:
-- web-ui
-- core
 epic: EPIC-c5uem
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: Zz
 related: []
+assignee: null
+tags:
+- web-ui
+- core
+position: Zz
 created: 2026-02-25
 updated: 2026-02-26
 ---

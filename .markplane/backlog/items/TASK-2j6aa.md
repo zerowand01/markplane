@@ -1,7 +1,7 @@
 ---
 id: TASK-2j6aa
 title: Align frontmatter and UI field ordering across all entity types
-status: planned
+status: done
 priority: medium
 type: enhancement
 effort: medium
@@ -18,7 +18,7 @@ related: []
 assignee: null
 position: Zzj
 created: 2026-02-27
-updated: 2026-02-27
+updated: 2026-02-28
 ---
 
 # Align frontmatter and UI field ordering across all entity types
@@ -32,7 +32,7 @@ Align both sides to these canonical orderings:
 - **Task**: `status, priority, type, effort, epic, plan, depends_on, blocks, related, assignee, tags`
 - **Epic**: `status, priority, started, target, related, tags`
 - **Plan**: `status, implements, related`
-- **Note**: `status, type, tags, related`
+- **Note**: `status, type, related, tags`
 
 Principle: status/workflow → classification → parent relationships → peer relationships → people → metadata.
 
@@ -51,6 +51,9 @@ Both struct field order in `models.rs` and FieldRow order in detail sheet compon
 
 - Changing struct field order changes YAML serialization order — existing files will get reordered on next write, which is the desired effect
 - Should be done after [[TASK-7s7u2]] and [[TASK-e4yqc]] to avoid reordering fields that are about to be removed
+- Note canonical ordering was corrected from the original spec (`status, type, tags, related`) to `status, type, related, tags` — the original had `related` (peer relationship) after `tags` (metadata), contradicting the stated principle and the ordering used by Task and Epic
+- Test YAML strings in `models.rs` and `frontmatter.rs` were updated to reflect the canonical field order and include previously missing fields (`related`, `position`)
+- All existing `.markplane/` files were reserialized via no-op status updates with `updated` dates restored from git
 
 ## References
 

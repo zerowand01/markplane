@@ -5,17 +5,17 @@ status: done
 priority: high
 type: enhancement
 effort: medium
-tags:
-- mcp
 epic: EPIC-a5vs9
 plan: null
 depends_on:
 - TASK-s6vjt
 blocks:
 - TASK-45fmi
-assignee: null
-position: a0d
 related: []
+assignee: null
+tags:
+- mcp
+position: a0d
 created: 2026-02-21
 updated: 2026-02-24
 ---

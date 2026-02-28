@@ -5,14 +5,14 @@ status: backlog
 priority: medium
 type: enhancement
 effort: small
-tags:
-- core
 epic: EPIC-c5uem
 plan: null
 depends_on: []
 blocks: []
 related: []
 assignee: null
+tags:
+- core
 position: a8
 created: 2026-02-26
 updated: 2026-02-28

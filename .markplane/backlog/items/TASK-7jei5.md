@@ -5,15 +5,15 @@ status: backlog
 priority: someday
 type: feature
 effort: medium
-tags:
-- mcp
 epic: EPIC-z8tdz
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: a6
 related: []
+assignee: null
+tags:
+- mcp
+position: a6
 created: 2026-02-10
 updated: 2026-02-23
 ---

@@ -5,15 +5,15 @@ status: done
 priority: medium
 type: feature
 effort: medium
-tags:
-- web-ui
 epic: EPIC-4bjs9
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: Zz
 related: []
+assignee: null
+tags:
+- web-ui
+position: Zz
 created: 2026-02-23
 updated: 2026-02-25
 ---

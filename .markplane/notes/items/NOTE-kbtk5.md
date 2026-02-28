@@ -1,14 +1,14 @@
 ---
 id: NOTE-kbtk5
 title: 'ADR: Client-only rendering for page components via dynamic ssr:false'
-type: decision
 status: active
+type: decision
+related:
+- TASK-ax3dv
 tags:
 - web-ui
 - architecture
 - next-js
-related:
-- TASK-ax3dv
 created: 2026-02-25
 updated: 2026-02-25
 ---

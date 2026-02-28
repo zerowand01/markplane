@@ -5,15 +5,15 @@ status: done
 priority: medium
 type: feature
 effort: small
-tags:
-- cli
 epic: EPIC-6zdf4
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: Zy
 related: []
+assignee: null
+tags:
+- cli
+position: Zy
 created: 2026-02-10
 updated: 2026-02-26
 ---

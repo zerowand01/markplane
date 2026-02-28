@@ -5,17 +5,17 @@ status: done
 priority: medium
 type: enhancement
 effort: medium
-tags:
-- consistency
-- data-model
 epic: null
 plan: null
 depends_on:
 - TASK-qgxin
 blocks: []
-assignee: null
-position: Zx
 related: []
+assignee: null
+tags:
+- consistency
+- data-model
+position: Zx
 created: 2026-02-26
 updated: 2026-02-26
 ---

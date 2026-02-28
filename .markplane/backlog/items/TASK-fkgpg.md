@@ -5,15 +5,15 @@ status: backlog
 priority: someday
 type: chore
 effort: small
-tags:
-- dependencies
 epic: EPIC-6zdf4
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: a0
 related: []
+assignee: null
+tags:
+- dependencies
+position: a0
 created: 2026-02-10
 updated: 2026-02-23
 ---

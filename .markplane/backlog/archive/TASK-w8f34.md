@@ -5,15 +5,15 @@ status: done
 priority: high
 type: enhancement
 effort: small
-tags:
-- mcp
 epic: null
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: a3
 related: []
+assignee: null
+tags:
+- mcp
+position: a3
 created: 2026-02-12
 updated: 2026-02-12
 ---

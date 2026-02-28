@@ -5,16 +5,16 @@ status: backlog
 priority: medium
 type: feature
 effort: large
-tags:
-- web-ui
-- docs
 epic: EPIC-4bjs9
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: a7
 related: []
+assignee: null
+tags:
+- web-ui
+- docs
+position: a7
 created: 2026-02-24
 updated: 2026-02-24
 ---

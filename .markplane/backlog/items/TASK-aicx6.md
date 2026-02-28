@@ -5,17 +5,17 @@ status: done
 priority: medium
 type: enhancement
 effort: medium
-tags:
-- core
-- cli
-- web
 epic: null
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: a4
 related: []
+assignee: null
+tags:
+- core
+- cli
+- web
+position: a4
 created: 2026-02-27
 updated: 2026-02-27
 ---

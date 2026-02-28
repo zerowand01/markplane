@@ -1,10 +1,12 @@
 ---
 id: NOTE-b3wiq
-title: "npm to pnpm migration analysis"
-type: decision
+title: npm to pnpm migration analysis
 status: draft
-tags: ["web-ui", "tooling"]
+type: decision
 related: []
+tags:
+- web-ui
+- tooling
 created: 2026-02-23
 updated: 2026-02-23
 ---

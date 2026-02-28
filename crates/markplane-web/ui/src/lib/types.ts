@@ -19,13 +19,13 @@ export interface Task {
   priority: Priority;
   type: TaskType;
   effort: Effort;
-  tags: string[];
   epic: string | null;
   plan: string | null;
   depends_on: string[];
   blocks: string[];
   related: string[];
   assignee: string | null;
+  tags: string[];
   position: string | null;
   created: string;
   updated: string;
@@ -39,8 +39,8 @@ export interface Epic {
   priority: Priority;
   started: string | null;
   target: string | null;
-  tags: string[];
   related: string[];
+  tags: string[];
   created: string;
   updated: string;
   body: string;
@@ -64,10 +64,10 @@ export interface Plan {
 export interface Note {
   id: string;
   title: string;
-  type: NoteType;
   status: NoteStatus;
-  tags: string[];
+  type: NoteType;
   related: string[];
+  tags: string[];
   created: string;
   updated: string;
   body: string;

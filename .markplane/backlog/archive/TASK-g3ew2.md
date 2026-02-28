@@ -5,17 +5,17 @@ status: done
 priority: high
 type: enhancement
 effort: medium
-tags:
-- core
-- templates
 epic: EPIC-6zdf4
 plan: null
 depends_on: []
 blocks:
 - TASK-45fmi
-assignee: null
-position: a0f
 related: []
+assignee: null
+tags:
+- core
+- templates
+position: a0f
 created: 2026-02-22
 updated: 2026-02-24
 ---

@@ -5,18 +5,18 @@ status: done
 priority: high
 type: feature
 effort: large
-tags:
-- templates
-- mcp
 epic: EPIC-a5vs9
 plan: null
 depends_on:
 - TASK-xvx5f
 - TASK-g3ew2
 blocks: []
-assignee: null
-position: a0h
 related: []
+assignee: null
+tags:
+- templates
+- mcp
+position: a0h
 created: 2026-02-22
 updated: 2026-02-24
 ---

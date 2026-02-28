@@ -1,13 +1,13 @@
 ---
 id: NOTE-v3uet
 title: 'Now/Next/Later roadmap pattern: research and architectural decision'
-type: decision
 status: active
+type: decision
+related:
+- TASK-s6vjt
 tags:
 - roadmap
 - architecture
-related:
-- TASK-s6vjt
 created: 2026-02-22
 updated: 2026-02-22
 ---

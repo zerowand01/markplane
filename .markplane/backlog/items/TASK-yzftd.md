@@ -5,17 +5,17 @@ status: draft
 priority: high
 type: chore
 effort: medium
-tags:
-- ci
-- release
 epic: EPIC-bb6pe
 plan: null
 depends_on: []
 blocks:
 - TASK-gpxpw
-assignee: null
-position: a1
 related: []
+assignee: null
+tags:
+- ci
+- release
+position: a1
 created: 2026-02-13
 updated: 2026-02-21
 ---

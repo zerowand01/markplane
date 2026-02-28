@@ -5,15 +5,15 @@ status: done
 priority: high
 type: bug
 effort: medium
-tags:
-- web-ui
 epic: null
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: a0
 related: []
+assignee: null
+tags:
+- web-ui
+position: a0
 created: 2026-02-25
 updated: 2026-02-25
 ---

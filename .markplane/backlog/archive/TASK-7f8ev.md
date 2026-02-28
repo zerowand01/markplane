@@ -5,15 +5,15 @@ status: done
 priority: medium
 type: enhancement
 effort: xs
-tags:
-- web-ui
 epic: EPIC-4bjs9
 plan: null
 depends_on: []
 blocks: []
-assignee: null
-position: Zzd
 related: []
+assignee: null
+tags:
+- web-ui
+position: Zzd
 created: 2026-02-23
 updated: 2026-02-25
 ---
