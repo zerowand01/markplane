@@ -16,7 +16,7 @@ pub enum LinkRelation {
     Blocks,
     /// Task depends on Task (reciprocal: blocks)
     DependsOn,
-    /// Task|Plan belongs to Epic (no reciprocal)
+    /// Task belongs to Epic (no reciprocal)
     Epic,
     /// Task -> Plan (reciprocal: plan.implements)
     Plan,
@@ -226,42 +226,22 @@ impl Project {
             }
 
             LinkRelation::Epic => {
-                require_prefix(from, &from_prefix, &[IdPrefix::Task, IdPrefix::Plan])?;
+                require_prefix(from, &from_prefix, &[IdPrefix::Task])?;
                 require_prefix(to, &to_prefix, &[IdPrefix::Epic])?;
 
-                match from_prefix {
-                    IdPrefix::Task => {
-                        let mut doc: MarkplaneDocument<Task> = self.read_item(from)?;
-                        match action {
-                            LinkAction::Add => {
-                                doc.frontmatter.epic = Some(to.to_string());
-                            }
-                            LinkAction::Remove => {
-                                if doc.frontmatter.epic.as_deref() == Some(to) {
-                                    doc.frontmatter.epic = None;
-                                }
-                            }
-                        }
-                        doc.frontmatter.updated = today;
-                        self.write_item(from, &doc)?;
+                let mut doc: MarkplaneDocument<Task> = self.read_item(from)?;
+                match action {
+                    LinkAction::Add => {
+                        doc.frontmatter.epic = Some(to.to_string());
                     }
-                    IdPrefix::Plan => {
-                        let mut doc: MarkplaneDocument<Plan> = self.read_item(from)?;
-                        match action {
-                            LinkAction::Add => {
-                                doc.frontmatter.epic = Some(to.to_string());
-                            }
-                            LinkAction::Remove => {
-                                if doc.frontmatter.epic.as_deref() == Some(to) {
-                                    doc.frontmatter.epic = None;
-                                }
-                            }
+                    LinkAction::Remove => {
+                        if doc.frontmatter.epic.as_deref() == Some(to) {
+                            doc.frontmatter.epic = None;
                         }
-                        doc.frontmatter.updated = today;
-                        self.write_item(from, &doc)?;
                     }
-                    _ => unreachable!(),
                 }
+                doc.frontmatter.updated = today;
+                self.write_item(from, &doc)?;
             }
 
             LinkRelation::Plan => {
@@ -371,7 +351,7 @@ mod tests {
     }
 
     fn create_plan(project: &Project, title: &str, task_id: &str) -> String {
-        let plan = project.create_plan(title, vec![], None, None).unwrap();
+        let plan = project.create_plan(title, vec![], None).unwrap();
         // Don't auto-link — we'll use link_items to test
         let _ = task_id;
         plan.id
@@ -457,21 +437,6 @@ mod tests {
             .unwrap();
 
         let doc: MarkplaneDocument<Task> = project.read_item(&t1).unwrap();
-        assert_eq!(doc.frontmatter.epic, Some(e1));
-    }
-
-    #[test]
-    fn test_link_epic_on_plan() {
-        let (_tmp, project) = setup_project();
-        let t1 = create_task(&project, "A task");
-        let p1 = create_plan(&project, "A plan", &t1);
-        let e1 = create_epic(&project, "An epic");
-
-        project
-            .link_items(&p1, &e1, LinkRelation::Epic, LinkAction::Add)
-            .unwrap();
-
-        let doc: MarkplaneDocument<Plan> = project.read_item(&p1).unwrap();
         assert_eq!(doc.frontmatter.epic, Some(e1));
     }
 
@@ -677,24 +642,6 @@ mod tests {
             .unwrap();
 
         let doc: MarkplaneDocument<Task> = project.read_item(&t1).unwrap();
-        assert_eq!(doc.frontmatter.epic, None);
-    }
-
-    #[test]
-    fn test_unlink_epic_on_plan() {
-        let (_tmp, project) = setup_project();
-        let t1 = create_task(&project, "A task");
-        let p1 = create_plan(&project, "A plan", &t1);
-        let e1 = create_epic(&project, "An epic");
-
-        project
-            .link_items(&p1, &e1, LinkRelation::Epic, LinkAction::Add)
-            .unwrap();
-        project
-            .link_items(&p1, &e1, LinkRelation::Epic, LinkAction::Remove)
-            .unwrap();
-
-        let doc: MarkplaneDocument<Plan> = project.read_item(&p1).unwrap();
         assert_eq!(doc.frontmatter.epic, None);
     }
 

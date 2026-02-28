@@ -409,10 +409,10 @@ mod tests {
         let (_tmp, project) = setup_project();
 
         project
-            .create_plan("Plan A", vec![], None, None)
+            .create_plan("Plan A", vec![], None)
             .unwrap();
         project
-            .create_plan("Plan B", vec![], None, None)
+            .create_plan("Plan B", vec![], None)
             .unwrap();
 
         let plans = project.list_plans().unwrap();
@@ -526,8 +526,8 @@ mod tests {
     fn test_list_plans_archived() {
         let (_tmp, project) = setup_project();
 
-        project.create_plan("Active plan", vec![], None, None).unwrap();
-        let plan2 = project.create_plan("Done plan", vec![], None, None).unwrap();
+        project.create_plan("Active plan", vec![], None).unwrap();
+        let plan2 = project.create_plan("Done plan", vec![], None).unwrap();
 
         project.archive_item(&plan2.id).unwrap();
 

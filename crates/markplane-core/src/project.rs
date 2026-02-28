@@ -426,7 +426,6 @@ impl Project {
         &self,
         title: &str,
         implements: Vec<String>,
-        epic: Option<String>,
         template: Option<&str>,
     ) -> Result<Plan> {
         validate_title_length(title)?;
@@ -438,7 +437,6 @@ impl Project {
             title: title.to_string(),
             status: PlanStatus::Draft,
             implements,
-            epic,
             related: vec![],
             created: today,
             updated: today,
@@ -1315,7 +1313,6 @@ mod tests {
                 "Dark mode implementation",
                 vec![task.id.clone()],
                 None,
-                None,
             )
             .unwrap();
 
@@ -1506,7 +1503,7 @@ mod tests {
 
         // Plan with implements list
         let plan = project
-            .create_plan("Plan A", vec![task.id.clone()], Some(epic.id.clone()), None)
+            .create_plan("Plan A", vec![task.id.clone()], None)
             .unwrap();
         let plan_path = project.item_path(&plan.id).unwrap();
         let plan_original = fs::read_to_string(&plan_path).unwrap();
@@ -1551,7 +1548,7 @@ mod tests {
     #[test]
     fn test_update_status_plan() {
         let (_tmp, project) = setup_project();
-        let plan = project.create_plan("Plan A", vec![], None, None).unwrap();
+        let plan = project.create_plan("Plan A", vec![], None).unwrap();
 
         project.update_status(&plan.id, "approved").unwrap();
         let doc: MarkplaneDocument<Plan> = project.read_item(&plan.id).unwrap();
@@ -1594,7 +1591,7 @@ mod tests {
     #[test]
     fn test_update_status_plan_invalid() {
         let (_tmp, project) = setup_project();
-        let plan = project.create_plan("Plan A", vec![], None, None).unwrap();
+        let plan = project.create_plan("Plan A", vec![], None).unwrap();
         assert!(project.update_status(&plan.id, "cancelled").is_err());
     }
 
@@ -1744,7 +1741,7 @@ mod tests {
     #[test]
     fn test_update_plan_body() {
         let (_tmp, project) = setup_project();
-        let plan = project.create_plan("Plan A", vec![], None, None).unwrap();
+        let plan = project.create_plan("Plan A", vec![], None).unwrap();
 
         project
             .update_plan(&plan.id, &PlanUpdate {
@@ -2080,7 +2077,7 @@ mod tests {
     #[test]
     fn test_update_plan_fields() {
         let (_tmp, project) = setup_project();
-        let plan = project.create_plan("Plan A", vec![], None, None).unwrap();
+        let plan = project.create_plan("Plan A", vec![], None).unwrap();
 
         project.update_plan(&plan.id, &PlanUpdate {
             title: Some("Plan A v2".to_string()),
@@ -2146,7 +2143,7 @@ mod tests {
         });
         assert!(result.is_err());
 
-        let plan = project.create_plan("Plan", vec![], None, None).unwrap();
+        let plan = project.create_plan("Plan", vec![], None).unwrap();
 
         // priority is not valid for plans
         let result = project.update_item(&plan.id, UpdateFields {
@@ -2252,7 +2249,7 @@ mod tests {
     fn test_create_plan_with_refactor_template() {
         let (_tmp, project) = setup_project();
         let plan = project
-            .create_plan("Refactor auth", vec![], None, Some("refactor"))
+            .create_plan("Refactor auth", vec![], Some("refactor"))
             .unwrap();
 
         let doc: MarkplaneDocument<Plan> = project.read_item(&plan.id).unwrap();

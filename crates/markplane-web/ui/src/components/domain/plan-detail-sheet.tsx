@@ -9,7 +9,6 @@ import { useUpdatePlan, useArchiveItem, useUnarchiveItem } from "@/lib/hooks/use
 import { MarkdownRenderer } from "./markdown-renderer";
 import { MarkdownEditor } from "./markdown-editor";
 import { WikiLinkChip } from "./wiki-link-chip";
-import { EntityCombobox } from "./entity-combobox";
 import { EntityRefEditor } from "./entity-ref-editor";
 import { InlineEdit } from "./inline-edit";
 import { FieldRow, EmptyValue } from "./field-row";
@@ -57,8 +56,6 @@ export function PlanDetailSheet({
   const { data: allPlans } = usePlans();
   const { data: notes } = useNotes();
 
-  const epicOptions =
-    epics?.map((e) => ({ id: e.id, title: e.title })) ?? [];
   const relatedOptions = [
     ...(allTasks?.map((t) => ({ id: t.id, title: t.title })) ?? []),
     ...(epics?.map((e) => ({ id: e.id, title: e.title })) ?? []),
@@ -168,19 +165,6 @@ export function PlanDetailSheet({
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </FieldRow>
-
-                <FieldRow label="Epic" editable>
-                  <EntityCombobox
-                    value={plan.epic}
-                    options={epicOptions}
-                    onSelect={(id) =>
-                      updatePlan.mutate({ id: plan.id, epic: id ?? "" })
-                    }
-                    placeholder="No epic"
-                    emptyLabel="No epic"
-                    linkValue
-                  />
                 </FieldRow>
 
                 <FieldRow label="Implements">

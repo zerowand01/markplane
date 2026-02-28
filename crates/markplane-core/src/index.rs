@@ -1069,9 +1069,9 @@ mod tests {
             )
             .unwrap();
         let active_plan = project
-            .create_plan("Active Plan", vec![task.id.clone()], None, None)
+            .create_plan("Active Plan", vec![task.id.clone()], None)
             .unwrap();
-        let done_plan = project.create_plan("Done Plan", vec![], None, None).unwrap();
+        let done_plan = project.create_plan("Done Plan", vec![], None).unwrap();
         project.update_status(&done_plan.id, "done").unwrap();
 
         project.generate_plans_index().unwrap();

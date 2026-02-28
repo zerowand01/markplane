@@ -1008,7 +1008,7 @@ fn handle_plan(project: &Project, args: &Value) -> Result<String, String> {
         .and_then(|v| v.as_str())
         .ok_or_else(|| "Missing required parameter: task_id".to_string())?;
 
-    // Read the task to get its title and epic
+    // Read the task to get its title
     let task_doc: MarkplaneDocument<Task> =
         project.read_item(task_id).map_err(|e| e.to_string())?;
 
@@ -1026,12 +1026,7 @@ fn handle_plan(project: &Project, args: &Value) -> Result<String, String> {
         .and_then(|v| v.as_str());
 
     let plan = project
-        .create_plan(
-            title,
-            vec![],
-            task_doc.frontmatter.epic.clone(),
-            template,
-        )
+        .create_plan(title, vec![], template)
         .map_err(|e| e.to_string())?;
 
     // Link the plan to the task via the centralized link system

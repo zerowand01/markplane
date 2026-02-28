@@ -116,9 +116,6 @@ fn show_plan(project: &Project, id: &str) -> anyhow::Result<()> {
     if !fm.implements.is_empty() {
         println!("  Implements: {}", fm.implements.join(", "));
     }
-    if let Some(ref epic) = fm.epic {
-        println!("  Epic:       {}", epic);
-    }
     if !fm.related.is_empty() {
         println!("  Related:    {}", fm.related.join(", "));
     }

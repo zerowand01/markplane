@@ -1,7 +1,7 @@
 ---
 id: TASK-e4yqc
 title: Remove epic field from Plan model
-status: planned
+status: done
 priority: medium
 type: enhancement
 effort: medium
@@ -18,7 +18,7 @@ related: []
 assignee: null
 position: ZzU
 created: 2026-02-27
-updated: 2026-02-27
+updated: 2026-02-28
 ---
 
 # Remove epic field from Plan model

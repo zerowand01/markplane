@@ -125,7 +125,6 @@ Titles are always double-quoted in the YAML to safely handle special characters.
 | `title` | string | yes | Plan title (max 500 characters) |
 | `status` | enum | yes | Current workflow status |
 | `implements` | string[] | no | Task IDs this plan implements (default: `[]`) |
-| `epic` | string? | no | Parent epic ID (default: `null`) |
 | `related` | string[] | no | Related item IDs, any type (default: `[]`) |
 | `created` | date | yes | Creation date (`YYYY-MM-DD`) |
 | `updated` | date | yes | Last modification date (`YYYY-MM-DD`) |

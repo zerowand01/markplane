@@ -1652,7 +1652,6 @@ fn test_resource_plan_item() {
             "Plan resource test",
             vec![],
             None,
-            None,
         )
         .unwrap();
 
@@ -2445,7 +2444,7 @@ fn test_tool_update_rejects_invalid_field_for_type() {
     let tmp = setup_project();
     let root = tmp.path().join(".markplane");
     let project = markplane_core::Project::new(root);
-    let plan = project.create_plan("Test plan", vec![], None, None).unwrap();
+    let plan = project.create_plan("Test plan", vec![], None).unwrap();
 
     // priority is not valid for plans
     let response = send_request(

@@ -412,8 +412,6 @@ pub struct Plan {
     #[serde(default)]
     pub implements: Vec<String>,
     #[serde(default)]
-    pub epic: Option<String>,
-    #[serde(default)]
     pub related: Vec<String>,
     pub created: NaiveDate,
     pub updated: NaiveDate,
@@ -623,7 +621,6 @@ id: PLAN-012
 title: "Dark mode implementation"
 status: in-progress
 implements: [TASK-042, TASK-043]
-epic: EPIC-003
 created: 2026-02-01
 updated: 2026-02-09
 "#;

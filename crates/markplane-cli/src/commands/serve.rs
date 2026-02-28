@@ -578,7 +578,6 @@ struct PlanResponse {
     title: String,
     status: String,
     implements: Vec<String>,
-    epic: Option<String>,
     related: Vec<String>,
     created: String,
     updated: String,
@@ -592,7 +591,6 @@ fn plan_to_response(doc: &MarkplaneDocument<Plan>) -> PlanResponse {
         title: fm.title.clone(),
         status: fm.status.to_string(),
         implements: fm.implements.clone(),
-        epic: fm.epic.clone(),
         related: fm.related.clone(),
         created: fm.created.to_string(),
         updated: fm.updated.to_string(),
@@ -604,7 +602,6 @@ fn plan_to_response(doc: &MarkplaneDocument<Plan>) -> PlanResponse {
 struct UpdatePlanRequest {
     title: Option<String>,
     status: Option<String>,
-    epic: Option<String>,
     #[serde(default)]
     related: Option<Vec<String>>,
     body: Option<String>,
@@ -1031,7 +1028,7 @@ async fn create_plan(
 
     let plan = state
         .project
-        .create_plan(&body.title, implements, None, None)
+        .create_plan(&body.title, implements, None)
         .map_err(|e| {
             error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -1549,26 +1546,6 @@ async fn update_plan(
     }
 
     // ── Links → link_items() per change ──────────────────────────────
-
-    // Epic (scalar): Add overwrites, Remove clears
-    if let Some(ref desired_epic) = body.epic {
-        let desired = if desired_epic.is_empty() { None } else { Some(desired_epic.as_str()) };
-        let current_epic = current.frontmatter.epic.as_deref();
-        if desired != current_epic {
-            match desired {
-                Some(new) => {
-                    state.project.link_items(&id, new, LinkRelation::Epic, LinkAction::Add)
-                        .map_err(map_core_error)?;
-                }
-                None => {
-                    if let Some(old) = current_epic {
-                        state.project.link_items(&id, old, LinkRelation::Epic, LinkAction::Remove)
-                            .map_err(map_core_error)?;
-                    }
-                }
-            }
-        }
-    }
 
     // related (array): diff
     if let Some(ref desired_related) = body.related {
@@ -2091,13 +2068,6 @@ fn build_graph(
                 source: fm.id.clone(),
                 target: imp.clone(),
                 relation: "implements".to_string(),
-            });
-        }
-        if let Some(epic) = &fm.epic {
-            edges.push(GraphEdgeResponse {
-                source: epic.clone(),
-                target: fm.id.clone(),
-                relation: "epic".to_string(),
             });
         }
         for rel in &fm.related {

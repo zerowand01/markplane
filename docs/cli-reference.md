@@ -396,7 +396,7 @@ Each relation type has specific source/target type constraints:
 |----------|------|----|--------|
 | `blocks` | TASK | TASK | Adds to `from.blocks[]` and `to.depends_on[]` |
 | `depends-on` | TASK | TASK | Adds to `from.depends_on[]` and `to.blocks[]` |
-| `epic` | TASK, PLAN | EPIC | Sets `from.epic` to target |
+| `epic` | TASK | EPIC | Sets `from.epic` to target |
 | `plan` | TASK | PLAN | Sets `from.plan` to target and adds to `plan.implements[]` |
 | `implements` | PLAN | TASK | Adds to `from.implements[]` and sets `task.plan` |
 | `related` | any | any | Adds to `from.related[]` and `to.related[]` (bidirectional) |
@@ -574,7 +574,7 @@ markplane plan <ID> [OPTIONS]
 | `--title <TITLE>` | `"Implementation plan for <item title>"` | Custom plan title |
 | `--template <NAME>` | — | Template name override (e.g. `refactor`). Defaults to `implementation`. |
 
-Creates a plan that references the task via `implements` and links the plan back to the item's `plan` field. Inherits the item's epic.
+Creates a plan that references the task via `implements` and links the plan back to the item's `plan` field.
 
 Only works with tasks (`TASK-xxxxx`).
 

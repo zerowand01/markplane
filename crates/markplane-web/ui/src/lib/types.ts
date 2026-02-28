@@ -55,7 +55,6 @@ export interface Plan {
   title: string;
   status: PlanStatus;
   implements: string[];
-  epic: string | null;
   related: string[];
   created: string;
   updated: string;
@@ -151,7 +150,6 @@ export interface UpdateEpicRequest {
 export interface UpdatePlanRequest {
   title?: string;
   status?: PlanStatus;
-  epic?: string;
   related?: string[];
   body?: string;
 }

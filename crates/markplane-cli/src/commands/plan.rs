@@ -16,7 +16,6 @@ pub fn run(id: String, title: Option<String>, template: Option<String>) -> anyho
     let plan = project.create_plan(
         &plan_title,
         vec![],
-        doc.frontmatter.epic.clone(),
         template.as_deref(),
     )?;
 

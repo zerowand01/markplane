@@ -329,7 +329,7 @@ You can provide a custom title:
 markplane plan TASK-d4p7m --title "JWT auth architecture"
 ```
 
-The plan is automatically linked back to the task, and inherits the item's epic.
+The plan is automatically linked back to the task.
 
 List all plans:
 
