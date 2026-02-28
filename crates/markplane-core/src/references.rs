@@ -2,7 +2,8 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use crate::error::Result;
-use crate::models::{parse_id, IdPrefix};
+use crate::frontmatter;
+use crate::models::{parse_id, IdPrefix, Task};
 use crate::project::Project;
 
 /// Return a glob pattern for scanning .md files in a directory.
@@ -97,6 +98,38 @@ pub fn validate_references(project: &Project) -> Result<Vec<BrokenReference>> {
                     });
                 }
             }
+        }
+    }
+
+    Ok(broken)
+}
+
+/// Validate that all task statuses are recognized by the configured workflow.
+/// Returns a list of broken references for tasks with unknown statuses.
+pub fn validate_task_statuses(project: &Project) -> Result<Vec<BrokenReference>> {
+    let mut broken = Vec::new();
+    let config = project.load_config()?;
+    let workflow = &config.workflows.task;
+
+    let dir = project.item_dir(&IdPrefix::Task);
+    if !dir.exists() {
+        return Ok(broken);
+    }
+
+    let pattern = scan_pattern(&dir);
+    for path in glob::glob(&pattern).unwrap_or_else(|_| glob::glob("").unwrap()).flatten() {
+        let filename = path.file_name().unwrap_or_default().to_string_lossy();
+        if filename == "INDEX.md" {
+            continue;
+        }
+        let content = std::fs::read_to_string(&path)?;
+        if let Ok(doc) = frontmatter::parse_frontmatter::<Task>(&content)
+            && !workflow.contains(&doc.frontmatter.status)
+        {
+            broken.push(BrokenReference {
+                source_file: path.to_string_lossy().to_string(),
+                target_id: format!("status:{}", doc.frontmatter.status),
+            });
         }
     }
 

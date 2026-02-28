@@ -283,7 +283,7 @@ export function ArchiveContent() {
                 {item.type === "epics" ? (
                   <EpicStatusBadge status={item.status as "now" | "next" | "later" | "done"} />
                 ) : item.type === "tasks" ? (
-                  <StatusBadge status={item.status as "done" | "cancelled" | "draft" | "backlog" | "planned" | "in-progress"} />
+                  <StatusBadge status={item.status} />
                 ) : (
                   <span
                     className="text-xs px-2 py-0.5 rounded shrink-0"

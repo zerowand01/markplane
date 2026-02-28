@@ -107,7 +107,7 @@ markplane add "Add rate limiting to auth endpoints" --type enhancement --priorit
 - **Priorities**: `critical`, `high`, `medium`, `low`, `someday`
 - **Effort sizes**: `xs`, `small`, `medium`, `large`, `xl`
 
-All new tasks start with status `draft`.
+All new tasks start with the default status from the first configured category (default: `draft`). Task statuses are configurable via `config.yaml` — see [File Format: Status Workflows](file-format.md#status-workflows) for details.
 
 ## 4. List and Filter Items
 

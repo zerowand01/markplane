@@ -20,13 +20,14 @@ pub fn run(id: String) -> anyhow::Result<()> {
 }
 
 fn show_task(project: &Project, id: &str) -> anyhow::Result<()> {
+    let config = project.load_config()?;
     let doc: MarkplaneDocument<Task> = project.read_item(id)?;
     let fm = &doc.frontmatter;
 
     println!("{}", fm.id.bold());
     println!("{}", fm.title.bold().white());
     println!();
-    println!("  Status:   {}", colorize_status(&fm.status.to_string()));
+    println!("  Status:   {}", colorize_status(&fm.status, config.task_category(&fm.status)));
     println!(
         "  Priority: {}",
         colorize_priority(&fm.priority.to_string())
@@ -74,7 +75,7 @@ fn show_epic(project: &Project, id: &str) -> anyhow::Result<()> {
     println!("{}", fm.id.bold());
     println!("{}", fm.title.bold().white());
     println!();
-    println!("  Status:   {}", colorize_status(&fm.status.to_string()));
+    println!("  Status:   {}", colorize_status(&fm.status.to_string(), None));
     println!(
         "  Priority: {}",
         colorize_priority(&fm.priority.to_string())
@@ -111,7 +112,7 @@ fn show_plan(project: &Project, id: &str) -> anyhow::Result<()> {
     println!("{}", fm.id.bold());
     println!("{}", fm.title.bold().white());
     println!();
-    println!("  Status:     {}", colorize_status(&fm.status.to_string()));
+    println!("  Status:     {}", colorize_status(&fm.status.to_string(), None));
 
     if !fm.implements.is_empty() {
         println!("  Implements: {}", fm.implements.join(", "));
@@ -138,7 +139,7 @@ fn show_note(project: &Project, id: &str) -> anyhow::Result<()> {
     println!("{}", fm.id.bold());
     println!("{}", fm.title.bold().white());
     println!();
-    println!("  Status:  {}", colorize_status(&fm.status.to_string()));
+    println!("  Status:  {}", colorize_status(&fm.status.to_string(), None));
     println!("  Type:    {}", fm.note_type);
 
     if !fm.tags.is_empty() {

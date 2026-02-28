@@ -4,7 +4,9 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEpics } from "@/lib/hooks/use-epics";
 import { useTasks } from "@/lib/hooks/use-tasks";
+import { useConfig } from "@/lib/hooks/use-config";
 import { useUpdateEpic } from "@/lib/hooks/use-mutations";
+import { CATEGORY_CONFIG, categoryOf } from "@/lib/constants";
 import { EpicDetailSheet } from "@/components/domain/epic-detail-sheet";
 import { TaskDetailSheet } from "@/components/domain/task-detail-sheet";
 import { Button } from "@/components/ui/button";
@@ -27,7 +29,7 @@ import {
   closestCorners,
 } from "@dnd-kit/core";
 import type { DragStartEvent, DragEndEvent, CollisionDetection } from "@dnd-kit/core";
-import type { Epic, EpicStatus, Task, Priority, TaskStatus } from "@/lib/types";
+import type { Epic, EpicStatus, Task, Priority, StatusCategory } from "@/lib/types";
 
 const PRIORITY_RANK: Record<Priority, number> = {
   critical: 0,
@@ -74,6 +76,8 @@ function NowCard({
 }) {
   const epicTasks = tasks.filter((t) => t.epic === epic.id);
   const percent = Math.round(epic.progress * 100);
+  const { data: nowCardConfig } = useConfig();
+  const nowCardWorkflow = nowCardConfig?.workflows.task;
 
   const {
     attributes,
@@ -82,14 +86,18 @@ function NowCard({
     isDragging,
   } = useDraggable({ id: epic.id, data: { epic } });
 
-  const statusGroups = (
-    [
-      { status: "in-progress" as TaskStatus, label: "In Progress", count: epicTasks.filter((t) => t.status === "in-progress").length },
-      { status: "planned" as TaskStatus, label: "Planned", count: epicTasks.filter((t) => t.status === "planned").length },
-      { status: "backlog" as TaskStatus, label: "Backlog", count: epicTasks.filter((t) => t.status === "backlog").length },
-      { status: "done" as TaskStatus, label: "Done", count: epicTasks.filter((t) => t.status === "done").length },
-    ] as const
-  ).filter((g) => g.count > 0);
+  // Group epic tasks by category for the status breakdown
+  const BREAKDOWN_CATEGORIES: StatusCategory[] = ["active", "planned", "backlog", "completed"];
+  const statusGroups = useMemo(() => {
+    if (!nowCardWorkflow) return [];
+    return BREAKDOWN_CATEGORIES
+      .map((cat) => {
+        const catStatuses = new Set(nowCardWorkflow[cat] ?? []);
+        const count = epicTasks.filter((t) => catStatuses.has(t.status)).length;
+        return { category: cat, label: CATEGORY_CONFIG[cat].label, count };
+      })
+      .filter((g) => g.count > 0);
+  }, [epicTasks, nowCardWorkflow]);
 
   return (
     <div
@@ -126,10 +134,10 @@ function NowCard({
         {statusGroups.length > 0 && (
           <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
             {statusGroups.map((group) => (
-              <span key={group.status} className="flex items-center gap-1">
+              <span key={group.category} className="flex items-center gap-1">
                 <span
                   className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: `var(--status-${group.status})` }}
+                  style={{ backgroundColor: `var(--status-category-${group.category})` }}
                 />
                 {group.count} {group.label.toLowerCase()}
               </span>

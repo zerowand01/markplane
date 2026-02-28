@@ -1,9 +1,10 @@
 use colored::Colorize;
-use markplane_core::{TaskStatus, Priority, Project, QueryFilter, ScanScope};
+use markplane_core::{StatusCategory, Priority, Project, QueryFilter, ScanScope};
 
 pub fn run() -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
     let config = project.load_config()?;
+    let workflow = &config.workflows.task;
     let items = project.list_tasks(&QueryFilter::default())?;
     let epics = project.list_epics()?;
     let plans = project.list_plans()?;
@@ -12,16 +13,21 @@ pub fn run() -> anyhow::Result<()> {
     println!("{}", "─".repeat(50).dimmed());
     println!();
 
-    // Status distribution
+    // Status distribution (by category)
     let total = items.len();
-    let count_status = |s: &TaskStatus| items.iter().filter(|i| i.frontmatter.status == *s).count();
+    let count_category = |cat: StatusCategory| -> usize {
+        let statuses: std::collections::HashSet<&str> = workflow
+            .statuses_in(cat)
+            .iter().map(|s| s.as_str()).collect();
+        items.iter().filter(|i| statuses.contains(i.frontmatter.status.as_str())).count()
+    };
 
-    let in_progress = count_status(&TaskStatus::InProgress);
-    let planned = count_status(&TaskStatus::Planned);
-    let backlog = count_status(&TaskStatus::Backlog);
-    let draft = count_status(&TaskStatus::Draft);
-    let done = count_status(&TaskStatus::Done);
-    let cancelled = count_status(&TaskStatus::Cancelled);
+    let in_progress = count_category(StatusCategory::Active);
+    let planned = count_category(StatusCategory::Planned);
+    let backlog = count_category(StatusCategory::Backlog);
+    let draft = count_category(StatusCategory::Draft);
+    let done = count_category(StatusCategory::Completed);
+    let cancelled = count_category(StatusCategory::Cancelled);
 
     println!("{}", "Task Status".bold());
     println!("  Total:       {}", total);
@@ -34,13 +40,17 @@ pub fn run() -> anyhow::Result<()> {
     println!();
 
     // Priority distribution (open items only)
+    let closed_statuses: std::collections::HashSet<&str> = workflow
+        .statuses_in(StatusCategory::Completed).iter()
+        .chain(workflow.statuses_in(StatusCategory::Cancelled).iter())
+        .map(|s| s.as_str()).collect();
+
     let count_priority = |p: &Priority| {
         items
             .iter()
             .filter(|i| {
                 i.frontmatter.priority == *p
-                    && i.frontmatter.status != TaskStatus::Done
-                    && i.frontmatter.status != TaskStatus::Cancelled
+                    && !closed_statuses.contains(i.frontmatter.status.as_str())
             })
             .count()
     };
@@ -74,19 +84,25 @@ pub fn run() -> anyhow::Result<()> {
             scope: ScanScope::All,
             ..Default::default()
         })?;
+        let cancelled_set: std::collections::HashSet<&str> = workflow
+            .statuses_in(StatusCategory::Cancelled)
+            .iter().map(|s| s.as_str()).collect();
+        let completed_set: std::collections::HashSet<&str> = workflow
+            .statuses_in(StatusCategory::Completed)
+            .iter().map(|s| s.as_str()).collect();
         println!("{}", "Epic Progress".bold());
         for epic in &epics {
             let epic_items: Vec<_> = all_tasks
                 .iter()
                 .filter(|i| {
                     i.frontmatter.epic.as_deref() == Some(&epic.frontmatter.id)
-                        && i.frontmatter.status != TaskStatus::Cancelled
+                        && !cancelled_set.contains(i.frontmatter.status.as_str())
                 })
                 .collect();
             let epic_total = epic_items.len();
             let epic_done = epic_items
                 .iter()
-                .filter(|i| i.frontmatter.status == TaskStatus::Done)
+                .filter(|i| completed_set.contains(i.frontmatter.status.as_str()))
                 .count();
             let pct = if epic_total > 0 {
                 (epic_done as f64 / epic_total as f64 * 100.0) as u32

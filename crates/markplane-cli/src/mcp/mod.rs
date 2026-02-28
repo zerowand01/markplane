@@ -171,13 +171,26 @@ fn build_instructions(project: &Project) -> String {
         .as_ref()
         .map(|c| c.note_types.join(", "))
         .unwrap_or_else(|| "research, analysis, idea, decision, meeting".to_string());
+    let task_statuses = config
+        .as_ref()
+        .map(|c| {
+            use markplane_core::StatusCategory;
+            StatusCategory::ALL.iter()
+                .filter_map(|cat| {
+                    let statuses = c.workflows.task.statuses_in(*cat);
+                    if statuses.is_empty() { None } else { Some(statuses.join(", ")) }
+                })
+                .collect::<Vec<_>>()
+                .join(" → ")
+        })
+        .unwrap_or_else(|| "draft → backlog → planned → in-progress → done (also cancelled)".to_string());
 
     format!(
         "Markplane is an AI-native, markdown-first project management system for the project \"{project_name}\". \
 Files are the source of truth, git is the changelog.\n\
 \n\
 ## Entity Types\n\
-- TASK-NNN: Tasks (bugs, features, chores). Statuses: draft → backlog → planned → in-progress → done (also cancelled)\n\
+- TASK-NNN: Tasks (bugs, features, chores). Statuses: {task_statuses}\n\
 - EPIC-NNN: Strategic epics grouping related tasks. Statuses: later → next → now → done\n\
 - PLAN-NNN: Implementation plans linked to tasks. Statuses: draft → approved → in-progress → done\n\
 - NOTE-NNN: Research notes, ideas, and decisions. Statuses: draft → active → archived\n\

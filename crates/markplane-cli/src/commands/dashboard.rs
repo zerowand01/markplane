@@ -1,11 +1,26 @@
 use colored::Colorize;
-use markplane_core::{TaskStatus, Priority, Project, QueryFilter, ScanScope, find_blocked_items};
+use markplane_core::{StatusCategory, Priority, Project, QueryFilter, ScanScope, find_blocked_items};
 
 pub fn run() -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
     let config = project.load_config()?;
+    let workflow = &config.workflows.task;
     let items = project.list_tasks(&QueryFilter::default())?;
     let epics = project.list_epics()?;
+
+    // Build category sets for filtering
+    let active_statuses: std::collections::HashSet<&str> = workflow
+        .statuses_in(StatusCategory::Active)
+        .iter().map(|s| s.as_str()).collect();
+    let completed_statuses: std::collections::HashSet<&str> = workflow
+        .statuses_in(StatusCategory::Completed)
+        .iter().map(|s| s.as_str()).collect();
+    let cancelled_statuses: std::collections::HashSet<&str> = workflow
+        .statuses_in(StatusCategory::Cancelled)
+        .iter().map(|s| s.as_str()).collect();
+    let closed_statuses: std::collections::HashSet<&str> = completed_statuses.iter()
+        .chain(cancelled_statuses.iter())
+        .copied().collect();
 
     println!(
         "{}",
@@ -17,7 +32,7 @@ pub fn run() -> anyhow::Result<()> {
     // In-progress work
     let in_progress: Vec<_> = items
         .iter()
-        .filter(|i| i.frontmatter.status == TaskStatus::InProgress)
+        .filter(|i| active_statuses.contains(i.frontmatter.status.as_str()))
         .collect();
     if !in_progress.is_empty() {
         println!("{}", "In Progress".bold().yellow());
@@ -34,11 +49,11 @@ pub fn run() -> anyhow::Result<()> {
     }
 
     // Blocked items
-    let blocked = find_blocked_items(&items);
+    let blocked = find_blocked_items(&items, workflow);
     if !blocked.is_empty() {
         let done_ids: std::collections::HashSet<&str> = items
             .iter()
-            .filter(|i| i.frontmatter.status == TaskStatus::Done)
+            .filter(|i| completed_statuses.contains(i.frontmatter.status.as_str()))
             .map(|i| i.frontmatter.id.as_str())
             .collect();
         println!("{}", "Blocked".bold().red());
@@ -76,13 +91,13 @@ pub fn run() -> anyhow::Result<()> {
                 .iter()
                 .filter(|i| {
                     i.frontmatter.epic.as_deref() == Some(&epic.frontmatter.id)
-                        && i.frontmatter.status != TaskStatus::Cancelled
+                        && !cancelled_statuses.contains(i.frontmatter.status.as_str())
                 })
                 .collect();
             let total = epic_items.len();
             let done_count = epic_items
                 .iter()
-                .filter(|i| i.frontmatter.status == TaskStatus::Done)
+                .filter(|i| completed_statuses.contains(i.frontmatter.status.as_str()))
                 .count();
             let pct = if total > 0 {
                 (done_count as f64 / total as f64 * 100.0) as u32
@@ -100,17 +115,13 @@ pub fn run() -> anyhow::Result<()> {
     // Quick counts
     let open = items
         .iter()
-        .filter(|i| {
-            i.frontmatter.status != TaskStatus::Done
-                && i.frontmatter.status != TaskStatus::Cancelled
-        })
+        .filter(|i| !closed_statuses.contains(i.frontmatter.status.as_str()))
         .count();
     let critical = items
         .iter()
         .filter(|i| {
             i.frontmatter.priority == Priority::Critical
-                && i.frontmatter.status != TaskStatus::Done
-                && i.frontmatter.status != TaskStatus::Cancelled
+                && !closed_statuses.contains(i.frontmatter.status.as_str())
         })
         .count();
 

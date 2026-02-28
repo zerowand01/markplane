@@ -24,11 +24,13 @@ impl Project {
             .iter()
             .filter(|e| e.frontmatter.status != EpicStatus::Done)
             .count();
+        let config = self.load_config()?;
+        let workflow = &config.workflows.task;
         let open_backlog = tasks
             .iter()
             .filter(|b| {
-                b.frontmatter.status != TaskStatus::Done
-                    && b.frontmatter.status != TaskStatus::Cancelled
+                workflow.category_of(&b.frontmatter.status)
+                    .is_none_or(|c| c.is_open())
             })
             .count();
         let active_plans = plans
@@ -86,24 +88,33 @@ impl Project {
 
         let mut content = format!("{}\n# Backlog Index\n\n", GENERATED_HEADER);
 
+        let workflow = &config.workflows.task;
+
+        // Build sets for category-based filtering
+        let completed_statuses: HashSet<&str> = workflow
+            .statuses_in(StatusCategory::Completed)
+            .iter().map(|s| s.as_str()).collect();
         // Build done_ids set for blocked-item dependency resolution
         let done_ids: HashSet<&str> = items
             .iter()
-            .filter(|i| i.frontmatter.status == TaskStatus::Done)
+            .filter(|i| completed_statuses.contains(i.frontmatter.status.as_str()))
             .map(|i| i.frontmatter.id.as_str())
             .collect();
 
         // Compute blocked items (items with unresolved depends_on)
-        let blocked = find_blocked_items(&items);
+        let blocked = find_blocked_items(&items, workflow);
         let blocked_ids: HashSet<&str> = blocked
             .iter()
             .map(|i| i.frontmatter.id.as_str())
             .collect();
 
-        // --- In Progress ---
+        // --- Active category statuses (In Progress equivalent) ---
+        let active_statuses: HashSet<&str> = workflow
+            .statuses_in(StatusCategory::Active)
+            .iter().map(|s| s.as_str()).collect();
         let in_progress: Vec<_> = items
             .iter()
-            .filter(|i| i.frontmatter.status == TaskStatus::InProgress)
+            .filter(|i| active_statuses.contains(i.frontmatter.status.as_str()))
             .collect();
         content.push_str(&format!("## In Progress ({})\n\n", in_progress.len()));
         if !in_progress.is_empty() {
@@ -142,11 +153,14 @@ impl Project {
             content.push('\n');
         }
 
-        // --- Planned (ready to start, excluding blocked) ---
+        // --- Planned category statuses (excluding blocked) ---
+        let planned_statuses: HashSet<&str> = workflow
+            .statuses_in(StatusCategory::Planned)
+            .iter().map(|s| s.as_str()).collect();
         let planned: Vec<_> = items
             .iter()
             .filter(|i| {
-                i.frontmatter.status == TaskStatus::Planned
+                planned_statuses.contains(i.frontmatter.status.as_str())
                     && !blocked_ids.contains(i.frontmatter.id.as_str())
             })
             .collect();
@@ -165,11 +179,14 @@ impl Project {
             content.push('\n');
         }
 
-        // --- Backlog (accepted but not yet scoped, excluding blocked) ---
+        // --- Backlog category statuses (excluding blocked) ---
+        let backlog_statuses: HashSet<&str> = workflow
+            .statuses_in(StatusCategory::Backlog)
+            .iter().map(|s| s.as_str()).collect();
         let backlog: Vec<_> = items
             .iter()
             .filter(|i| {
-                i.frontmatter.status == TaskStatus::Backlog
+                backlog_statuses.contains(i.frontmatter.status.as_str())
                     && !blocked_ids.contains(i.frontmatter.id.as_str())
             })
             .collect();
@@ -188,11 +205,14 @@ impl Project {
             content.push('\n');
         }
 
-        // --- Drafts (excluding blocked) ---
+        // --- Draft category statuses (excluding blocked) ---
+        let draft_statuses: HashSet<&str> = workflow
+            .statuses_in(StatusCategory::Draft)
+            .iter().map(|s| s.as_str()).collect();
         let drafts: Vec<_> = items
             .iter()
             .filter(|i| {
-                i.frontmatter.status == TaskStatus::Draft
+                draft_statuses.contains(i.frontmatter.status.as_str())
                     && !blocked_ids.contains(i.frontmatter.id.as_str())
             })
             .collect();
@@ -215,7 +235,7 @@ impl Project {
         let mut recently_done: Vec<_> = items
             .iter()
             .filter(|i| {
-                i.frontmatter.status == TaskStatus::Done
+                completed_statuses.contains(i.frontmatter.status.as_str())
                     && i.frontmatter.updated >= recent_cutoff
             })
             .collect();
@@ -247,6 +267,8 @@ impl Project {
 
     /// Regenerate roadmap/INDEX.md with epics and nested task tables.
     pub fn generate_roadmap_index(&self) -> Result<()> {
+        let config = self.load_config()?;
+        let workflow = &config.workflows.task;
         let epics = self.list_epics()?;
         // Use ScanScope::All so archived tasks are included in epic progress and task tables
         let tasks = self.list_tasks(&QueryFilter {
@@ -273,7 +295,7 @@ impl Project {
             content.push_str(&format!("## {}\n\n", label));
 
             for epic in &group {
-                render_epic_with_items(&mut content, epic, &tasks);
+                render_epic_with_items(&mut content, epic, &tasks, workflow);
             }
         }
 
@@ -285,7 +307,7 @@ impl Project {
         if !done_epics.is_empty() {
             content.push_str("## Done\n\n");
             for epic in &done_epics {
-                render_epic_with_items(&mut content, epic, &tasks);
+                render_epic_with_items(&mut content, epic, &tasks, workflow);
             }
         }
 
@@ -449,9 +471,10 @@ fn render_epic_with_items(
     content: &mut String,
     epic: &MarkplaneDocument<Epic>,
     tasks: &[MarkplaneDocument<Task>],
+    workflow: &TaskWorkflow,
 ) {
     let epic_id = &epic.frontmatter.id;
-    let (done, total) = epic_progress(epic_id, tasks);
+    let (done, total) = epic_progress(epic_id, tasks, workflow);
     let pct = if total > 0 {
         (done as f64 / total as f64 * 100.0) as u32
     } else {
@@ -485,18 +508,25 @@ fn render_epic_with_items(
 
 /// Count (done, total) tasks for a given epic.
 /// Cancelled tasks are excluded — they don't represent work to be done.
-fn epic_progress(epic_id: &str, items: &[MarkplaneDocument<Task>]) -> (usize, usize) {
+fn epic_progress(epic_id: &str, items: &[MarkplaneDocument<Task>], workflow: &TaskWorkflow) -> (usize, usize) {
+    let cancelled_statuses: HashSet<&str> = workflow
+        .statuses_in(StatusCategory::Cancelled)
+        .iter().map(|s| s.as_str()).collect();
+    let completed_statuses: HashSet<&str> = workflow
+        .statuses_in(StatusCategory::Completed)
+        .iter().map(|s| s.as_str()).collect();
+
     let epic_items: Vec<_> = items
         .iter()
         .filter(|i| {
             i.frontmatter.epic.as_deref() == Some(epic_id)
-                && i.frontmatter.status != TaskStatus::Cancelled
+                && !cancelled_statuses.contains(i.frontmatter.status.as_str())
         })
         .collect();
     let total = epic_items.len();
     let done = epic_items
         .iter()
-        .filter(|i| i.frontmatter.status == TaskStatus::Done)
+        .filter(|i| completed_statuses.contains(i.frontmatter.status.as_str()))
         .count();
     (done, total)
 }

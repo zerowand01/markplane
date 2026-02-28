@@ -331,7 +331,8 @@ Mirror the Rust data model exactly:
 ```typescript
 // lib/types.ts
 
-type TaskStatus = 'draft' | 'backlog' | 'planned' | 'in-progress' | 'done' | 'cancelled';
+type StatusCategory = 'draft' | 'backlog' | 'planned' | 'active' | 'completed' | 'cancelled';
+type TaskWorkflow = Record<StatusCategory, string[]>;  // configurable via workflows.task in config.yaml
 type EpicStatus = 'now' | 'next' | 'later' | 'done';
 type PlanStatus = 'draft' | 'approved' | 'in-progress' | 'done';
 type NoteStatus = 'draft' | 'active' | 'archived';
@@ -343,7 +344,7 @@ type NoteType = 'research' | 'analysis' | 'idea' | 'decision' | 'meeting';
 interface Task {
   id: string;
   title: string;
-  status: TaskStatus;
+  status: string;  // configurable — resolved to StatusCategory via TaskWorkflow
   priority: Priority;
   type: TaskType;
   effort: Effort;
@@ -372,7 +373,7 @@ interface Epic {
   task_count: number;
   done_count: number;
   progress: number;  // 0.0 - 1.0
-  status_breakdown: Record<TaskStatus, number>;
+  status_breakdown: Record<string, number>;  // keyed by task status strings
 }
 
 interface Plan {

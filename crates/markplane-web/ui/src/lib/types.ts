@@ -1,4 +1,5 @@
-export type TaskStatus = "draft" | "backlog" | "planned" | "in-progress" | "done" | "cancelled";
+export type TaskStatus = string;
+export type StatusCategory = "draft" | "backlog" | "planned" | "active" | "completed" | "cancelled";
 export type EpicStatus = "now" | "next" | "later" | "done";
 export type PlanStatus = "draft" | "approved" | "in-progress" | "done";
 export type NoteStatus = "draft" | "active" | "archived";
@@ -7,9 +8,14 @@ export type TaskType = string;
 export type Effort = "xs" | "small" | "medium" | "large" | "xl";
 export type NoteType = string;
 
+export type TaskWorkflow = Record<StatusCategory, string[]>;
+
 export interface ProjectConfig {
   task_types: string[];
   note_types: string[];
+  workflows: {
+    task: TaskWorkflow;
+  };
 }
 
 export interface Task {
@@ -78,11 +84,11 @@ export interface ProjectSummary {
   description: string;
   counts: {
     total: number;
-    in_progress: number;
+    active: number;
     planned: number;
     backlog: number;
     draft: number;
-    done: number;
+    completed: number;
     blocked: number;
   };
   now_epics: Epic[];

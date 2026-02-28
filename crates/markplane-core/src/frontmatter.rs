@@ -93,7 +93,7 @@ fn find_closing_delimiter(content: &str) -> Result<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{Task, TaskStatus};
+    use crate::models::Task;
 
     #[test]
     fn test_parse_frontmatter_raw_basic() {
@@ -166,7 +166,7 @@ Some description here.
 "#;
         let doc: MarkplaneDocument<Task> = parse_frontmatter(content).unwrap();
         assert_eq!(doc.frontmatter.id, "TASK-042");
-        assert_eq!(doc.frontmatter.status, TaskStatus::InProgress);
+        assert_eq!(doc.frontmatter.status, "in-progress");
         assert_eq!(doc.frontmatter.item_type, "feature");
         assert!(doc.body.starts_with("# Add dark mode"));
     }

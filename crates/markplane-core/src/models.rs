@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::fmt;
 use std::str::FromStr;
 
@@ -109,44 +110,142 @@ pub fn generate_random_id(prefix: &IdPrefix) -> String {
 
 // ── Status Enums ───────────────────────────────────────────────────────────
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+/// Fixed status categories that system logic operates on.
+/// User-configurable status strings map to these categories.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum TaskStatus {
+pub enum StatusCategory {
     Draft,
     Backlog,
     Planned,
-    InProgress,
-    Done,
+    Active,
+    Completed,
     Cancelled,
 }
 
-impl fmt::Display for TaskStatus {
+impl StatusCategory {
+    /// All categories in display order.
+    pub const ALL: &[StatusCategory] = &[
+        StatusCategory::Draft,
+        StatusCategory::Backlog,
+        StatusCategory::Planned,
+        StatusCategory::Active,
+        StatusCategory::Completed,
+        StatusCategory::Cancelled,
+    ];
+
+    /// Whether this category represents a closed/terminal state.
+    pub fn is_closed(self) -> bool {
+        matches!(self, StatusCategory::Completed | StatusCategory::Cancelled)
+    }
+
+    /// Whether this category represents an open/active state.
+    pub fn is_open(self) -> bool {
+        !self.is_closed()
+    }
+}
+
+impl fmt::Display for StatusCategory {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TaskStatus::Draft => write!(f, "draft"),
-            TaskStatus::Backlog => write!(f, "backlog"),
-            TaskStatus::Planned => write!(f, "planned"),
-            TaskStatus::InProgress => write!(f, "in-progress"),
-            TaskStatus::Done => write!(f, "done"),
-            TaskStatus::Cancelled => write!(f, "cancelled"),
+            StatusCategory::Draft => write!(f, "draft"),
+            StatusCategory::Backlog => write!(f, "backlog"),
+            StatusCategory::Planned => write!(f, "planned"),
+            StatusCategory::Active => write!(f, "active"),
+            StatusCategory::Completed => write!(f, "completed"),
+            StatusCategory::Cancelled => write!(f, "cancelled"),
         }
     }
 }
 
-impl FromStr for TaskStatus {
+impl FromStr for StatusCategory {
     type Err = MarkplaneError;
 
     fn from_str(s: &str) -> Result<Self> {
         match s {
-            "draft" => Ok(TaskStatus::Draft),
-            "backlog" => Ok(TaskStatus::Backlog),
-            "planned" => Ok(TaskStatus::Planned),
-            "in-progress" => Ok(TaskStatus::InProgress),
-            "done" => Ok(TaskStatus::Done),
-            "cancelled" => Ok(TaskStatus::Cancelled),
+            "draft" => Ok(StatusCategory::Draft),
+            "backlog" => Ok(StatusCategory::Backlog),
+            "planned" => Ok(StatusCategory::Planned),
+            "active" => Ok(StatusCategory::Active),
+            "completed" => Ok(StatusCategory::Completed),
+            "cancelled" => Ok(StatusCategory::Cancelled),
             _ => Err(MarkplaneError::InvalidStatus(s.into())),
         }
     }
+}
+
+/// Mapping from status categories to user-facing status strings.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct TaskWorkflow(pub BTreeMap<StatusCategory, Vec<String>>);
+
+impl TaskWorkflow {
+    /// Look up which category a status string belongs to.
+    pub fn category_of(&self, status: &str) -> Option<StatusCategory> {
+        for (cat, statuses) in &self.0 {
+            if statuses.iter().any(|s| s == status) {
+                return Some(*cat);
+            }
+        }
+        None
+    }
+
+    /// All status strings in category order.
+    pub fn all_statuses(&self) -> Vec<&str> {
+        let mut result = Vec::new();
+        for cat in StatusCategory::ALL {
+            if let Some(statuses) = self.0.get(cat) {
+                for s in statuses {
+                    result.push(s.as_str());
+                }
+            }
+        }
+        result
+    }
+
+    /// The default status (first status in the earliest category).
+    pub fn default_status(&self) -> &str {
+        for cat in StatusCategory::ALL {
+            if let Some(first) = self.0.get(cat).and_then(|s| s.first()) {
+                return first.as_str();
+            }
+        }
+        "draft"
+    }
+
+    /// Get the statuses for a given category.
+    pub fn statuses_in(&self, cat: StatusCategory) -> &[String] {
+        self.0.get(&cat).map(|v| v.as_slice()).unwrap_or(&[])
+    }
+
+    /// Check whether a status string is valid in this workflow.
+    pub fn contains(&self, status: &str) -> bool {
+        self.category_of(status).is_some()
+    }
+}
+
+impl Default for TaskWorkflow {
+    fn default() -> Self {
+        default_task_workflow()
+    }
+}
+
+/// The default task workflow matching the original 6 hardcoded statuses.
+pub fn default_task_workflow() -> TaskWorkflow {
+    let mut map = BTreeMap::new();
+    map.insert(StatusCategory::Draft, vec!["draft".into()]);
+    map.insert(StatusCategory::Backlog, vec!["backlog".into()]);
+    map.insert(StatusCategory::Planned, vec!["planned".into()]);
+    map.insert(StatusCategory::Active, vec!["in-progress".into()]);
+    map.insert(StatusCategory::Completed, vec!["done".into()]);
+    map.insert(StatusCategory::Cancelled, vec!["cancelled".into()]);
+    TaskWorkflow(map)
+}
+
+/// Workflow configuration section in config.yaml.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct WorkflowConfig {
+    #[serde(default = "default_task_workflow")]
+    pub task: TaskWorkflow,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -361,7 +460,7 @@ impl FromStr for Effort {
 pub struct Task {
     pub id: String,
     pub title: String,
-    pub status: TaskStatus,
+    pub status: String,
     pub priority: Priority,
     #[serde(rename = "type")]
     pub item_type: String,
@@ -445,6 +544,8 @@ pub struct Config {
     pub task_types: Vec<String>,
     #[serde(default = "default_note_types")]
     pub note_types: Vec<String>,
+    #[serde(default)]
+    pub workflows: WorkflowConfig,
 }
 
 impl Config {
@@ -456,6 +557,16 @@ impl Config {
     /// Return the default note type (first in the configured list).
     pub fn default_note_type(&self) -> &str {
         self.note_types.first().map(|s| s.as_str()).unwrap_or("research")
+    }
+
+    /// Look up the category of a task status string.
+    pub fn task_category(&self, status: &str) -> Option<StatusCategory> {
+        self.workflows.task.category_of(status)
+    }
+
+    /// Return the default task status string.
+    pub fn default_task_status(&self) -> &str {
+        self.workflows.task.default_status()
     }
 }
 
@@ -488,6 +599,7 @@ impl Default for Config {
             documentation_paths: Vec::new(),
             task_types: default_task_types(),
             note_types: default_note_types(),
+            workflows: WorkflowConfig::default(),
         }
     }
 }
@@ -545,17 +657,49 @@ mod tests {
     }
 
     #[test]
-    fn test_task_status_display() {
-        assert_eq!(TaskStatus::InProgress.to_string(), "in-progress");
-        assert_eq!(TaskStatus::Draft.to_string(), "draft");
+    fn test_status_category_display() {
+        assert_eq!(StatusCategory::Active.to_string(), "active");
+        assert_eq!(StatusCategory::Draft.to_string(), "draft");
+        assert_eq!(StatusCategory::Completed.to_string(), "completed");
     }
 
     #[test]
-    fn test_task_status_serde_roundtrip() {
-        let yaml = serde_yaml::to_string(&TaskStatus::InProgress).unwrap();
-        assert!(yaml.contains("in-progress"));
-        let parsed: TaskStatus = serde_yaml::from_str(&yaml).unwrap();
-        assert_eq!(parsed, TaskStatus::InProgress);
+    fn test_status_category_is_closed() {
+        assert!(StatusCategory::Completed.is_closed());
+        assert!(StatusCategory::Cancelled.is_closed());
+        assert!(!StatusCategory::Active.is_closed());
+        assert!(!StatusCategory::Draft.is_closed());
+        assert!(StatusCategory::Active.is_open());
+    }
+
+    #[test]
+    fn test_task_workflow_category_of() {
+        let wf = default_task_workflow();
+        assert_eq!(wf.category_of("draft"), Some(StatusCategory::Draft));
+        assert_eq!(wf.category_of("in-progress"), Some(StatusCategory::Active));
+        assert_eq!(wf.category_of("done"), Some(StatusCategory::Completed));
+        assert_eq!(wf.category_of("cancelled"), Some(StatusCategory::Cancelled));
+        assert_eq!(wf.category_of("unknown"), None);
+    }
+
+    #[test]
+    fn test_task_workflow_all_statuses() {
+        let wf = default_task_workflow();
+        let all = wf.all_statuses();
+        assert_eq!(all, vec!["draft", "backlog", "planned", "in-progress", "done", "cancelled"]);
+    }
+
+    #[test]
+    fn test_task_workflow_default_status() {
+        let wf = default_task_workflow();
+        assert_eq!(wf.default_status(), "draft");
+    }
+
+    #[test]
+    fn test_task_workflow_statuses_in() {
+        let wf = default_task_workflow();
+        assert_eq!(wf.statuses_in(StatusCategory::Active), &["in-progress"]);
+        assert_eq!(wf.statuses_in(StatusCategory::Completed), &["done"]);
     }
 
     #[test]
@@ -580,7 +724,7 @@ updated: 2026-02-09
 "#;
         let item: Task = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(item.id, "TASK-042");
-        assert_eq!(item.status, TaskStatus::InProgress);
+        assert_eq!(item.status, "in-progress");
         assert_eq!(item.item_type, "feature");
         assert_eq!(item.tags, vec!["ui", "theming"]);
         assert_eq!(item.epic, Some("EPIC-003".to_string()));
@@ -657,6 +801,8 @@ updated: 2026-02-09
         let config = Config::default();
         assert_eq!(config.version, 1);
         assert_eq!(config.context.token_budget, 1000);
+        assert_eq!(config.default_task_status(), "draft");
+        assert_eq!(config.task_category("in-progress"), Some(StatusCategory::Active));
     }
 
     #[test]

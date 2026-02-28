@@ -146,9 +146,31 @@ Titles are always double-quoted in the YAML to safely handle special characters.
 
 ### Status Workflows
 
-**TaskStatus** — `draft` → `backlog` → `planned` → `in-progress` → `done`
+**Task statuses** are fully configurable via `config.yaml` under `workflows.task`. Each status maps to one of six **status categories** that control system behavior:
 
-Also: `cancelled` (terminal state, reachable from any non-done status)
+| Category | Default Status | System Behavior |
+|----------|---------------|-----------------|
+| `draft` | `draft` | Initial state, hidden from board view |
+| `backlog` | `backlog` | Visible in list view, not on board |
+| `planned` | `planned` | Appears on kanban board |
+| `active` | `in-progress` | Active work, appears on board |
+| `completed` | `done` | Closed — eligible for archiving |
+| `cancelled` | `cancelled` | Closed — eligible for archiving |
+
+Add custom statuses by placing them under the appropriate category in `config.yaml`:
+
+```yaml
+workflows:
+  task:
+    draft: [draft]
+    backlog: [backlog, triage]
+    planned: [planned]
+    active: [in-progress, in-review, in-qa]
+    completed: [done, deployed]
+    cancelled: [cancelled, wont-fix]
+```
+
+Default workflow (used when `workflows.task` is not configured):
 
 ```
 draft → backlog → planned → in-progress → done

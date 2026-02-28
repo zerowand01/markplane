@@ -41,21 +41,19 @@ import { PageTransition } from "@/components/domain/page-transition";
 import { isInputFocused } from "@/lib/hooks/use-keyboard-nav";
 import { ArrowUpRight, ArrowDownLeft, Archive, Plus } from "lucide-react";
 import { CreateDialog } from "@/components/domain/create-dialog";
+import { useConfig } from "@/lib/hooks/use-config";
+import { buildStatusConfig, categoryOf } from "@/lib/constants";
 import { generateKeyBetween } from "fractional-indexing";
-import type { Task, TaskStatus, Priority, Effort } from "@/lib/types";
+import type { Task, TaskStatus, Priority, Effort, StatusCategory } from "@/lib/types";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-const KANBAN_COLUMNS: { status: TaskStatus; label: string; wipLimit?: number }[] = [
-  { status: "planned", label: "Planned" },
-  { status: "in-progress", label: "In Progress", wipLimit: 5 },
-  { status: "done", label: "Done" },
-];
-
 type ViewMode = "board" | "backlog";
 
-const BOARD_STATUSES: TaskStatus[] = ["planned", "in-progress", "done", "cancelled"];
-const BACKLOG_STATUSES: TaskStatus[] = ["draft", "backlog"];
+/** Categories that appear as kanban board columns. */
+const BOARD_CATEGORIES: StatusCategory[] = ["planned", "active", "completed"];
+/** Categories that appear in the backlog list view. */
+const BACKLOG_CATEGORIES: StatusCategory[] = ["draft", "backlog"];
 
 const PRIORITY_GROUPS: { priority: Priority; label: string }[] = [
   { priority: "critical", label: "Critical" },
@@ -73,7 +71,7 @@ const EFFORT_RANK: Record<Effort, number> = {
   xl: 4,
 };
 
-type StatusFilter = "all" | "draft" | "backlog";
+type StatusFilter = "all" | string;
 
 type SortKey = "manual" | "title" | "effort" | "epic" | "updated";
 
@@ -85,22 +83,19 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "epic", label: "Epic" },
 ];
 
-// Kanban collision detection: only consider column droppables, not individual
-// card sortables. This ensures dragging to an empty column (e.g. In Progress)
-// correctly resolves to that column instead of a card in an adjacent column.
-const KANBAN_COLUMN_IDS = new Set<string>(KANBAN_COLUMNS.map((c) => c.status));
-
-const kanbanCollisionDetection: CollisionDetection = (args) => {
-  const columnOnly = {
-    ...args,
-    droppableContainers: args.droppableContainers.filter((c) =>
-      KANBAN_COLUMN_IDS.has(c.id as string)
-    ),
+function makeKanbanCollisionDetection(columnIds: Set<string>): CollisionDetection {
+  return (args) => {
+    const columnOnly = {
+      ...args,
+      droppableContainers: args.droppableContainers.filter((c) =>
+        columnIds.has(c.id as string)
+      ),
+    };
+    const collisions = rectIntersection(columnOnly);
+    if (collisions.length > 0) return collisions;
+    return closestCorners(columnOnly);
   };
-  const collisions = rectIntersection(columnOnly);
-  if (collisions.length > 0) return collisions;
-  return closestCorners(columnOnly);
-};
+}
 
 // ── Main Content ──────────────────────────────────────────────────────────
 
@@ -130,12 +125,46 @@ export function BacklogContent() {
 
   const { data: tasks, isLoading, error, refetch } = useTasks();
   const { data: epics } = useEpics();
+  const { data: projectConfig, isLoading: configLoading } = useConfig();
+  const workflow = projectConfig?.workflows.task;
+
+  // Derive kanban columns and status sets from workflow config
+  const { kanbanColumns, boardStatuses, backlogStatuses, statusConfig } = useMemo(() => {
+    if (!workflow) return { kanbanColumns: [], boardStatuses: new Set<string>(), backlogStatuses: new Set<string>(), statusConfig: {} as ReturnType<typeof buildStatusConfig> };
+
+    const sc = buildStatusConfig(workflow);
+    const cols: { status: string; label: string; wipLimit?: number }[] = [];
+    const boardSet = new Set<string>();
+    const backlogSet = new Set<string>();
+
+    for (const cat of BOARD_CATEGORIES) {
+      for (const status of workflow[cat] ?? []) {
+        cols.push({
+          status,
+          label: sc[status]?.label ?? status,
+          wipLimit: cat === "active" ? 5 : undefined,
+        });
+        boardSet.add(status);
+      }
+    }
+    // Cancelled statuses also show on the board (in the done column as sub-section)
+    for (const status of workflow.cancelled ?? []) {
+      boardSet.add(status);
+    }
+    for (const cat of BACKLOG_CATEGORIES) {
+      for (const status of workflow[cat] ?? []) {
+        backlogSet.add(status);
+      }
+    }
+
+    return { kanbanColumns: cols, boardStatuses: boardSet, backlogStatuses: backlogSet, statusConfig: sc };
+  }, [workflow]);
 
   const filteredTasks = useMemo(() => {
     if (!tasks) return [];
-    const viewStatuses = view === "board" ? BOARD_STATUSES : BACKLOG_STATUSES;
+    const viewStatuses = view === "board" ? boardStatuses : backlogStatuses;
     return tasks.filter((t) => {
-      if (!viewStatuses.includes(t.status)) return false;
+      if (!viewStatuses.has(t.status)) return false;
       if (view === "backlog" && filterStatus !== "all" && t.status !== filterStatus)
         return false;
       if (filterPriority !== "all" && t.priority !== filterPriority)
@@ -146,7 +175,7 @@ export function BacklogContent() {
       if (filterTag !== "all" && !t.tags.includes(filterTag)) return false;
       return true;
     });
-  }, [tasks, view, filterPriority, filterStatus, filterEpic, filterAssignee, filterTag]);
+  }, [tasks, view, filterPriority, filterStatus, filterEpic, filterAssignee, filterTag, boardStatuses, backlogStatuses]);
 
   const openTask = useCallback(
     (id: string) => {
@@ -192,7 +221,7 @@ export function BacklogContent() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [view, changeView]);
 
-  if (isLoading) return <BacklogSkeleton />;
+  if (isLoading || configLoading || !workflow) return <BacklogSkeleton />;
 
   if (error) {
     return (
@@ -279,8 +308,11 @@ export function BacklogContent() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="backlog">Backlog only</SelectItem>
-                <SelectItem value="draft">Drafts only</SelectItem>
+                {[...backlogStatuses].map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {statusConfig[s]?.label ?? s} only
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           )}
@@ -378,7 +410,7 @@ export function BacklogContent() {
 
       {/* Views */}
       {view === "board" && (
-        <KanbanView tasks={filteredTasks} onTaskClick={openTask} />
+        <KanbanView tasks={filteredTasks} onTaskClick={openTask} kanbanColumns={kanbanColumns} workflow={workflow} />
       )}
       {view === "backlog" && (
         <BacklogListView tasks={filteredTasks} onTaskClick={openTask} sortKey={sortKey} />
@@ -409,9 +441,13 @@ export function BacklogContent() {
 function KanbanView({
   tasks,
   onTaskClick,
+  kanbanColumns,
+  workflow,
 }: {
   tasks: Task[];
   onTaskClick: (id: string) => void;
+  kanbanColumns: { status: string; label: string; wipLimit?: number }[];
+  workflow: import("@/lib/types").TaskWorkflow;
 }) {
   const updateTask = useUpdateTask();
   const archiveItem = useArchiveItem();
@@ -432,16 +468,25 @@ function KanbanView({
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
+  const kanbanColumnIds = useMemo(() => new Set(kanbanColumns.map(c => c.status)), [kanbanColumns]);
+  const kanbanCollisionDetection = useMemo(() => makeKanbanCollisionDetection(kanbanColumnIds), [kanbanColumnIds]);
+
+  const firstPlannedStatus = workflow.planned?.[0];
+
+  const cancelledStatuses = useMemo(() => {
+    return new Set(workflow.cancelled ?? []);
+  }, [workflow]);
+
   const { tasksByStatus, totalsByStatus, cancelledTasks } = useMemo(() => {
     const map = new Map<TaskStatus, Task[]>();
     const totals = new Map<TaskStatus, number>();
     const cancelled: Task[] = [];
-    for (const col of KANBAN_COLUMNS) {
+    for (const col of kanbanColumns) {
       map.set(col.status, []);
       totals.set(col.status, 0);
     }
     for (const task of displayTasks) {
-      if (task.status === "cancelled") {
+      if (cancelledStatuses.has(task.status)) {
         cancelled.push(task);
         continue;
       }
@@ -452,7 +497,7 @@ function KanbanView({
       }
     }
     return { tasksByStatus: map, totalsByStatus: totals, cancelledTasks: cancelled };
-  }, [displayTasks]);
+  }, [displayTasks, kanbanColumns, cancelledStatuses]);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const task = event.active.data.current?.task as Task | undefined;
@@ -469,7 +514,7 @@ function KanbanView({
       const overId = over.id as string;
 
       // Custom collision detection ensures over is always a column
-      if (!KANBAN_COLUMN_IDS.has(overId)) return;
+      if (!kanbanColumnIds.has(overId)) return;
       const targetStatus = overId as TaskStatus;
 
       // Only update if status actually changed
@@ -483,7 +528,7 @@ function KanbanView({
         updateTask.mutate({ id: taskId, status: targetStatus });
       }
     },
-    [displayTasks, updateTask]
+    [displayTasks, updateTask, kanbanColumnIds]
   );
 
   return (
@@ -494,13 +539,17 @@ function KanbanView({
       onDragEnd={handleDragEnd}
     >
       <div className="flex flex-col md:flex-row gap-4 overflow-x-auto pb-4">
-        {KANBAN_COLUMNS.map((col) => {
+        {kanbanColumns.map((col) => {
           const columnTasks = tasksByStatus.get(col.status) || [];
           const totalCount = totalsByStatus.get(col.status) || 0;
           const isOverWip =
             col.wipLimit !== undefined && columnTasks.length > col.wipLimit;
 
-          const isDoneColumn = col.status === "done";
+          const colCategory = categoryOf(workflow, col.status);
+          const isCompletedColumn = colCategory === "completed";
+          const isPlannedColumn = colCategory === "planned";
+          // Get first backlog status for demote action
+          const firstBacklogStatus = workflow.backlog[0];
 
           return (
             <KanbanColumn
@@ -513,10 +562,10 @@ function KanbanView({
               isOverWip={isOverWip}
               tasks={columnTasks}
               onTaskClick={onTaskClick}
-              onDemote={col.status === "planned" ? (id) => updateTask.mutate({ id, status: "backlog" }) : undefined}
-              cancelledTasks={isDoneColumn ? cancelledTasks : undefined}
-              onArchive={isDoneColumn ? (id) => archiveItem.mutate(id) : undefined}
-              onArchiveAll={isDoneColumn ? () => {
+              onDemote={isPlannedColumn ? (id) => updateTask.mutate({ id, status: firstBacklogStatus }) : undefined}
+              cancelledTasks={isCompletedColumn ? cancelledTasks : undefined}
+              onArchive={isCompletedColumn ? (id) => archiveItem.mutate(id) : undefined}
+              onArchiveAll={isCompletedColumn ? () => {
                 const ids = [
                   ...columnTasks.map((t) => t.id),
                   ...cancelledTasks.map((t) => t.id),
@@ -659,6 +708,10 @@ function BacklogListView({
   onTaskClick: (id: string) => void;
   sortKey: SortKey;
 }) {
+  const { data: listConfig } = useConfig();
+  const listWorkflow = listConfig?.workflows.task;
+  const firstPlannedStatus = listWorkflow?.planned?.[0];
+
   const updateTask = useUpdateTask();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
@@ -741,9 +794,10 @@ function BacklogListView({
 
   const handlePromote = useCallback(
     (taskId: string) => {
-      updateTask.mutate({ id: taskId, status: "planned" });
+      if (!firstPlannedStatus) return;
+      updateTask.mutate({ id: taskId, status: firstPlannedStatus });
     },
-    [updateTask]
+    [updateTask, firstPlannedStatus]
   );
 
   const handleDragEnd = useCallback(
@@ -758,8 +812,9 @@ function BacklogListView({
       // Check if dropped on the promote zone — immediately remove from local
       // state so the card disappears without a snap-back animation.
       if (overId === "promote-to-board") {
+        if (!firstPlannedStatus) return;
         setPendingReorder(displayTasks.filter((t) => t.id !== taskId));
-        updateTask.mutate({ id: taskId, status: "planned" });
+        updateTask.mutate({ id: taskId, status: firstPlannedStatus });
         return;
       }
 
@@ -979,7 +1034,10 @@ function BacklogRow({
         ? "XL"
         : task.effort.charAt(0).toUpperCase();
 
-  const isDraft = task.status === "draft";
+  const { data: rowConfig } = useConfig();
+  const isDraft = rowConfig?.workflows.task
+    ? categoryOf(rowConfig.workflows.task, task.status) === "draft"
+    : false;
 
   return (
     <div
@@ -999,7 +1057,7 @@ function BacklogRow({
         <span className="font-mono text-sm text-muted-foreground w-24 shrink-0">
           {task.id}
         </span>
-        {isDraft && <StatusBadge status="draft" />}
+        {isDraft && <StatusBadge status={task.status} />}
         <span className="text-base font-medium truncate flex-1">{task.title}</span>
         {task.epic && (
           <span

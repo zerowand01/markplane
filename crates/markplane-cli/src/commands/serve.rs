@@ -21,8 +21,8 @@ use tower_http::services::ServeDir;
 use markplane_core::{
     Effort, Epic, EpicStatus, EpicUpdate, LinkAction, LinkRelation,
     MarkplaneDocument, MarkplaneError, Note, NoteUpdate, Patch, Plan, PlanUpdate,
-    Priority, Project, QueryFilter, ScanScope, Task, TaskStatus, TaskUpdate, find_blocked_items,
-    parse_id,
+    Priority, Project, QueryFilter, ScanScope, StatusCategory, Task, TaskUpdate,
+    find_blocked_items, parse_id,
 };
 
 #[cfg(feature = "embed-ui")]
@@ -319,6 +319,12 @@ struct ListMeta {
 struct ConfigResponse {
     task_types: Vec<String>,
     note_types: Vec<String>,
+    workflows: WorkflowsResponse,
+}
+
+#[derive(Serialize)]
+struct WorkflowsResponse {
+    task: std::collections::BTreeMap<String, Vec<String>>,
 }
 
 #[derive(Serialize)]
@@ -509,20 +515,28 @@ struct EpicResponse {
 fn epic_to_response(
     doc: &MarkplaneDocument<Epic>,
     tasks: &[MarkplaneDocument<Task>],
+    workflow: &markplane_core::TaskWorkflow,
 ) -> EpicResponse {
     let fm = &doc.frontmatter;
+    let cancelled_statuses: std::collections::HashSet<&str> = workflow
+        .statuses_in(StatusCategory::Cancelled)
+        .iter().map(|s| s.as_str()).collect();
+    let completed_statuses: std::collections::HashSet<&str> = workflow
+        .statuses_in(StatusCategory::Completed)
+        .iter().map(|s| s.as_str()).collect();
+
     let epic_tasks: Vec<_> = tasks
         .iter()
         .filter(|t| {
             t.frontmatter.epic.as_deref() == Some(&fm.id)
-                && t.frontmatter.status != TaskStatus::Cancelled
+                && !cancelled_statuses.contains(t.frontmatter.status.as_str())
         })
         .collect();
 
     let task_count = epic_tasks.len();
     let done_count = epic_tasks
         .iter()
-        .filter(|t| t.frontmatter.status == TaskStatus::Done)
+        .filter(|t| completed_statuses.contains(t.frontmatter.status.as_str()))
         .count();
     let progress = if task_count > 0 {
         done_count as f64 / task_count as f64
@@ -671,11 +685,11 @@ struct SummaryResponse {
 #[derive(Serialize)]
 struct SummaryCounts {
     total: usize,
-    in_progress: usize,
+    active: usize,
     planned: usize,
     backlog: usize,
     draft: usize,
-    done: usize,
+    completed: usize,
     blocked: usize,
 }
 
@@ -700,33 +714,50 @@ async fn get_summary(
         .list_epics()
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
 
-    let blocked = find_blocked_items(&tasks);
+    let workflow = &config.workflows.task;
+    let blocked = find_blocked_items(&tasks, workflow);
+
+    let active_statuses: HashSet<&str> = workflow
+        .statuses_in(StatusCategory::Active)
+        .iter().map(|s| s.as_str()).collect();
+    let planned_statuses: HashSet<&str> = workflow
+        .statuses_in(StatusCategory::Planned)
+        .iter().map(|s| s.as_str()).collect();
+    let backlog_statuses: HashSet<&str> = workflow
+        .statuses_in(StatusCategory::Backlog)
+        .iter().map(|s| s.as_str()).collect();
+    let draft_statuses: HashSet<&str> = workflow
+        .statuses_in(StatusCategory::Draft)
+        .iter().map(|s| s.as_str()).collect();
+    let completed_statuses: HashSet<&str> = workflow
+        .statuses_in(StatusCategory::Completed)
+        .iter().map(|s| s.as_str()).collect();
 
     let in_progress: Vec<_> = tasks
         .iter()
-        .filter(|t| t.frontmatter.status == TaskStatus::InProgress)
+        .filter(|t| active_statuses.contains(t.frontmatter.status.as_str()))
         .collect();
     let planned_count = tasks
         .iter()
-        .filter(|t| t.frontmatter.status == TaskStatus::Planned)
+        .filter(|t| planned_statuses.contains(t.frontmatter.status.as_str()))
         .count();
     let backlog_count = tasks
         .iter()
-        .filter(|t| t.frontmatter.status == TaskStatus::Backlog)
+        .filter(|t| backlog_statuses.contains(t.frontmatter.status.as_str()))
         .count();
     let draft_count = tasks
         .iter()
-        .filter(|t| t.frontmatter.status == TaskStatus::Draft)
+        .filter(|t| draft_statuses.contains(t.frontmatter.status.as_str()))
         .count();
     let done_count = tasks
         .iter()
-        .filter(|t| t.frontmatter.status == TaskStatus::Done)
+        .filter(|t| completed_statuses.contains(t.frontmatter.status.as_str()))
         .count();
 
     let now_epics: Vec<_> = epics
         .iter()
         .filter(|e| e.frontmatter.status == EpicStatus::Now)
-        .map(|e| epic_to_response(e, &all_tasks))
+        .map(|e| epic_to_response(e, &all_tasks, workflow))
         .collect();
 
     let in_progress_tasks: Vec<_> = in_progress.iter().map(|t| task_to_response(t)).collect();
@@ -735,7 +766,7 @@ async fn get_summary(
     // Recent completions: done items sorted by updated date (most recent first)
     let mut recent_done: Vec<_> = tasks
         .iter()
-        .filter(|t| t.frontmatter.status == TaskStatus::Done)
+        .filter(|t| completed_statuses.contains(t.frontmatter.status.as_str()))
         .collect();
     recent_done.sort_by(|a, b| b.frontmatter.updated.cmp(&a.frontmatter.updated));
     let recent_completions: Vec<_> = recent_done
@@ -748,8 +779,8 @@ async fn get_summary(
     let next_up_tasks: Vec<_> = tasks
         .iter()
         .filter(|t| {
-            t.frontmatter.status == TaskStatus::Planned
-                || t.frontmatter.status == TaskStatus::Backlog
+            planned_statuses.contains(t.frontmatter.status.as_str())
+                || backlog_statuses.contains(t.frontmatter.status.as_str())
         })
         .take(5)
         .map(task_to_response)
@@ -771,11 +802,11 @@ async fn get_summary(
         description: config.project.description,
         counts: SummaryCounts {
             total: tasks.len(),
-            in_progress: in_progress.len(),
+            active: in_progress.len(),
             planned: planned_count,
             backlog: backlog_count,
             draft: draft_count,
-            done: done_count,
+            completed: done_count,
             blocked: blocked.len(),
         },
         now_epics,
@@ -799,17 +830,34 @@ async fn get_config(
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "config_error", &e.to_string()))?;
 
     Ok(Json(ApiResponse {
-        data: ConfigResponse {
-            task_types: config.task_types,
-            note_types: config.note_types,
-        },
+        data: config_to_response(config),
     }))
+}
+
+fn config_to_response(config: markplane_core::Config) -> ConfigResponse {
+    let task_workflow_map = config.workflows.task.0
+        .iter()
+        .map(|(cat, statuses)| (cat.to_string(), statuses.clone()))
+        .collect();
+    ConfigResponse {
+        task_types: config.task_types,
+        note_types: config.note_types,
+        workflows: WorkflowsResponse {
+            task: task_workflow_map,
+        },
+    }
 }
 
 #[derive(Deserialize)]
 struct UpdateConfigRequest {
     task_types: Option<Vec<String>>,
     note_types: Option<Vec<String>>,
+    workflows: Option<UpdateWorkflowsRequest>,
+}
+
+#[derive(Deserialize)]
+struct UpdateWorkflowsRequest {
+    task: Option<std::collections::BTreeMap<String, Vec<String>>>,
 }
 
 async fn patch_config(
@@ -849,6 +897,33 @@ async fn patch_config(
     if let Some(note_types) = body.note_types {
         config.note_types = validate_types(note_types, "note_types")?;
     }
+    if let Some(workflows) = body.workflows
+        && let Some(task_workflow) = workflows.task
+    {
+            let mut workflow_map = std::collections::BTreeMap::new();
+            for (cat_str, statuses) in task_workflow {
+                let category: StatusCategory = cat_str.parse().map_err(|_| {
+                    error_response(
+                        StatusCode::BAD_REQUEST,
+                        "validation_error",
+                        &format!("Unknown status category: {cat_str}"),
+                    )
+                })?;
+                let cleaned = validate_types(statuses, &format!("workflows.task.{cat_str}"))?;
+                workflow_map.insert(category, cleaned);
+            }
+            // Ensure all 6 categories are present
+            for cat in StatusCategory::ALL {
+                if !workflow_map.contains_key(cat) {
+                    return Err(error_response(
+                        StatusCode::BAD_REQUEST,
+                        "validation_error",
+                        &format!("Missing required status category: {cat}"),
+                    ));
+                }
+            }
+            config.workflows.task = markplane_core::TaskWorkflow(workflow_map);
+    }
 
     state
         .project
@@ -856,10 +931,7 @@ async fn patch_config(
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "config_error", &e.to_string()))?;
 
     Ok(Json(ApiResponse {
-        data: ConfigResponse {
-            task_types: config.task_types,
-            note_types: config.note_types,
-        },
+        data: config_to_response(config),
     }))
 }
 
@@ -1009,10 +1081,11 @@ async fn create_epic(
 
     // New epic has no tasks yet
     let tasks: Vec<MarkplaneDocument<Task>> = vec![];
+    let config = state.project.load_config().map_err(map_core_error)?;
     Ok((
         StatusCode::CREATED,
         Json(ApiResponse {
-            data: epic_to_response(&doc, &tasks),
+            data: epic_to_response(&doc, &tasks, &config.workflows.task),
         }),
     ))
 }
@@ -1344,8 +1417,10 @@ async fn get_epics(
         .list_tasks(&QueryFilter { scope: ScanScope::All, ..Default::default() })
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
 
+    let config = state.project.load_config()
+        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "config_error", &e.to_string()))?;
     let total = epics.len();
-    let data: Vec<_> = epics.iter().map(|e| epic_to_response(e, &tasks)).collect();
+    let data: Vec<_> = epics.iter().map(|e| epic_to_response(e, &tasks, &config.workflows.task)).collect();
 
     Ok(Json(ApiListResponse {
         data,
@@ -1369,9 +1444,11 @@ async fn get_epic(
         .project
         .list_tasks(&QueryFilter { scope: ScanScope::All, ..Default::default() })
         .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+    let config = state.project.load_config()
+        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "config_error", &e.to_string()))?;
 
     Ok(Json(ApiResponse {
-        data: epic_to_response(&doc, &tasks),
+        data: epic_to_response(&doc, &tasks, &config.workflows.task),
     }))
 }
 
@@ -1518,9 +1595,10 @@ async fn update_epic(
     // Re-read for response
     let doc: MarkplaneDocument<Epic> = state.project.read_item(&id).map_err(map_core_error)?;
     let tasks = state.project.list_tasks(&QueryFilter { scope: ScanScope::All, ..Default::default() }).map_err(map_core_error)?;
+    let config = state.project.load_config().map_err(map_core_error)?;
 
     Ok(Json(ApiResponse {
-        data: epic_to_response(&doc, &tasks),
+        data: epic_to_response(&doc, &tasks, &config.workflows.task),
     }))
 }
 

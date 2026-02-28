@@ -83,12 +83,14 @@ After `markplane init`, your repo gets a `.markplane/` directory:
 
 ## Status Workflows
 
-| Type | Statuses |
-|------|----------|
-| Task | `draft` → `backlog` → `planned` → `in-progress` → `done` (also `cancelled`) |
-| Epic | `later` → `next` → `now` → `done` |
-| Plan | `draft` → `approved` → `in-progress` → `done` |
-| Note | `draft` → `active` → `archived` |
+| Type | Statuses | Configurable? |
+|------|----------|---------------|
+| Task | `draft` → `backlog` → `planned` → `in-progress` → `done` (also `cancelled`) | Yes — via `config.yaml` `workflows.task` |
+| Epic | `later` → `next` → `now` → `done` | No |
+| Plan | `draft` → `approved` → `in-progress` → `done` | No |
+| Note | `draft` → `active` → `archived` | No |
+
+Task statuses are fully configurable. Each status maps to one of six **status categories** (`draft`, `backlog`, `planned`, `active`, `completed`, `cancelled`) that control system behavior (kanban columns, progress tracking, archive eligibility). Add custom statuses like `in-review`, `in-qa`, or `deployed` by placing them under the appropriate category in `config.yaml`.
 
 ## Web UI
 

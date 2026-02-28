@@ -44,7 +44,7 @@ impl Project {
             let fm = &doc.frontmatter;
 
             if let Some(ref statuses) = filter.status
-                && !statuses.contains(&fm.status.to_string()) {
+                && !statuses.contains(&fm.status) {
                     return false;
                 }
 

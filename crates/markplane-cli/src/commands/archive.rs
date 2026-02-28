@@ -1,6 +1,6 @@
 use colored::Colorize;
 use markplane_core::{
-    EpicStatus, NoteStatus, PlanStatus, Project, QueryFilter, TaskStatus,
+    EpicStatus, NoteStatus, PlanStatus, Project, QueryFilter,
 };
 
 pub fn run(id: Option<String>, all_done: bool, dry_run: bool) -> anyhow::Result<()> {
@@ -24,11 +24,13 @@ pub fn run(id: Option<String>, all_done: bool, dry_run: bool) -> anyhow::Result<
     // Batch archive all done/cancelled items across all entity types
     let mut to_archive: Vec<(String, String)> = Vec::new(); // (id, description)
 
-    // Tasks: done or cancelled
+    // Tasks: closed statuses (completed or cancelled categories)
+    let config = project.load_config()?;
+    let workflow = &config.workflows.task;
     let tasks = project.list_tasks(&QueryFilter::default())?;
     for doc in &tasks {
         let fm = &doc.frontmatter;
-        if fm.status == TaskStatus::Done || fm.status == TaskStatus::Cancelled {
+        if workflow.category_of(&fm.status).is_some_and(|c| c.is_closed()) {
             to_archive.push((fm.id.clone(), format!("{} ({})", fm.title, fm.status)));
         }
     }

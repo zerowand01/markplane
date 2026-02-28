@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::fs;
 
-use markplane_core::{TaskStatus, Project, QueryFilter, parse_id, IdPrefix};
+use markplane_core::{StatusCategory, Project, QueryFilter, parse_id, IdPrefix};
 use markplane_core::manifest;
 use serde_json::{json, Value};
 
@@ -131,16 +131,17 @@ fn read_summary(project: &Project) -> Result<String, String> {
         .list_tasks(&QueryFilter::default())
         .map_err(|e| e.to_string())?;
 
+    let workflow = &config.workflows.task;
     let mut in_progress = 0usize;
     let mut planned = 0usize;
     let mut done = 0usize;
     let total = items.len();
 
     for item in &items {
-        match item.frontmatter.status {
-            TaskStatus::InProgress => in_progress += 1,
-            TaskStatus::Planned => planned += 1,
-            TaskStatus::Done => done += 1,
+        match workflow.category_of(&item.frontmatter.status) {
+            Some(StatusCategory::Active) => in_progress += 1,
+            Some(StatusCategory::Planned) => planned += 1,
+            Some(StatusCategory::Completed) => done += 1,
             _ => {}
         }
     }
@@ -152,8 +153,16 @@ fn read_summary(project: &Project) -> Result<String, String> {
 }
 
 fn read_active_work(project: &Project) -> Result<String, String> {
+    let config = project.load_config().map_err(|e| e.to_string())?;
+    let active_statuses: Vec<String> = config.workflows.task
+        .statuses_in(StatusCategory::Active)
+        .to_vec();
     let filter = QueryFilter {
-        status: Some(vec!["in-progress".to_string()]),
+        status: Some(if active_statuses.is_empty() {
+            vec!["in-progress".to_string()]
+        } else {
+            active_statuses
+        }),
         ..Default::default()
     };
 
@@ -178,30 +187,20 @@ fn read_active_work(project: &Project) -> Result<String, String> {
 }
 
 fn read_blocked(project: &Project) -> Result<String, String> {
+    let config = project.load_config().map_err(|e| e.to_string())?;
+    let workflow = &config.workflows.task;
     let items = project
         .list_tasks(&QueryFilter::default())
         .map_err(|e| e.to_string())?;
 
-    // Build a set of done item IDs
+    let blocked = markplane_core::find_blocked_items(&items, workflow);
+    let completed_statuses: HashSet<&str> = workflow
+        .statuses_in(StatusCategory::Completed)
+        .iter().map(|s| s.as_str()).collect();
     let done_ids: HashSet<&str> = items
         .iter()
-        .filter(|doc| doc.frontmatter.status == TaskStatus::Done)
+        .filter(|doc| completed_statuses.contains(doc.frontmatter.status.as_str()))
         .map(|doc| doc.frontmatter.id.as_str())
-        .collect();
-
-    // Only include items that have unresolved (non-done) dependencies
-    let blocked: Vec<_> = items
-        .iter()
-        .filter(|doc| {
-            doc.frontmatter.status != TaskStatus::Done
-                && doc.frontmatter.status != TaskStatus::Cancelled
-                && !doc.frontmatter.depends_on.is_empty()
-                && doc
-                    .frontmatter
-                    .depends_on
-                    .iter()
-                    .any(|dep| !done_ids.contains(dep.as_str()))
-        })
         .collect();
 
     if blocked.is_empty() {

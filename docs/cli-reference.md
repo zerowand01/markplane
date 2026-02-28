@@ -758,7 +758,7 @@ markplane status <ID> <NEW_STATUS>
 
 | Prefix | Valid statuses |
 |--------|---------------|
-| `TASK` | `draft`, `backlog`, `planned`, `in-progress`, `done`, `cancelled` |
+| `TASK` | Configurable via `config.yaml` `workflows.task`. Defaults: `draft`, `backlog`, `planned`, `in-progress`, `done`, `cancelled` |
 | `EPIC` | `later`, `next`, `now`, `done` |
 | `PLAN` | `draft`, `approved`, `in-progress`, `done` |
 | `NOTE` | `draft`, `active`, `archived` |

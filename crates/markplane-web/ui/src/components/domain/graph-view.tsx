@@ -19,7 +19,9 @@ import {
 import ELK from "elkjs/lib/elk.bundled.js";
 import "@xyflow/react/dist/style.css";
 
-import { PREFIX_CONFIG } from "@/lib/constants";
+import { PREFIX_CONFIG, categoryOf } from "@/lib/constants";
+import { useConfig } from "@/lib/hooks/use-config";
+import type { TaskWorkflow } from "@/lib/types";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -98,27 +100,17 @@ const RELATION_LABELS: Record<string, string> = {
 
 // --- Helpers ---
 
-function statusToColor(status: string): string {
-  switch (status) {
-    case "in-progress":
-      return "var(--status-in-progress)";
-    case "now":
-      return "var(--status-now)";
-    case "next":
-      return "var(--status-next)";
-    case "later":
-      return "var(--status-later)";
-    case "done":
-      return "var(--status-done)";
-    case "planned":
-      return "var(--status-planned)";
-    case "backlog":
-      return "var(--status-backlog)";
-    case "cancelled":
-      return "var(--status-cancelled)";
-    default:
-      return "var(--status-draft)";
+function statusToColor(status: string, workflow?: TaskWorkflow): string {
+  // For task statuses, derive category fallback from workflow
+  if (workflow) {
+    const category = categoryOf(workflow, status);
+    if (category) {
+      return `var(--status-${status}, var(--status-category-${category}))`;
+    }
   }
+  // For non-task statuses (epic, plan, note) or when workflow unavailable,
+  // use direct CSS variable with muted-foreground fallback
+  return `var(--status-${status}, var(--muted-foreground))`;
 }
 
 function countEdgesByLayer(
@@ -161,14 +153,25 @@ const DEFAULT_FILTERS: Filters = {
   tags: new Set(),
 };
 
+/** Check if a graph node is in a closed state (completed/cancelled for tasks, done for others). */
+function isNodeClosed(node: GraphNode, workflow?: TaskWorkflow): boolean {
+  if (node.type === "task" && workflow) {
+    const cat = categoryOf(workflow, node.status);
+    return cat === "completed" || cat === "cancelled";
+  }
+  // Epic, plan, note — fixed statuses
+  return node.status === "done" || node.status === "cancelled" || node.status === "archived";
+}
+
 function computeAllowedNodes(
   graphData: GraphData,
   filters: Filters,
   epicMembers: Record<string, Set<string>>,
+  workflow?: TaskWorkflow,
 ): Set<string> {
   const allowed = new Set<string>();
   for (const n of graphData.nodes) {
-    if (!filters.showCompleted && (n.status === "done" || n.status === "cancelled")) continue;
+    if (!filters.showCompleted && isNodeClosed(n, workflow)) continue;
     if (filters.priorities.size > 0 && n.priority && !filters.priorities.has(n.priority)) continue;
     if (filters.tags.size > 0 && (!n.tags || !n.tags.some((t) => filters.tags.has(t)))) continue;
     if (filters.epics.size > 0) {
@@ -190,10 +193,10 @@ function buildNodeData(
   node: GraphNode,
   sourcePosition: Position,
   targetPosition: Position,
+  workflow?: TaskWorkflow,
 ) {
   const prefix = node.id.split("-")[0];
   const entityColor = PREFIX_CONFIG[prefix]?.color ?? "var(--entity-task)";
-  const isDone = node.status === "done" || node.status === "cancelled";
 
   return {
     id: node.id,
@@ -201,8 +204,8 @@ function buildNodeData(
     entityType: node.type,
     status: node.status,
     entityColor,
-    statusColor: statusToColor(node.status),
-    isDone: isDone ? "true" : "",
+    statusColor: statusToColor(node.status, workflow),
+    isDone: isNodeClosed(node, workflow) ? "true" : "",
     sourcePosition,
     targetPosition,
   };
@@ -214,6 +217,7 @@ async function buildLayout(
   allowedNodes: Set<string>,
   direction: LayoutDirection,
   prevPositions: Map<string, { x: number; y: number }>,
+  workflow?: TaskWorkflow,
 ): Promise<{ nodes: Node[]; edges: Edge[] }> {
   const useCompound = activeLayers.has("epics");
 
@@ -451,7 +455,7 @@ async function buildLayout(
         nodes.push({
           id: innerChild.id,
           position: { x: innerChild.x ?? 0, y: innerChild.y ?? 0 },
-          data: buildNodeData(childNode, sourcePosition, targetPosition),
+          data: buildNodeData(childNode, sourcePosition, targetPosition, workflow),
           type: "itemNode",
           parentId: elkChild.id,
           extent: "parent" as const,
@@ -465,7 +469,7 @@ async function buildLayout(
       nodes.push({
         id: elkChild.id,
         position: { x: elkChild.x ?? 0, y: elkChild.y ?? 0 },
-        data: buildNodeData(node, sourcePosition, targetPosition),
+        data: buildNodeData(node, sourcePosition, targetPosition, workflow),
         type: "itemNode",
         style: { width: NODE_WIDTH, height: NODE_HEIGHT },
       });
@@ -948,6 +952,9 @@ export default function GraphView({
   focusId?: string;
   onNodeClick?: (nodeId: string) => void;
 }) {
+  const { data: graphConfig } = useConfig();
+  const graphWorkflow = graphConfig?.workflows.task;
+
   const [activeLayers, setActiveLayers] = useState<Set<string>>(DEFAULT_LAYERS);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [direction, setDirection] = useState<LayoutDirection>("TB");
@@ -988,8 +995,8 @@ export default function GraphView({
   }, [graphData]);
 
   const allowedNodes = useMemo(
-    () => computeAllowedNodes(graphData, filters, epicMembers),
-    [graphData, filters, epicMembers],
+    () => computeAllowedNodes(graphData, filters, epicMembers, graphWorkflow),
+    [graphData, filters, epicMembers, graphWorkflow],
   );
 
   const edgeCounts = useMemo(
@@ -998,8 +1005,8 @@ export default function GraphView({
   );
 
   const hasCompletedItems = useMemo(
-    () => graphData.nodes.some((n) => n.status === "done" || n.status === "cancelled"),
-    [graphData],
+    () => graphData.nodes.some((n) => isNodeClosed(n, graphWorkflow)),
+    [graphData, graphWorkflow],
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -1019,7 +1026,7 @@ export default function GraphView({
     const version = ++layoutVersionRef.current;
     setIsLayouting(true);
 
-    buildLayout(graphData, activeLayers, allowedNodes, direction, prevPositionsRef.current)
+    buildLayout(graphData, activeLayers, allowedNodes, direction, prevPositionsRef.current, graphWorkflow)
       .then((result) => {
         if (version !== layoutVersionRef.current) return;
 
@@ -1038,7 +1045,7 @@ export default function GraphView({
         if (version !== layoutVersionRef.current) return;
         setIsLayouting(false);
       });
-  }, [graphData, activeLayers, allowedNodes, direction, layoutKey, setNodes, setEdges]);
+  }, [graphData, activeLayers, allowedNodes, direction, layoutKey, setNodes, setEdges, graphWorkflow]);
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     if (onNodeClickProp) {

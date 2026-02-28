@@ -13,9 +13,10 @@ pub mod links;
 
 pub use error::{MarkplaneError, Result};
 pub use models::{
-    Task, TaskStatus, Config, Effort, Epic, EpicStatus, IdPrefix,
-    MarkplaneDocument, Note, NoteStatus, Plan, PlanStatus, Priority,
-    generate_random_id, parse_id, default_task_types, default_note_types,
+    Task, StatusCategory, TaskWorkflow, WorkflowConfig, Config, Effort, Epic,
+    EpicStatus, IdPrefix, MarkplaneDocument, Note, NoteStatus, Plan, PlanStatus,
+    Priority, generate_random_id, parse_id, default_task_types, default_note_types,
+    default_task_workflow,
 };
 pub use frontmatter::{parse_frontmatter, parse_frontmatter_raw, write_frontmatter};
 pub use project::{
@@ -24,6 +25,6 @@ pub use project::{
     MoveDirective,
 };
 pub use query::{QueryFilter, ScanScope};
-pub use references::{extract_references, validate_references, find_orphans, BrokenReference, build_reference_graph};
+pub use references::{extract_references, validate_references, validate_task_statuses, find_orphans, BrokenReference, build_reference_graph};
 pub use templates::render_template;
 pub use links::{LinkRelation, LinkAction};

@@ -10,9 +10,20 @@ import {
   ThumbsUp,
   Archive,
 } from "lucide-react";
-import type { TaskStatus, EpicStatus, Priority } from "./types";
+import type { EpicStatus, Priority, StatusCategory, TaskWorkflow } from "./types";
 
-export const STATUS_CONFIG: Record<TaskStatus, { label: string; icon: LucideIcon }> = {
+/** Fixed config per status category — icon and color for system-level rendering. */
+export const CATEGORY_CONFIG: Record<StatusCategory, { label: string; icon: LucideIcon }> = {
+  draft: { label: "Draft", icon: CircleDashed },
+  backlog: { label: "Backlog", icon: Circle },
+  planned: { label: "Planned", icon: CircleDot },
+  active: { label: "Active", icon: LoaderCircle },
+  completed: { label: "Completed", icon: CircleCheck },
+  cancelled: { label: "Cancelled", icon: CircleX },
+};
+
+/** Default status config for known statuses (backward compat). */
+export const STATUS_CONFIG: Record<string, { label: string; icon: LucideIcon }> = {
   draft: { label: "Draft", icon: CircleDashed },
   backlog: { label: "Backlog", icon: Circle },
   planned: { label: "Planned", icon: CircleDot },
@@ -20,6 +31,38 @@ export const STATUS_CONFIG: Record<TaskStatus, { label: string; icon: LucideIcon
   done: { label: "Done", icon: CircleCheck },
   cancelled: { label: "Cancelled", icon: CircleX },
 };
+
+/** Build a status→config mapping from a TaskWorkflow.
+ *  Known statuses get their explicit config; custom statuses inherit from their category. */
+export function buildStatusConfig(workflow: TaskWorkflow): Record<string, { label: string; icon: LucideIcon; category: StatusCategory }> {
+  const result: Record<string, { label: string; icon: LucideIcon; category: StatusCategory }> = {};
+  for (const [category, statuses] of Object.entries(workflow) as [StatusCategory, string[]][]) {
+    const catConfig = CATEGORY_CONFIG[category];
+    for (const status of statuses) {
+      const known = STATUS_CONFIG[status];
+      result[status] = {
+        label: known?.label ?? status.split("-").map(w => w.length > 0 ? w[0].toUpperCase() + w.slice(1) : "").join(" "),
+        icon: known?.icon ?? catConfig.icon,
+        category,
+      };
+    }
+  }
+  return result;
+}
+
+/** Get the category for a status given a workflow. */
+export function categoryOf(workflow: TaskWorkflow, status: string): StatusCategory | undefined {
+  for (const [category, statuses] of Object.entries(workflow) as [StatusCategory, string[]][]) {
+    if (statuses.includes(status)) return category;
+  }
+  return undefined;
+}
+
+/** Get all status strings from a workflow in category order. */
+export function allStatuses(workflow: TaskWorkflow): string[] {
+  const order: StatusCategory[] = ["draft", "backlog", "planned", "active", "completed", "cancelled"];
+  return order.flatMap(cat => workflow[cat] ?? []);
+}
 
 export const EPIC_STATUS_CONFIG: Record<EpicStatus, { label: string; icon: LucideIcon }> = {
   now: { label: "Now", icon: CirclePlay },

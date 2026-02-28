@@ -36,19 +36,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { STATUS_CONFIG } from "@/lib/constants";
+import { STATUS_CONFIG, buildStatusConfig, allStatuses, categoryOf } from "@/lib/constants";
 import { useConfig } from "@/lib/hooks/use-config";
-import { Pencil, Archive, ArchiveRestore } from "lucide-react";
-import type { TaskStatus, Priority, Effort } from "@/lib/types";
-
-const ALL_STATUSES: TaskStatus[] = [
-  "draft",
-  "backlog",
-  "planned",
-  "in-progress",
-  "done",
-  "cancelled",
-];
+import { Circle, Pencil, Archive, ArchiveRestore } from "lucide-react";
+import type { Priority, Effort } from "@/lib/types";
 const ALL_PRIORITIES: Priority[] = [
   "critical",
   "high",
@@ -82,6 +73,12 @@ export function TaskDetailSheet({
   const { data: plans } = usePlans();
   const { data: notes } = useNotes();
   const { data: config } = useConfig();
+  const workflow = config?.workflows.task;
+  const statusConfig = workflow ? buildStatusConfig(workflow) : null;
+  const statusList = workflow ? allStatuses(workflow) : [];
+
+  const taskCategory = task && workflow ? categoryOf(workflow, task.status) : undefined;
+  const isClosedStatus = taskCategory === "completed" || taskCategory === "cancelled";
 
   const epicOptions =
     epics?.map((e) => ({ id: e.id, title: e.title })) ?? [];
@@ -137,7 +134,7 @@ export function TaskDetailSheet({
                     <ArchiveRestore className="size-3.5" />
                     <span className="text-xs">Restore</span>
                   </Button>
-                ) : (task.status === "done" || task.status === "cancelled") && (
+                ) : isClosedStatus && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -174,32 +171,34 @@ export function TaskDetailSheet({
                         style={{ color: `var(--status-${task.status})` }}
                       >
                         {(() => {
-                          const Icon = STATUS_CONFIG[task.status].icon;
+                          const cfg = statusConfig?.[task.status] ?? STATUS_CONFIG[task.status];
+                          const Icon = cfg?.icon ?? Circle;
                           return <Icon className="size-3.5 text-current" />;
                         })()}
-                        <span className="text-sm">{STATUS_CONFIG[task.status].label}</span>
+                        <span className="text-sm">
+                          {statusConfig?.[task.status]?.label ?? STATUS_CONFIG[task.status]?.label ?? task.status}
+                        </span>
                       </span>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                      {ALL_STATUSES.map((s) => (
-                        <DropdownMenuItem
-                          key={s}
-                          onClick={() =>
-                            updateTask.mutate({ id: task.id, status: s })
-                          }
-                        >
-                          {(() => {
-                            const Icon = STATUS_CONFIG[s].icon;
-                            return (
-                              <Icon
-                                className="mr-2 size-4 text-current"
-                                style={{ color: `var(--status-${s})` }}
-                              />
-                            );
-                          })()}
-                          {STATUS_CONFIG[s].label}
-                        </DropdownMenuItem>
-                      ))}
+                      {statusList.map((s) => {
+                        const cfg = statusConfig?.[s] ?? STATUS_CONFIG[s];
+                        const Icon = cfg?.icon ?? Circle;
+                        return (
+                          <DropdownMenuItem
+                            key={s}
+                            onClick={() =>
+                              updateTask.mutate({ id: task.id, status: s })
+                            }
+                          >
+                            <Icon
+                              className="mr-2 size-4 text-current"
+                              style={{ color: `var(--status-${s})` }}
+                            />
+                            {cfg?.label ?? s}
+                          </DropdownMenuItem>
+                        );
+                      })}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </FieldRow>

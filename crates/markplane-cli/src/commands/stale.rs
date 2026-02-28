@@ -26,12 +26,13 @@ pub fn run(days: u32) -> anyhow::Result<()> {
 
     let items = project.list_tasks(&QueryFilter::default())?;
 
+    let config = project.load_config()?;
+    let workflow = &config.workflows.task;
     let stale: Vec<StaleRow> = items
         .iter()
         .filter(|doc| {
             let fm = &doc.frontmatter;
-            fm.status != markplane_core::TaskStatus::Done
-                && fm.status != markplane_core::TaskStatus::Cancelled
+            workflow.category_of(&fm.status).is_none_or(|c| c.is_open())
                 && fm.updated < cutoff
         })
         .map(|doc| {

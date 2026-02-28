@@ -40,7 +40,7 @@ Items that cannot proceed because they depend on other items that are not yet do
 
 Comprehensive project health data:
 
-- **Status distribution**: Count of items in each status (draft, backlog, planned, in-progress, done, cancelled)
+- **Status distribution**: Count of items by status category (draft, backlog, planned, active, completed, cancelled)
 - **Priority distribution**: Count of open items at each priority level
 - **Epic progress**: Per-epic completion percentage and item counts
 - **Plans summary**: Active vs. completed plans

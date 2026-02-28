@@ -334,6 +334,20 @@ impl Project {
 
     // ── CRUD Operations ───────────────────────────────────────────────────
 
+    /// Validate that a task status is in the configured workflow.
+    pub fn validate_task_status(&self, status: &str) -> Result<()> {
+        let config = self.load_config()?;
+        if config.workflows.task.contains(status) {
+            Ok(())
+        } else {
+            Err(MarkplaneError::Config(format!(
+                "Unknown task status: '{}'. Valid statuses: {}",
+                status,
+                config.workflows.task.all_statuses().join(", ")
+            )))
+        }
+    }
+
     /// Create a new task.
     #[allow(clippy::too_many_arguments)]
     pub fn create_task(
@@ -348,6 +362,7 @@ impl Project {
     ) -> Result<Task> {
         validate_title_length(title)?;
         self.validate_task_type(item_type)?;
+        let config = self.load_config()?;
         let id = self.next_id(&IdPrefix::Task)?;
         let today = Local::now().date_naive();
         let position = self.append_position(&priority)?;
@@ -356,7 +371,7 @@ impl Project {
         let task = Task {
             id,
             title: title.to_string(),
-            status: TaskStatus::Draft,
+            status: config.default_task_status().to_string(),
             priority,
             item_type: item_type.to_string(),
             effort,
@@ -514,8 +529,9 @@ impl Project {
 
         match prefix {
             IdPrefix::Task => {
+                self.validate_task_status(new_status)?;
                 let mut doc: MarkplaneDocument<Task> = self.read_item(id)?;
-                doc.frontmatter.status = new_status.parse()?;
+                doc.frontmatter.status = new_status.to_string();
                 doc.frontmatter.updated = today;
                 self.write_item(id, &doc)?;
             }
@@ -554,7 +570,8 @@ impl Project {
             fm.title = title.clone();
         }
         if let Some(ref status) = u.status {
-            fm.status = status.parse()?;
+            self.validate_task_status(status)?;
+            fm.status = status.clone();
         }
         if let Some(ref priority) = u.priority {
             fm.priority = priority.parse()?;
@@ -1147,20 +1164,32 @@ fn validate_title_length(title: &str) -> Result<()> {
 /// Find tasks that are blocked (have unresolved dependencies).
 /// An item is blocked if it's not done/cancelled and has at least one
 /// dependency that isn't done.
-pub fn find_blocked_items(
-    items: &[MarkplaneDocument<Task>],
-) -> Vec<&MarkplaneDocument<Task>> {
+pub fn find_blocked_items<'a>(
+    items: &'a [MarkplaneDocument<Task>],
+    workflow: &TaskWorkflow,
+) -> Vec<&'a MarkplaneDocument<Task>> {
+    let completed_statuses: HashSet<&str> = workflow
+        .statuses_in(StatusCategory::Completed)
+        .iter()
+        .map(|s| s.as_str())
+        .collect();
+    let closed_statuses: HashSet<&str> = workflow
+        .statuses_in(StatusCategory::Completed)
+        .iter()
+        .chain(workflow.statuses_in(StatusCategory::Cancelled).iter())
+        .map(|s| s.as_str())
+        .collect();
+
     let done_ids: HashSet<&str> = items
         .iter()
-        .filter(|i| i.frontmatter.status == TaskStatus::Done)
+        .filter(|i| completed_statuses.contains(i.frontmatter.status.as_str()))
         .map(|i| i.frontmatter.id.as_str())
         .collect();
 
     items
         .iter()
         .filter(|i| {
-            i.frontmatter.status != TaskStatus::Done
-                && i.frontmatter.status != TaskStatus::Cancelled
+            !closed_statuses.contains(i.frontmatter.status.as_str())
                 && !i.frontmatter.depends_on.is_empty()
                 && i.frontmatter
                     .depends_on
@@ -1269,7 +1298,7 @@ mod tests {
 
         assert!(item.id.starts_with("TASK-"));
         assert_eq!(item.title, "Fix login bug");
-        assert_eq!(item.status, TaskStatus::Draft);
+        assert_eq!(item.status, "draft");
         assert_eq!(item.priority, Priority::High);
         assert_eq!(item.item_type, "bug");
 
@@ -1356,7 +1385,7 @@ mod tests {
         project.update_status(&task.id, "in-progress").unwrap();
 
         let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
-        assert_eq!(doc.frontmatter.status, TaskStatus::InProgress);
+        assert_eq!(doc.frontmatter.status, "in-progress");
     }
 
     #[test]
@@ -1607,8 +1636,9 @@ mod tests {
             .create_task("B", "feature", Priority::Medium, Effort::Small, None, vec![], None)
             .unwrap();
 
+        let config = project.load_config().unwrap();
         let items = project.list_tasks(&crate::query::QueryFilter::default()).unwrap();
-        let blocked = find_blocked_items(&items);
+        let blocked = find_blocked_items(&items, &config.workflows.task);
         assert!(blocked.is_empty());
     }
 
@@ -1627,8 +1657,9 @@ mod tests {
         doc.frontmatter.depends_on = vec![blocker.id.clone()];
         project.write_item(&blocked_task.id, &doc).unwrap();
 
+        let config = project.load_config().unwrap();
         let items = project.list_tasks(&crate::query::QueryFilter::default()).unwrap();
-        let blocked = find_blocked_items(&items);
+        let blocked = find_blocked_items(&items, &config.workflows.task);
         assert_eq!(blocked.len(), 1);
         assert_eq!(blocked[0].frontmatter.id, blocked_task.id);
     }
@@ -1651,8 +1682,9 @@ mod tests {
         // Mark blocker as done
         project.update_status(&blocker.id, "done").unwrap();
 
+        let config = project.load_config().unwrap();
         let items = project.list_tasks(&crate::query::QueryFilter::default()).unwrap();
-        let blocked = find_blocked_items(&items);
+        let blocked = find_blocked_items(&items, &config.workflows.task);
         assert!(blocked.is_empty()); // No longer blocked
     }
 

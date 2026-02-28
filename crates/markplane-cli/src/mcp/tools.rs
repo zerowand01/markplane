@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::fs;
 
 use markplane_core::{
-    Task, TaskStatus, Effort, LinkAction, LinkRelation,
+    Task, StatusCategory, Effort, IdPrefix, LinkAction, LinkRelation,
     MarkplaneDocument, MoveDirective, Note, Patch, Priority, Project, QueryFilter,
-    ScanScope, UpdateFields, build_reference_graph, validate_references,
+    ScanScope, UpdateFields, build_reference_graph, parse_id, validate_references,
 };
 use serde_json::{json, Value};
 
@@ -25,6 +25,12 @@ pub fn list_tools(project: &Project) -> Value {
     let update_note_type_desc = config.as_ref()
         .map(|c| format!("Note type ({}). Notes only.", c.note_types.join(", ")))
         .unwrap_or_else(|| "Note type (research, analysis, idea, decision, meeting). Notes only.".to_string());
+    let task_statuses_desc = config.as_ref()
+        .map(|c| format!("Filter by status ({})", c.workflows.task.all_statuses().join(", ")))
+        .unwrap_or_else(|| "Filter by status (draft, backlog, planned, in-progress, done, cancelled)".to_string());
+    let update_status_desc = config.as_ref()
+        .map(|c| format!("New status value. Task: {}. Epic: now/next/later/done. Plan: draft/approved/in-progress/done. Note: draft/active/archived.", c.workflows.task.all_statuses().join("/")))
+        .unwrap_or_else(|| "New status value. Task: draft/backlog/planned/in-progress/done/cancelled. Epic: now/next/later/done. Plan: draft/approved/in-progress/done. Note: draft/active/archived.".to_string());
     json!({
         "tools": [
             {
@@ -49,7 +55,7 @@ pub fn list_tools(project: &Project) -> Value {
                         "status": {
                             "type": "array",
                             "items": { "type": "string" },
-                            "description": "Filter by status (draft, backlog, planned, in-progress, done, cancelled)"
+                            "description": task_statuses_desc
                         },
                         "priority": {
                             "type": "array",
@@ -154,7 +160,7 @@ pub fn list_tools(project: &Project) -> Value {
                         },
                         "status": {
                             "type": "string",
-                            "description": "New status value. Task: draft/backlog/planned/in-progress/done/cancelled. Epic: now/next/later/done. Plan: draft/approved/in-progress/done. Note: draft/active/archived."
+                            "description": update_status_desc
                         },
                         "priority": {
                             "type": "string",
@@ -466,19 +472,20 @@ fn handle_summary(project: &Project) -> Result<String, String> {
         .list_tasks(&QueryFilter::default())
         .map_err(|e| e.to_string())?;
 
+    let workflow = &config.workflows.task;
     let mut in_progress = 0;
     let mut planned = 0;
     let mut draft = 0;
     let mut done = 0;
     let mut backlog = 0;
     for item in &tasks {
-        match item.frontmatter.status {
-            TaskStatus::InProgress => in_progress += 1,
-            TaskStatus::Planned => planned += 1,
-            TaskStatus::Draft => draft += 1,
-            TaskStatus::Done => done += 1,
-            TaskStatus::Backlog => backlog += 1,
-            TaskStatus::Cancelled => {}
+        match workflow.category_of(&item.frontmatter.status) {
+            Some(StatusCategory::Active) => in_progress += 1,
+            Some(StatusCategory::Planned) => planned += 1,
+            Some(StatusCategory::Draft) => draft += 1,
+            Some(StatusCategory::Completed) => done += 1,
+            Some(StatusCategory::Backlog) => backlog += 1,
+            Some(StatusCategory::Cancelled) | None => {}
         }
     }
 
@@ -794,8 +801,20 @@ fn handle_start(project: &Project, args: &Value) -> Result<String, String> {
         .and_then(|v| v.as_str())
         .ok_or_else(|| "Missing required parameter: id".to_string())?;
 
+    let (prefix, _) = parse_id(id).map_err(|e| e.to_string())?;
+    let active_status = if prefix == IdPrefix::Task {
+        let config = project.load_config().map_err(|e| e.to_string())?;
+        config.workflows.task
+            .statuses_in(StatusCategory::Active)
+            .first()
+            .cloned()
+            .unwrap_or_else(|| "in-progress".to_string())
+    } else {
+        "in-progress".to_string()
+    };
+
     project
-        .update_status(id, "in-progress")
+        .update_status(id, &active_status)
         .map_err(|e| e.to_string())?;
 
     Ok(r#"{"success":true}"#.to_string())
@@ -839,8 +858,20 @@ fn handle_done(project: &Project, args: &Value) -> Result<String, String> {
         .and_then(|v| v.as_str())
         .ok_or_else(|| "Missing required parameter: id".to_string())?;
 
+    let (prefix, _) = parse_id(id).map_err(|e| e.to_string())?;
+    let done_status = if prefix == IdPrefix::Task {
+        let config = project.load_config().map_err(|e| e.to_string())?;
+        config.workflows.task
+            .statuses_in(StatusCategory::Completed)
+            .first()
+            .cloned()
+            .unwrap_or_else(|| "done".to_string())
+    } else {
+        "done".to_string()
+    };
+
     project
-        .update_status(id, "done")
+        .update_status(id, &done_status)
         .map_err(|e| e.to_string())?;
 
     Ok(r#"{"success":true}"#.to_string())
@@ -1071,18 +1102,31 @@ fn handle_link(project: &Project, args: &Value) -> Result<String, String> {
 }
 
 fn handle_check(project: &Project) -> Result<String, String> {
-    let broken = validate_references(project).map_err(|e| e.to_string())?;
+    let broken_refs = validate_references(project).map_err(|e| e.to_string())?;
+    let broken_statuses = markplane_core::validate_task_statuses(project).map_err(|e| e.to_string())?;
 
-    if broken.is_empty() {
-        return Ok("All cross-references are valid.".to_string());
+    if broken_refs.is_empty() && broken_statuses.is_empty() {
+        return Ok("All cross-references and task statuses are valid.".to_string());
     }
 
-    let mut output = format!("{} broken reference(s) found:\n\n", broken.len());
-    for br in &broken {
-        output.push_str(&format!(
-            "- {} references missing item {}\n",
-            br.source_file, br.target_id
-        ));
+    let mut output = String::new();
+    if !broken_refs.is_empty() {
+        output.push_str(&format!("{} broken reference(s) found:\n\n", broken_refs.len()));
+        for br in &broken_refs {
+            output.push_str(&format!(
+                "- {} references missing item {}\n",
+                br.source_file, br.target_id
+            ));
+        }
+    }
+    if !broken_statuses.is_empty() {
+        output.push_str(&format!("\n{} invalid task status(es) found:\n\n", broken_statuses.len()));
+        for br in &broken_statuses {
+            output.push_str(&format!(
+                "- {} has unknown {}\n",
+                br.source_file, br.target_id
+            ));
+        }
     }
     Ok(output)
 }

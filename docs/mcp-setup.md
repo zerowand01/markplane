@@ -132,8 +132,8 @@ The server exposes 17 tools via the `tools/list` method.
 |------|-------------|-----------------|-----------------|
 | `markplane_add` | Create a new item. | `title` (string) | `kind` (string): item kind — `task` (default), `epic`, or `note`; `type` (string): item type (tasks only, configurable via `config.yaml`); `priority` (string): priority (tasks and epics), default medium; `effort` (string): effort size (tasks only), default medium; `epic` (string): parent epic ID (tasks only); `note_type` (string): note type (notes only, configurable via `config.yaml`); `tags` (string[]): tags (tasks and notes); `template` (string): template name override (e.g. `bug`, `research`) |
 | `markplane_update` | Update fields on an existing item. | `id` (string) | `title` (string): new title; `status` (string): new status; `priority` (string): new priority; `effort` (string): effort size (tasks); `type` (string): item type (tasks); `assignee` (string/null): set or clear assignee (tasks); `position` (string/null): position key; `add_tags` (string[]): tags to add; `remove_tags` (string[]): tags to remove; `started` (string/null): started date YYYY-MM-DD (epics); `target` (string/null): target date YYYY-MM-DD (epics); `note_type` (string): note type (notes) |
-| `markplane_start` | Set a task to in-progress status. | `id` (string) | *(none)* |
-| `markplane_done` | Mark a task as done. | `id` (string) | *(none)* |
+| `markplane_start` | Set a task to active status (first status in the `active` category, default: `in-progress`). For epics, uses `markplane_update` with `status: now/next/later/done` instead. | `id` (string) | *(none)* |
+| `markplane_done` | Mark a task as done (first status in the `completed` category, default: `done`). Also works for epics, plans, and notes. | `id` (string) | *(none)* |
 | `markplane_move` | Move a task to a new position within its priority group. Handles fractional-indexing math automatically. | `id` (string) | `to` (string): `top` or `bottom`; `before` (string): task ID to position before; `after` (string): task ID to position after. Provide exactly one of `to`, `before`, or `after`. |
 
 ### Workflow

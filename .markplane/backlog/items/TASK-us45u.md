@@ -1,7 +1,7 @@
 ---
 id: TASK-us45u
 title: Configurable task statuses with status categories
-status: backlog
+status: done
 priority: medium
 type: feature
 effort: large
@@ -16,7 +16,7 @@ tags:
 - config
 position: Zzx
 created: 2026-02-10
-updated: 2026-02-26
+updated: 2026-02-28
 ---
 
 # Configurable task statuses with status categories

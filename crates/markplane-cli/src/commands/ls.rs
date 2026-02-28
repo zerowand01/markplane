@@ -88,6 +88,7 @@ fn list_tasks(
     item_type: Option<String>,
     archived: bool,
 ) -> anyhow::Result<()> {
+    let config = project.load_config()?;
     let filter = QueryFilter {
         status: status.map(|s| parse_comma_list(&s)),
         priority: priority.map(|s| parse_comma_list(&s)),
@@ -112,7 +113,7 @@ fn list_tasks(
             TaskRow {
                 id: fm.id.clone(),
                 title: truncate(&fm.title, 40),
-                status: colorize_status(&fm.status.to_string()),
+                status: colorize_status(&fm.status, config.task_category(&fm.status)),
                 priority: colorize_priority(&fm.priority.to_string()),
                 effort: fm.effort.to_string(),
                 epic: fm.epic.as_deref().unwrap_or("—").to_string(),
@@ -140,7 +141,7 @@ fn list_epics(project: &Project, archived: bool) -> anyhow::Result<()> {
             EpicRow {
                 id: fm.id.clone(),
                 title: truncate(&fm.title, 40),
-                status: colorize_status(&fm.status.to_string()),
+                status: colorize_status(&fm.status.to_string(), None),
                 priority: colorize_priority(&fm.priority.to_string()),
             }
         })
@@ -166,7 +167,7 @@ fn list_plans(project: &Project, archived: bool) -> anyhow::Result<()> {
             PlanRow {
                 id: fm.id.clone(),
                 title: truncate(&fm.title, 40),
-                status: colorize_status(&fm.status.to_string()),
+                status: colorize_status(&fm.status.to_string(), None),
                 implements: if fm.implements.is_empty() {
                     "—".to_string()
                 } else {
@@ -197,7 +198,7 @@ fn list_notes(project: &Project, archived: bool) -> anyhow::Result<()> {
                 id: fm.id.clone(),
                 title: truncate(&fm.title, 40),
                 note_type: fm.note_type.to_string(),
-                status: colorize_status(&fm.status.to_string()),
+                status: colorize_status(&fm.status.to_string(), None),
             }
         })
         .collect();

@@ -21,3 +21,17 @@ note_types:
 - idea
 - decision
 - meeting
+workflows:
+  task:
+    draft:
+    - draft
+    backlog:
+    - backlog
+    planned:
+    - planned
+    active:
+    - in-progress
+    completed:
+    - done
+    cancelled:
+    - cancelled
