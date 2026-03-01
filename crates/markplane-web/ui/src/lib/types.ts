@@ -209,8 +209,20 @@ export interface SearchResult {
   archived: boolean;
 }
 
+export interface DocMeta {
+  slug: string;
+  title: string;
+}
+
+export interface DocContent {
+  slug: string;
+  title: string;
+  content: string;
+}
+
 export type WsEvent =
   | { type: "file_changed"; entity: "task" | "epic" | "plan" | "note"; id: string; action: "created" | "modified" | "deleted" }
   | { type: "config_changed" }
   | { type: "sync_complete" }
+  | { type: "doc_changed"; slug: string }
   | { type: "connected"; version: string };

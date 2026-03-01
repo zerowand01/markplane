@@ -47,6 +47,7 @@ const NAVIGATION_ITEMS = [
   { label: "Go to Plans", path: "/plans", shortcut: "g p" },
   { label: "Go to Notes", path: "/notes", shortcut: "g n" },
   { label: "Go to Graph", path: "/graph", shortcut: "g g" },
+  { label: "Go to Docs", path: "/docs", shortcut: "g ?" },
 ];
 
 const CREATE_ITEMS = [

@@ -2,7 +2,7 @@
 id: TASK-ict2n
 title: Add internal Fibonacci point mapping to effort sizes
 status: backlog
-priority: medium
+priority: low
 type: enhancement
 effort: small
 epic: EPIC-c5uem
@@ -13,7 +13,7 @@ related: []
 assignee: null
 tags:
 - core
-position: a8
+position: a1
 created: 2026-02-26
 updated: 2026-02-28
 ---

@@ -121,7 +121,6 @@ See the [Web UI Guide](docs/web-ui-guide.md) for development workflow, keyboard 
 - [CLI Reference](docs/cli-reference.md) — Complete command documentation
 - [Web UI Guide](docs/web-ui-guide.md) — Web dashboard usage and development
 - [MCP Setup Guide](docs/mcp-setup.md) — AI tool integration
-- [Architecture](docs/architecture.md) — System design and crate structure
 
 ## MCP Integration
 

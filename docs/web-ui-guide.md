@@ -24,6 +24,7 @@ markplane serve --port 8080  # Custom port
 | Notes | `/notes` | Research notes, ideas, and decisions |
 | Graph | `/graph` | Interactive dependency graph |
 | Archive | `/archive` | Archived items with restore action |
+| Docs | `/docs` | Searchable documentation viewer for user-facing guides |
 | Settings | `/settings` | Configure task types, note types, and other project settings |
 | Search | `/search` | Full-text search across all items |
 
@@ -132,6 +133,7 @@ All changes are detected via filesystem watching and pushed to the browser over 
 | `g` then `g` | Go to Graph |
 | `g` then `a` | Go to Archive |
 | `g` then `s` | Go to Settings |
+| `g` then `?` | Go to Docs |
 
 ### Global
 
@@ -249,6 +251,8 @@ Error:             { "error": { "code": string, "message": string } }
 | GET | `/api/search?q=...` | Full-text search |
 | GET | `/api/graph` | Full dependency graph |
 | GET | `/api/graph/:id` | Focused graph (2-hop neighborhood) |
+| GET | `/api/docs` | List available documentation pages |
+| GET | `/api/docs/:slug` | Get documentation page content |
 | POST | `/api/items/:id/archive` | Archive any item (task, epic, plan, note) |
 | POST | `/api/items/:id/unarchive` | Restore an archived item |
 | GET | `/api/config` | Get project configuration (item types, note types) |
@@ -264,6 +268,7 @@ Connect to `ws://localhost:4200/ws` for real-time updates:
 { "type": "file_changed", "entity": "task", "id": "TASK-fq2x8", "action": "modified" }
 { "type": "config_changed" }
 { "type": "sync_complete" }
+{ "type": "doc_changed", "slug": "cli-reference" }
 { "type": "connected", "version": "0.1.0" }
 ```
 

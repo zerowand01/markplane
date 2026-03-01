@@ -22,7 +22,6 @@
 │   ├── INDEX.md             # Plan listing (auto-generated)
 │   ├── items/               # Plan files
 │   │   └── PLAN-ya8v2.md
-│   ├── templates/           # Plan-specific templates
 │   └── archive/             # Completed plans
 ├── notes/
 │   ├── INDEX.md             # Note listing (auto-generated)

@@ -44,6 +44,9 @@ export function useWebSocket() {
             case "sync_complete":
               queryClient.invalidateQueries();
               break;
+            case "doc_changed":
+              queryClient.invalidateQueries({ queryKey: ["docs"] });
+              break;
             case "connected":
               break;
           }

@@ -650,7 +650,9 @@ mod tests {
     fn test_generate_random_id_uniqueness() {
         use std::collections::HashSet;
         let mut ids = HashSet::new();
-        for _ in 0..1000 {
+        // 100 iterations keeps collision probability negligible (~0.015%)
+        // with a 32^5 (~33.5M) keyspace. 1000 had ~1.5% flake rate.
+        for _ in 0..100 {
             let id = generate_random_id(&IdPrefix::Task);
             assert!(ids.insert(id), "Duplicate ID generated");
         }

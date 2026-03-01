@@ -14,9 +14,9 @@ assignee: null
 tags:
 - onboarding
 - init
-position: aA
+position: a5V
 created: 2026-02-21
-updated: 2026-02-25
+updated: 2026-03-01
 ---
 
 # Seed markplane init with starter content and onboarding plan

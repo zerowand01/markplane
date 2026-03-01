@@ -15,6 +15,7 @@ const CHORD_NAV: ChordMap = {
   g: "/graph",
   a: "/archive",
   s: "/settings",
+  "?": "/docs",
 };
 
 export function isInputFocused(): boolean {
@@ -57,14 +58,7 @@ export function useKeyboardNav() {
         return; // Let Radix UI handle the actual closing
       }
 
-      // ? opens command palette (Cmd+K)
-      if (e.key === "?") {
-        e.preventDefault();
-        window.dispatchEvent(new Event("open-command-palette"));
-        return;
-      }
-
-      // Chord: g then <letter> for navigation
+      // Chord: g then <letter> for navigation (must check before standalone ? handler)
       if (chordPending.current) {
         resetChord();
         const dest = CHORD_NAV[e.key];
@@ -72,6 +66,13 @@ export function useKeyboardNav() {
           e.preventDefault();
           routerRef.current.push(dest);
         }
+        return;
+      }
+
+      // ? opens command palette (Cmd+K)
+      if (e.key === "?") {
+        e.preventDefault();
+        window.dispatchEvent(new Event("open-command-palette"));
         return;
       }
 

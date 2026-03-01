@@ -114,4 +114,5 @@ export const NAV_ITEMS = [
   { href: "/notes", label: "Notes", icon: "Lightbulb" },
   { href: "/roadmap", label: "Roadmap", icon: "Map" },
   { href: "/graph", label: "Graph", icon: "GitBranch" },
+  { href: "/docs", label: "Docs", icon: "BookOpen" },
 ] as const;

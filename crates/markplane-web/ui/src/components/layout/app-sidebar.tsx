@@ -10,6 +10,7 @@ import {
   GitBranch,
   Map,
   Archive,
+  BookOpen,
   PanelLeft,
   Search,
   Settings,
@@ -113,6 +114,14 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-2">
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={pathname.startsWith("/docs")} tooltip="Docs" className="text-base">
+              <Link href="/docs">
+                <BookOpen className="size-5" />
+                <span>Docs</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={pathname.startsWith("/settings")} tooltip="Settings" className="text-base">
               <Link href="/settings">

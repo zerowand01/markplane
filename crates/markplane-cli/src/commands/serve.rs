@@ -38,6 +38,24 @@ struct AppState {
     ws_tx: broadcast::Sender<String>,
 }
 
+// ── Documentation Manifest ───────────────────────────────────────────────
+
+struct DocEntry {
+    slug: &'static str,
+    title: &'static str,
+    path: &'static str,
+}
+
+const DOC_MANIFEST: &[DocEntry] = &[
+    DocEntry { slug: "readme", title: "README", path: "README.md" },
+    DocEntry { slug: "getting-started", title: "Getting Started", path: "docs/getting-started.md" },
+    DocEntry { slug: "file-format", title: "Item Reference", path: "docs/file-format.md" },
+    DocEntry { slug: "cli-reference", title: "CLI Reference", path: "docs/cli-reference.md" },
+    DocEntry { slug: "mcp-setup", title: "MCP Setup", path: "docs/mcp-setup.md" },
+    DocEntry { slug: "ai-integration", title: "AI Integration", path: "docs/ai-integration.md" },
+    DocEntry { slug: "web-ui-guide", title: "Web UI Guide", path: "docs/web-ui-guide.md" },
+];
+
 pub async fn run(port: u16, open: bool, dev: bool) -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
 
@@ -78,6 +96,8 @@ pub async fn run(port: u16, open: bool, dev: bool) -> anyhow::Result<()> {
         .route("/api/link", post(post_link))
         .route("/api/config", get(get_config).patch(patch_config))
         .route("/api/sync", post(post_sync))
+        .route("/api/docs", get(get_docs))
+        .route("/api/docs/{slug}", get(get_doc))
         .route("/api/search", get(get_search))
         .route("/api/graph", get(get_graph_all))
         .route("/api/graph/{id}", get(get_graph_focused))
@@ -201,6 +221,24 @@ async fn run_file_watcher(
         .watcher()
         .watch(&root, notify::RecursiveMode::Recursive)?;
 
+    // Also watch documentation files (repo root is parent of .markplane/)
+    let repo = root.parent().unwrap_or(&root).to_path_buf();
+    let docs_dir = repo.join("docs");
+    if docs_dir.is_dir() {
+        let _ = debouncer.watcher().watch(&docs_dir, notify::RecursiveMode::NonRecursive);
+    }
+    let readme_path = repo.join("README.md");
+    if readme_path.is_file() {
+        // Watch the repo root non-recursively to catch README.md changes
+        let _ = debouncer.watcher().watch(&repo, notify::RecursiveMode::NonRecursive);
+    }
+
+    // Build lookup set of absolute doc paths for fast matching
+    let doc_paths: HashMap<PathBuf, &'static str> = DOC_MANIFEST
+        .iter()
+        .map(|entry| (repo.join(entry.path), entry.slug))
+        .collect();
+
     // Keep debouncer alive
     let _debouncer = debouncer;
 
@@ -209,6 +247,16 @@ async fn run_file_watcher(
 
         // Skip non-markdown files (except config.yaml)
         if !path_str.ends_with(".md") && !path_str.ends_with("config.yaml") {
+            continue;
+        }
+
+        // Check if this is a documentation file change
+        if let Some(slug) = doc_paths.get(&path) {
+            let event = serde_json::json!({
+                "type": "doc_changed",
+                "slug": slug
+            });
+            let _ = tx.send(event.to_string());
             continue;
         }
 
@@ -368,6 +416,64 @@ fn map_core_error(e: MarkplaneError) -> (StatusCode, Json<ApiError>) {
             error_response(StatusCode::INTERNAL_SERVER_ERROR, "internal_error", &e.to_string())
         }
     }
+}
+
+// ── Documentation API ────────────────────────────────────────────────────
+
+#[derive(Serialize)]
+struct DocMetaResponse {
+    slug: String,
+    title: String,
+}
+
+#[derive(Serialize)]
+struct DocContentResponse {
+    slug: String,
+    title: String,
+    content: String,
+}
+
+/// Resolve the repo root from the `.markplane/` project root.
+fn repo_root(project: &Project) -> PathBuf {
+    project.root().parent().unwrap_or(project.root()).to_path_buf()
+}
+
+async fn get_docs(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<ApiListResponse<DocMetaResponse>>, (StatusCode, Json<ApiError>)> {
+    let root = repo_root(&state.project);
+    let docs: Vec<DocMetaResponse> = DOC_MANIFEST
+        .iter()
+        .filter(|entry| root.join(entry.path).is_file())
+        .map(|entry| DocMetaResponse {
+            slug: entry.slug.to_string(),
+            title: entry.title.to_string(),
+        })
+        .collect();
+    let total = docs.len();
+    Ok(Json(ApiListResponse { data: docs, meta: ListMeta { total } }))
+}
+
+async fn get_doc(
+    State(state): State<Arc<AppState>>,
+    Path(slug): Path<String>,
+) -> Result<Json<ApiResponse<DocContentResponse>>, (StatusCode, Json<ApiError>)> {
+    let entry = DOC_MANIFEST
+        .iter()
+        .find(|e| e.slug == slug)
+        .ok_or_else(|| error_response(StatusCode::NOT_FOUND, "not_found", "Document not found"))?;
+
+    let file_path = repo_root(&state.project).join(entry.path);
+    let content = std::fs::read_to_string(&file_path)
+        .map_err(|_| error_response(StatusCode::NOT_FOUND, "not_found", "Document file not found on disk"))?;
+
+    Ok(Json(ApiResponse {
+        data: DocContentResponse {
+            slug: entry.slug.to_string(),
+            title: entry.title.to_string(),
+            content,
+        },
+    }))
 }
 
 /// Diff two vectors to produce add/remove lists.

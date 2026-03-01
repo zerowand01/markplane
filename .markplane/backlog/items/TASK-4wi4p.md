@@ -1,7 +1,7 @@
 ---
 id: TASK-4wi4p
 title: Add documentation viewer to web UI
-status: backlog
+status: done
 priority: medium
 type: feature
 effort: large
@@ -16,7 +16,7 @@ tags:
 - docs
 position: a7
 created: 2026-02-24
-updated: 2026-02-24
+updated: 2026-03-01
 ---
 
 # Add documentation viewer to web UI
