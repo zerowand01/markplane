@@ -260,6 +260,9 @@ pub enum Commands {
         /// Also show orphan items (no incoming references)
         #[arg(long)]
         orphans: bool,
+        /// Repair asymmetric reciprocal links
+        #[arg(long)]
+        fix: bool,
     },
 
     /// List items not updated in N days
@@ -390,7 +393,7 @@ pub fn execute(cmd: Commands) -> anyhow::Result<()> {
             relation,
             remove,
         } => link::run(from, to, relation, remove),
-        Commands::Check { orphans } => check::run(orphans),
+        Commands::Check { orphans, fix } => check::run(orphans, fix),
         Commands::Stale { days } => stale::run(days),
         Commands::Archive { id, all_done, dry_run } => archive::run(id, all_done, dry_run),
         Commands::Unarchive { id } => unarchive::run(id),

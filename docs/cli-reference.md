@@ -123,7 +123,7 @@ markplane unarchive TASK-fq2x8
 
 ## check
 
-Validate cross-references and find broken links.
+Validate cross-references, task statuses, and reciprocal link integrity.
 
 ```
 markplane check [OPTIONS]
@@ -134,19 +134,31 @@ markplane check [OPTIONS]
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--orphans` | `false` | Also show orphan items (items with no incoming references) |
+| `--fix` | `false` | Repair asymmetric reciprocal links |
 
-Scans all markdown files for `[[ITEM-xxxxx]]` references and verifies that each referenced item exists. Exits with a non-zero status if broken references are found.
+Scans all markdown files for `[[ITEM-xxxxx]]` references and verifies that each referenced item exists. Also validates task statuses against the configured workflow, and checks that reciprocal links (blocks/depends_on, plan/implements, related) are symmetric on both sides. Exits with a non-zero status if issues are found.
+
+Use `--fix` to automatically repair asymmetric reciprocal links. This is safe — it uses the same idempotent `link_items` logic and only adds missing reciprocals.
 
 **Example:**
 
 ```bash
 markplane check
 # ✓ No broken references found.
+# ✓ All task statuses are valid.
+# ✓ All reciprocal links are symmetric.
 
 markplane check --orphans
 # ✓ No broken references found.
+# ✓ All task statuses are valid.
+# ✓ All reciprocal links are symmetric.
 # ! 1 orphan item(s) (no incoming references):
 #   TASK-nq5w2
+
+markplane check --fix
+# ✗ 1 asymmetric link(s):
+#   TASK-abc12 has blocks: TASK-def34 but TASK-def34 is missing depends_on: TASK-abc12
+#   ✓ Repaired blocks TASK-abc12 → TASK-def34
 ```
 
 ---

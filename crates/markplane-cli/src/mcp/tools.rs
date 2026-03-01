@@ -377,7 +377,7 @@ pub fn list_tools(project: &Project) -> Value {
             },
             {
                 "name": "markplane_check",
-                "description": "Validate all cross-references in the project. Reports broken links.",
+                "description": "Validate all cross-references in the project. Reports broken links, invalid statuses, and asymmetric reciprocal links.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {},
@@ -1104,9 +1104,10 @@ fn handle_link(project: &Project, args: &Value) -> Result<String, String> {
 fn handle_check(project: &Project) -> Result<String, String> {
     let broken_refs = validate_references(project).map_err(|e| e.to_string())?;
     let broken_statuses = markplane_core::validate_task_statuses(project).map_err(|e| e.to_string())?;
+    let asymmetric = markplane_core::validate_reciprocal_links(project).map_err(|e| e.to_string())?;
 
-    if broken_refs.is_empty() && broken_statuses.is_empty() {
-        return Ok("All cross-references and task statuses are valid.".to_string());
+    if broken_refs.is_empty() && broken_statuses.is_empty() && asymmetric.is_empty() {
+        return Ok("All cross-references, task statuses, and reciprocal links are valid.".to_string());
     }
 
     let mut output = String::new();
@@ -1127,6 +1128,17 @@ fn handle_check(project: &Project) -> Result<String, String> {
                 br.source_file, br.target_id
             ));
         }
+    }
+    if !asymmetric.is_empty() {
+        output.push_str(&format!("\n{} asymmetric reciprocal link(s) found:\n\n", asymmetric.len()));
+        for link in &asymmetric {
+            output.push_str(&format!(
+                "- {} has {}: {} but {} is missing {}: {}\n",
+                link.source_id, link.forward_field, link.target_id,
+                link.target_id, link.missing_field, link.source_id,
+            ));
+        }
+        output.push_str("\nUse `markplane check --fix` to repair asymmetric links.\n");
     }
     Ok(output)
 }

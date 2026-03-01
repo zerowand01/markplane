@@ -25,6 +25,6 @@ pub use project::{
     MoveDirective,
 };
 pub use query::{QueryFilter, ScanScope};
-pub use references::{extract_references, validate_references, validate_task_statuses, find_orphans, BrokenReference, build_reference_graph};
+pub use references::{extract_references, validate_references, validate_task_statuses, validate_reciprocal_links, find_orphans, BrokenReference, AsymmetricLink, build_reference_graph};
 pub use templates::render_template;
 pub use links::{LinkRelation, LinkAction};

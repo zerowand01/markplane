@@ -1,16 +1,28 @@
 use colored::Colorize;
-use markplane_core::{validate_references, validate_task_statuses, find_orphans, Project};
+use markplane_core::{
+    validate_references, validate_task_statuses, validate_reciprocal_links, find_orphans,
+    LinkAction, LinkRelation, Project,
+};
 
-pub fn run(orphans: bool) -> anyhow::Result<()> {
+fn field_to_relation(forward_field: &str) -> Option<LinkRelation> {
+    match forward_field {
+        "blocks" => Some(LinkRelation::Blocks),
+        "depends_on" => Some(LinkRelation::DependsOn),
+        "plan" => Some(LinkRelation::Plan),
+        "implements" => Some(LinkRelation::Implements),
+        "related" => Some(LinkRelation::Related),
+        _ => None,
+    }
+}
+
+pub fn run(orphans: bool, fix: bool) -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
-    let mut has_errors = false;
 
     // Check for broken references
     let broken = validate_references(&project)?;
     if broken.is_empty() {
         println!("{} No broken references found.", "✓".green());
     } else {
-        has_errors = true;
         println!(
             "{} {} broken reference(s):\n",
             "✗".red(),
@@ -30,7 +42,6 @@ pub fn run(orphans: bool) -> anyhow::Result<()> {
     if invalid_statuses.is_empty() {
         println!("{} All task statuses are valid.", "✓".green());
     } else {
-        has_errors = true;
         println!(
             "\n{} {} invalid task status(es):\n",
             "✗".red(),
@@ -40,6 +51,70 @@ pub fn run(orphans: bool) -> anyhow::Result<()> {
             println!(
                 "  {} has unknown status (not in configured workflow)",
                 br.source_file.dimmed(),
+            );
+        }
+    }
+
+    // Check for asymmetric reciprocal links
+    let asymmetric = validate_reciprocal_links(&project)?;
+    if asymmetric.is_empty() {
+        println!("{} All reciprocal links are symmetric.", "✓".green());
+    } else {
+        println!(
+            "\n{} {} asymmetric link(s):\n",
+            "✗".red(),
+            asymmetric.len()
+        );
+        for link in &asymmetric {
+            println!(
+                "  {} has {}: {} but {} is missing {}: {}",
+                link.source_id.yellow(),
+                link.forward_field,
+                link.target_id,
+                link.target_id.yellow(),
+                link.missing_field,
+                link.source_id,
+            );
+        }
+
+        if fix {
+            println!();
+            let mut repaired = 0;
+            for link in &asymmetric {
+                if let Some(relation) = field_to_relation(&link.forward_field) {
+                    match project.link_items(
+                        &link.source_id,
+                        &link.target_id,
+                        relation,
+                        LinkAction::Add,
+                    ) {
+                        Ok(()) => {
+                            repaired += 1;
+                            println!(
+                                "  {} Repaired {} {} → {}",
+                                "✓".green(),
+                                link.forward_field,
+                                link.source_id,
+                                link.target_id,
+                            );
+                        }
+                        Err(e) => {
+                            println!(
+                                "  {} Failed to repair {} {} → {}: {}",
+                                "✗".red(),
+                                link.forward_field,
+                                link.source_id,
+                                link.target_id,
+                                e,
+                            );
+                        }
+                    }
+                }
+            }
+            println!(
+                "\nRepaired {} of {} asymmetric link(s).",
+                repaired,
+                asymmetric.len()
             );
         }
     }
@@ -61,9 +136,14 @@ pub fn run(orphans: bool) -> anyhow::Result<()> {
         }
     }
 
-    if has_errors {
-        let total = broken.len() + invalid_statuses.len();
-        return Err(anyhow::anyhow!("Found {} issue(s)", total));
+    // Broken refs and invalid statuses are never auto-fixable
+    let unfixable = broken.len() + invalid_statuses.len();
+    if unfixable > 0 {
+        return Err(anyhow::anyhow!("Found {} issue(s)", unfixable + asymmetric.len()));
+    }
+    // Asymmetric links are only an error if --fix wasn't used
+    if !asymmetric.is_empty() && !fix {
+        return Err(anyhow::anyhow!("Found {} asymmetric link(s)", asymmetric.len()));
     }
 
     Ok(())

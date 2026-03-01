@@ -156,7 +156,7 @@ The server exposes 17 tools via the `tools/list` method.
 | Tool | Description | Required Params | Optional Params |
 |------|-------------|-----------------|-----------------|
 | `markplane_sync` | Regenerate INDEX.md files and .context/ summaries. | *(none)* | *(none)* |
-| `markplane_check` | Validate all cross-references in the project. Reports broken links. | *(none)* | *(none)* |
+| `markplane_check` | Validate all cross-references in the project. Reports broken links, invalid statuses, and asymmetric reciprocal links. | *(none)* | *(none)* |
 
 ## Resource Catalog
 

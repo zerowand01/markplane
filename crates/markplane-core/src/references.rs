@@ -3,7 +3,7 @@ use std::path::Path;
 
 use crate::error::Result;
 use crate::frontmatter;
-use crate::models::{parse_id, IdPrefix, Task};
+use crate::models::{parse_id, Epic, IdPrefix, Note, Plan, Task};
 use crate::project::Project;
 
 /// Return a glob pattern for scanning .md files in a directory.
@@ -283,6 +283,208 @@ pub fn build_reference_graph(project: &Project) -> Result<HashMap<String, Vec<St
     Ok(graph)
 }
 
+/// A reciprocal link where one side exists but the other is missing.
+#[derive(Debug)]
+pub struct AsymmetricLink {
+    /// The item that has the forward link.
+    pub source_id: String,
+    /// The item that should have the reciprocal.
+    pub target_id: String,
+    /// The field name on the source (e.g. "blocks").
+    pub forward_field: String,
+    /// The field name that is missing on the target (e.g. "depends_on").
+    pub missing_field: String,
+}
+
+/// Helper to get the `related` field for any entity type.
+fn get_related<'a>(
+    id: &str,
+    tasks: &'a HashMap<String, Task>,
+    epics: &'a HashMap<String, Epic>,
+    plans: &'a HashMap<String, Plan>,
+    notes: &'a HashMap<String, Note>,
+) -> Option<&'a [String]> {
+    if let Some(t) = tasks.get(id) {
+        return Some(&t.related);
+    }
+    if let Some(e) = epics.get(id) {
+        return Some(&e.related);
+    }
+    if let Some(p) = plans.get(id) {
+        return Some(&p.related);
+    }
+    if let Some(n) = notes.get(id) {
+        return Some(&n.related);
+    }
+    None
+}
+
+/// Collect asymmetric `related` links from a source item into the results vec.
+fn collect_asymmetric_related(
+    id: &str,
+    targets: &[String],
+    tasks: &HashMap<String, Task>,
+    epics: &HashMap<String, Epic>,
+    plans: &HashMap<String, Plan>,
+    notes: &HashMap<String, Note>,
+    asymmetric: &mut Vec<AsymmetricLink>,
+) {
+    for target in targets {
+        if let Some(target_related) = get_related(target, tasks, epics, plans, notes)
+            && !target_related.iter().any(|r| r == id)
+        {
+            asymmetric.push(AsymmetricLink {
+                source_id: id.to_string(),
+                target_id: target.clone(),
+                forward_field: "related".to_string(),
+                missing_field: "related".to_string(),
+            });
+        }
+    }
+}
+
+/// Validate that all reciprocal links are symmetric.
+/// Returns a list of asymmetric links where one side of a reciprocal pair is missing.
+/// Only checks targets that exist (broken references are caught by `validate_references`).
+pub fn validate_reciprocal_links(project: &Project) -> Result<Vec<AsymmetricLink>> {
+    let mut asymmetric = Vec::new();
+
+    // Load all items into HashMaps keyed by ID
+    let mut tasks: HashMap<String, Task> = HashMap::new();
+    let mut epics: HashMap<String, Epic> = HashMap::new();
+    let mut plans: HashMap<String, Plan> = HashMap::new();
+    let mut notes: HashMap<String, Note> = HashMap::new();
+
+    let task_dir = project.item_dir(&IdPrefix::Task);
+    if task_dir.exists() {
+        let pattern = scan_pattern(&task_dir);
+        for path in glob::glob(&pattern).unwrap_or_else(|_| glob::glob("").unwrap()).flatten() {
+            let content = std::fs::read_to_string(&path)?;
+            if let Ok(doc) = frontmatter::parse_frontmatter::<Task>(&content) {
+                tasks.insert(doc.frontmatter.id.clone(), doc.frontmatter);
+            }
+        }
+    }
+
+    let epic_dir = project.item_dir(&IdPrefix::Epic);
+    if epic_dir.exists() {
+        let pattern = scan_pattern(&epic_dir);
+        for path in glob::glob(&pattern).unwrap_or_else(|_| glob::glob("").unwrap()).flatten() {
+            let content = std::fs::read_to_string(&path)?;
+            if let Ok(doc) = frontmatter::parse_frontmatter::<Epic>(&content) {
+                epics.insert(doc.frontmatter.id.clone(), doc.frontmatter);
+            }
+        }
+    }
+
+    let plan_dir = project.item_dir(&IdPrefix::Plan);
+    if plan_dir.exists() {
+        let pattern = scan_pattern(&plan_dir);
+        for path in glob::glob(&pattern).unwrap_or_else(|_| glob::glob("").unwrap()).flatten() {
+            let content = std::fs::read_to_string(&path)?;
+            if let Ok(doc) = frontmatter::parse_frontmatter::<Plan>(&content) {
+                plans.insert(doc.frontmatter.id.clone(), doc.frontmatter);
+            }
+        }
+    }
+
+    let note_dir = project.item_dir(&IdPrefix::Note);
+    if note_dir.exists() {
+        let pattern = scan_pattern(&note_dir);
+        for path in glob::glob(&pattern).unwrap_or_else(|_| glob::glob("").unwrap()).flatten() {
+            let content = std::fs::read_to_string(&path)?;
+            if let Ok(doc) = frontmatter::parse_frontmatter::<Note>(&content) {
+                notes.insert(doc.frontmatter.id.clone(), doc.frontmatter);
+            }
+        }
+    }
+
+    // Check reciprocal pairs on tasks
+    for (id, task) in &tasks {
+        // blocks → depends_on
+        for target in &task.blocks {
+            if let Some(target_task) = tasks.get(target)
+                && !target_task.depends_on.contains(id)
+            {
+                asymmetric.push(AsymmetricLink {
+                    source_id: id.clone(),
+                    target_id: target.clone(),
+                    forward_field: "blocks".to_string(),
+                    missing_field: "depends_on".to_string(),
+                });
+            }
+        }
+
+        // depends_on → blocks
+        for target in &task.depends_on {
+            if let Some(target_task) = tasks.get(target)
+                && !target_task.blocks.contains(id)
+            {
+                asymmetric.push(AsymmetricLink {
+                    source_id: id.clone(),
+                    target_id: target.clone(),
+                    forward_field: "depends_on".to_string(),
+                    missing_field: "blocks".to_string(),
+                });
+            }
+        }
+
+        // plan → implements
+        if let Some(ref plan_id) = task.plan
+            && let Some(target_plan) = plans.get(plan_id)
+            && !target_plan.implements.contains(id)
+        {
+            asymmetric.push(AsymmetricLink {
+                source_id: id.clone(),
+                target_id: plan_id.clone(),
+                forward_field: "plan".to_string(),
+                missing_field: "implements".to_string(),
+            });
+        }
+
+        // related (task side)
+        collect_asymmetric_related(id, &task.related, &tasks, &epics, &plans, &notes, &mut asymmetric);
+    }
+
+    // Check plan implements → task plan
+    for (id, plan) in &plans {
+        for target in &plan.implements {
+            if let Some(target_task) = tasks.get(target)
+                && target_task.plan.as_deref() != Some(id.as_str())
+            {
+                asymmetric.push(AsymmetricLink {
+                    source_id: id.clone(),
+                    target_id: target.clone(),
+                    forward_field: "implements".to_string(),
+                    missing_field: "plan".to_string(),
+                });
+            }
+        }
+
+        // related (plan side)
+        collect_asymmetric_related(id, &plan.related, &tasks, &epics, &plans, &notes, &mut asymmetric);
+    }
+
+    // Check related on epics and notes
+    for (id, epic) in &epics {
+        collect_asymmetric_related(id, &epic.related, &tasks, &epics, &plans, &notes, &mut asymmetric);
+    }
+
+    for (id, note) in &notes {
+        collect_asymmetric_related(id, &note.related, &tasks, &epics, &plans, &notes, &mut asymmetric);
+    }
+
+    // Sort for deterministic output
+    asymmetric.sort_by(|a, b| {
+        a.source_id
+            .cmp(&b.source_id)
+            .then(a.target_id.cmp(&b.target_id))
+            .then(a.forward_field.cmp(&b.forward_field))
+    });
+
+    Ok(asymmetric)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -549,5 +751,130 @@ mod tests {
 
         let graph = build_reference_graph(&project).unwrap();
         assert!(graph.is_empty());
+    }
+
+    // ── validate_reciprocal_links ──────────────────────────────────────────
+
+    #[test]
+    fn test_reciprocal_blocks_depends_on_asymmetric() {
+        use tempfile::TempDir;
+        use crate::project::Project;
+        use crate::models::{Priority, Effort};
+        use crate::links::{LinkRelation, LinkAction};
+
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().join(".markplane");
+        let project = Project::init(root, "Test", "Test").unwrap();
+
+        let task_a = project
+            .create_task("A", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .unwrap();
+        let task_b = project
+            .create_task("B", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .unwrap();
+
+        // Create proper link first
+        project.link_items(&task_a.id, &task_b.id, LinkRelation::Blocks, LinkAction::Add).unwrap();
+
+        // Manually corrupt: remove depends_on from B
+        let mut doc_b: crate::models::MarkplaneDocument<Task> = project.read_item(&task_b.id).unwrap();
+        doc_b.frontmatter.depends_on.clear();
+        project.write_item(&task_b.id, &doc_b).unwrap();
+
+        let issues = validate_reciprocal_links(&project).unwrap();
+        assert_eq!(issues.len(), 1);
+        assert_eq!(issues[0].source_id, task_a.id);
+        assert_eq!(issues[0].target_id, task_b.id);
+        assert_eq!(issues[0].forward_field, "blocks");
+        assert_eq!(issues[0].missing_field, "depends_on");
+    }
+
+    #[test]
+    fn test_reciprocal_plan_implements_asymmetric() {
+        use tempfile::TempDir;
+        use crate::project::Project;
+        use crate::models::{Priority, Effort};
+        use crate::links::{LinkRelation, LinkAction};
+
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().join(".markplane");
+        let project = Project::init(root, "Test", "Test").unwrap();
+
+        let task = project
+            .create_task("Task", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .unwrap();
+        let plan = project.create_plan("Plan", vec![], None).unwrap();
+
+        // Create proper link
+        project.link_items(&task.id, &plan.id, LinkRelation::Plan, LinkAction::Add).unwrap();
+
+        // Manually corrupt: remove implements from plan
+        let mut doc_p: crate::models::MarkplaneDocument<Plan> = project.read_item(&plan.id).unwrap();
+        doc_p.frontmatter.implements.clear();
+        project.write_item(&plan.id, &doc_p).unwrap();
+
+        let issues = validate_reciprocal_links(&project).unwrap();
+        assert_eq!(issues.len(), 1);
+        assert_eq!(issues[0].forward_field, "plan");
+        assert_eq!(issues[0].missing_field, "implements");
+    }
+
+    #[test]
+    fn test_reciprocal_related_asymmetric() {
+        use tempfile::TempDir;
+        use crate::project::Project;
+        use crate::models::{Priority, Effort};
+        use crate::links::{LinkRelation, LinkAction};
+
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().join(".markplane");
+        let project = Project::init(root, "Test", "Test").unwrap();
+
+        let task = project
+            .create_task("Task", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .unwrap();
+        let note = project.create_note("Note", "idea", vec![], None).unwrap();
+
+        // Create proper link
+        project.link_items(&task.id, &note.id, LinkRelation::Related, LinkAction::Add).unwrap();
+
+        // Manually corrupt: remove related from note
+        let mut doc_n: crate::models::MarkplaneDocument<Note> = project.read_item(&note.id).unwrap();
+        doc_n.frontmatter.related.clear();
+        project.write_item(&note.id, &doc_n).unwrap();
+
+        let issues = validate_reciprocal_links(&project).unwrap();
+        assert_eq!(issues.len(), 1);
+        assert_eq!(issues[0].forward_field, "related");
+        assert_eq!(issues[0].missing_field, "related");
+    }
+
+    #[test]
+    fn test_reciprocal_no_false_positives() {
+        use tempfile::TempDir;
+        use crate::project::Project;
+        use crate::models::{Priority, Effort};
+        use crate::links::{LinkRelation, LinkAction};
+
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().join(".markplane");
+        let project = Project::init(root, "Test", "Test").unwrap();
+
+        let task_a = project
+            .create_task("A", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .unwrap();
+        let task_b = project
+            .create_task("B", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .unwrap();
+        let plan = project.create_plan("Plan", vec![], None).unwrap();
+        let note = project.create_note("Note", "idea", vec![], None).unwrap();
+
+        // Create correct reciprocal links
+        project.link_items(&task_a.id, &task_b.id, LinkRelation::Blocks, LinkAction::Add).unwrap();
+        project.link_items(&task_a.id, &plan.id, LinkRelation::Plan, LinkAction::Add).unwrap();
+        project.link_items(&task_a.id, &note.id, LinkRelation::Related, LinkAction::Add).unwrap();
+
+        let issues = validate_reciprocal_links(&project).unwrap();
+        assert!(issues.is_empty(), "Expected no issues but found: {:?}", issues.iter().map(|i| format!("{} -> {} ({}/{})", i.source_id, i.target_id, i.forward_field, i.missing_field)).collect::<Vec<_>>());
     }
 }

@@ -1148,6 +1148,95 @@ fn test_check_clean() {
         .stdout(predicate::str::contains("No broken references"));
 }
 
+#[test]
+fn test_check_asymmetric_links() {
+    let tmp = setup_project();
+    // Create two tasks and link them
+    let out1 = cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Blocker"])
+        .output()
+        .unwrap();
+    assert!(out1.status.success());
+    let id1 = extract_id(&out1.stdout);
+
+    let out2 = cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Blocked"])
+        .output()
+        .unwrap();
+    assert!(out2.status.success());
+    let id2 = extract_id(&out2.stdout);
+
+    cmd()
+        .current_dir(tmp.path())
+        .args(["link", &id1, &id2, "--relation", "blocks"])
+        .assert()
+        .success();
+
+    // Manually corrupt: remove depends_on from the blocked task
+    let item_path = tmp.path().join(format!(".markplane/backlog/items/{}.md", id2));
+    let content = std::fs::read_to_string(&item_path).unwrap();
+    let content = content.replace(&format!("depends_on:\n- {}", id1), "depends_on: []");
+    std::fs::write(&item_path, content).unwrap();
+
+    // Check should detect the asymmetric link
+    cmd()
+        .current_dir(tmp.path())
+        .arg("check")
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("asymmetric link"));
+}
+
+#[test]
+fn test_check_fix_repairs_links() {
+    let tmp = setup_project();
+    let out1 = cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Blocker"])
+        .output()
+        .unwrap();
+    assert!(out1.status.success());
+    let id1 = extract_id(&out1.stdout);
+
+    let out2 = cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Blocked"])
+        .output()
+        .unwrap();
+    assert!(out2.status.success());
+    let id2 = extract_id(&out2.stdout);
+
+    cmd()
+        .current_dir(tmp.path())
+        .args(["link", &id1, &id2, "--relation", "blocks"])
+        .assert()
+        .success();
+
+    // Manually corrupt: remove depends_on from the blocked task
+    let item_path = tmp.path().join(format!(".markplane/backlog/items/{}.md", id2));
+    let content = std::fs::read_to_string(&item_path).unwrap();
+    let content = content.replace(&format!("depends_on:\n- {}", id1), "depends_on: []");
+    std::fs::write(&item_path, content).unwrap();
+
+    // Fix should repair it
+    cmd()
+        .current_dir(tmp.path())
+        .args(["check", "--fix"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Repaired"));
+
+    // After fix, check should pass clean
+    cmd()
+        .current_dir(tmp.path())
+        .arg("check")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("All reciprocal links are symmetric"));
+}
+
 // ── Metrics ──────────────────────────────────────────────────────────────
 
 #[test]

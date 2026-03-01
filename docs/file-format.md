@@ -252,7 +252,7 @@ Reference rules:
 - Only the four valid prefixes (`EPIC`, `TASK`, `PLAN`, `NOTE`) are recognized
 - Invalid references (e.g., `[[INVALID-x7k2f]]`) are ignored during extraction
 
-Use `markplane check` to validate all references and `markplane check --orphans` to find items with no incoming references.
+Use `markplane check` to validate all references, task statuses, and reciprocal link symmetry. Add `--orphans` to find items with no incoming references, or `--fix` to repair asymmetric reciprocal links.
 
 ## config.yaml Schema
 

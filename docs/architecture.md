@@ -157,7 +157,7 @@ Position normalization (`--normalize`) is separate from sync because it modifies
 ### Reference Validation
 
 ```
-CLI: markplane check --orphans
+CLI: markplane check [--orphans] [--fix]
   │
   ├─ validate_references(project)
   │    ├─ For each .md file in backlog/, roadmap/, plans/, notes/:
@@ -165,7 +165,19 @@ CLI: markplane check --orphans
   │    │    └─ Check each ID resolves via project.item_path()
   │    └─ Return list of BrokenReference { source_file, target_id }
   │
-  └─ find_orphans(project)
+  ├─ validate_task_statuses(project)
+  │    └─ Check each task's status is in the configured workflow
+  │
+  ├─ validate_reciprocal_links(project)
+  │    ├─ Load all items into HashMaps by type
+  │    ├─ Check blocks ↔ depends_on symmetry (Task ↔ Task)
+  │    ├─ Check plan ↔ implements symmetry (Task ↔ Plan)
+  │    ├─ Check related ↔ related symmetry (all entity types)
+  │    └─ Return list of AsymmetricLink (only for existing targets)
+  │
+  ├─ [--fix] For each AsymmetricLink: link_items(source, target, relation, Add)
+  │
+  └─ [--orphans] find_orphans(project)
        ├─ Collect all item IDs from filenames
        ├─ Collect all referenced IDs (body [[refs]] + frontmatter fields)
        └─ Return IDs with no incoming references

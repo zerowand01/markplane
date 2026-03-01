@@ -941,7 +941,81 @@ fn test_tool_check_clean() {
 
     assert!(response["error"].is_null());
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
-    assert!(text.contains("All cross-references and task statuses are valid"));
+    assert!(text.contains("All cross-references, task statuses, and reciprocal links are valid"));
+}
+
+#[test]
+fn test_tool_check_asymmetric_links() {
+    let tmp = setup_project();
+
+    // Create two tasks
+    let resp1 = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "Blocker" }
+            }
+        }),
+    );
+    let id1 = extract_id_from_response(&resp1);
+
+    let resp2 = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "Blocked" }
+            }
+        }),
+    );
+    let id2 = extract_id_from_response(&resp2);
+
+    // Link them
+    send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_link",
+                "arguments": { "from": id1, "to": id2, "relation": "blocks" }
+            }
+        }),
+    );
+
+    // Manually corrupt: remove depends_on from the blocked task
+    let item_path = tmp.path().join(format!(".markplane/backlog/items/{}.md", id2));
+    let content = std::fs::read_to_string(&item_path).unwrap();
+    let content = content.replace(&format!("depends_on:\n- {}", id1), "depends_on: []");
+    std::fs::write(&item_path, content).unwrap();
+
+    // Check should detect the asymmetric link
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 91,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_check",
+                "arguments": {}
+            }
+        }),
+    );
+
+    assert!(response["error"].is_null());
+    let text = response["result"]["content"][0]["text"].as_str().unwrap();
+    assert!(text.contains("asymmetric reciprocal link"), "Expected asymmetric link report, got: {}", text);
+    assert!(text.contains(&id1));
+    assert!(text.contains(&id2));
 }
 
 // ── Tool: markplane_graph ────────────────────────────────────────────────
