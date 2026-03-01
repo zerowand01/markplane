@@ -1,7 +1,7 @@
 ---
 id: TASK-jyvek
 title: Detect and repair orphaned reciprocal links in check command
-status: backlog
+status: planned
 priority: medium
 type: enhancement
 effort: medium

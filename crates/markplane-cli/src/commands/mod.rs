@@ -39,6 +39,9 @@ pub enum Commands {
         /// Project description
         #[arg(long, default_value = "")]
         description: String,
+        /// Skip starter content (create empty project)
+        #[arg(long)]
+        empty: bool,
     },
 
     /// Create a new task
@@ -342,7 +345,7 @@ pub enum LsKind {
 
 pub fn execute(cmd: Commands) -> anyhow::Result<()> {
     match cmd {
-        Commands::Init { name, description } => init::run(name, description),
+        Commands::Init { name, description, empty } => init::run(name, description, empty),
         Commands::Add {
             title,
             r#type,

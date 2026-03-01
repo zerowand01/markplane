@@ -6,12 +6,12 @@ fn cmd() -> Command {
     assert_cmd::cargo::cargo_bin_cmd!("markplane")
 }
 
-/// Run markplane inside a temp dir, initializing it first.
+/// Run markplane inside a temp dir, initializing it first (empty, no starter content).
 fn setup_project() -> TempDir {
     let tmp = TempDir::new().unwrap();
     cmd()
         .current_dir(tmp.path())
-        .args(["init", "--name", "Test Project"])
+        .args(["init", "--name", "Test Project", "--empty"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Initialized Markplane project"));
@@ -40,7 +40,7 @@ fn test_init_creates_structure() {
     let tmp = TempDir::new().unwrap();
     cmd()
         .current_dir(tmp.path())
-        .args(["init", "--name", "My Project", "--description", "A test"])
+        .args(["init", "--name", "My Project", "--description", "A test", "--empty"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Initialized Markplane project: My Project"))
@@ -60,7 +60,7 @@ fn test_init_defaults_to_dir_name() {
     let tmp = TempDir::new().unwrap();
     cmd()
         .current_dir(tmp.path())
-        .arg("init")
+        .args(["init", "--empty"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Initialized Markplane project"));
@@ -71,9 +71,81 @@ fn test_init_already_initialized() {
     let tmp = setup_project();
     cmd()
         .current_dir(tmp.path())
-        .arg("init")
+        .args(["init", "--empty"])
         .assert()
         .failure();
+}
+
+#[test]
+fn test_init_with_starter_content() {
+    let tmp = TempDir::new().unwrap();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["init", "--name", "Seeded Project"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Seeded with starter content"))
+        .stdout(predicate::str::contains("Next steps:"));
+
+    // Tasks should exist
+    cmd()
+        .current_dir(tmp.path())
+        .arg("ls")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Review and customize"))
+        .stdout(predicate::str::contains("Import existing work"));
+
+    // Epic should exist
+    cmd()
+        .current_dir(tmp.path())
+        .args(["ls", "epics"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Project Setup"));
+
+    // Plan should exist
+    cmd()
+        .current_dir(tmp.path())
+        .args(["ls", "plans"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Import existing work"));
+
+    // Note should exist
+    cmd()
+        .current_dir(tmp.path())
+        .args(["ls", "notes"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Project decisions"));
+
+    // No broken references
+    cmd()
+        .current_dir(tmp.path())
+        .arg("check")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("No broken references"));
+}
+
+#[test]
+fn test_init_empty() {
+    let tmp = TempDir::new().unwrap();
+    cmd()
+        .current_dir(tmp.path())
+        .args(["init", "--name", "Empty Project", "--empty"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Initialized Markplane project"))
+        .stdout(predicate::str::contains("Get started:"));
+
+    cmd()
+        .current_dir(tmp.path())
+        .arg("ls")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("No tasks found"));
 }
 
 // ── Add ──────────────────────────────────────────────────────────────────

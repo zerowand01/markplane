@@ -365,6 +365,162 @@ INDEX.md
 .context/
 ";
 
+// ── Starter content body templates ───────────────────────────────────────
+// Used by `seed_starter_content()` during `markplane init`. These are internal
+// templates (not exposed to users). Placeholders are substituted with generated
+// IDs via `render_template()`.
+
+pub const STARTER_EPIC_BODY: &str = "\
+## Objective
+
+Get your markplane project set up and ready for use. This epic tracks the \
+initial onboarding steps to help you learn the system by doing.
+
+## Key Results
+
+- [ ] Project configuration reviewed and customized ([[{SETUP_TASK_ID}]])
+- [ ] Existing work imported or captured ([[{IMPORT_TASK_ID}]])
+- [ ] Team is using markplane for day-to-day project tracking
+
+## Notes
+
+Delete this epic once onboarding is complete, or keep it as a reference.
+";
+
+pub const STARTER_SETUP_TASK_BODY: &str = "\
+## Description
+
+Walk through the markplane configuration and customize it for your project.
+
+## Steps
+
+1. **Review config.yaml** — Open `.markplane/config.yaml` and update the project \
+name and description. Check that the task types, note types, and workflow statuses \
+fit your team's process.
+
+2. **Customize templates** — Browse `.markplane/templates/` and edit the markdown \
+templates to match your preferred format. Templates use `{TITLE}` placeholders.
+
+3. **Set up AI integration** — If you use Claude Code or another AI tool, run \
+`markplane claude-md` to generate the integration snippet for your `CLAUDE.md`.
+
+4. **Configure documentation paths** — Add `documentation_paths` to `config.yaml` \
+to link your project's existing docs (e.g., `docs/`, `README.md`) into the \
+markplane index.
+
+## Acceptance Criteria
+
+- [ ] Config reflects actual project name and workflow
+- [ ] Templates customized or defaults confirmed
+- [ ] AI integration configured (if applicable)
+";
+
+pub const STARTER_IMPORT_TASK_BODY: &str = "\
+## Description
+
+Migrate existing tasks, issues, or TODOs into markplane so everything lives in \
+one place.
+
+See [[{PLAN_ID}]] for a step-by-step migration guide covering GitHub Issues, \
+Jira, and inline TODOs.
+
+## Acceptance Criteria
+
+- [ ] All active work items captured in markplane
+- [ ] Old tracking system archived or redirected
+";
+
+pub const STARTER_PLAN_BODY: &str = "\
+## Context
+
+This plan covers how to bring existing work items into markplane for \
+[[{IMPORT_TASK_ID}]].
+
+## Quick Reference
+
+```bash
+# Create a task
+markplane add \"Task title\" --type feature --priority high
+
+# Create an epic and link tasks
+markplane epic \"Epic title\"
+markplane link <task-id> <epic-id> -r epic
+
+# Create a plan for a task
+markplane plan <task-id>
+
+# View your backlog
+markplane ls
+```
+
+## Migration Steps
+
+### From GitHub Issues
+
+1. Export issues (or review them manually)
+2. Create a markplane task for each active issue
+3. Group related tasks under epics
+4. Close the GitHub issues with a note pointing to markplane
+
+### From Jira
+
+1. Export active items from your Jira board
+2. Map Jira statuses to markplane statuses (backlog, planned, in-progress, done)
+3. Create tasks with appropriate types and priorities
+4. Link related items using `markplane link`
+
+### From Inline TODOs
+
+1. Search your codebase: `grep -r \"TODO\\|FIXME\\|HACK\" src/`
+2. Create a task for each actionable TODO
+3. Replace the inline comment with a wiki-link reference to the task
+4. Use tags to categorize (e.g., `--tags tech-debt`)
+";
+
+pub const STARTER_NOTE_BODY: &str = "\
+## Purpose
+
+A running log of key project decisions. Each entry captures the context, \
+options considered, and rationale — so future-you (or teammates) can understand \
+*why* things are the way they are.
+
+## Template
+
+When adding a new decision, copy this template:
+
+```markdown
+### Decision Title
+
+**Date:** YYYY-MM-DD
+**Status:** Proposed | Accepted | Superseded
+**Context:** What prompted this decision?
+**Options considered:**
+1. Option A — pros/cons
+2. Option B — pros/cons
+
+**Decision:** What was decided and why.
+**Consequences:** What follows from this decision.
+```
+
+---
+
+### Use markplane for project management
+
+**Date:** {TODAY}
+**Status:** Accepted
+**Context:** Needed a lightweight, AI-friendly project tracking system that \
+lives in the repo alongside the code. Related to [[{EPIC_ID}]].
+**Options considered:**
+1. GitHub Issues — good integration but separate from codebase context
+2. Jira — powerful but heavyweight, poor AI integration
+3. Markplane — markdown-first, lives in repo, AI-native
+
+**Decision:** Adopted markplane. Files are the source of truth, git is the \
+changelog. AI tools can read and update items directly.
+**Consequences:** Team needs to learn markplane CLI. All project tracking \
+happens through `.markplane/` directory.
+";
+
 /// Replace template placeholders with actual values.
 pub fn render_template(template: &str, vars: &[(&str, &str)]) -> String {
     let mut result = template.to_string();

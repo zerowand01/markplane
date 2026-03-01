@@ -356,14 +356,19 @@ markplane init [OPTIONS]
 |--------|---------|-------------|
 | `--name <NAME>` | Current directory name | Project name |
 | `--description <DESC>` | `""` | Project description |
+| `--empty` | `false` | Skip starter content (create empty project) |
 
-Creates the full directory structure, `config.yaml`, INDEX.md files, templates, and special note files (`ideas.md`, `decisions.md`). Fails if `.markplane/` already exists.
+Creates the full directory structure, `config.yaml`, INDEX.md files, templates, and special note files (`ideas.md`, `decisions.md`). By default, seeds the project with starter content (1 epic, 2 tasks, 1 plan, 1 note) that demonstrates correct format and provides an onboarding workflow. Use `--empty` to skip this. Fails if `.markplane/` already exists.
 
-**Example:**
+**Examples:**
 
 ```bash
-markplane init --name "My App" --description "A web application"
+markplane init --name "My App"
 # Initialized Markplane project: My App
+# Seeded with starter content (1 epic, 2 tasks, 1 plan, 1 note)
+
+markplane init --name "My App" --empty
+# Initialized Markplane project: My App (no starter content)
 ```
 
 ---

@@ -1146,6 +1146,100 @@ impl Project {
 
         Ok(Project::new(root))
     }
+
+    /// Seed the project with starter content that demonstrates the system.
+    ///
+    /// Creates an epic, two tasks, a plan, and a note with realistic body
+    /// content and cross-references. Called by `markplane init` by default
+    /// (skipped with `--empty`).
+    pub fn seed_starter_content(&self) -> Result<Vec<String>> {
+        use crate::links::{LinkAction, LinkRelation};
+
+        // 1. Create epic
+        let epic = self.create_epic("Project Setup", Priority::Medium, None)?;
+        let epic_id = epic.id.clone();
+
+        // 2. Create task 1: review setup
+        let setup_task = self.create_task(
+            "Review and customize your markplane setup",
+            "chore",
+            Priority::Medium,
+            Effort::Small,
+            Some(epic_id.clone()),
+            vec!["onboarding".to_string()],
+            None,
+        )?;
+        let setup_task_id = setup_task.id.clone();
+
+        // 3. Create task 2: import existing work
+        let import_task = self.create_task(
+            "Import existing work into markplane",
+            "chore",
+            Priority::Medium,
+            Effort::Medium,
+            Some(epic_id.clone()),
+            vec!["onboarding".to_string()],
+            None,
+        )?;
+        let import_task_id = import_task.id.clone();
+
+        // 4. Create plan for the import task
+        let plan = self.create_plan(
+            "Import existing work into markplane",
+            vec![],
+            None,
+        )?;
+        let plan_id = plan.id.clone();
+
+        // 5. Create note
+        let note = self.create_note(
+            "Project decisions",
+            "decision",
+            vec!["onboarding".to_string()],
+            None,
+        )?;
+        let note_id = note.id.clone();
+
+        // 6. Link plan ↔ import task
+        self.link_items(&import_task_id, &plan_id, LinkRelation::Plan, LinkAction::Add)?;
+
+        // 7. Set statuses and body content in one pass per item
+        let today = Local::now().format("%Y-%m-%d").to_string();
+        let vars = &[
+            ("{EPIC_ID}", epic_id.as_str()),
+            ("{SETUP_TASK_ID}", setup_task_id.as_str()),
+            ("{IMPORT_TASK_ID}", import_task_id.as_str()),
+            ("{PLAN_ID}", plan_id.as_str()),
+            ("{TODAY}", today.as_str()),
+        ];
+
+        self.update_epic(&epic_id, &EpicUpdate {
+            status: Some("now".to_string()),
+            body: Some(render_template(templates::STARTER_EPIC_BODY, vars)),
+            ..Default::default()
+        })?;
+        self.update_task(&setup_task_id, &TaskUpdate {
+            status: Some("backlog".to_string()),
+            body: Some(render_template(templates::STARTER_SETUP_TASK_BODY, vars)),
+            ..Default::default()
+        })?;
+        self.update_task(&import_task_id, &TaskUpdate {
+            status: Some("backlog".to_string()),
+            body: Some(render_template(templates::STARTER_IMPORT_TASK_BODY, vars)),
+            ..Default::default()
+        })?;
+        self.update_plan(&plan_id, &PlanUpdate {
+            body: Some(render_template(templates::STARTER_PLAN_BODY, vars)),
+            ..Default::default()
+        })?;
+        self.update_note(&note_id, &NoteUpdate {
+            status: Some("active".to_string()),
+            body: Some(render_template(templates::STARTER_NOTE_BODY, vars)),
+            ..Default::default()
+        })?;
+
+        Ok(vec![epic_id, setup_task_id, import_task_id, plan_id, note_id])
+    }
 }
 
 /// Validate that a title does not exceed the maximum length.
@@ -2506,5 +2600,61 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("not a task"), "error should say not a task: {}", err);
+    }
+
+    #[test]
+    fn test_seed_starter_content() {
+        let (_tmp, project) = setup_project();
+        let ids = project.seed_starter_content().unwrap();
+        assert_eq!(ids.len(), 5, "should return 5 IDs");
+
+        let epic_id = &ids[0];
+        let setup_task_id = &ids[1];
+        let import_task_id = &ids[2];
+        let plan_id = &ids[3];
+        let note_id = &ids[4];
+
+        // Verify all items are readable
+        let epic_doc: MarkplaneDocument<Epic> = project.read_item(epic_id).unwrap();
+        assert_eq!(epic_doc.frontmatter.title, "Project Setup");
+        assert_eq!(epic_doc.frontmatter.status, EpicStatus::Now);
+
+        let setup_doc: MarkplaneDocument<Task> = project.read_item(setup_task_id).unwrap();
+        assert_eq!(setup_doc.frontmatter.title, "Review and customize your markplane setup");
+        assert_eq!(setup_doc.frontmatter.status, "backlog");
+        assert_eq!(setup_doc.frontmatter.epic.as_deref(), Some(epic_id.as_str()));
+        assert!(setup_doc.frontmatter.tags.contains(&"onboarding".to_string()));
+
+        let import_doc: MarkplaneDocument<Task> = project.read_item(import_task_id).unwrap();
+        assert_eq!(import_doc.frontmatter.title, "Import existing work into markplane");
+        assert_eq!(import_doc.frontmatter.status, "backlog");
+        assert_eq!(import_doc.frontmatter.epic.as_deref(), Some(epic_id.as_str()));
+        assert_eq!(import_doc.frontmatter.plan.as_deref(), Some(plan_id.as_str()));
+
+        let plan_doc: MarkplaneDocument<Plan> = project.read_item(plan_id).unwrap();
+        assert_eq!(plan_doc.frontmatter.title, "Import existing work into markplane");
+        assert!(plan_doc.frontmatter.implements.contains(import_task_id));
+
+        let note_doc: MarkplaneDocument<Note> = project.read_item(note_id).unwrap();
+        assert_eq!(note_doc.frontmatter.title, "Project decisions");
+        assert_eq!(note_doc.frontmatter.status, NoteStatus::Active);
+
+        // Verify cross-references in body content
+        assert!(epic_doc.body.contains(&format!("[[{}]]", setup_task_id)));
+        assert!(epic_doc.body.contains(&format!("[[{}]]", import_task_id)));
+        assert!(import_doc.body.contains(&format!("[[{}]]", plan_id)));
+        assert!(plan_doc.body.contains(&format!("[[{}]]", import_task_id)));
+        assert!(note_doc.body.contains(&format!("[[{}]]", epic_id)));
+
+        // Verify items exist after sync
+        project.sync_all().unwrap();
+        let tasks = project.list_tasks(&Default::default()).unwrap();
+        let epics = project.list_epics().unwrap();
+        let plans = project.list_plans().unwrap();
+        let notes = project.list_notes().unwrap();
+        assert_eq!(epics.len(), 1);
+        assert_eq!(tasks.len(), 2);
+        assert_eq!(plans.len(), 1);
+        assert_eq!(notes.len(), 1);
     }
 }

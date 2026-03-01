@@ -15,13 +15,15 @@ cargo install --path crates/markplane-cli
 Navigate to your repository and run:
 
 ```bash
-markplane init --name "My App" --description "A web application"
+markplane init --name "My App"
 ```
 
 Output:
 
 ```
 Initialized Markplane project: My App
+
+  Seeded with starter content (1 epic, 2 tasks, 1 plan, 1 note)
 
   .markplane/
   ├── config.yaml
@@ -33,12 +35,13 @@ Initialized Markplane project: My App
   ├── templates/
   └── .context/
 
-Get started:
-  markplane add "My first task"
-  markplane ls
+Next steps:
+  markplane ls                  # See your starter tasks
+  markplane show TASK-xxxxx   # Review your setup checklist
+  markplane dashboard           # Project overview
 ```
 
-This creates the `.markplane/` directory structure with config, templates, index files, and special note files (`ideas.md`, `decisions.md`).
+This creates the `.markplane/` directory structure with config, templates, index files, and special note files (`ideas.md`, `decisions.md`). By default it also seeds the project with starter content — an onboarding epic, setup tasks, a migration plan, and a decision log note — that demonstrates correct format and gives you something to work with immediately. Use `markplane init --empty` to skip starter content.
 
 ## How Items Relate
 
