@@ -1,7 +1,7 @@
 ---
 id: TASK-f65s9
 title: Seed markplane init with starter content and onboarding plan
-status: backlog
+status: planned
 priority: medium
 type: feature
 effort: medium

@@ -10,12 +10,36 @@ export type NoteType = string;
 
 export type TaskWorkflow = Record<StatusCategory, string[]>;
 
+export interface ProjectInfo {
+  name: string;
+  description: string;
+}
+
+export interface ContextConfig {
+  token_budget: number;
+  recent_days: number;
+  auto_generate: boolean;
+}
+
 export interface ProjectConfig {
+  project: ProjectInfo;
+  context: ContextConfig;
+  documentation_paths: string[];
   task_types: string[];
   note_types: string[];
   workflows: {
     task: TaskWorkflow;
   };
+}
+
+/** Matches the backend's UpdateConfigRequest — partial at every level. */
+export interface UpdateConfigRequest {
+  project?: Partial<ProjectInfo>;
+  context?: Partial<ContextConfig>;
+  documentation_paths?: string[];
+  task_types?: string[];
+  note_types?: string[];
+  workflows?: { task?: TaskWorkflow };
 }
 
 export interface Task {

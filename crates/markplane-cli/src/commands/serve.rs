@@ -365,9 +365,25 @@ struct ListMeta {
 
 #[derive(Serialize)]
 struct ConfigResponse {
+    project: ProjectInfoResponse,
+    context: ContextConfigResponse,
+    documentation_paths: Vec<String>,
     task_types: Vec<String>,
     note_types: Vec<String>,
     workflows: WorkflowsResponse,
+}
+
+#[derive(Serialize)]
+struct ProjectInfoResponse {
+    name: String,
+    description: String,
+}
+
+#[derive(Serialize)]
+struct ContextConfigResponse {
+    token_budget: u32,
+    recent_days: u32,
+    auto_generate: bool,
 }
 
 #[derive(Serialize)]
@@ -946,6 +962,16 @@ fn config_to_response(config: markplane_core::Config) -> ConfigResponse {
         .map(|(cat, statuses)| (cat.to_string(), statuses.clone()))
         .collect();
     ConfigResponse {
+        project: ProjectInfoResponse {
+            name: config.project.name,
+            description: config.project.description,
+        },
+        context: ContextConfigResponse {
+            token_budget: config.context.token_budget,
+            recent_days: config.context.recent_days,
+            auto_generate: config.context.auto_generate,
+        },
+        documentation_paths: config.documentation_paths,
         task_types: config.task_types,
         note_types: config.note_types,
         workflows: WorkflowsResponse {
@@ -956,9 +982,25 @@ fn config_to_response(config: markplane_core::Config) -> ConfigResponse {
 
 #[derive(Deserialize)]
 struct UpdateConfigRequest {
+    project: Option<UpdateProjectRequest>,
+    context: Option<UpdateContextRequest>,
+    documentation_paths: Option<Vec<String>>,
     task_types: Option<Vec<String>>,
     note_types: Option<Vec<String>>,
     workflows: Option<UpdateWorkflowsRequest>,
+}
+
+#[derive(Deserialize)]
+struct UpdateProjectRequest {
+    name: Option<String>,
+    description: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct UpdateContextRequest {
+    token_budget: Option<u32>,
+    recent_days: Option<u32>,
+    auto_generate: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -995,6 +1037,65 @@ async fn patch_config(
             .filter(|s| seen.insert(s.clone()))
             .collect();
         Ok(deduped)
+    }
+
+    if let Some(project) = body.project {
+        if let Some(name) = project.name {
+            let name = name.trim().to_string();
+            if name.is_empty() {
+                return Err(error_response(
+                    StatusCode::BAD_REQUEST,
+                    "validation_error",
+                    "Project name cannot be empty",
+                ));
+            }
+            if name.len() > 200 {
+                return Err(error_response(
+                    StatusCode::BAD_REQUEST,
+                    "validation_error",
+                    "Project name must be 200 characters or fewer",
+                ));
+            }
+            config.project.name = name;
+        }
+        if let Some(description) = project.description {
+            config.project.description = description.trim().to_string();
+        }
+    }
+
+    if let Some(context) = body.context {
+        if let Some(token_budget) = context.token_budget {
+            if !(1..=1_000_000).contains(&token_budget) {
+                return Err(error_response(
+                    StatusCode::BAD_REQUEST,
+                    "validation_error",
+                    "Token budget must be between 1 and 1,000,000",
+                ));
+            }
+            config.context.token_budget = token_budget;
+        }
+        if let Some(recent_days) = context.recent_days {
+            if !(1..=365).contains(&recent_days) {
+                return Err(error_response(
+                    StatusCode::BAD_REQUEST,
+                    "validation_error",
+                    "Recent days must be between 1 and 365",
+                ));
+            }
+            config.context.recent_days = recent_days;
+        }
+        if let Some(auto_generate) = context.auto_generate {
+            config.context.auto_generate = auto_generate;
+        }
+    }
+
+    if let Some(paths) = body.documentation_paths {
+        let mut seen = HashSet::new();
+        config.documentation_paths = paths
+            .into_iter()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty() && seen.insert(s.clone()))
+            .collect();
     }
 
     if let Some(task_types) = body.task_types {

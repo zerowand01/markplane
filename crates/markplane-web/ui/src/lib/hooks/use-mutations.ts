@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { patchJson, postJson, postAction } from "@/lib/api";
 import { toast } from "sonner";
-import type { Task, Epic, Plan, Note, ProjectConfig, CreateTaskRequest, CreateEpicRequest, CreatePlanRequest, CreateNoteRequest, UpdateTaskRequest, UpdateEpicRequest, UpdatePlanRequest, UpdateNoteRequest } from "@/lib/types";
+import type { Task, Epic, Plan, Note, ProjectConfig, UpdateConfigRequest, CreateTaskRequest, CreateEpicRequest, CreatePlanRequest, CreateNoteRequest, UpdateTaskRequest, UpdateEpicRequest, UpdatePlanRequest, UpdateNoteRequest } from "@/lib/types";
 
 // Ordered by display priority — first match wins when multiple fields change
 const TASK_FIELD_LABELS: [string, string][] = [
@@ -503,17 +503,28 @@ export function useBatchArchive() {
   });
 }
 
+function mergeConfig(prev: ProjectConfig, updates: UpdateConfigRequest): ProjectConfig {
+  const result = { ...prev };
+  if (updates.project) result.project = { ...prev.project, ...updates.project };
+  if (updates.context) result.context = { ...prev.context, ...updates.context };
+  if (updates.documentation_paths !== undefined) result.documentation_paths = updates.documentation_paths;
+  if (updates.task_types !== undefined) result.task_types = updates.task_types;
+  if (updates.note_types !== undefined) result.note_types = updates.note_types;
+  if (updates.workflows) result.workflows = { ...prev.workflows, ...updates.workflows };
+  return result;
+}
+
 export function useUpdateConfig() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (body: Partial<ProjectConfig>) =>
+    mutationFn: (body: UpdateConfigRequest) =>
       patchJson<ProjectConfig>("/api/config", body),
     onMutate: async (updates) => {
       await queryClient.cancelQueries({ queryKey: ["config"] });
       const previous = queryClient.getQueryData<ProjectConfig>(["config"]);
       if (previous) {
-        queryClient.setQueryData<ProjectConfig>(["config"], { ...previous, ...updates });
+        queryClient.setQueryData<ProjectConfig>(["config"], mergeConfig(previous, updates));
       }
       return { previous };
     },

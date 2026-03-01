@@ -126,7 +126,13 @@ crates/markplane-web/ui/               # Next.js project root
 │   │   │   │   └── page.tsx         # Archived items with restore action
 │   │   │   │
 │   │   │   └── settings/
-│   │   │       └── page.tsx         # Project settings (type configuration)
+│   │   │       ├── layout.tsx       # Settings sidebar nav + content area
+│   │   │       ├── page.tsx         # Redirect to /settings/general
+│   │   │       ├── general/page.tsx # Project info, docs paths, context settings
+│   │   │       ├── task-types/page.tsx
+│   │   │       ├── note-types/page.tsx
+│   │   │       ├── workflow/page.tsx
+│   │   │       └── sections/        # Section components (general, types, workflow)
 │   │   │
 │   │   ├── components/
 │   │   │   ├── ui/                  # shadcn/ui primitives (22 components)
@@ -306,8 +312,8 @@ The link endpoint accepts `{ from, to, relation, remove? }` where `relation` is 
 | `GET` | `/api/graph` | Full project dependency graph |
 | `POST` | `/api/sync` | Trigger `markplane sync` (regenerate INDEX.md + .context/) |
 | `GET` | `/api/search?q=...` | Full-text search across all items (min 2 chars) |
-| `GET` | `/api/config` | Get project configuration (item types, note types) |
-| `PATCH` | `/api/config` | Update project configuration (validates, trims, lowercases, deduplicates) |
+| `GET` | `/api/config` | Get project configuration (project info, context settings, documentation paths, types, workflows) |
+| `PATCH` | `/api/config` | Update project configuration (partial updates at every level; validates, trims, deduplicates) |
 
 #### Response Format
 
@@ -497,7 +503,7 @@ All mutation hooks use TanStack Query's `useMutation` with `onMutate`/`onError`/
 | `/notes` | Notes | Research, ideas, decisions. Note detail via Sheet slide-over |
 | `/graph` | Dependency Graph | Full project graph (React Flow + ELK layout) |
 | `/archive` | Archive | Archived items with restore action |
-| `/settings` | Settings | Project configuration: task types, note types |
+| `/settings/*` | Settings | Project configuration: general, task types, note types, workflow (sidebar nav layout) |
 
 ### URL Design
 

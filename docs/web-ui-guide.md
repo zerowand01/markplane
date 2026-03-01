@@ -25,7 +25,7 @@ markplane serve --port 8080  # Custom port
 | Graph | `/graph` | Interactive dependency graph |
 | Archive | `/archive` | Archived items with restore action |
 | Docs | `/docs` | Searchable documentation viewer for user-facing guides |
-| Settings | `/settings` | Configure task types, note types, and other project settings |
+| Settings | `/settings/*` | Configure project info, task types, note types, workflow, and documentation paths |
 | Search | `/search` | Full-text search across all items |
 
 ## Views
@@ -81,20 +81,22 @@ An interactive node graph built with React Flow showing `blocks`, `depends_on`, 
 - Use `?focus=TASK-rm6d3` to center the graph on a specific item
 - MiniMap in the corner for orientation
 
-### Settings (`/settings`)
+### Settings (`/settings/*`)
 
-Manage project configuration visually. The Settings page shows two sections side by side:
+Manage project configuration visually. Settings uses a sidebar navigation layout with four sections:
 
-- **Task Types** — the list of allowed values for the `type` field on tasks (e.g., `feature`, `bug`, `chore`)
-- **Note Types** — the list of allowed values for the `type` field on notes (e.g., `research`, `idea`, `decision`)
+- **General** (`/settings/general`) — project name and description, documentation paths, and context generation settings (auto-generate toggle, token budget, recent days)
+- **Task Types** (`/settings/task-types`) — the list of allowed values for the `type` field on tasks (e.g., `feature`, `bug`, `chore`)
+- **Note Types** (`/settings/note-types`) — the list of allowed values for the `type` field on notes (e.g., `research`, `idea`, `decision`)
+- **Task Workflow** (`/settings/workflow`) — configure which status strings map to each status category (draft, backlog, planned, active, completed, cancelled)
 
-Each section lets you:
+The type and workflow editors let you:
 
-- **Add** a new type using the input at the bottom (press Enter or click +)
-- **Remove** a type by clicking the X button (at least one type must remain)
-- **Reorder** types by dragging the grip handle — the first type in the list becomes the default for newly created items
+- **Add** a new entry using the input at the bottom (press Enter or click +)
+- **Remove** an entry by clicking the X button (at least one entry must remain per section/category)
+- **Reorder** entries by dragging the grip handle — the first type in the list becomes the default for newly created items
 
-Changes save immediately and are reflected everywhere: create dialogs, detail sheet dropdowns, CLI defaults, and MCP tools. Other browser tabs stay in sync via WebSocket. Under the hood, changes write directly to `.markplane/config.yaml`.
+General settings fields save on blur or Enter (text/number inputs) or immediately on toggle (switches). Changes are reflected everywhere: create dialogs, detail sheet dropdowns, CLI defaults, and MCP tools. Other browser tabs stay in sync via WebSocket. Under the hood, changes write directly to `.markplane/config.yaml`.
 
 ### Command Palette (`Cmd+K`)
 
@@ -255,8 +257,8 @@ Error:             { "error": { "code": string, "message": string } }
 | GET | `/api/docs/:slug` | Get documentation page content |
 | POST | `/api/items/:id/archive` | Archive any item (task, epic, plan, note) |
 | POST | `/api/items/:id/unarchive` | Restore an archived item |
-| GET | `/api/config` | Get project configuration (item types, note types) |
-| PATCH | `/api/config` | Update project configuration |
+| GET | `/api/config` | Get project configuration (project info, context settings, documentation paths, item types, note types, workflows) |
+| PATCH | `/api/config` | Update project configuration (partial updates supported at every level) |
 
 All list endpoints (`/api/tasks`, `/api/epics`, `/api/plans`, `/api/notes`) accept an `?archived=true` query parameter to return archived items instead of active ones.
 

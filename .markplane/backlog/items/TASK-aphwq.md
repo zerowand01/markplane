@@ -1,7 +1,7 @@
 ---
 id: TASK-aphwq
 title: Settings page sidebar layout + General section
-status: backlog
+status: done
 priority: medium
 type: enhancement
 effort: medium
@@ -17,7 +17,7 @@ tags:
 - settings
 position: a5
 created: 2026-02-28
-updated: 2026-02-28
+updated: 2026-03-01
 ---
 
 # Settings page sidebar layout + General section
@@ -50,21 +50,34 @@ Expand `GET /api/config` and `PATCH /api/config` to include `project` (name, des
 
 ## Acceptance Criteria
 
-- [ ] Settings page has an internal sidebar with 4 sections (General, Task Types, Note Types, Task Workflow)
-- [ ] Each section is URL-addressable (`/settings/general`, etc.)
-- [ ] `/settings` redirects to `/settings/general`
-- [ ] General section allows editing project name, description, documentation paths, and context config
-- [ ] `GET /api/config` returns all config fields including project, context, and documentation_paths
-- [ ] `PATCH /api/config` accepts updates to project, context, and documentation_paths
-- [ ] Existing Task Types, Note Types, and Task Workflow editors work as before
-- [ ] Layout is responsive — sidebar collapses gracefully on mobile
+- [x] Settings page has an internal sidebar with 4 sections (General, Task Types, Note Types, Task Workflow)
+- [x] Each section is URL-addressable (`/settings/general`, etc.)
+- [x] `/settings` redirects to `/settings/general`
+- [x] General section allows editing project name, description, documentation paths, and context config
+- [x] `GET /api/config` returns all config fields including project, context, and documentation_paths
+- [x] `PATCH /api/config` accepts updates to project, context, and documentation_paths
+- [x] Existing Task Types, Note Types, and Task Workflow editors work as before
+- [x] Layout is responsive — sidebar collapses gracefully on mobile
 
-## Notes
+## Implementation Notes
 
-- Current settings implementation: `crates/markplane-web/ui/src/app/settings/settings-content.tsx`
-- Config model: `Config` struct in `crates/markplane-core/src/models.rs`
-- API endpoints: `get_config` / `patch_config` in `crates/markplane-cli/src/commands/serve.rs`
-- Keep the sidebar lightweight — a simple nav list, not the full shadcn Sidebar component
-- [[TASK-kfv9v]] (Template management UI) depends on this task for the sidebar layout
+### Files changed
+- **`serve.rs`**: Added `ProjectInfoResponse`, `ContextConfigResponse`, `UpdateProjectRequest`, `UpdateContextRequest` structs. Expanded `ConfigResponse` and `UpdateConfigRequest`. Added validation in `patch_config()`: project name (non-empty, max 200), token budget (1-1M), recent days (1-365), doc paths (trim/dedup/filter empty).
+- **`types.ts`**: Added `ProjectInfo`, `ContextConfig`, `UpdateConfigRequest` interfaces. Expanded `ProjectConfig`.
+- **`use-mutations.ts`**: Changed `useUpdateConfig` from `Partial<ProjectConfig>` to `UpdateConfigRequest`. Added `mergeConfig()` deep-merge helper for correct optimistic updates of nested objects.
+- **`settings/layout.tsx`**: New settings layout with sticky sidebar nav (vertical on desktop, horizontal tabs on mobile). Active state uses `bg-accent` matching the main app sidebar pattern.
+- **`settings/page.tsx`**: Replaced with `redirect("/settings/general")`.
+- **`settings/sections/`**: Extracted `type-list-editor.tsx` (shared), `task-types-section.tsx`, `note-types-section.tsx`, `workflow-section.tsx`, and new `general-section.tsx`.
+- **`settings/{general,task-types,note-types,workflow}/page.tsx`**: Thin wrappers with dynamic imports (`ssr: false`).
+- **Deleted**: `settings-content.tsx` (superseded by section files).
+- **Added**: shadcn `switch.tsx` and `label.tsx` components.
+- **Docs updated**: `web-ui-guide.md`, `web-ui/architecture.md`.
+
+### Key decisions
+- **Sticky nav, not fixed-height scroll container**: Desktop sidebar uses `sticky top-6 self-start` for independent scrolling without restructuring the root layout.
+- **`trailingSlash: true` compatibility**: Active nav detection uses `pathname === href || pathname === href + "/"` to handle Next.js trailing slash config.
+- **Full sub-objects for config updates**: Callers send complete nested objects (e.g., `{ project: { name, description } }`) so the shallow PATCH merge on the server is safe. The `mergeConfig()` helper in the optimistic update handles partial nested objects correctly regardless.
+- **Enter-to-save on single-line inputs**: Triggers blur which fires the existing `onBlur` save handler. Textarea left as blur-only since Enter is for newlines.
+- **Workflow single column**: Changed from 2-column grid to vertical stack for clearer ordering.
 
 ## References
