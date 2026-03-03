@@ -1,5 +1,5 @@
 use assert_cmd::Command;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use tempfile::TempDir;
 
 fn mcp_cmd() -> Command {
@@ -48,8 +48,16 @@ fn extract_id_from_response(response: &Value) -> String {
 /// Assert that a tool call returned an error via isError: true in the result.
 /// Tool-level errors are returned as successful JSON-RPC responses with isError flag.
 fn assert_tool_error(response: &Value, msg: &str) {
-    assert!(response["error"].is_null(), "{}: should not be a JSON-RPC error", msg);
-    assert_eq!(response["result"]["isError"], true, "{}: should have isError: true", msg);
+    assert!(
+        response["error"].is_null(),
+        "{}: should not be a JSON-RPC error",
+        msg
+    );
+    assert_eq!(
+        response["result"]["isError"], true,
+        "{}: should have isError: true",
+        msg
+    );
 }
 
 // ── Initialize ──────────────────────────────────────────────────────────
@@ -69,10 +77,12 @@ fn test_initialize() {
 
     assert_eq!(response["jsonrpc"], "2.0");
     assert_eq!(response["id"], 1);
-    assert!(response["result"]["serverInfo"]["name"]
-        .as_str()
-        .unwrap()
-        .contains("markplane"));
+    assert!(
+        response["result"]["serverInfo"]["name"]
+            .as_str()
+            .unwrap()
+            .contains("markplane")
+    );
     assert!(response["result"]["capabilities"]["tools"].is_object());
     assert!(response["result"]["capabilities"]["resources"].is_object());
     // Protocol version should be 2025-11-25
@@ -135,10 +145,12 @@ fn test_unknown_method_returns_error() {
     assert_eq!(response["id"], 3);
     assert!(response["error"].is_object());
     assert_eq!(response["error"]["code"], -32601); // METHOD_NOT_FOUND
-    assert!(response["error"]["message"]
-        .as_str()
-        .unwrap()
-        .contains("Method not found"));
+    assert!(
+        response["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("Method not found")
+    );
 }
 
 // ── Malformed JSON ───────────────────────────────────────────────────────
@@ -193,8 +205,14 @@ fn test_tools_list() {
     assert!(tool_names.contains(&"markplane_show"));
     assert!(tool_names.contains(&"markplane_add"));
     assert!(tool_names.contains(&"markplane_update"));
-    assert!(!tool_names.contains(&"markplane_start"), "markplane_start should be removed");
-    assert!(!tool_names.contains(&"markplane_done"), "markplane_done should be removed");
+    assert!(
+        !tool_names.contains(&"markplane_start"),
+        "markplane_start should be removed"
+    );
+    assert!(
+        !tool_names.contains(&"markplane_done"),
+        "markplane_done should be removed"
+    );
     assert!(tool_names.contains(&"markplane_sync"));
     assert!(tool_names.contains(&"markplane_context"));
     assert!(tool_names.contains(&"markplane_graph"));
@@ -205,8 +223,16 @@ fn test_tools_list() {
     assert!(tool_names.contains(&"markplane_archive"));
     assert!(tool_names.contains(&"markplane_unarchive"));
     assert!(tool_names.contains(&"markplane_move"));
-    assert!(!tool_names.contains(&"markplane_stale"), "markplane_stale should be removed");
-    assert_eq!(tool_names.len(), 15, "Expected 15 tools, got: {:?}", tool_names);
+    assert!(
+        !tool_names.contains(&"markplane_stale"),
+        "markplane_stale should be removed"
+    );
+    assert_eq!(
+        tool_names.len(),
+        15,
+        "Expected 15 tools, got: {:?}",
+        tool_names
+    );
 }
 
 // ── Resources List ───────────────────────────────────────────────────────
@@ -304,8 +330,17 @@ fn test_tool_add() {
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
     let result: Value = serde_json::from_str(text).unwrap();
     let id = result["id"].as_str().unwrap();
-    assert!(id.starts_with("TASK-"), "ID should start with TASK-, got: {}", id);
-    assert_eq!(id.len(), 10, "ID should be 10 chars (TASK-xxxxx), got: {}", id);
+    assert!(
+        id.starts_with("TASK-"),
+        "ID should start with TASK-, got: {}",
+        id
+    );
+    assert_eq!(
+        id.len(),
+        10,
+        "ID should be 10 chars (TASK-xxxxx), got: {}",
+        id
+    );
     assert_eq!(result["title"], "Build the API");
 }
 
@@ -353,7 +388,11 @@ fn test_tool_add_epic() {
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
     let result: Value = serde_json::from_str(text).unwrap();
     let id = result["id"].as_str().unwrap();
-    assert!(id.starts_with("EPIC-"), "ID should start with EPIC-, got: {}", id);
+    assert!(
+        id.starts_with("EPIC-"),
+        "ID should start with EPIC-, got: {}",
+        id
+    );
     assert_eq!(result["title"], "Phase 1 rollout");
 }
 
@@ -382,7 +421,11 @@ fn test_tool_add_note() {
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
     let result: Value = serde_json::from_str(text).unwrap();
     let id = result["id"].as_str().unwrap();
-    assert!(id.starts_with("NOTE-"), "ID should start with NOTE-, got: {}", id);
+    assert!(
+        id.starts_with("NOTE-"),
+        "ID should start with NOTE-, got: {}",
+        id
+    );
     assert_eq!(result["title"], "Research caching strategies");
 }
 
@@ -570,7 +613,10 @@ fn test_tool_query_tasks_include_updated() {
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
     let items: Vec<Value> = serde_json::from_str(text).unwrap();
     assert_eq!(items.len(), 1);
-    assert!(items[0]["updated"].is_string(), "Task query should include updated date");
+    assert!(
+        items[0]["updated"].is_string(),
+        "Task query should include updated date"
+    );
 }
 
 #[test]
@@ -609,8 +655,14 @@ fn test_tool_query_epics() {
     assert_eq!(items[0]["title"], "Epic A");
     assert_eq!(items[0]["status"], "later");
     assert_eq!(items[0]["priority"], "high");
-    assert!(items[0]["created"].is_string(), "epic query should include created date");
-    assert!(items[0]["updated"].is_string(), "epic query should include updated date");
+    assert!(
+        items[0]["created"].is_string(),
+        "epic query should include created date"
+    );
+    assert!(
+        items[0]["updated"].is_string(),
+        "epic query should include updated date"
+    );
 }
 
 #[test]
@@ -662,7 +714,10 @@ fn test_tool_query_plans() {
     let items: Vec<Value> = serde_json::from_str(text).unwrap();
     assert_eq!(items.len(), 1);
     assert_eq!(items[0]["status"], "draft");
-    assert!(items[0]["updated"].is_string(), "Plan query should include updated date");
+    assert!(
+        items[0]["updated"].is_string(),
+        "Plan query should include updated date"
+    );
 }
 
 #[test]
@@ -700,7 +755,10 @@ fn test_tool_query_notes() {
     assert_eq!(items.len(), 1);
     assert_eq!(items[0]["title"], "Note A");
     assert_eq!(items[0]["type"], "idea");
-    assert!(items[0]["updated"].is_string(), "Note query should include updated date");
+    assert!(
+        items[0]["updated"].is_string(),
+        "Note query should include updated date"
+    );
 }
 
 #[test]
@@ -876,7 +934,9 @@ fn test_tool_check_clean() {
 
     assert!(response["error"].is_null());
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
-    assert!(text.contains("All cross-references, task statuses, reciprocal links, and dependency graphs are valid"));
+    assert!(text.contains(
+        "All cross-references, task statuses, reciprocal links, and dependency graphs are valid"
+    ));
 }
 
 #[test]
@@ -927,7 +987,9 @@ fn test_tool_check_asymmetric_links() {
     );
 
     // Manually corrupt: remove depends_on from the blocked task
-    let item_path = tmp.path().join(format!(".markplane/backlog/items/{}.md", id2));
+    let item_path = tmp
+        .path()
+        .join(format!(".markplane/backlog/items/{}.md", id2));
     let content = std::fs::read_to_string(&item_path).unwrap();
     let content = content.replace(&format!("depends_on:\n- {}", id1), "depends_on: []");
     std::fs::write(&item_path, content).unwrap();
@@ -948,7 +1010,11 @@ fn test_tool_check_asymmetric_links() {
 
     assert!(response["error"].is_null());
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
-    assert!(text.contains("asymmetric reciprocal link"), "Expected asymmetric link report, got: {}", text);
+    assert!(
+        text.contains("asymmetric reciprocal link"),
+        "Expected asymmetric link report, got: {}",
+        text
+    );
     assert!(text.contains(&id1));
     assert!(text.contains(&id2));
 }
@@ -1218,8 +1284,10 @@ fn test_tool_link_epic() {
 
     // Verify task.epic is set
     let task_content = std::fs::read_to_string(
-        tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))
-    ).unwrap();
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id)),
+    )
+    .unwrap();
     assert!(task_content.contains(&epic_id));
 }
 
@@ -1259,14 +1327,18 @@ fn test_tool_link_plan_reciprocal() {
 
     // Verify task has plan set
     let task_content = std::fs::read_to_string(
-        tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))
-    ).unwrap();
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id)),
+    )
+    .unwrap();
     assert!(task_content.contains(plan_id));
 
     // Verify plan has implements set
     let plan_content = std::fs::read_to_string(
-        tmp.path().join(format!(".markplane/plans/items/{}.md", plan_id))
-    ).unwrap();
+        tmp.path()
+            .join(format!(".markplane/plans/items/{}.md", plan_id)),
+    )
+    .unwrap();
     assert!(plan_content.contains(&task_id));
 }
 
@@ -1342,8 +1414,10 @@ fn test_tool_link_remove() {
 
     // Verify link is removed
     let task_content = std::fs::read_to_string(
-        tmp.path().join(format!(".markplane/backlog/items/{}.md", task1_id))
-    ).unwrap();
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task1_id)),
+    )
+    .unwrap();
     assert!(!task_content.contains(&task2_id));
 }
 
@@ -1402,13 +1476,23 @@ fn test_tool_link_related_bidirectional() {
 
     // Verify both files contain the reciprocal link
     let task_content = std::fs::read_to_string(
-        tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))
-    ).unwrap();
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id)),
+    )
+    .unwrap();
     let epic_content = std::fs::read_to_string(
-        tmp.path().join(format!(".markplane/roadmap/items/{}.md", epic_id))
-    ).unwrap();
-    assert!(task_content.contains(&epic_id), "Task should have related link to Epic");
-    assert!(epic_content.contains(&task_id), "Epic should have related link to Task");
+        tmp.path()
+            .join(format!(".markplane/roadmap/items/{}.md", epic_id)),
+    )
+    .unwrap();
+    assert!(
+        task_content.contains(&epic_id),
+        "Task should have related link to Epic"
+    );
+    assert!(
+        epic_content.contains(&task_id),
+        "Epic should have related link to Task"
+    );
 
     // Verify show output includes the related field
     let show_resp = send_request(
@@ -1424,7 +1508,10 @@ fn test_tool_link_related_bidirectional() {
         }),
     );
     let show_text = show_resp["result"]["content"][0]["text"].as_str().unwrap();
-    assert!(show_text.contains(&epic_id), "Show output should contain related epic ID");
+    assert!(
+        show_text.contains(&epic_id),
+        "Show output should contain related epic ID"
+    );
 }
 
 // ── Unknown tool ─────────────────────────────────────────────────────────
@@ -1446,11 +1533,17 @@ fn test_unknown_tool_returns_error() {
     );
 
     assert!(response["error"].is_object());
-    assert_eq!(response["error"]["code"].as_i64().unwrap(), -32601, "Unknown tool should return METHOD_NOT_FOUND (-32601)");
-    assert!(response["error"]["message"]
-        .as_str()
-        .unwrap()
-        .contains("Unknown tool"));
+    assert_eq!(
+        response["error"]["code"].as_i64().unwrap(),
+        -32601,
+        "Unknown tool should return METHOD_NOT_FOUND (-32601)"
+    );
+    assert!(
+        response["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("Unknown tool")
+    );
 }
 
 // ── Missing params ───────────────────────────────────────────────────────
@@ -1524,9 +1617,7 @@ fn test_resource_active_work() {
     );
 
     assert!(response["error"].is_null());
-    let text = response["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap();
+    let text = response["result"]["contents"][0]["text"].as_str().unwrap();
     assert!(text.contains("Active Work"));
     assert!(text.contains("No items currently in progress"));
 }
@@ -1545,9 +1636,7 @@ fn test_resource_blocked() {
     );
 
     assert!(response["error"].is_null());
-    let text = response["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap();
+    let text = response["result"]["contents"][0]["text"].as_str().unwrap();
     assert!(text.contains("Blocked Items"));
     assert!(text.contains("No items with unresolved dependencies"));
 }
@@ -1581,9 +1670,7 @@ fn test_resource_task_item() {
     );
 
     assert!(response["error"].is_null());
-    let text = response["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap();
+    let text = response["result"]["contents"][0]["text"].as_str().unwrap();
     assert!(text.contains(&task.id));
     assert!(text.contains("Resource test"));
 }
@@ -1608,9 +1695,7 @@ fn test_resource_epic_item() {
     );
 
     assert!(response["error"].is_null());
-    let text = response["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap();
+    let text = response["result"]["contents"][0]["text"].as_str().unwrap();
     assert!(text.contains(&epic.id));
 }
 
@@ -1628,10 +1713,12 @@ fn test_resource_unknown_uri() {
     );
 
     assert!(response["error"].is_object());
-    assert!(response["error"]["message"]
-        .as_str()
-        .unwrap()
-        .contains("Unknown resource URI"));
+    assert!(
+        response["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("Unknown resource URI")
+    );
 }
 
 #[test]
@@ -1658,11 +1745,7 @@ fn test_resource_plan_item() {
     let root = tmp.path().join(".markplane");
     let project = markplane_core::Project::new(root);
     let plan = project
-        .create_plan(
-            "Plan resource test",
-            vec![],
-            None,
-        )
+        .create_plan("Plan resource test", vec![], None)
         .unwrap();
 
     let response = send_request(
@@ -1676,9 +1759,7 @@ fn test_resource_plan_item() {
     );
 
     assert!(response["error"].is_null());
-    let text = response["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap();
+    let text = response["result"]["contents"][0]["text"].as_str().unwrap();
     assert!(text.contains(&plan.id));
     assert!(text.contains("Plan resource test"));
 }
@@ -1711,10 +1792,12 @@ fn test_resource_plan_wrong_prefix() {
     );
 
     assert!(response["error"].is_object());
-    assert!(response["error"]["message"]
-        .as_str()
-        .unwrap()
-        .contains("Expected PLAN-"));
+    assert!(
+        response["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("Expected PLAN-")
+    );
 }
 
 #[test]
@@ -1723,12 +1806,7 @@ fn test_resource_note_item() {
     let root = tmp.path().join(".markplane");
     let project = markplane_core::Project::new(root);
     let note = project
-        .create_note(
-            "Note resource test",
-            "research",
-            vec![],
-            None,
-        )
+        .create_note("Note resource test", "research", vec![], None)
         .unwrap();
 
     let response = send_request(
@@ -1742,9 +1820,7 @@ fn test_resource_note_item() {
     );
 
     assert!(response["error"].is_null());
-    let text = response["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap();
+    let text = response["result"]["contents"][0]["text"].as_str().unwrap();
     assert!(text.contains(&note.id));
     assert!(text.contains("Note resource test"));
 }
@@ -1777,10 +1853,12 @@ fn test_resource_note_wrong_prefix() {
     );
 
     assert!(response["error"].is_object());
-    assert!(response["error"]["message"]
-        .as_str()
-        .unwrap()
-        .contains("Expected NOTE-"));
+    assert!(
+        response["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("Expected NOTE-")
+    );
 }
 
 // ── Tool: markplane_update (expanded) ────────────────────────────────────
@@ -2227,11 +2305,20 @@ fn test_tool_move_to_top() {
             }
         }),
     );
-    assert!(response["error"].is_null(), "move failed: {:?}", response["error"]);
+    assert!(
+        response["error"].is_null(),
+        "move failed: {:?}",
+        response["error"]
+    );
 
     let pos3 = read_position(&tmp, &t3).expect("t3 should have position");
     let pos1 = read_position(&tmp, &t1).expect("t1 should have position");
-    assert!(pos3 < pos1, "t3 ({}) should sort before t1 ({})", pos3, pos1);
+    assert!(
+        pos3 < pos1,
+        "t3 ({}) should sort before t1 ({})",
+        pos3,
+        pos1
+    );
 }
 
 #[test]
@@ -2254,7 +2341,11 @@ fn test_tool_move_to_bottom() {
             }
         }),
     );
-    assert!(response["error"].is_null(), "move failed: {:?}", response["error"]);
+    assert!(
+        response["error"].is_null(),
+        "move failed: {:?}",
+        response["error"]
+    );
 
     let pos1 = read_position(&tmp, &t1).expect("t1 should have position");
     let pos3 = read_position(&tmp, &t3).expect("t3 should have position");
@@ -2281,7 +2372,11 @@ fn test_tool_move_before() {
             }
         }),
     );
-    assert!(response["error"].is_null(), "move failed: {:?}", response["error"]);
+    assert!(
+        response["error"].is_null(),
+        "move failed: {:?}",
+        response["error"]
+    );
 
     let pos1 = read_position(&tmp, &t1).expect("t1 should have position");
     let pos3 = read_position(&tmp, &t3).expect("t3 should have position");
@@ -2310,7 +2405,11 @@ fn test_tool_move_after() {
             }
         }),
     );
-    assert!(response["error"].is_null(), "move failed: {:?}", response["error"]);
+    assert!(
+        response["error"].is_null(),
+        "move failed: {:?}",
+        response["error"]
+    );
 
     let pos2 = read_position(&tmp, &t2).expect("t2 should have position");
     let pos1 = read_position(&tmp, &t1).expect("t1 should have position");
@@ -2493,12 +2592,18 @@ fn test_tool_add_with_template() {
             }
         }),
     );
-    assert!(response["result"].is_object(), "Expected result, got: {:?}", response);
+    assert!(
+        response["result"].is_object(),
+        "Expected result, got: {:?}",
+        response
+    );
 
     let id = extract_id_from_response(&response);
     let content = std::fs::read_to_string(
-        tmp.path().join(format!(".markplane/backlog/items/{}.md", id)),
-    ).unwrap();
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", id)),
+    )
+    .unwrap();
     assert!(content.contains("## Steps to Reproduce"));
 }
 
@@ -2535,12 +2640,18 @@ fn test_tool_plan_with_template() {
             }
         }),
     );
-    assert!(response["result"].is_object(), "Expected result, got: {:?}", response);
+    assert!(
+        response["result"].is_object(),
+        "Expected result, got: {:?}",
+        response
+    );
 
     let plan_id = extract_id_from_response(&response);
     let content = std::fs::read_to_string(
-        tmp.path().join(format!(".markplane/plans/items/{}.md", plan_id)),
-    ).unwrap();
+        tmp.path()
+            .join(format!(".markplane/plans/items/{}.md", plan_id)),
+    )
+    .unwrap();
     assert!(content.contains("## Motivation"));
 }
 
@@ -2558,7 +2669,11 @@ fn test_resource_templates() {
             }
         }),
     );
-    assert!(response["result"].is_object(), "Expected result, got: {:?}", response);
+    assert!(
+        response["result"].is_object(),
+        "Expected result, got: {:?}",
+        response
+    );
 
     let text = response["result"]["contents"][0]["text"].as_str().unwrap();
     assert!(text.contains("task:"));

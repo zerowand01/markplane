@@ -1,4 +1,4 @@
-use markplane_core::{parse_id, IdPrefix, Project, StatusCategory};
+use markplane_core::{IdPrefix, Project, StatusCategory, parse_id};
 
 pub fn run(id: String) -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
@@ -6,7 +6,9 @@ pub fn run(id: String) -> anyhow::Result<()> {
 
     let done_status = if prefix == IdPrefix::Task {
         let config = project.load_config()?;
-        config.workflows.task
+        config
+            .workflows
+            .task
             .statuses_in(StatusCategory::Completed)
             .first()
             .cloned()

@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 
 use chrono::{Local, NaiveDate};
 use fs2::FileExt;
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use tempfile::NamedTempFile;
 
 use crate::error::{MarkplaneError, Result};
@@ -148,7 +148,10 @@ fn write_new_file(path: &Path, content: &str) -> Result<()> {
 /// so a crash mid-write can never leave a truncated/corrupted target file.
 fn atomic_write(path: &Path, content: &[u8]) -> Result<()> {
     let parent = path.parent().ok_or_else(|| {
-        MarkplaneError::Config(format!("Cannot determine parent directory of {}", path.display()))
+        MarkplaneError::Config(format!(
+            "Cannot determine parent directory of {}",
+            path.display()
+        ))
     })?;
     let mut tmp = NamedTempFile::new_in(parent)?;
     tmp.write_all(content)?;
@@ -322,8 +325,7 @@ impl Project {
         };
 
         // Validate template name to prevent path traversal
-        manifest::validate_template_name(&name)
-            .map_err(MarkplaneError::Config)?;
+        manifest::validate_template_name(&name).map_err(MarkplaneError::Config)?;
 
         // Try reading from disk first
         let filename = manifest::template_filename(kind, &name);
@@ -422,7 +424,10 @@ impl Project {
         };
 
         let body = render_template(&tmpl, &[("{TITLE}", title)]);
-        let doc = MarkplaneDocument { frontmatter: &task, body };
+        let doc = MarkplaneDocument {
+            frontmatter: &task,
+            body,
+        };
         let content = write_frontmatter(&doc)?;
 
         let items_dir = self.item_dir(&IdPrefix::Task).join("items");
@@ -459,7 +464,10 @@ impl Project {
 
         let tmpl = self.resolve_template_body("epic", template, None)?;
         let body = render_template(&tmpl, &[("{TITLE}", title)]);
-        let doc = MarkplaneDocument { frontmatter: &epic, body };
+        let doc = MarkplaneDocument {
+            frontmatter: &epic,
+            body,
+        };
         let content = write_frontmatter(&doc)?;
 
         let items_dir = self.item_dir(&IdPrefix::Epic).join("items");
@@ -493,7 +501,10 @@ impl Project {
 
         let tmpl = self.resolve_template_body("plan", template, None)?;
         let body = render_template(&tmpl, &[("{TITLE}", title)]);
-        let doc = MarkplaneDocument { frontmatter: &plan, body };
+        let doc = MarkplaneDocument {
+            frontmatter: &plan,
+            body,
+        };
         let content = write_frontmatter(&doc)?;
 
         let items_dir = self.item_dir(&IdPrefix::Plan).join("items");
@@ -530,7 +541,10 @@ impl Project {
         };
 
         let body = render_template(&tmpl, &[("{TITLE}", title)]);
-        let doc = MarkplaneDocument { frontmatter: &note, body };
+        let doc = MarkplaneDocument {
+            frontmatter: &note,
+            body,
+        };
         let content = write_frontmatter(&doc)?;
 
         let items_dir = self.item_dir(&IdPrefix::Note).join("items");
@@ -763,7 +777,9 @@ impl Project {
         match prefix {
             IdPrefix::Task => {
                 // Reject fields not applicable to tasks
-                if !matches!(fields.started, Patch::Unchanged) || !matches!(fields.target, Patch::Unchanged) {
+                if !matches!(fields.started, Patch::Unchanged)
+                    || !matches!(fields.target, Patch::Unchanged)
+                {
                     return Err(MarkplaneError::Config(
                         "Tasks do not support started/target fields".into(),
                     ));
@@ -773,18 +789,21 @@ impl Project {
                         "Tasks do not support the note_type field".into(),
                     ));
                 }
-                self.update_task(id, &TaskUpdate {
-                    title: fields.title,
-                    status: fields.status,
-                    priority: fields.priority,
-                    effort: fields.effort,
-                    item_type: fields.item_type,
-                    assignee: fields.assignee,
-                    position: fields.position,
-                    add_tags: fields.add_tags,
-                    remove_tags: fields.remove_tags,
-                    body: None,
-                })
+                self.update_task(
+                    id,
+                    &TaskUpdate {
+                        title: fields.title,
+                        status: fields.status,
+                        priority: fields.priority,
+                        effort: fields.effort,
+                        item_type: fields.item_type,
+                        assignee: fields.assignee,
+                        position: fields.position,
+                        add_tags: fields.add_tags,
+                        remove_tags: fields.remove_tags,
+                        body: None,
+                    },
+                )
             }
             IdPrefix::Epic => {
                 // Reject fields not applicable to epics
@@ -813,16 +832,19 @@ impl Project {
                         "Epics do not support the note_type field".into(),
                     ));
                 }
-                self.update_epic(id, &EpicUpdate {
-                    title: fields.title,
-                    status: fields.status,
-                    priority: fields.priority,
-                    add_tags: fields.add_tags,
-                    remove_tags: fields.remove_tags,
-                    started: fields.started,
-                    target: fields.target,
-                    body: None,
-                })
+                self.update_epic(
+                    id,
+                    &EpicUpdate {
+                        title: fields.title,
+                        status: fields.status,
+                        priority: fields.priority,
+                        add_tags: fields.add_tags,
+                        remove_tags: fields.remove_tags,
+                        started: fields.started,
+                        target: fields.target,
+                        body: None,
+                    },
+                )
             }
             IdPrefix::Plan => {
                 // Reject fields not applicable to plans
@@ -833,9 +855,10 @@ impl Project {
                     ("note_type", fields.note_type.is_some()),
                 ] {
                     if present {
-                        return Err(MarkplaneError::Config(
-                            format!("Plans do not support the {} field", name),
-                        ));
+                        return Err(MarkplaneError::Config(format!(
+                            "Plans do not support the {} field",
+                            name
+                        )));
                     }
                 }
                 if !matches!(fields.assignee, Patch::Unchanged) {
@@ -849,20 +872,23 @@ impl Project {
                     ));
                 }
                 if !fields.add_tags.is_empty() || !fields.remove_tags.is_empty() {
-                    return Err(MarkplaneError::Config(
-                        "Plans do not support tags".into(),
-                    ));
+                    return Err(MarkplaneError::Config("Plans do not support tags".into()));
                 }
-                if !matches!(fields.started, Patch::Unchanged) || !matches!(fields.target, Patch::Unchanged) {
+                if !matches!(fields.started, Patch::Unchanged)
+                    || !matches!(fields.target, Patch::Unchanged)
+                {
                     return Err(MarkplaneError::Config(
                         "Plans do not support started/target fields".into(),
                     ));
                 }
-                self.update_plan(id, &PlanUpdate {
-                    title: fields.title,
-                    status: fields.status,
-                    body: None,
-                })
+                self.update_plan(
+                    id,
+                    &PlanUpdate {
+                        title: fields.title,
+                        status: fields.status,
+                        body: None,
+                    },
+                )
             }
             IdPrefix::Note => {
                 // Reject fields not applicable to notes
@@ -891,19 +917,24 @@ impl Project {
                         "Notes do not support the position field".into(),
                     ));
                 }
-                if !matches!(fields.started, Patch::Unchanged) || !matches!(fields.target, Patch::Unchanged) {
+                if !matches!(fields.started, Patch::Unchanged)
+                    || !matches!(fields.target, Patch::Unchanged)
+                {
                     return Err(MarkplaneError::Config(
                         "Notes do not support started/target fields".into(),
                     ));
                 }
-                self.update_note(id, &NoteUpdate {
-                    title: fields.title,
-                    status: fields.status,
-                    note_type: fields.note_type,
-                    add_tags: fields.add_tags,
-                    remove_tags: fields.remove_tags,
-                    body: None,
-                })
+                self.update_note(
+                    id,
+                    &NoteUpdate {
+                        title: fields.title,
+                        status: fields.status,
+                        note_type: fields.note_type,
+                        add_tags: fields.add_tags,
+                        remove_tags: fields.remove_tags,
+                        body: None,
+                    },
+                )
             }
         }
     }
@@ -946,17 +977,19 @@ impl Project {
         };
 
         // Build sorted list excluding the item being moved
-        let others: Vec<_> = tasks.iter()
-            .filter(|t| t.frontmatter.id != id)
-            .collect();
+        let others: Vec<_> = tasks.iter().filter(|t| t.frontmatter.id != id).collect();
 
         let (insert_index, new_pos) = match &directive {
             MoveDirective::Top => {
-                let first_pos = others.first().and_then(|t| t.frontmatter.position.as_deref());
+                let first_pos = others
+                    .first()
+                    .and_then(|t| t.frontmatter.position.as_deref());
                 (0, generate_key_between(None, first_pos)?)
             }
             MoveDirective::Bottom => {
-                let last_pos = others.last().and_then(|t| t.frontmatter.position.as_deref());
+                let last_pos = others
+                    .last()
+                    .and_then(|t| t.frontmatter.position.as_deref());
                 (others.len(), generate_key_between(last_pos, None)?)
             }
             MoveDirective::Before(target_id) => {
@@ -966,7 +999,11 @@ impl Project {
                     ));
                 }
                 let idx = self.find_move_target(&others, target_id, id, &priority)?;
-                let before = if idx > 0 { others[idx - 1].frontmatter.position.as_deref() } else { None };
+                let before = if idx > 0 {
+                    others[idx - 1].frontmatter.position.as_deref()
+                } else {
+                    None
+                };
                 let after = others[idx].frontmatter.position.as_deref();
                 (idx, generate_key_between(before, after)?)
             }
@@ -978,36 +1015,47 @@ impl Project {
                 }
                 let idx = self.find_move_target(&others, target_id, id, &priority)?;
                 let before = others[idx].frontmatter.position.as_deref();
-                let after = others.get(idx + 1).and_then(|t| t.frontmatter.position.as_deref());
+                let after = others
+                    .get(idx + 1)
+                    .and_then(|t| t.frontmatter.position.as_deref());
                 (idx + 1, generate_key_between(before, after)?)
             }
         };
 
         match new_pos {
-            Some(pos) => self.update_task(id, &TaskUpdate {
-                position: Patch::Set(pos),
-                ..Default::default()
-            }),
+            Some(pos) => self.update_task(
+                id,
+                &TaskUpdate {
+                    position: Patch::Set(pos),
+                    ..Default::default()
+                },
+            ),
             None => {
                 // No room for a fractional key — normalize the group with the
                 // moved item at the desired index.
-                let mut ordered: Vec<_> = tasks.iter()
-                    .filter(|t| t.frontmatter.id != id)
-                    .collect();
-                let moved = tasks.iter().find(|t| t.frontmatter.id == id)
-                    .ok_or_else(|| MarkplaneError::NotFound(format!(
-                        "task {} not found in priority group during move", id
-                    )))?;
+                let mut ordered: Vec<_> = tasks.iter().filter(|t| t.frontmatter.id != id).collect();
+                let moved = tasks
+                    .iter()
+                    .find(|t| t.frontmatter.id == id)
+                    .ok_or_else(|| {
+                        MarkplaneError::NotFound(format!(
+                            "task {} not found in priority group during move",
+                            id
+                        ))
+                    })?;
                 let at = insert_index.min(ordered.len());
                 ordered.insert(at, moved);
 
                 let keys = sequential_keys(ordered.len());
                 for (doc, new_key) in ordered.iter().zip(keys.iter()) {
                     if doc.frontmatter.position.as_deref() != Some(new_key.as_str()) {
-                        self.update_task(&doc.frontmatter.id, &TaskUpdate {
-                            position: Patch::Set(new_key.clone()),
-                            ..Default::default()
-                        })?;
+                        self.update_task(
+                            &doc.frontmatter.id,
+                            &TaskUpdate {
+                                position: Patch::Set(new_key.clone()),
+                                ..Default::default()
+                            },
+                        )?;
                     }
                 }
                 Ok(())
@@ -1027,14 +1075,12 @@ impl Project {
         others
             .iter()
             .position(|t| t.frontmatter.id == target_id)
-            .ok_or_else(|| {
-                match self.read_item::<Task>(target_id) {
-                    Ok(target_doc) => MarkplaneError::InvalidLink(format!(
-                        "{} is in priority '{}' but {} is in '{}'",
-                        target_id, target_doc.frontmatter.priority, moved_id, priority,
-                    )),
-                    Err(e) => e,
-                }
+            .ok_or_else(|| match self.read_item::<Task>(target_id) {
+                Ok(target_doc) => MarkplaneError::InvalidLink(format!(
+                    "{} is in priority '{}' but {} is in '{}'",
+                    target_id, target_doc.frontmatter.priority, moved_id, priority,
+                )),
+                Err(e) => e,
             })
     }
 
@@ -1045,10 +1091,13 @@ impl Project {
         let keys = sequential_keys(tasks.len());
         for (doc, new_pos) in tasks.iter().zip(keys.iter()) {
             if doc.frontmatter.position.as_deref() != Some(new_pos.as_str()) {
-                self.update_task(&doc.frontmatter.id, &TaskUpdate {
-                    position: Patch::Set(new_pos.clone()),
-                    ..Default::default()
-                })?;
+                self.update_task(
+                    &doc.frontmatter.id,
+                    &TaskUpdate {
+                        position: Patch::Set(new_pos.clone()),
+                        ..Default::default()
+                    },
+                )?;
             }
         }
         Ok(())
@@ -1058,14 +1107,19 @@ impl Project {
     ///
     /// Returns a list of `(referencing_id, relation, action)` tuples that can be
     /// used to remove the inbound references via `link_items()`.
-    pub fn find_inbound_references(&self, target_id: &str) -> Result<Vec<(String, LinkRelation, LinkAction)>> {
+    pub fn find_inbound_references(
+        &self,
+        target_id: &str,
+    ) -> Result<Vec<(String, LinkRelation, LinkAction)>> {
         let mut refs = Vec::new();
 
         // Scan tasks for references to target_id
         let tasks = self.list_tasks(&QueryFilter::default())?;
         for doc in &tasks {
             let fm = &doc.frontmatter;
-            if fm.id == target_id { continue; }
+            if fm.id == target_id {
+                continue;
+            }
             if fm.blocks.iter().any(|b| b == target_id) {
                 refs.push((fm.id.clone(), LinkRelation::Blocks, LinkAction::Remove));
             }
@@ -1087,7 +1141,9 @@ impl Project {
         let plans = self.list_plans()?;
         for doc in &plans {
             let fm = &doc.frontmatter;
-            if fm.id == target_id { continue; }
+            if fm.id == target_id {
+                continue;
+            }
             if fm.implements.iter().any(|i| i == target_id) {
                 refs.push((fm.id.clone(), LinkRelation::Implements, LinkAction::Remove));
             }
@@ -1100,7 +1156,9 @@ impl Project {
         let epics = self.list_epics()?;
         for doc in &epics {
             let fm = &doc.frontmatter;
-            if fm.id == target_id { continue; }
+            if fm.id == target_id {
+                continue;
+            }
             if fm.related.iter().any(|r| r == target_id) {
                 refs.push((fm.id.clone(), LinkRelation::Related, LinkAction::Remove));
             }
@@ -1110,7 +1168,9 @@ impl Project {
         let notes = self.list_notes()?;
         for doc in &notes {
             let fm = &doc.frontmatter;
-            if fm.id == target_id { continue; }
+            if fm.id == target_id {
+                continue;
+            }
             if fm.related.iter().any(|r| r == target_id) {
                 refs.push((fm.id.clone(), LinkRelation::Related, LinkAction::Remove));
             }
@@ -1185,12 +1245,13 @@ impl Project {
     /// Returns `(display_name, relative_path_from_markplane_root)` pairs.
     pub fn list_documentation_files(&self) -> Result<Vec<(String, String)>> {
         let config = self.load_config()?;
-        let repo_root = self.root().parent().ok_or_else(|| {
-            MarkplaneError::Config("Cannot determine repo root".into())
-        })?;
-        let canonical_root = repo_root.canonicalize().map_err(|e| {
-            MarkplaneError::Config(format!("Cannot canonicalize repo root: {e}"))
-        })?;
+        let repo_root = self
+            .root()
+            .parent()
+            .ok_or_else(|| MarkplaneError::Config("Cannot determine repo root".into()))?;
+        let canonical_root = repo_root
+            .canonicalize()
+            .map_err(|e| MarkplaneError::Config(format!("Cannot canonicalize repo root: {e}")))?;
         let mut docs = Vec::new();
         for doc_path in &config.documentation_paths {
             let abs_dir = repo_root.join(doc_path);
@@ -1274,23 +1335,29 @@ impl Project {
             &[("{PROJECT_NAME}", project_name), ("{DATE}", &today)],
         );
         fs::write(root.join("INDEX.md"), root_index)?;
-        fs::write(root.join("roadmap/INDEX.md"), templates::ROADMAP_INDEX_TEMPLATE)?;
-        fs::write(root.join("backlog/INDEX.md"), templates::TASK_INDEX_TEMPLATE)?;
+        fs::write(
+            root.join("roadmap/INDEX.md"),
+            templates::ROADMAP_INDEX_TEMPLATE,
+        )?;
+        fs::write(
+            root.join("backlog/INDEX.md"),
+            templates::TASK_INDEX_TEMPLATE,
+        )?;
         fs::write(root.join("plans/INDEX.md"), templates::PLANS_INDEX_TEMPLATE)?;
         fs::write(root.join("notes/INDEX.md"), templates::NOTES_INDEX_TEMPLATE)?;
         // Write special note files
         fs::write(root.join("notes/ideas.md"), templates::IDEAS_TEMPLATE)?;
-        fs::write(root.join("notes/decisions.md"), templates::DECISIONS_TEMPLATE)?;
+        fs::write(
+            root.join("notes/decisions.md"),
+            templates::DECISIONS_TEMPLATE,
+        )?;
 
         // Write template manifest and files
         fs::write(
             root.join("templates/manifest.yaml"),
             manifest::DEFAULT_MANIFEST,
         )?;
-        fs::write(
-            root.join("templates/task.md"),
-            templates::TASK_TEMPLATE,
-        )?;
+        fs::write(root.join("templates/task.md"), templates::TASK_TEMPLATE)?;
         fs::write(
             root.join("templates/task-bug.md"),
             templates::TASK_BUG_TEMPLATE,
@@ -1357,11 +1424,7 @@ impl Project {
         let import_task_id = import_task.id.clone();
 
         // 4. Create plan for the import task
-        let plan = self.create_plan(
-            "Import existing work into markplane",
-            vec![],
-            None,
-        )?;
+        let plan = self.create_plan("Import existing work into markplane", vec![], None)?;
         let plan_id = plan.id.clone();
 
         // 5. Create note
@@ -1374,7 +1437,12 @@ impl Project {
         let note_id = note.id.clone();
 
         // 6. Link plan ↔ import task
-        self.link_items(&import_task_id, &plan_id, LinkRelation::Plan, LinkAction::Add)?;
+        self.link_items(
+            &import_task_id,
+            &plan_id,
+            LinkRelation::Plan,
+            LinkAction::Add,
+        )?;
 
         // 7. Set statuses and body content in one pass per item
         let today = Local::now().format("%Y-%m-%d").to_string();
@@ -1386,32 +1454,53 @@ impl Project {
             ("{TODAY}", today.as_str()),
         ];
 
-        self.update_epic(&epic_id, &EpicUpdate {
-            status: Some("now".to_string()),
-            body: Some(render_template(templates::STARTER_EPIC_BODY, vars)),
-            ..Default::default()
-        })?;
-        self.update_task(&setup_task_id, &TaskUpdate {
-            status: Some("backlog".to_string()),
-            body: Some(render_template(templates::STARTER_SETUP_TASK_BODY, vars)),
-            ..Default::default()
-        })?;
-        self.update_task(&import_task_id, &TaskUpdate {
-            status: Some("backlog".to_string()),
-            body: Some(render_template(templates::STARTER_IMPORT_TASK_BODY, vars)),
-            ..Default::default()
-        })?;
-        self.update_plan(&plan_id, &PlanUpdate {
-            body: Some(render_template(templates::STARTER_PLAN_BODY, vars)),
-            ..Default::default()
-        })?;
-        self.update_note(&note_id, &NoteUpdate {
-            status: Some("active".to_string()),
-            body: Some(render_template(templates::STARTER_NOTE_BODY, vars)),
-            ..Default::default()
-        })?;
+        self.update_epic(
+            &epic_id,
+            &EpicUpdate {
+                status: Some("now".to_string()),
+                body: Some(render_template(templates::STARTER_EPIC_BODY, vars)),
+                ..Default::default()
+            },
+        )?;
+        self.update_task(
+            &setup_task_id,
+            &TaskUpdate {
+                status: Some("backlog".to_string()),
+                body: Some(render_template(templates::STARTER_SETUP_TASK_BODY, vars)),
+                ..Default::default()
+            },
+        )?;
+        self.update_task(
+            &import_task_id,
+            &TaskUpdate {
+                status: Some("backlog".to_string()),
+                body: Some(render_template(templates::STARTER_IMPORT_TASK_BODY, vars)),
+                ..Default::default()
+            },
+        )?;
+        self.update_plan(
+            &plan_id,
+            &PlanUpdate {
+                body: Some(render_template(templates::STARTER_PLAN_BODY, vars)),
+                ..Default::default()
+            },
+        )?;
+        self.update_note(
+            &note_id,
+            &NoteUpdate {
+                status: Some("active".to_string()),
+                body: Some(render_template(templates::STARTER_NOTE_BODY, vars)),
+                ..Default::default()
+            },
+        )?;
 
-        Ok(vec![epic_id, setup_task_id, import_task_id, plan_id, note_id])
+        Ok(vec![
+            epic_id,
+            setup_task_id,
+            import_task_id,
+            plan_id,
+            note_id,
+        ])
     }
 }
 
@@ -1428,8 +1517,7 @@ fn validate_title_length(title: &str) -> Result<()> {
     if char_count > MAX_TITLE_LENGTH {
         return Err(MarkplaneError::Config(format!(
             "Title exceeds maximum length of {} characters (got {})",
-            MAX_TITLE_LENGTH,
-            char_count
+            MAX_TITLE_LENGTH, char_count
         )));
     }
     Ok(())
@@ -1544,7 +1632,11 @@ mod tests {
     fn test_next_id() {
         let (_tmp, project) = setup_project();
         let id1 = project.next_id(&IdPrefix::Task).unwrap();
-        assert!(id1.starts_with("TASK-"), "Expected TASK- prefix, got: {}", id1);
+        assert!(
+            id1.starts_with("TASK-"),
+            "Expected TASK- prefix, got: {}",
+            id1
+        );
         assert!(parse_id(&id1).is_ok());
 
         let id2 = project.next_id(&IdPrefix::Task).unwrap();
@@ -1586,7 +1678,9 @@ mod tests {
     #[test]
     fn test_create_epic() {
         let (_tmp, project) = setup_project();
-        let epic = project.create_epic("Phase 1: Foundation", Priority::High, None).unwrap();
+        let epic = project
+            .create_epic("Phase 1: Foundation", Priority::High, None)
+            .unwrap();
 
         assert!(epic.id.starts_with("EPIC-"));
         assert_eq!(epic.status, EpicStatus::Later);
@@ -1612,11 +1706,7 @@ mod tests {
             .unwrap();
 
         let plan = project
-            .create_plan(
-                "Dark mode implementation",
-                vec![task.id.clone()],
-                None,
-            )
+            .create_plan("Dark mode implementation", vec![task.id.clone()], None)
             .unwrap();
 
         assert!(plan.id.starts_with("PLAN-"));
@@ -1773,7 +1863,9 @@ mod tests {
         let (_tmp, project) = setup_project();
 
         // Task with tags, epic, special chars
-        let epic = project.create_epic("Phase 1", Priority::High, None).unwrap();
+        let epic = project
+            .create_epic("Phase 1", Priority::High, None)
+            .unwrap();
         let task = project
             .create_task(
                 "Fix \"login\" bug's edge-case",
@@ -1794,7 +1886,10 @@ mod tests {
         project.write_item(&task.id, &doc).unwrap();
         let after_roundtrip = fs::read_to_string(&path).unwrap();
 
-        assert_eq!(original, after_roundtrip, "create output must be byte-identical to read→write roundtrip");
+        assert_eq!(
+            original, after_roundtrip,
+            "create output must be byte-identical to read→write roundtrip"
+        );
 
         // Same for epic
         let epic_path = project.item_path(&epic.id).unwrap();
@@ -1832,7 +1927,9 @@ mod tests {
     #[test]
     fn test_update_status_epic() {
         let (_tmp, project) = setup_project();
-        let epic = project.create_epic("Phase 1", Priority::High, None).unwrap();
+        let epic = project
+            .create_epic("Phase 1", Priority::High, None)
+            .unwrap();
 
         project.update_status(&epic.id, "next").unwrap();
         let doc: MarkplaneDocument<Epic> = project.read_item(&epic.id).unwrap();
@@ -1845,7 +1942,6 @@ mod tests {
         project.update_status(&epic.id, "done").unwrap();
         let doc: MarkplaneDocument<Epic> = project.read_item(&epic.id).unwrap();
         assert_eq!(doc.frontmatter.status, EpicStatus::Done);
-
     }
 
     #[test]
@@ -1885,7 +1981,9 @@ mod tests {
     #[test]
     fn test_update_status_epic_invalid() {
         let (_tmp, project) = setup_project();
-        let epic = project.create_epic("Phase 1", Priority::High, None).unwrap();
+        let epic = project
+            .create_epic("Phase 1", Priority::High, None)
+            .unwrap();
         assert!(project.update_status(&epic.id, "in-progress").is_err());
         assert!(project.update_status(&epic.id, "planned").is_err());
         assert!(project.update_status(&epic.id, "active").is_err());
@@ -1904,14 +2002,32 @@ mod tests {
     fn test_find_blocked_items_none_blocked() {
         let (_tmp, project) = setup_project();
         project
-            .create_task("A", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task(
+                "A",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
         project
-            .create_task("B", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task(
+                "B",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
 
         let config = project.load_config().unwrap();
-        let items = project.list_tasks(&crate::query::QueryFilter::default()).unwrap();
+        let items = project
+            .list_tasks(&crate::query::QueryFilter::default())
+            .unwrap();
         let blocked = find_blocked_items(&items, &config.workflows.task);
         assert!(blocked.is_empty());
     }
@@ -1920,10 +2036,26 @@ mod tests {
     fn test_find_blocked_items_with_blocked() {
         let (_tmp, project) = setup_project();
         let blocker = project
-            .create_task("Blocker", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task(
+                "Blocker",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
         let blocked_task = project
-            .create_task("Blocked", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task(
+                "Blocked",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
 
         // Set blocked_task to depend on blocker
@@ -1932,7 +2064,9 @@ mod tests {
         project.write_item(&blocked_task.id, &doc).unwrap();
 
         let config = project.load_config().unwrap();
-        let items = project.list_tasks(&crate::query::QueryFilter::default()).unwrap();
+        let items = project
+            .list_tasks(&crate::query::QueryFilter::default())
+            .unwrap();
         let blocked = find_blocked_items(&items, &config.workflows.task);
         assert_eq!(blocked.len(), 1);
         assert_eq!(blocked[0].frontmatter.id, blocked_task.id);
@@ -1942,10 +2076,26 @@ mod tests {
     fn test_find_blocked_items_resolved_dependency() {
         let (_tmp, project) = setup_project();
         let blocker = project
-            .create_task("Blocker", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task(
+                "Blocker",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
         let blocked_task = project
-            .create_task("Blocked", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task(
+                "Blocked",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
 
         // Set dependency
@@ -1957,7 +2107,9 @@ mod tests {
         project.update_status(&blocker.id, "done").unwrap();
 
         let config = project.load_config().unwrap();
-        let items = project.list_tasks(&crate::query::QueryFilter::default()).unwrap();
+        let items = project
+            .list_tasks(&crate::query::QueryFilter::default())
+            .unwrap();
         let blocked = find_blocked_items(&items, &config.workflows.task);
         assert!(blocked.is_empty()); // No longer blocked
     }
@@ -2008,17 +2160,28 @@ mod tests {
     fn test_update_task_body() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("Test item", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task(
+                "Test item",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
 
         let original: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
         assert!(original.body.contains("[What needs to be done"));
 
         project
-            .update_task(&task.id, &TaskUpdate {
-                body: Some("# Test item\n\nActual description here.\n".into()),
-                ..Default::default()
-            })
+            .update_task(
+                &task.id,
+                &TaskUpdate {
+                    body: Some("# Test item\n\nActual description here.\n".into()),
+                    ..Default::default()
+                },
+            )
             .unwrap();
 
         let updated: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
@@ -2030,13 +2193,18 @@ mod tests {
     #[test]
     fn test_update_epic_body() {
         let (_tmp, project) = setup_project();
-        let epic = project.create_epic("Phase 1", Priority::High, None).unwrap();
+        let epic = project
+            .create_epic("Phase 1", Priority::High, None)
+            .unwrap();
 
         project
-            .update_epic(&epic.id, &EpicUpdate {
-                body: Some("# Phase 1\n\n## Objective\n\nBuild the foundation.\n".into()),
-                ..Default::default()
-            })
+            .update_epic(
+                &epic.id,
+                &EpicUpdate {
+                    body: Some("# Phase 1\n\n## Objective\n\nBuild the foundation.\n".into()),
+                    ..Default::default()
+                },
+            )
             .unwrap();
 
         let updated: MarkplaneDocument<Epic> = project.read_item(&epic.id).unwrap();
@@ -2050,10 +2218,13 @@ mod tests {
         let plan = project.create_plan("Plan A", vec![], None).unwrap();
 
         project
-            .update_plan(&plan.id, &PlanUpdate {
-                body: Some("# Plan A\n\nDetailed steps.\n".into()),
-                ..Default::default()
-            })
+            .update_plan(
+                &plan.id,
+                &PlanUpdate {
+                    body: Some("# Plan A\n\nDetailed steps.\n".into()),
+                    ..Default::default()
+                },
+            )
             .unwrap();
 
         let updated: MarkplaneDocument<Plan> = project.read_item(&plan.id).unwrap();
@@ -2068,10 +2239,13 @@ mod tests {
             .unwrap();
 
         project
-            .update_note(&note.id, &NoteUpdate {
-                body: Some("# Research A\n\nFindings here.\n".into()),
-                ..Default::default()
-            })
+            .update_note(
+                &note.id,
+                &NoteUpdate {
+                    body: Some("# Research A\n\nFindings here.\n".into()),
+                    ..Default::default()
+                },
+            )
             .unwrap();
 
         let updated: MarkplaneDocument<Note> = project.read_item(&note.id).unwrap();
@@ -2081,10 +2255,13 @@ mod tests {
     #[test]
     fn test_update_task_body_nonexistent() {
         let (_tmp, project) = setup_project();
-        let result = project.update_task("TASK-zzzzz", &TaskUpdate {
-            body: Some("new body".into()),
-            ..Default::default()
-        });
+        let result = project.update_task(
+            "TASK-zzzzz",
+            &TaskUpdate {
+                body: Some("new body".into()),
+                ..Default::default()
+            },
+        );
         assert!(result.is_err());
     }
 
@@ -2168,7 +2345,15 @@ mod tests {
     fn test_unarchive_item() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("To archive", "chore", Priority::Low, Effort::Xs, None, vec![], None)
+            .create_task(
+                "To archive",
+                "chore",
+                Priority::Low,
+                Effort::Xs,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
 
         project.archive_item(&task.id).unwrap();
@@ -2186,7 +2371,15 @@ mod tests {
     fn test_unarchive_not_archived_errors() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("Active item", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task(
+                "Active item",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
 
         let result = project.unarchive_item(&task.id);
@@ -2199,7 +2392,15 @@ mod tests {
     fn test_is_archived() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("Test", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task(
+                "Test",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
 
         assert!(!project.is_archived(&task.id).unwrap());
@@ -2251,13 +2452,26 @@ mod tests {
     fn test_update_task_title() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("Original", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task(
+                "Original",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
 
-        project.update_task(&task.id, &TaskUpdate {
-            title: Some("Updated title".to_string()),
-            ..Default::default()
-        }).unwrap();
+        project
+            .update_task(
+                &task.id,
+                &TaskUpdate {
+                    title: Some("Updated title".to_string()),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
 
         let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
         assert_eq!(doc.frontmatter.title, "Updated title");
@@ -2267,18 +2481,31 @@ mod tests {
     fn test_update_task_multiple_fields() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("Multi", "feature", Priority::Low, Effort::Small, None, vec!["old".to_string()], None)
+            .create_task(
+                "Multi",
+                "feature",
+                Priority::Low,
+                Effort::Small,
+                None,
+                vec!["old".to_string()],
+                None,
+            )
             .unwrap();
 
-        project.update_task(&task.id, &TaskUpdate {
-            priority: Some("high".to_string()),
-            effort: Some("large".to_string()),
-            item_type: Some("bug".to_string()),
-            assignee: Patch::Set("daniel".to_string()),
-            add_tags: vec!["new".to_string()],
-            remove_tags: vec!["old".to_string()],
-            ..Default::default()
-        }).unwrap();
+        project
+            .update_task(
+                &task.id,
+                &TaskUpdate {
+                    priority: Some("high".to_string()),
+                    effort: Some("large".to_string()),
+                    item_type: Some("bug".to_string()),
+                    assignee: Patch::Set("daniel".to_string()),
+                    add_tags: vec!["new".to_string()],
+                    remove_tags: vec!["old".to_string()],
+                    ..Default::default()
+                },
+            )
+            .unwrap();
 
         let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
         assert_eq!(doc.frontmatter.priority, Priority::High);
@@ -2292,22 +2519,40 @@ mod tests {
     fn test_update_task_clear_assignee() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("Clear test", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task(
+                "Clear test",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
 
         // Set assignee first
-        project.update_task(&task.id, &TaskUpdate {
-            assignee: Patch::Set("daniel".to_string()),
-            ..Default::default()
-        }).unwrap();
+        project
+            .update_task(
+                &task.id,
+                &TaskUpdate {
+                    assignee: Patch::Set("daniel".to_string()),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
         let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
         assert_eq!(doc.frontmatter.assignee, Some("daniel".to_string()));
 
         // Clear it
-        project.update_task(&task.id, &TaskUpdate {
-            assignee: Patch::Clear,
-            ..Default::default()
-        }).unwrap();
+        project
+            .update_task(
+                &task.id,
+                &TaskUpdate {
+                    assignee: Patch::Clear,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
         let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
         assert_eq!(doc.frontmatter.assignee, None);
     }
@@ -2316,22 +2561,40 @@ mod tests {
     fn test_update_task_clear_position() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("Pos test", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task(
+                "Pos test",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
 
         // Set position first
-        project.update_task(&task.id, &TaskUpdate {
-            position: Patch::Set("aaa".to_string()),
-            ..Default::default()
-        }).unwrap();
+        project
+            .update_task(
+                &task.id,
+                &TaskUpdate {
+                    position: Patch::Set("aaa".to_string()),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
         let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
         assert_eq!(doc.frontmatter.position, Some("aaa".to_string()));
 
         // Clear it
-        project.update_task(&task.id, &TaskUpdate {
-            position: Patch::Clear,
-            ..Default::default()
-        }).unwrap();
+        project
+            .update_task(
+                &task.id,
+                &TaskUpdate {
+                    position: Patch::Clear,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
         let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
         assert_eq!(doc.frontmatter.position, None);
     }
@@ -2339,35 +2602,52 @@ mod tests {
     #[test]
     fn test_update_epic_clear_started_and_target() {
         let (_tmp, project) = setup_project();
-        let epic = project.create_epic("Date test", Priority::Medium, None).unwrap();
+        let epic = project
+            .create_epic("Date test", Priority::Medium, None)
+            .unwrap();
 
         let start = chrono::NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
         let end = chrono::NaiveDate::from_ymd_opt(2026, 6, 1).unwrap();
 
         // Set dates
-        project.update_epic(&epic.id, &EpicUpdate {
-            started: Patch::Set(start),
-            target: Patch::Set(end),
-            ..Default::default()
-        }).unwrap();
+        project
+            .update_epic(
+                &epic.id,
+                &EpicUpdate {
+                    started: Patch::Set(start),
+                    target: Patch::Set(end),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
         let doc: MarkplaneDocument<Epic> = project.read_item(&epic.id).unwrap();
         assert_eq!(doc.frontmatter.started, Some(start));
         assert_eq!(doc.frontmatter.target, Some(end));
 
         // Clear started
-        project.update_epic(&epic.id, &EpicUpdate {
-            started: Patch::Clear,
-            ..Default::default()
-        }).unwrap();
+        project
+            .update_epic(
+                &epic.id,
+                &EpicUpdate {
+                    started: Patch::Clear,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
         let doc: MarkplaneDocument<Epic> = project.read_item(&epic.id).unwrap();
         assert_eq!(doc.frontmatter.started, None);
         assert_eq!(doc.frontmatter.target, Some(end));
 
         // Clear target
-        project.update_epic(&epic.id, &EpicUpdate {
-            target: Patch::Clear,
-            ..Default::default()
-        }).unwrap();
+        project
+            .update_epic(
+                &epic.id,
+                &EpicUpdate {
+                    target: Patch::Clear,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
         let doc: MarkplaneDocument<Epic> = project.read_item(&epic.id).unwrap();
         assert_eq!(doc.frontmatter.target, None);
     }
@@ -2376,13 +2656,24 @@ mod tests {
     fn test_update_task_invalid_status() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("Bad status", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task(
+                "Bad status",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
 
-        let result = project.update_task(&task.id, &TaskUpdate {
-            status: Some("bogus".to_string()),
-            ..Default::default()
-        });
+        let result = project.update_task(
+            &task.id,
+            &TaskUpdate {
+                status: Some("bogus".to_string()),
+                ..Default::default()
+            },
+        );
         assert!(result.is_err());
     }
 
@@ -2391,17 +2682,24 @@ mod tests {
     #[test]
     fn test_update_epic_fields() {
         let (_tmp, project) = setup_project();
-        let epic = project.create_epic("Phase 1", Priority::Medium, None).unwrap();
+        let epic = project
+            .create_epic("Phase 1", Priority::Medium, None)
+            .unwrap();
 
         let date = chrono::NaiveDate::from_ymd_opt(2026, 6, 1).unwrap();
-        project.update_epic(&epic.id, &EpicUpdate {
-            title: Some("Phase 1 Updated".to_string()),
-            priority: Some("high".to_string()),
-            started: Patch::Set(chrono::NaiveDate::from_ymd_opt(2026, 2, 20).unwrap()),
-            target: Patch::Set(date),
-            add_tags: vec!["core".to_string()],
-            ..Default::default()
-        }).unwrap();
+        project
+            .update_epic(
+                &epic.id,
+                &EpicUpdate {
+                    title: Some("Phase 1 Updated".to_string()),
+                    priority: Some("high".to_string()),
+                    started: Patch::Set(chrono::NaiveDate::from_ymd_opt(2026, 2, 20).unwrap()),
+                    target: Patch::Set(date),
+                    add_tags: vec!["core".to_string()],
+                    ..Default::default()
+                },
+            )
+            .unwrap();
 
         let doc: MarkplaneDocument<Epic> = project.read_item(&epic.id).unwrap();
         assert_eq!(doc.frontmatter.title, "Phase 1 Updated");
@@ -2418,11 +2716,16 @@ mod tests {
         let (_tmp, project) = setup_project();
         let plan = project.create_plan("Plan A", vec![], None).unwrap();
 
-        project.update_plan(&plan.id, &PlanUpdate {
-            title: Some("Plan A v2".to_string()),
-            status: Some("approved".to_string()),
-            ..Default::default()
-        }).unwrap();
+        project
+            .update_plan(
+                &plan.id,
+                &PlanUpdate {
+                    title: Some("Plan A v2".to_string()),
+                    status: Some("approved".to_string()),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
 
         let doc: MarkplaneDocument<Plan> = project.read_item(&plan.id).unwrap();
         assert_eq!(doc.frontmatter.title, "Plan A v2");
@@ -2434,15 +2737,22 @@ mod tests {
     #[test]
     fn test_update_note_fields() {
         let (_tmp, project) = setup_project();
-        let note = project.create_note("Research", "idea", vec!["wip".to_string()], None).unwrap();
+        let note = project
+            .create_note("Research", "idea", vec!["wip".to_string()], None)
+            .unwrap();
 
-        project.update_note(&note.id, &NoteUpdate {
-            title: Some("Decision: Use Redis".to_string()),
-            note_type: Some("decision".to_string()),
-            add_tags: vec!["arch".to_string()],
-            remove_tags: vec!["wip".to_string()],
-            ..Default::default()
-        }).unwrap();
+        project
+            .update_note(
+                &note.id,
+                &NoteUpdate {
+                    title: Some("Decision: Use Redis".to_string()),
+                    note_type: Some("decision".to_string()),
+                    add_tags: vec!["arch".to_string()],
+                    remove_tags: vec!["wip".to_string()],
+                    ..Default::default()
+                },
+            )
+            .unwrap();
 
         let doc: MarkplaneDocument<Note> = project.read_item(&note.id).unwrap();
         assert_eq!(doc.frontmatter.title, "Decision: Use Redis");
@@ -2456,14 +2766,27 @@ mod tests {
     fn test_update_item_task() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("Dispatch test", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task(
+                "Dispatch test",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
 
-        project.update_item(&task.id, UpdateFields {
-            effort: Some("large".to_string()),
-            priority: Some("high".to_string()),
-            ..Default::default()
-        }).unwrap();
+        project
+            .update_item(
+                &task.id,
+                UpdateFields {
+                    effort: Some("large".to_string()),
+                    priority: Some("high".to_string()),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
 
         let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
         assert_eq!(doc.frontmatter.effort, Effort::Large);
@@ -2476,28 +2799,37 @@ mod tests {
         let epic = project.create_epic("Epic", Priority::Medium, None).unwrap();
 
         // effort is not valid for epics
-        let result = project.update_item(&epic.id, UpdateFields {
-            effort: Some("large".to_string()),
-            ..Default::default()
-        });
+        let result = project.update_item(
+            &epic.id,
+            UpdateFields {
+                effort: Some("large".to_string()),
+                ..Default::default()
+            },
+        );
         assert!(result.is_err());
 
         let plan = project.create_plan("Plan", vec![], None).unwrap();
 
         // priority is not valid for plans
-        let result = project.update_item(&plan.id, UpdateFields {
-            priority: Some("high".to_string()),
-            ..Default::default()
-        });
+        let result = project.update_item(
+            &plan.id,
+            UpdateFields {
+                priority: Some("high".to_string()),
+                ..Default::default()
+            },
+        );
         assert!(result.is_err());
 
         let note = project.create_note("Note", "idea", vec![], None).unwrap();
 
         // assignee is not valid for notes
-        let result = project.update_item(&note.id, UpdateFields {
-            assignee: Patch::Set("someone".to_string()),
-            ..Default::default()
-        });
+        let result = project.update_item(
+            &note.id,
+            UpdateFields {
+                assignee: Patch::Set("someone".to_string()),
+                ..Default::default()
+            },
+        );
         assert!(result.is_err());
     }
 
@@ -2505,14 +2837,25 @@ mod tests {
     fn test_update_item_title_too_long() {
         let (_tmp, project) = setup_project();
         let task = project
-            .create_task("Title test", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task(
+                "Title test",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
 
         let long_title = "x".repeat(501);
-        let result = project.update_item(&task.id, UpdateFields {
-            title: Some(long_title),
-            ..Default::default()
-        });
+        let result = project.update_item(
+            &task.id,
+            UpdateFields {
+                title: Some(long_title),
+                ..Default::default()
+            },
+        );
         assert!(result.is_err());
     }
 
@@ -2532,7 +2875,9 @@ mod tests {
     #[test]
     fn test_resolve_template_explicit_override() {
         let (_tmp, project) = setup_project();
-        let body = project.resolve_template_body("task", Some("bug"), None).unwrap();
+        let body = project
+            .resolve_template_body("task", Some("bug"), None)
+            .unwrap();
         assert!(body.contains("## Steps to Reproduce"));
     }
 
@@ -2540,7 +2885,9 @@ mod tests {
     fn test_resolve_template_type_defaults() {
         let (_tmp, project) = setup_project();
         // With manifest present, bug type should resolve to bug template
-        let body = project.resolve_template_body("task", None, Some("bug")).unwrap();
+        let body = project
+            .resolve_template_body("task", None, Some("bug"))
+            .unwrap();
         assert!(body.contains("## Steps to Reproduce"));
     }
 
@@ -2559,18 +2906,33 @@ mod tests {
         fs::write(
             project.root().join("templates/task-custom.md"),
             "# {TITLE}\n\nCustom template body.\n",
-        ).unwrap();
+        )
+        .unwrap();
 
-        let body = project.resolve_template_body("task", Some("custom"), None).unwrap();
+        let body = project
+            .resolve_template_body("task", Some("custom"), None)
+            .unwrap();
         assert!(body.contains("Custom template body."));
     }
 
     #[test]
     fn test_resolve_template_rejects_path_traversal() {
         let (_tmp, project) = setup_project();
-        assert!(project.resolve_template_body("task", Some("x/../../README"), None).is_err());
-        assert!(project.resolve_template_body("task", Some("../etc/passwd"), None).is_err());
-        assert!(project.resolve_template_body("task", Some("foo\\bar"), None).is_err());
+        assert!(
+            project
+                .resolve_template_body("task", Some("x/../../README"), None)
+                .is_err()
+        );
+        assert!(
+            project
+                .resolve_template_body("task", Some("../etc/passwd"), None)
+                .is_err()
+        );
+        assert!(
+            project
+                .resolve_template_body("task", Some("foo\\bar"), None)
+                .is_err()
+        );
     }
 
     #[test]
@@ -2622,8 +2984,7 @@ mod tests {
 
         // Verify manifest exists and is valid YAML
         let manifest_content = fs::read_to_string(root.join("templates/manifest.yaml")).unwrap();
-        let manifest: crate::manifest::Manifest =
-            serde_yaml::from_str(&manifest_content).unwrap();
+        let manifest: crate::manifest::Manifest = serde_yaml::from_str(&manifest_content).unwrap();
         assert!(manifest.contains_key("task"));
         assert!(manifest.contains_key("epic"));
         assert!(manifest.contains_key("plan"));
@@ -2765,11 +3126,27 @@ mod tests {
         let (_tmp, project) = setup_project();
         // Create tasks without positions
         let t1 = project
-            .create_task("First", "feature", Priority::High, Effort::Small, None, vec![], None)
+            .create_task(
+                "First",
+                "feature",
+                Priority::High,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap()
             .id;
         let t2 = project
-            .create_task("Second", "feature", Priority::High, Effort::Small, None, vec![], None)
+            .create_task(
+                "Second",
+                "feature",
+                Priority::High,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap()
             .id;
 
@@ -2789,7 +3166,11 @@ mod tests {
         let result = project.move_item(&t_high, MoveDirective::Before(t_low));
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
-        assert!(err.contains("priority"), "error should mention priority: {}", err);
+        assert!(
+            err.contains("priority"),
+            "error should mention priority: {}",
+            err
+        );
     }
 
     #[test]
@@ -2820,7 +3201,11 @@ mod tests {
         let result = project.move_item(&epic.id, MoveDirective::Top);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
-        assert!(err.contains("not a task"), "error should say not a task: {}", err);
+        assert!(
+            err.contains("not a task"),
+            "error should say not a task: {}",
+            err
+        );
     }
 
     #[test]
@@ -2841,19 +3226,42 @@ mod tests {
         assert_eq!(epic_doc.frontmatter.status, EpicStatus::Now);
 
         let setup_doc: MarkplaneDocument<Task> = project.read_item(setup_task_id).unwrap();
-        assert_eq!(setup_doc.frontmatter.title, "Review and customize your markplane setup");
+        assert_eq!(
+            setup_doc.frontmatter.title,
+            "Review and customize your markplane setup"
+        );
         assert_eq!(setup_doc.frontmatter.status, "backlog");
-        assert_eq!(setup_doc.frontmatter.epic.as_deref(), Some(epic_id.as_str()));
-        assert!(setup_doc.frontmatter.tags.contains(&"onboarding".to_string()));
+        assert_eq!(
+            setup_doc.frontmatter.epic.as_deref(),
+            Some(epic_id.as_str())
+        );
+        assert!(
+            setup_doc
+                .frontmatter
+                .tags
+                .contains(&"onboarding".to_string())
+        );
 
         let import_doc: MarkplaneDocument<Task> = project.read_item(import_task_id).unwrap();
-        assert_eq!(import_doc.frontmatter.title, "Import existing work into markplane");
+        assert_eq!(
+            import_doc.frontmatter.title,
+            "Import existing work into markplane"
+        );
         assert_eq!(import_doc.frontmatter.status, "backlog");
-        assert_eq!(import_doc.frontmatter.epic.as_deref(), Some(epic_id.as_str()));
-        assert_eq!(import_doc.frontmatter.plan.as_deref(), Some(plan_id.as_str()));
+        assert_eq!(
+            import_doc.frontmatter.epic.as_deref(),
+            Some(epic_id.as_str())
+        );
+        assert_eq!(
+            import_doc.frontmatter.plan.as_deref(),
+            Some(plan_id.as_str())
+        );
 
         let plan_doc: MarkplaneDocument<Plan> = project.read_item(plan_id).unwrap();
-        assert_eq!(plan_doc.frontmatter.title, "Import existing work into markplane");
+        assert_eq!(
+            plan_doc.frontmatter.title,
+            "Import existing work into markplane"
+        );
         assert!(plan_doc.frontmatter.implements.contains(import_task_id));
 
         let note_doc: MarkplaneDocument<Note> = project.read_item(note_id).unwrap();

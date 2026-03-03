@@ -13,7 +13,10 @@ pub fn run(normalize: bool) -> anyhow::Result<()> {
 
     project.sync_all()?;
 
-    println!("{} All INDEX.md files and .context/ summaries regenerated.", "✓".green());
+    println!(
+        "{} All INDEX.md files and .context/ summaries regenerated.",
+        "✓".green()
+    );
 
     Ok(())
 }

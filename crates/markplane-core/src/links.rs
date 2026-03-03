@@ -287,9 +287,8 @@ impl Project {
 
         // Acquire locks on all involved files in deterministic order.
         let lock_ids = collect_lock_ids(self, from, to, relation, action)?;
-        let _locks: Vec<File> = self.lock_items(
-            &mut lock_ids.iter().map(String::as_str).collect::<Vec<_>>(),
-        )?;
+        let _locks: Vec<File> =
+            self.lock_items(&mut lock_ids.iter().map(String::as_str).collect::<Vec<_>>())?;
 
         match relation {
             LinkRelation::Blocks => {
@@ -456,7 +455,15 @@ mod tests {
 
     fn create_task(project: &Project, title: &str) -> String {
         let task = project
-            .create_task(title, "feature", Priority::Medium, Effort::Medium, None, vec![], None)
+            .create_task(
+                title,
+                "feature",
+                Priority::Medium,
+                Effort::Medium,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
         task.id
     }
@@ -474,9 +481,7 @@ mod tests {
     }
 
     fn create_note(project: &Project, title: &str) -> String {
-        let note = project
-            .create_note(title, "idea", vec![], None)
-            .unwrap();
+        let note = project.create_note(title, "idea", vec![], None).unwrap();
         note.id
     }
 
@@ -917,11 +922,21 @@ mod tests {
         let task_doc: MarkplaneDocument<Task> = project.read_item(&t1).unwrap();
         let epic_doc: MarkplaneDocument<Epic> = project.read_item(&e1).unwrap();
         assert_eq!(
-            task_doc.frontmatter.related.iter().filter(|r| *r == &e1).count(),
+            task_doc
+                .frontmatter
+                .related
+                .iter()
+                .filter(|r| *r == &e1)
+                .count(),
             1
         );
         assert_eq!(
-            epic_doc.frontmatter.related.iter().filter(|r| *r == &t1).count(),
+            epic_doc
+                .frontmatter
+                .related
+                .iter()
+                .filter(|r| *r == &t1)
+                .count(),
             1
         );
     }

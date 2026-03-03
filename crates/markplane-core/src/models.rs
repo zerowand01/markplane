@@ -55,10 +55,7 @@ impl IdPrefix {
             "TASK" => Ok(IdPrefix::Task),
             "PLAN" => Ok(IdPrefix::Plan),
             "NOTE" => Ok(IdPrefix::Note),
-            _ => Err(MarkplaneError::InvalidId(format!(
-                "Unknown prefix: {}",
-                s
-            ))),
+            _ => Err(MarkplaneError::InvalidId(format!("Unknown prefix: {}", s))),
         }
     }
 }
@@ -404,14 +401,10 @@ impl FromStr for Priority {
             "medium" => Ok(Priority::Medium),
             "low" => Ok(Priority::Low),
             "someday" => Ok(Priority::Someday),
-            _ => Err(MarkplaneError::Config(format!(
-                "Unknown priority: {}",
-                s
-            ))),
+            _ => Err(MarkplaneError::Config(format!("Unknown priority: {}", s))),
         }
     }
 }
-
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -452,7 +445,6 @@ impl FromStr for Effort {
         }
     }
 }
-
 
 // ── Entity Structs ─────────────────────────────────────────────────────────
 
@@ -551,12 +543,18 @@ pub struct Config {
 impl Config {
     /// Return the default task type (first in the configured list).
     pub fn default_task_type(&self) -> &str {
-        self.task_types.first().map(|s| s.as_str()).unwrap_or("feature")
+        self.task_types
+            .first()
+            .map(|s| s.as_str())
+            .unwrap_or("feature")
     }
 
     /// Return the default note type (first in the configured list).
     pub fn default_note_type(&self) -> &str {
-        self.note_types.first().map(|s| s.as_str()).unwrap_or("research")
+        self.note_types
+            .first()
+            .map(|s| s.as_str())
+            .unwrap_or("research")
     }
 
     /// Look up the category of a task status string.
@@ -642,7 +640,11 @@ mod tests {
         assert_eq!(suffix.len(), RANDOM_ID_LENGTH);
         // All chars should be from the alphabet
         for c in suffix.bytes() {
-            assert!(RANDOM_ID_ALPHABET.contains(&c), "Invalid char: {}", c as char);
+            assert!(
+                RANDOM_ID_ALPHABET.contains(&c),
+                "Invalid char: {}",
+                c as char
+            );
         }
     }
 
@@ -688,7 +690,17 @@ mod tests {
     fn test_task_workflow_all_statuses() {
         let wf = default_task_workflow();
         let all = wf.all_statuses();
-        assert_eq!(all, vec!["draft", "backlog", "planned", "in-progress", "done", "cancelled"]);
+        assert_eq!(
+            all,
+            vec![
+                "draft",
+                "backlog",
+                "planned",
+                "in-progress",
+                "done",
+                "cancelled"
+            ]
+        );
     }
 
     #[test]
@@ -804,7 +816,10 @@ updated: 2026-02-09
         assert_eq!(config.version, 1);
         assert_eq!(config.context.token_budget, 1000);
         assert_eq!(config.default_task_status(), "draft");
-        assert_eq!(config.task_category("in-progress"), Some(StatusCategory::Active));
+        assert_eq!(
+            config.task_category("in-progress"),
+            Some(StatusCategory::Active)
+        );
     }
 
     #[test]
@@ -883,8 +898,14 @@ updated: 2026-02-09
     #[test]
     fn test_plan_status_from_str() {
         assert_eq!("draft".parse::<PlanStatus>().unwrap(), PlanStatus::Draft);
-        assert_eq!("approved".parse::<PlanStatus>().unwrap(), PlanStatus::Approved);
-        assert_eq!("in-progress".parse::<PlanStatus>().unwrap(), PlanStatus::InProgress);
+        assert_eq!(
+            "approved".parse::<PlanStatus>().unwrap(),
+            PlanStatus::Approved
+        );
+        assert_eq!(
+            "in-progress".parse::<PlanStatus>().unwrap(),
+            PlanStatus::InProgress
+        );
         assert_eq!("done".parse::<PlanStatus>().unwrap(), PlanStatus::Done);
         assert!("invalid".parse::<PlanStatus>().is_err());
     }
@@ -893,13 +914,21 @@ updated: 2026-02-09
     fn test_note_status_from_str() {
         assert_eq!("draft".parse::<NoteStatus>().unwrap(), NoteStatus::Draft);
         assert_eq!("active".parse::<NoteStatus>().unwrap(), NoteStatus::Active);
-        assert_eq!("archived".parse::<NoteStatus>().unwrap(), NoteStatus::Archived);
+        assert_eq!(
+            "archived".parse::<NoteStatus>().unwrap(),
+            NoteStatus::Archived
+        );
         assert!("invalid".parse::<NoteStatus>().is_err());
     }
 
     #[test]
     fn test_epic_status_display_roundtrip() {
-        for status in [EpicStatus::Now, EpicStatus::Next, EpicStatus::Later, EpicStatus::Done] {
+        for status in [
+            EpicStatus::Now,
+            EpicStatus::Next,
+            EpicStatus::Later,
+            EpicStatus::Done,
+        ] {
             let s = status.to_string();
             let parsed: EpicStatus = s.parse().unwrap();
             assert_eq!(parsed, status);
@@ -908,7 +937,12 @@ updated: 2026-02-09
 
     #[test]
     fn test_plan_status_display_roundtrip() {
-        for status in [PlanStatus::Draft, PlanStatus::Approved, PlanStatus::InProgress, PlanStatus::Done] {
+        for status in [
+            PlanStatus::Draft,
+            PlanStatus::Approved,
+            PlanStatus::InProgress,
+            PlanStatus::Done,
+        ] {
             let s = status.to_string();
             let parsed: PlanStatus = s.parse().unwrap();
             assert_eq!(parsed, status);

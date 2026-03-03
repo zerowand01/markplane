@@ -2,11 +2,11 @@ use std::collections::HashMap;
 use std::fs;
 
 use markplane_core::{
-    Task, StatusCategory, Effort, LinkAction, LinkRelation,
-    MarkplaneDocument, MoveDirective, Note, Patch, Priority, Project, QueryFilter,
-    ScanScope, UpdateFields, build_reference_graph, validate_references,
+    Effort, LinkAction, LinkRelation, MarkplaneDocument, MoveDirective, Note, Patch, Priority,
+    Project, QueryFilter, ScanScope, StatusCategory, Task, UpdateFields, build_reference_graph,
+    validate_references,
 };
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use super::protocol::{JsonRpcResponse, METHOD_NOT_FOUND};
 
@@ -16,18 +16,42 @@ pub fn list_tools(project: &Project) -> Value {
     let task_types_desc = config.as_ref()
         .map(|c| format!("Task type ({}). Tasks only. Default: {}", c.task_types.join(", "), c.default_task_type()))
         .unwrap_or_else(|| "Task type (feature, bug, enhancement, chore, research, spike). Tasks only. Default: feature".to_string());
-    let note_types_desc = config.as_ref()
-        .map(|c| format!("Note type ({}). Notes only. Default: {}", c.note_types.join(", "), c.default_note_type()))
-        .unwrap_or_else(|| "Note type (research, analysis, idea, decision, meeting). Notes only. Default: research".to_string());
-    let update_type_desc = config.as_ref()
+    let note_types_desc = config
+        .as_ref()
+        .map(|c| {
+            format!(
+                "Note type ({}). Notes only. Default: {}",
+                c.note_types.join(", "),
+                c.default_note_type()
+            )
+        })
+        .unwrap_or_else(|| {
+            "Note type (research, analysis, idea, decision, meeting). Notes only. Default: research"
+                .to_string()
+        });
+    let update_type_desc = config
+        .as_ref()
         .map(|c| format!("Task type ({}). Tasks only.", c.task_types.join(", ")))
-        .unwrap_or_else(|| "Task type (feature, bug, enhancement, chore, research, spike). Tasks only.".to_string());
-    let update_note_type_desc = config.as_ref()
+        .unwrap_or_else(|| {
+            "Task type (feature, bug, enhancement, chore, research, spike). Tasks only.".to_string()
+        });
+    let update_note_type_desc = config
+        .as_ref()
         .map(|c| format!("Note type ({}). Notes only.", c.note_types.join(", ")))
-        .unwrap_or_else(|| "Note type (research, analysis, idea, decision, meeting). Notes only.".to_string());
-    let task_statuses_desc = config.as_ref()
-        .map(|c| format!("Filter by status ({})", c.workflows.task.all_statuses().join(", ")))
-        .unwrap_or_else(|| "Filter by status (draft, backlog, planned, in-progress, done, cancelled)".to_string());
+        .unwrap_or_else(|| {
+            "Note type (research, analysis, idea, decision, meeting). Notes only.".to_string()
+        });
+    let task_statuses_desc = config
+        .as_ref()
+        .map(|c| {
+            format!(
+                "Filter by status ({})",
+                c.workflows.task.all_statuses().join(", ")
+            )
+        })
+        .unwrap_or_else(|| {
+            "Filter by status (draft, backlog, planned, in-progress, done, cancelled)".to_string()
+        });
     let update_status_desc = config.as_ref()
         .map(|c| format!("New status value. Task: {}. Epic: now/next/later/done. Plan: draft/approved/in-progress/done. Note: draft/active/archived.", c.workflows.task.all_statuses().join("/")))
         .unwrap_or_else(|| "New status value. Task: draft/backlog/planned/in-progress/done/cancelled. Epic: now/next/later/done. Plan: draft/approved/in-progress/done. Note: draft/active/archived.".to_string());
@@ -407,11 +431,7 @@ pub fn call_tool(id: Value, project: &Project, name: &str, args: Value) -> JsonR
         "markplane_archive" => handle_archive(project, &args),
         "markplane_unarchive" => handle_unarchive(project, &args),
         _ => {
-            return JsonRpcResponse::error(
-                id,
-                METHOD_NOT_FOUND,
-                format!("Unknown tool: {}", name),
-            );
+            return JsonRpcResponse::error(id, METHOD_NOT_FOUND, format!("Unknown tool: {}", name));
         }
     };
 
@@ -484,10 +504,7 @@ fn handle_summary(project: &Project) -> Result<String, String> {
 }
 
 fn handle_query(project: &Project, args: &Value) -> Result<String, String> {
-    let kind = args
-        .get("kind")
-        .and_then(|v| v.as_str())
-        .unwrap_or("tasks");
+    let kind = args.get("kind").and_then(|v| v.as_str()).unwrap_or("tasks");
 
     let archived = args
         .get("archived")
@@ -515,7 +532,11 @@ fn handle_query(project: &Project, args: &Value) -> Result<String, String> {
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string()),
                 item_type: None,
-                scope: if archived { ScanScope::Archived } else { ScanScope::Active },
+                scope: if archived {
+                    ScanScope::Archived
+                } else {
+                    ScanScope::Active
+                },
             };
 
             let items = project.list_tasks(&filter).map_err(|e| e.to_string())?;
@@ -535,7 +556,9 @@ fn handle_query(project: &Project, args: &Value) -> Result<String, String> {
                 .collect()
         }
         "epics" => {
-            let items = project.list_epics_filtered(archived).map_err(|e| e.to_string())?;
+            let items = project
+                .list_epics_filtered(archived)
+                .map_err(|e| e.to_string())?;
             items
                 .iter()
                 .map(|doc| {
@@ -552,7 +575,9 @@ fn handle_query(project: &Project, args: &Value) -> Result<String, String> {
                 .collect()
         }
         "plans" => {
-            let items = project.list_plans_filtered(archived).map_err(|e| e.to_string())?;
+            let items = project
+                .list_plans_filtered(archived)
+                .map_err(|e| e.to_string())?;
             items
                 .iter()
                 .map(|doc| {
@@ -567,7 +592,9 @@ fn handle_query(project: &Project, args: &Value) -> Result<String, String> {
                 .collect()
         }
         "notes" => {
-            let items = project.list_notes_filtered(archived).map_err(|e| e.to_string())?;
+            let items = project
+                .list_notes_filtered(archived)
+                .map_err(|e| e.to_string())?;
             items
                 .iter()
                 .map(|doc| {
@@ -582,7 +609,12 @@ fn handle_query(project: &Project, args: &Value) -> Result<String, String> {
                 })
                 .collect()
         }
-        _ => return Err(format!("Unknown kind: {}. Expected tasks, epics, plans, or notes", kind)),
+        _ => {
+            return Err(format!(
+                "Unknown kind: {}. Expected tasks, epics, plans, or notes",
+                kind
+            ));
+        }
     };
 
     serde_json::to_string_pretty(&results).map_err(|e| e.to_string())
@@ -604,14 +636,9 @@ fn handle_add(project: &Project, args: &Value) -> Result<String, String> {
         .and_then(|v| v.as_str())
         .ok_or_else(|| "Missing required parameter: title".to_string())?;
 
-    let kind = args
-        .get("kind")
-        .and_then(|v| v.as_str())
-        .unwrap_or("task");
+    let kind = args.get("kind").and_then(|v| v.as_str()).unwrap_or("task");
 
-    let template = args
-        .get("template")
-        .and_then(|v| v.as_str());
+    let template = args.get("template").and_then(|v| v.as_str());
 
     match kind {
         "task" => {
@@ -686,7 +713,10 @@ fn handle_add(project: &Project, args: &Value) -> Result<String, String> {
             let result = json!({ "id": note.id, "title": note.title });
             serde_json::to_string(&result).map_err(|e| e.to_string())
         }
-        _ => Err(format!("Unknown kind: {}. Expected task, epic, or note", kind)),
+        _ => Err(format!(
+            "Unknown kind: {}. Expected task, epic, or note",
+            kind
+        )),
     }
 }
 
@@ -727,7 +757,9 @@ fn handle_update(project: &Project, args: &Value) -> Result<String, String> {
         if val.is_null() {
             Patch::Clear
         } else if let Some(s) = val.as_str() {
-            let date = s.parse().map_err(|_| format!("Invalid date for started: {} (expected YYYY-MM-DD)", s))?;
+            let date = s
+                .parse()
+                .map_err(|_| format!("Invalid date for started: {} (expected YYYY-MM-DD)", s))?;
             Patch::Set(date)
         } else {
             Patch::Unchanged
@@ -741,7 +773,9 @@ fn handle_update(project: &Project, args: &Value) -> Result<String, String> {
         if val.is_null() {
             Patch::Clear
         } else if let Some(s) = val.as_str() {
-            let date = s.parse().map_err(|_| format!("Invalid date for target: {} (expected YYYY-MM-DD)", s))?;
+            let date = s
+                .parse()
+                .map_err(|_| format!("Invalid date for target: {} (expected YYYY-MM-DD)", s))?;
             Patch::Set(date)
         } else {
             Patch::Unchanged
@@ -751,22 +785,42 @@ fn handle_update(project: &Project, args: &Value) -> Result<String, String> {
     };
 
     let fields = UpdateFields {
-        title: args.get("title").and_then(|v| v.as_str()).map(|s| s.to_string()),
-        status: args.get("status").and_then(|v| v.as_str()).map(|s| s.to_string()),
-        priority: args.get("priority").and_then(|v| v.as_str()).map(|s| s.to_string()),
-        effort: args.get("effort").and_then(|v| v.as_str()).map(|s| s.to_string()),
-        item_type: args.get("type").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        title: args
+            .get("title")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
+        status: args
+            .get("status")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
+        priority: args
+            .get("priority")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
+        effort: args
+            .get("effort")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
+        item_type: args
+            .get("type")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
         assignee,
         position,
-        add_tags: args.get("add_tags")
+        add_tags: args
+            .get("add_tags")
             .and_then(|v| serde_json::from_value(v.clone()).ok())
             .unwrap_or_default(),
-        remove_tags: args.get("remove_tags")
+        remove_tags: args
+            .get("remove_tags")
             .and_then(|v| serde_json::from_value(v.clone()).ok())
             .unwrap_or_default(),
         started,
         target,
-        note_type: args.get("note_type").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        note_type: args
+            .get("note_type")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
     };
 
     project.update_item(id, fields).map_err(|e| e.to_string())?;
@@ -790,12 +844,13 @@ fn handle_move(project: &Project, args: &Value) -> Result<String, String> {
         (None, Some(target), None) => MoveDirective::Before(target.to_string()),
         (None, None, Some(target)) => MoveDirective::After(target.to_string()),
         (Some(v), None, None) => {
-            return Err(format!("Invalid 'to' value: {}. Expected 'top' or 'bottom'", v));
+            return Err(format!(
+                "Invalid 'to' value: {}. Expected 'top' or 'bottom'",
+                v
+            ));
         }
         _ => {
-            return Err(
-                "Provide exactly one of: to (top/bottom), before, or after".to_string(),
-            );
+            return Err("Provide exactly one of: to (top/bottom), before, or after".to_string());
         }
     };
 
@@ -837,10 +892,7 @@ fn handle_graph(project: &Project, args: &Value) -> Result<String, String> {
         .and_then(|v| v.as_str())
         .ok_or_else(|| "Missing required parameter: id".to_string())?;
 
-    let max_depth = args
-        .get("depth")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(2) as usize;
+    let max_depth = args.get("depth").and_then(|v| v.as_u64()).unwrap_or(2) as usize;
 
     let graph = build_reference_graph(project).map_err(|e| e.to_string())?;
 
@@ -898,10 +950,7 @@ fn handle_graph(project: &Project, args: &Value) -> Result<String, String> {
         output.push_str("(none)\n");
     }
 
-    output.push_str(&format!(
-        "\n## Related Items (depth {})\n",
-        max_depth
-    ));
+    output.push_str(&format!("\n## Related Items (depth {})\n", max_depth));
     let mut sorted_visited: Vec<_> = visited.iter().filter(|(k, _)| **k != id).collect();
     sorted_visited.sort_by_key(|(_, d)| *d);
     if sorted_visited.is_empty() {
@@ -972,18 +1021,13 @@ fn handle_plan(project: &Project, args: &Value) -> Result<String, String> {
     let task_doc: MarkplaneDocument<Task> =
         project.read_item(task_id).map_err(|e| e.to_string())?;
 
-    let default_title = format!(
-        "Implementation plan for {}",
-        task_doc.frontmatter.title
-    );
+    let default_title = format!("Implementation plan for {}", task_doc.frontmatter.title);
     let title = args
         .get("title")
         .and_then(|v| v.as_str())
         .unwrap_or(&default_title);
 
-    let template = args
-        .get("template")
-        .and_then(|v| v.as_str());
+    let template = args.get("template").and_then(|v| v.as_str());
 
     let plan = project
         .create_plan(title, vec![], template)
@@ -1020,8 +1064,14 @@ fn handle_link(project: &Project, args: &Value) -> Result<String, String> {
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
 
-    let relation: LinkRelation = relation_str.parse().map_err(|e: markplane_core::MarkplaneError| e.to_string())?;
-    let action = if remove { LinkAction::Remove } else { LinkAction::Add };
+    let relation: LinkRelation = relation_str
+        .parse()
+        .map_err(|e: markplane_core::MarkplaneError| e.to_string())?;
+    let action = if remove {
+        LinkAction::Remove
+    } else {
+        LinkAction::Add
+    };
 
     project
         .link_items(from, to, relation, action)
@@ -1032,17 +1082,26 @@ fn handle_link(project: &Project, args: &Value) -> Result<String, String> {
 
 fn handle_check(project: &Project) -> Result<String, String> {
     let broken_refs = validate_references(project).map_err(|e| e.to_string())?;
-    let broken_statuses = markplane_core::validate_task_statuses(project).map_err(|e| e.to_string())?;
-    let asymmetric = markplane_core::validate_reciprocal_links(project).map_err(|e| e.to_string())?;
+    let broken_statuses =
+        markplane_core::validate_task_statuses(project).map_err(|e| e.to_string())?;
+    let asymmetric =
+        markplane_core::validate_reciprocal_links(project).map_err(|e| e.to_string())?;
     let cycles = markplane_core::detect_cycles(project).map_err(|e| e.to_string())?;
 
-    if broken_refs.is_empty() && broken_statuses.is_empty() && asymmetric.is_empty() && cycles.is_empty() {
+    if broken_refs.is_empty()
+        && broken_statuses.is_empty()
+        && asymmetric.is_empty()
+        && cycles.is_empty()
+    {
         return Ok("All cross-references, task statuses, reciprocal links, and dependency graphs are valid.".to_string());
     }
 
     let mut output = String::new();
     if !broken_refs.is_empty() {
-        output.push_str(&format!("{} broken reference(s) found:\n\n", broken_refs.len()));
+        output.push_str(&format!(
+            "{} broken reference(s) found:\n\n",
+            broken_refs.len()
+        ));
         for br in &broken_refs {
             output.push_str(&format!(
                 "- {} references missing item {}\n",
@@ -1051,7 +1110,10 @@ fn handle_check(project: &Project) -> Result<String, String> {
         }
     }
     if !broken_statuses.is_empty() {
-        output.push_str(&format!("\n{} invalid task status(es) found:\n\n", broken_statuses.len()));
+        output.push_str(&format!(
+            "\n{} invalid task status(es) found:\n\n",
+            broken_statuses.len()
+        ));
         for br in &broken_statuses {
             output.push_str(&format!(
                 "- {} has unknown {}\n",
@@ -1060,18 +1122,28 @@ fn handle_check(project: &Project) -> Result<String, String> {
         }
     }
     if !asymmetric.is_empty() {
-        output.push_str(&format!("\n{} asymmetric reciprocal link(s) found:\n\n", asymmetric.len()));
+        output.push_str(&format!(
+            "\n{} asymmetric reciprocal link(s) found:\n\n",
+            asymmetric.len()
+        ));
         for link in &asymmetric {
             output.push_str(&format!(
                 "- {} has {}: {} but {} is missing {}: {}\n",
-                link.source_id, link.forward_field, link.target_id,
-                link.target_id, link.missing_field, link.source_id,
+                link.source_id,
+                link.forward_field,
+                link.target_id,
+                link.target_id,
+                link.missing_field,
+                link.source_id,
             ));
         }
         output.push_str("\nUse `markplane check --fix` to repair asymmetric links.\n");
     }
     if !cycles.is_empty() {
-        output.push_str(&format!("\n{} dependency cycle(s) found:\n\n", cycles.len()));
+        output.push_str(&format!(
+            "\n{} dependency cycle(s) found:\n\n",
+            cycles.len()
+        ));
         for cycle in &cycles {
             output.push_str(&format!("- {}\n", cycle.path.join(" → ")));
         }
@@ -1085,9 +1157,7 @@ fn handle_archive(project: &Project, args: &Value) -> Result<String, String> {
         .and_then(|v| v.as_str())
         .ok_or_else(|| "Missing required parameter: id".to_string())?;
 
-    project
-        .archive_item(id)
-        .map_err(|e| e.to_string())?;
+    project.archive_item(id).map_err(|e| e.to_string())?;
 
     Ok(format!("{{\"success\":true,\"archived\":\"{}\"}}", id))
 }
@@ -1098,9 +1168,7 @@ fn handle_unarchive(project: &Project, args: &Value) -> Result<String, String> {
         .and_then(|v| v.as_str())
         .ok_or_else(|| "Missing required parameter: id".to_string())?;
 
-    project
-        .unarchive_item(id)
-        .map_err(|e| e.to_string())?;
+    project.unarchive_item(id).map_err(|e| e.to_string())?;
 
     Ok(format!("{{\"success\":true,\"restored\":\"{}\"}}", id))
 }

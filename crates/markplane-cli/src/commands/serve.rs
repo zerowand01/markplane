@@ -4,12 +4,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use axum::extract::{Path, Query, State};
+use axum::Router;
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
+use axum::extract::{Path, Query, State};
 use axum::http::{HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Json};
 use axum::routing::{get, post};
-use axum::Router;
 use futures::SinkExt;
 use futures::stream::StreamExt;
 use serde::{Deserialize, Serialize};
@@ -20,10 +20,9 @@ use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 
 use markplane_core::{
-    Effort, Epic, EpicStatus, EpicUpdate, LinkAction, LinkRelation,
-    MarkplaneDocument, MarkplaneError, Note, NoteUpdate, Patch, Plan, PlanUpdate,
-    Priority, Project, QueryFilter, ScanScope, StatusCategory, Task, TaskUpdate,
-    find_blocked_items, parse_id,
+    Effort, Epic, EpicStatus, EpicUpdate, LinkAction, LinkRelation, MarkplaneDocument,
+    MarkplaneError, Note, NoteUpdate, Patch, Plan, PlanUpdate, Priority, Project, QueryFilter,
+    ScanScope, StatusCategory, Task, TaskUpdate, find_blocked_items, parse_id,
 };
 
 #[cfg(feature = "embed-ui")]
@@ -50,13 +49,41 @@ struct DocEntry {
 }
 
 const DOC_MANIFEST: &[DocEntry] = &[
-    DocEntry { slug: "readme", title: "README", path: "README.md" },
-    DocEntry { slug: "getting-started", title: "Getting Started", path: "docs/getting-started.md" },
-    DocEntry { slug: "file-format", title: "Item Reference", path: "docs/file-format.md" },
-    DocEntry { slug: "cli-reference", title: "CLI Reference", path: "docs/cli-reference.md" },
-    DocEntry { slug: "mcp-setup", title: "MCP Setup", path: "docs/mcp-setup.md" },
-    DocEntry { slug: "ai-integration", title: "AI Integration", path: "docs/ai-integration.md" },
-    DocEntry { slug: "web-ui-guide", title: "Web UI Guide", path: "docs/web-ui-guide.md" },
+    DocEntry {
+        slug: "readme",
+        title: "README",
+        path: "README.md",
+    },
+    DocEntry {
+        slug: "getting-started",
+        title: "Getting Started",
+        path: "docs/getting-started.md",
+    },
+    DocEntry {
+        slug: "file-format",
+        title: "Item Reference",
+        path: "docs/file-format.md",
+    },
+    DocEntry {
+        slug: "cli-reference",
+        title: "CLI Reference",
+        path: "docs/cli-reference.md",
+    },
+    DocEntry {
+        slug: "mcp-setup",
+        title: "MCP Setup",
+        path: "docs/mcp-setup.md",
+    },
+    DocEntry {
+        slug: "ai-integration",
+        title: "AI Integration",
+        path: "docs/ai-integration.md",
+    },
+    DocEntry {
+        slug: "web-ui-guide",
+        title: "Web UI Guide",
+        path: "docs/web-ui-guide.md",
+    },
 ];
 
 pub async fn run(port: u16, open: bool, dev: bool) -> anyhow::Result<()> {
@@ -112,8 +139,12 @@ pub async fn run(port: u16, open: bool, dev: bool) -> anyhow::Result<()> {
     let cors = if dev {
         CorsLayer::permissive()
     } else {
-        let localhost = format!("http://localhost:{}", port).parse::<HeaderValue>().unwrap();
-        let loopback = format!("http://127.0.0.1:{}", port).parse::<HeaderValue>().unwrap();
+        let localhost = format!("http://localhost:{}", port)
+            .parse::<HeaderValue>()
+            .unwrap();
+        let loopback = format!("http://127.0.0.1:{}", port)
+            .parse::<HeaderValue>()
+            .unwrap();
         CorsLayer::new()
             .allow_origin([localhost, loopback])
             .allow_methods(tower_http::cors::Any)
@@ -137,10 +168,9 @@ pub async fn run(port: u16, open: bool, dev: bool) -> anyhow::Result<()> {
         }
         #[cfg(not(feature = "embed-ui"))]
         {
-            let ui_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../markplane-web/ui/out");
-            let serve_dir = ServeDir::new(&ui_dir)
-                .append_index_html_on_directories(true);
+            let ui_dir =
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../markplane-web/ui/out");
+            let serve_dir = ServeDir::new(&ui_dir).append_index_html_on_directories(true);
             api.fallback_service(serve_dir)
                 .layer(cors)
                 .layer(axum::extract::DefaultBodyLimit::max(2_097_152))
@@ -175,9 +205,7 @@ pub async fn run(port: u16, open: bool, dev: bool) -> anyhow::Result<()> {
 // ── Embedded Static File Server ──────────────────────────────────────────
 
 #[cfg(feature = "embed-ui")]
-async fn serve_embedded(
-    uri: axum::http::Uri,
-) -> impl IntoResponse {
+async fn serve_embedded(uri: axum::http::Uri) -> impl IntoResponse {
     let path = uri.path().trim_start_matches('/');
 
     // Try the exact path first
@@ -187,7 +215,8 @@ async fn serve_embedded(
             StatusCode::OK,
             [(axum::http::header::CONTENT_TYPE, mime.as_ref().to_string())],
             content.data.into_owned(),
-        ).into_response();
+        )
+            .into_response();
     }
 
     // For directory paths, try index.html
@@ -201,7 +230,8 @@ async fn serve_embedded(
             StatusCode::OK,
             [(axum::http::header::CONTENT_TYPE, "text/html".to_string())],
             content.data.into_owned(),
-        ).into_response();
+        )
+            .into_response();
     }
 
     // SPA fallback: serve root index.html for client-side routing
@@ -210,7 +240,8 @@ async fn serve_embedded(
             StatusCode::OK,
             [(axum::http::header::CONTENT_TYPE, "text/html".to_string())],
             content.data.into_owned(),
-        ).into_response();
+        )
+            .into_response();
     }
 
     (StatusCode::NOT_FOUND, "Not found").into_response()
@@ -218,11 +249,8 @@ async fn serve_embedded(
 
 // ── File Watcher ─────────────────────────────────────────────────────────
 
-async fn run_file_watcher(
-    root: PathBuf,
-    tx: broadcast::Sender<String>,
-) -> anyhow::Result<()> {
-    use notify_debouncer_mini::{new_debouncer, DebouncedEventKind};
+async fn run_file_watcher(root: PathBuf, tx: broadcast::Sender<String>) -> anyhow::Result<()> {
+    use notify_debouncer_mini::{DebouncedEventKind, new_debouncer};
 
     let (notify_tx, mut notify_rx) = tokio::sync::mpsc::channel(100);
 
@@ -247,12 +275,16 @@ async fn run_file_watcher(
     let repo = root.parent().unwrap_or(&root).to_path_buf();
     let docs_dir = repo.join("docs");
     if docs_dir.is_dir() {
-        let _ = debouncer.watcher().watch(&docs_dir, notify::RecursiveMode::NonRecursive);
+        let _ = debouncer
+            .watcher()
+            .watch(&docs_dir, notify::RecursiveMode::NonRecursive);
     }
     let readme_path = repo.join("README.md");
     if readme_path.is_file() {
         // Watch the repo root non-recursively to catch README.md changes
-        let _ = debouncer.watcher().watch(&repo, notify::RecursiveMode::NonRecursive);
+        let _ = debouncer
+            .watcher()
+            .watch(&repo, notify::RecursiveMode::NonRecursive);
     }
 
     // Build lookup set of absolute doc paths for fast matching
@@ -359,7 +391,9 @@ async fn handle_ws(socket: WebSocket, state: Arc<AppState>) {
 
     // Send connected message
     let connected = serde_json::json!({"type": "connected", "version": "0.1.0"});
-    let _ = sender.send(Message::Text(connected.to_string().into())).await;
+    let _ = sender
+        .send(Message::Text(connected.to_string().into()))
+        .await;
 
     let mut rx = state.ws_tx.subscribe();
 
@@ -460,32 +494,60 @@ fn error_response(status: StatusCode, code: &str, message: &str) -> (StatusCode,
 /// Map a `MarkplaneError` to an HTTP error response.
 fn map_core_error(e: MarkplaneError) -> (StatusCode, Json<ApiError>) {
     match &e {
-        MarkplaneError::NotFound(_) => error_response(StatusCode::NOT_FOUND, "not_found", &e.to_string()),
-        MarkplaneError::InvalidId(_) => error_response(StatusCode::BAD_REQUEST, "invalid_id", &e.to_string()),
+        MarkplaneError::NotFound(_) => {
+            error_response(StatusCode::NOT_FOUND, "not_found", &e.to_string())
+        }
+        MarkplaneError::InvalidId(_) => {
+            error_response(StatusCode::BAD_REQUEST, "invalid_id", &e.to_string())
+        }
         MarkplaneError::InvalidStatus(_) | MarkplaneError::InvalidTransition { .. } => {
             error_response(StatusCode::BAD_REQUEST, "invalid_status", &e.to_string())
         }
-        MarkplaneError::InvalidLink(_) => error_response(StatusCode::BAD_REQUEST, "invalid_link", &e.to_string()),
-        MarkplaneError::InvalidPosition(_) => error_response(StatusCode::UNPROCESSABLE_ENTITY, "invalid_position", &e.to_string()),
-        MarkplaneError::DuplicateId(_) => error_response(StatusCode::CONFLICT, "duplicate_id", &e.to_string()),
-        MarkplaneError::BrokenReference(_) => error_response(StatusCode::BAD_REQUEST, "broken_reference", &e.to_string()),
+        MarkplaneError::InvalidLink(_) => {
+            error_response(StatusCode::BAD_REQUEST, "invalid_link", &e.to_string())
+        }
+        MarkplaneError::InvalidPosition(_) => error_response(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "invalid_position",
+            &e.to_string(),
+        ),
+        MarkplaneError::DuplicateId(_) => {
+            error_response(StatusCode::CONFLICT, "duplicate_id", &e.to_string())
+        }
+        MarkplaneError::BrokenReference(_) => {
+            error_response(StatusCode::BAD_REQUEST, "broken_reference", &e.to_string())
+        }
         MarkplaneError::Config(_) | MarkplaneError::Frontmatter(_) => {
             error_response(StatusCode::BAD_REQUEST, "invalid_field", &e.to_string())
         }
-        MarkplaneError::NotInitialized(_) => {
-            error_response(StatusCode::INTERNAL_SERVER_ERROR, "internal_error", &e.to_string())
-        }
+        MarkplaneError::NotInitialized(_) => error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "internal_error",
+            &e.to_string(),
+        ),
         MarkplaneError::Io(_) => {
             eprintln!("Internal IO error: {e}");
-            error_response(StatusCode::INTERNAL_SERVER_ERROR, "internal_error", "An internal I/O error occurred")
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal_error",
+                "An internal I/O error occurred",
+            )
         }
         MarkplaneError::Yaml(_) => {
             eprintln!("Internal YAML error: {e}");
-            error_response(StatusCode::INTERNAL_SERVER_ERROR, "internal_error", "An internal data parsing error occurred")
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal_error",
+                "An internal data parsing error occurred",
+            )
         }
         MarkplaneError::Persist(_) => {
             eprintln!("Atomic write error: {e}");
-            error_response(StatusCode::INTERNAL_SERVER_ERROR, "internal_error", "An internal I/O error occurred")
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal_error",
+                "An internal I/O error occurred",
+            )
         }
     }
 }
@@ -498,7 +560,11 @@ fn map_anyhow_error(e: anyhow::Error) -> (StatusCode, Json<ApiError>) {
         Ok(me) => map_core_error(me),
         Err(e) => {
             eprintln!("Internal error: {e}");
-            error_response(StatusCode::INTERNAL_SERVER_ERROR, "internal_error", "An internal error occurred")
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal_error",
+                "An internal error occurred",
+            )
         }
     }
 }
@@ -520,7 +586,11 @@ struct DocContentResponse {
 
 /// Resolve the repo root from the `.markplane/` project root.
 fn repo_root(project: &Project) -> PathBuf {
-    project.root().parent().unwrap_or(project.root()).to_path_buf()
+    project
+        .root()
+        .parent()
+        .unwrap_or(project.root())
+        .to_path_buf()
 }
 
 async fn get_docs(
@@ -536,7 +606,10 @@ async fn get_docs(
         })
         .collect();
     let total = docs.len();
-    Ok(Json(ApiListResponse { data: docs, meta: ListMeta { total } }))
+    Ok(Json(ApiListResponse {
+        data: docs,
+        meta: ListMeta { total },
+    }))
 }
 
 async fn get_doc(
@@ -549,8 +622,13 @@ async fn get_doc(
         .ok_or_else(|| error_response(StatusCode::NOT_FOUND, "not_found", "Document not found"))?;
 
     let file_path = repo_root(&state.project).join(entry.path);
-    let content = std::fs::read_to_string(&file_path)
-        .map_err(|_| error_response(StatusCode::NOT_FOUND, "not_found", "Document file not found on disk"))?;
+    let content = std::fs::read_to_string(&file_path).map_err(|_| {
+        error_response(
+            StatusCode::NOT_FOUND,
+            "not_found",
+            "Document file not found on disk",
+        )
+    })?;
 
     Ok(Json(ApiResponse {
         data: DocContentResponse {
@@ -564,8 +642,16 @@ async fn get_doc(
 /// Diff two vectors to produce add/remove lists.
 /// Converts the web UI's replacement semantics (full desired array) to core's add/remove semantics.
 fn diff_vec(current: &[String], desired: &[String]) -> (Vec<String>, Vec<String>) {
-    let to_add = desired.iter().filter(|d| !current.contains(d)).cloned().collect();
-    let to_remove = current.iter().filter(|c| !desired.contains(c)).cloned().collect();
+    let to_add = desired
+        .iter()
+        .filter(|d| !current.contains(d))
+        .cloned()
+        .collect();
+    let to_remove = current
+        .iter()
+        .filter(|c| !desired.contains(c))
+        .cloned()
+        .collect();
     (to_add, to_remove)
 }
 
@@ -711,10 +797,14 @@ fn epic_to_response(
     let fm = &doc.frontmatter;
     let cancelled_statuses: std::collections::HashSet<&str> = workflow
         .statuses_in(StatusCategory::Cancelled)
-        .iter().map(|s| s.as_str()).collect();
+        .iter()
+        .map(|s| s.as_str())
+        .collect();
     let completed_statuses: std::collections::HashSet<&str> = workflow
         .statuses_in(StatusCategory::Completed)
-        .iter().map(|s| s.as_str()).collect();
+        .iter()
+        .map(|s| s.as_str())
+        .collect();
 
     let epic_tasks: Vec<_> = tasks
         .iter()
@@ -891,38 +981,47 @@ async fn get_summary(
 ) -> Result<Json<ApiResponse<SummaryResponse>>, (StatusCode, Json<ApiError>)> {
     let project = &state.project;
 
-    let config = project
-        .load_config()
-        .map_err(map_core_error)?;
+    let config = project.load_config().map_err(map_core_error)?;
     let tasks = project
         .list_tasks(&QueryFilter::default())
         .map_err(map_core_error)?;
     // All tasks (active + archived) for accurate epic progress
     let all_tasks = project
-        .list_tasks(&QueryFilter { scope: ScanScope::All, ..Default::default() })
+        .list_tasks(&QueryFilter {
+            scope: ScanScope::All,
+            ..Default::default()
+        })
         .map_err(map_core_error)?;
-    let epics = project
-        .list_epics()
-        .map_err(map_core_error)?;
+    let epics = project.list_epics().map_err(map_core_error)?;
 
     let workflow = &config.workflows.task;
     let blocked = find_blocked_items(&tasks, workflow);
 
     let active_statuses: HashSet<&str> = workflow
         .statuses_in(StatusCategory::Active)
-        .iter().map(|s| s.as_str()).collect();
+        .iter()
+        .map(|s| s.as_str())
+        .collect();
     let planned_statuses: HashSet<&str> = workflow
         .statuses_in(StatusCategory::Planned)
-        .iter().map(|s| s.as_str()).collect();
+        .iter()
+        .map(|s| s.as_str())
+        .collect();
     let backlog_statuses: HashSet<&str> = workflow
         .statuses_in(StatusCategory::Backlog)
-        .iter().map(|s| s.as_str()).collect();
+        .iter()
+        .map(|s| s.as_str())
+        .collect();
     let draft_statuses: HashSet<&str> = workflow
         .statuses_in(StatusCategory::Draft)
-        .iter().map(|s| s.as_str()).collect();
+        .iter()
+        .map(|s| s.as_str())
+        .collect();
     let completed_statuses: HashSet<&str> = workflow
         .statuses_in(StatusCategory::Completed)
-        .iter().map(|s| s.as_str()).collect();
+        .iter()
+        .map(|s| s.as_str())
+        .collect();
 
     let in_progress: Vec<_> = tasks
         .iter()
@@ -1015,10 +1114,7 @@ async fn get_summary(
 async fn get_config(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<ApiResponse<ConfigResponse>>, (StatusCode, Json<ApiError>)> {
-    let config = state
-        .project
-        .load_config()
-        .map_err(map_core_error)?;
+    let config = state.project.load_config().map_err(map_core_error)?;
 
     Ok(Json(ApiResponse {
         data: config_to_response(config),
@@ -1026,7 +1122,10 @@ async fn get_config(
 }
 
 fn config_to_response(config: markplane_core::Config) -> ConfigResponse {
-    let task_workflow_map = config.workflows.task.0
+    let task_workflow_map = config
+        .workflows
+        .task
+        .0
         .iter()
         .map(|(cat, statuses)| (cat.to_string(), statuses.clone()))
         .collect();
@@ -1081,13 +1180,13 @@ async fn patch_config(
     State(state): State<Arc<AppState>>,
     Json(body): Json<UpdateConfigRequest>,
 ) -> Result<Json<ApiResponse<ConfigResponse>>, (StatusCode, Json<ApiError>)> {
-    let mut config = state
-        .project
-        .load_config()
-        .map_err(map_core_error)?;
+    let mut config = state.project.load_config().map_err(map_core_error)?;
 
     // Helper: validate a type list — trim, lowercase, reject empty/duplicate, require ≥1
-    fn validate_types(raw: Vec<String>, field_name: &str) -> Result<Vec<String>, (StatusCode, Json<ApiError>)> {
+    fn validate_types(
+        raw: Vec<String>,
+        field_name: &str,
+    ) -> Result<Vec<String>, (StatusCode, Json<ApiError>)> {
         let cleaned: Vec<String> = raw
             .into_iter()
             .map(|s| s.trim().to_lowercase())
@@ -1176,61 +1275,62 @@ async fn patch_config(
     if let Some(workflows) = body.workflows
         && let Some(task_workflow) = workflows.task
     {
-            let mut workflow_map = std::collections::BTreeMap::new();
-            for (cat_str, statuses) in task_workflow {
-                let category: StatusCategory = cat_str.parse().map_err(|_| {
-                    error_response(
-                        StatusCode::BAD_REQUEST,
-                        "validation_error",
-                        &format!("Unknown status category: {cat_str}"),
-                    )
-                })?;
-                let cleaned = validate_types(statuses, &format!("workflows.task.{cat_str}"))?;
-                workflow_map.insert(category, cleaned);
-            }
-            // Ensure all 6 categories are present
-            for cat in StatusCategory::ALL {
-                if !workflow_map.contains_key(cat) {
-                    return Err(error_response(
-                        StatusCode::BAD_REQUEST,
-                        "validation_error",
-                        &format!("Missing required status category: {cat}"),
-                    ));
-                }
-            }
-
-            // Validate that no active tasks use statuses being removed
-            let new_workflow = markplane_core::TaskWorkflow(workflow_map);
-            let new_statuses: HashSet<&str> = new_workflow.all_statuses().into_iter().collect();
-            let tasks = state.project.list_tasks(&QueryFilter::default()).map_err(map_core_error)?;
-            let mut stranded: Vec<(String, String)> = Vec::new();
-            for doc in &tasks {
-                let status_str = doc.frontmatter.status.to_string();
-                if !new_statuses.contains(status_str.as_str()) {
-                    stranded.push((doc.frontmatter.id.clone(), status_str));
-                }
-            }
-            if !stranded.is_empty() {
-                let details: Vec<String> = stranded.iter()
-                    .map(|(id, status)| format!("{} (status: {})", id, status))
-                    .collect();
+        let mut workflow_map = std::collections::BTreeMap::new();
+        for (cat_str, statuses) in task_workflow {
+            let category: StatusCategory = cat_str.parse().map_err(|_| {
+                error_response(
+                    StatusCode::BAD_REQUEST,
+                    "validation_error",
+                    &format!("Unknown status category: {cat_str}"),
+                )
+            })?;
+            let cleaned = validate_types(statuses, &format!("workflows.task.{cat_str}"))?;
+            workflow_map.insert(category, cleaned);
+        }
+        // Ensure all 6 categories are present
+        for cat in StatusCategory::ALL {
+            if !workflow_map.contains_key(cat) {
                 return Err(error_response(
-                    StatusCode::CONFLICT,
-                    "active_tasks_conflict",
-                    &format!(
-                        "Cannot remove statuses used by active tasks: {}",
-                        details.join(", ")
-                    ),
+                    StatusCode::BAD_REQUEST,
+                    "validation_error",
+                    &format!("Missing required status category: {cat}"),
                 ));
             }
+        }
 
-            config.workflows.task = new_workflow;
+        // Validate that no active tasks use statuses being removed
+        let new_workflow = markplane_core::TaskWorkflow(workflow_map);
+        let new_statuses: HashSet<&str> = new_workflow.all_statuses().into_iter().collect();
+        let tasks = state
+            .project
+            .list_tasks(&QueryFilter::default())
+            .map_err(map_core_error)?;
+        let mut stranded: Vec<(String, String)> = Vec::new();
+        for doc in &tasks {
+            let status_str = doc.frontmatter.status.to_string();
+            if !new_statuses.contains(status_str.as_str()) {
+                stranded.push((doc.frontmatter.id.clone(), status_str));
+            }
+        }
+        if !stranded.is_empty() {
+            let details: Vec<String> = stranded
+                .iter()
+                .map(|(id, status)| format!("{} (status: {})", id, status))
+                .collect();
+            return Err(error_response(
+                StatusCode::CONFLICT,
+                "active_tasks_conflict",
+                &format!(
+                    "Cannot remove statuses used by active tasks: {}",
+                    details.join(", ")
+                ),
+            ));
+        }
+
+        config.workflows.task = new_workflow;
     }
 
-    state
-        .project
-        .save_config(&config)
-        .map_err(map_core_error)?;
+    state.project.save_config(&config).map_err(map_core_error)?;
 
     Ok(Json(ApiResponse {
         data: config_to_response(config),
@@ -1261,13 +1361,14 @@ async fn get_tasks(
         tags: params.tags.map(|s| super::parse_comma_list(&s)),
         assignee: params.assignee,
         item_type: params.item_type.map(|s| super::parse_comma_list(&s)),
-        scope: if params.archived { ScanScope::Archived } else { ScanScope::Active },
+        scope: if params.archived {
+            ScanScope::Archived
+        } else {
+            ScanScope::Active
+        },
     };
 
-    let tasks = state
-        .project
-        .list_tasks(&filter)
-        .map_err(map_core_error)?;
+    let tasks = state.project.list_tasks(&filter).map_err(map_core_error)?;
 
     let total = tasks.len();
     let data: Vec<_> = tasks.iter().map(task_to_response).collect();
@@ -1283,13 +1384,15 @@ async fn get_task(
     Path(id): Path<String>,
 ) -> Result<Json<ApiResponse<TaskResponse>>, (StatusCode, Json<ApiError>)> {
     // Validate ID format
-    parse_id(&id)
-        .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
+    parse_id(&id).map_err(|_| {
+        error_response(
+            StatusCode::BAD_REQUEST,
+            "invalid_id",
+            &format!("Invalid ID format: {}", id),
+        )
+    })?;
 
-    let doc: MarkplaneDocument<Task> = state
-        .project
-        .read_item(&id)
-        .map_err(map_core_error)?;
+    let doc: MarkplaneDocument<Task> = state.project.read_item(&id).map_err(map_core_error)?;
 
     Ok(Json(ApiResponse {
         data: task_to_response(&doc),
@@ -1301,7 +1404,10 @@ async fn create_task(
     Json(body): Json<CreateTaskRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<TaskResponse>>), (StatusCode, Json<ApiError>)> {
     let config = state.project.load_config().map_err(map_core_error)?;
-    let item_type = body.item_type.as_deref().unwrap_or(config.default_task_type());
+    let item_type = body
+        .item_type
+        .as_deref()
+        .unwrap_or(config.default_task_type());
     let priority: Priority = body
         .priority
         .parse()
@@ -1313,14 +1419,19 @@ async fn create_task(
 
     let task = state
         .project
-        .create_task(&body.title, item_type, priority, effort, body.epic, body.tags, None)
+        .create_task(
+            &body.title,
+            item_type,
+            priority,
+            effort,
+            body.epic,
+            body.tags,
+            None,
+        )
         .map_err(map_core_error)?;
 
     // Read the created task back to get the full document with body
-    let doc: MarkplaneDocument<Task> = state
-        .project
-        .read_item(&task.id)
-        .map_err(map_core_error)?;
+    let doc: MarkplaneDocument<Task> = state.project.read_item(&task.id).map_err(map_core_error)?;
 
     Ok((
         StatusCode::CREATED,
@@ -1344,10 +1455,7 @@ async fn create_epic(
         .create_epic(&body.title, priority, None)
         .map_err(map_core_error)?;
 
-    let doc: MarkplaneDocument<Epic> = state
-        .project
-        .read_item(&epic.id)
-        .map_err(map_core_error)?;
+    let doc: MarkplaneDocument<Epic> = state.project.read_item(&epic.id).map_err(map_core_error)?;
 
     // New epic has no tasks yet
     let tasks: Vec<MarkplaneDocument<Task>> = vec![];
@@ -1367,7 +1475,11 @@ async fn create_plan(
     // Validate task_id if provided
     if let Some(ref task_id) = body.task_id {
         let (prefix, _) = parse_id(task_id).map_err(|_| {
-            error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid task ID format: {}", task_id))
+            error_response(
+                StatusCode::BAD_REQUEST,
+                "invalid_id",
+                &format!("Invalid task ID format: {}", task_id),
+            )
         })?;
         if prefix != markplane_core::IdPrefix::Task {
             return Err(error_response(
@@ -1377,7 +1489,11 @@ async fn create_plan(
             ));
         }
         state.project.item_path(task_id).map_err(|_| {
-            error_response(StatusCode::NOT_FOUND, "not_found", &format!("Task {} not found", task_id))
+            error_response(
+                StatusCode::NOT_FOUND,
+                "not_found",
+                &format!("Task {} not found", task_id),
+            )
         })?;
     }
 
@@ -1393,17 +1509,13 @@ async fn create_plan(
 
     // If task_id provided, link the plan back to the task
     if let Some(ref task_id) = body.task_id
-        && let Err(e) = state.project.link_items(
-            task_id,
-            &plan.id,
-            LinkRelation::Plan,
-            LinkAction::Add,
-        )
+        && let Err(e) =
+            state
+                .project
+                .link_items(task_id, &plan.id, LinkRelation::Plan, LinkAction::Add)
     {
         // Roll back: delete the plan file
-        let _ = std::fs::remove_file(
-            state.project.item_path(&plan.id).unwrap_or_default()
-        );
+        let _ = std::fs::remove_file(state.project.item_path(&plan.id).unwrap_or_default());
         return Err(error_response(
             StatusCode::INTERNAL_SERVER_ERROR,
             "link_error",
@@ -1411,10 +1523,7 @@ async fn create_plan(
         ));
     }
 
-    let doc: MarkplaneDocument<Plan> = state
-        .project
-        .read_item(&plan.id)
-        .map_err(map_core_error)?;
+    let doc: MarkplaneDocument<Plan> = state.project.read_item(&plan.id).map_err(map_core_error)?;
 
     Ok((
         StatusCode::CREATED,
@@ -1429,16 +1538,16 @@ async fn create_note(
     Json(body): Json<CreateNoteRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<NoteResponse>>), (StatusCode, Json<ApiError>)> {
     let config = state.project.load_config().map_err(map_core_error)?;
-    let note_type = body.note_type.as_deref().unwrap_or(config.default_note_type());
+    let note_type = body
+        .note_type
+        .as_deref()
+        .unwrap_or(config.default_note_type());
     let note = state
         .project
         .create_note(&body.title, note_type, body.tags, None)
         .map_err(map_core_error)?;
 
-    let doc: MarkplaneDocument<Note> = state
-        .project
-        .read_item(&note.id)
-        .map_err(map_core_error)?;
+    let doc: MarkplaneDocument<Note> = state.project.read_item(&note.id).map_err(map_core_error)?;
 
     Ok((
         StatusCode::CREATED,
@@ -1453,8 +1562,13 @@ async fn update_task(
     Path(id): Path<String>,
     Json(body): Json<UpdateTaskRequest>,
 ) -> Result<Json<ApiResponse<TaskResponse>>, (StatusCode, Json<ApiError>)> {
-    parse_id(&id)
-        .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
+    parse_id(&id).map_err(|_| {
+        error_response(
+            StatusCode::BAD_REQUEST,
+            "invalid_id",
+            &format!("Invalid ID format: {}", id),
+        )
+    })?;
 
     // Read current state for diffing tags and links
     let current: MarkplaneDocument<Task> = state.project.read_item(&id).map_err(map_core_error)?;
@@ -1478,43 +1592,62 @@ async fn update_task(
         Some(s) => Patch::Set(s.clone()),
     };
 
-    let has_changes = body.title.is_some() || body.status.is_some()
-        || body.priority.is_some() || body.effort.is_some() || body.item_type.is_some()
-        || !add_tags.is_empty() || !remove_tags.is_empty()
-        || !matches!(assignee, Patch::Unchanged) || !matches!(position, Patch::Unchanged)
+    let has_changes = body.title.is_some()
+        || body.status.is_some()
+        || body.priority.is_some()
+        || body.effort.is_some()
+        || body.item_type.is_some()
+        || !add_tags.is_empty()
+        || !remove_tags.is_empty()
+        || !matches!(assignee, Patch::Unchanged)
+        || !matches!(position, Patch::Unchanged)
         || body.body.is_some();
     if has_changes {
-        state.project.update_task(&id, &TaskUpdate {
-            title: body.title,
-            status: body.status,
-            priority: body.priority,
-            effort: body.effort,
-            item_type: body.item_type,
-            assignee,
-            position,
-            add_tags,
-            remove_tags,
-            body: body.body,
-        }).map_err(map_core_error)?;
+        state
+            .project
+            .update_task(
+                &id,
+                &TaskUpdate {
+                    title: body.title,
+                    status: body.status,
+                    priority: body.priority,
+                    effort: body.effort,
+                    item_type: body.item_type,
+                    assignee,
+                    position,
+                    add_tags,
+                    remove_tags,
+                    body: body.body,
+                },
+            )
+            .map_err(map_core_error)?;
     }
 
     // ── Links → link_items() per change ──────────────────────────────
 
     // Epic (scalar): Add overwrites, Remove clears
     if let Some(ref desired_epic) = body.epic {
-        let desired = if desired_epic.is_empty() { None } else { Some(desired_epic.as_str()) };
+        let desired = if desired_epic.is_empty() {
+            None
+        } else {
+            Some(desired_epic.as_str())
+        };
         let current_epic = fm.epic.as_deref();
         if desired != current_epic {
             match desired {
                 Some(new) => {
                     // Add overwrites the epic field directly
-                    state.project.link_items(&id, new, LinkRelation::Epic, LinkAction::Add)
+                    state
+                        .project
+                        .link_items(&id, new, LinkRelation::Epic, LinkAction::Add)
                         .map_err(map_core_error)?;
                 }
                 None => {
                     // Clear: remove the current epic link
                     if let Some(old) = current_epic {
-                        state.project.link_items(&id, old, LinkRelation::Epic, LinkAction::Remove)
+                        state
+                            .project
+                            .link_items(&id, old, LinkRelation::Epic, LinkAction::Remove)
                             .map_err(map_core_error)?;
                     }
                 }
@@ -1524,19 +1657,27 @@ async fn update_task(
 
     // Plan (scalar): Add handles old plan cleanup internally
     if let Some(ref desired_plan) = body.plan {
-        let desired = if desired_plan.is_empty() { None } else { Some(desired_plan.as_str()) };
+        let desired = if desired_plan.is_empty() {
+            None
+        } else {
+            Some(desired_plan.as_str())
+        };
         let current_plan = fm.plan.as_deref();
         if desired != current_plan {
             match desired {
                 Some(new) => {
                     // Add cleans up old plan's implements list and sets new plan
-                    state.project.link_items(&id, new, LinkRelation::Plan, LinkAction::Add)
+                    state
+                        .project
+                        .link_items(&id, new, LinkRelation::Plan, LinkAction::Add)
                         .map_err(map_core_error)?;
                 }
                 None => {
                     // Clear: remove the current plan link
                     if let Some(old) = current_plan {
-                        state.project.link_items(&id, old, LinkRelation::Plan, LinkAction::Remove)
+                        state
+                            .project
+                            .link_items(&id, old, LinkRelation::Plan, LinkAction::Remove)
                             .map_err(map_core_error)?;
                     }
                 }
@@ -1549,11 +1690,15 @@ async fn update_task(
         let (to_add, to_remove) = diff_vec(&fm.depends_on, desired_deps);
         // Remove first to avoid transient invalid states
         for dep in &to_remove {
-            state.project.link_items(&id, dep, LinkRelation::DependsOn, LinkAction::Remove)
+            state
+                .project
+                .link_items(&id, dep, LinkRelation::DependsOn, LinkAction::Remove)
                 .map_err(map_core_error)?;
         }
         for dep in &to_add {
-            state.project.link_items(&id, dep, LinkRelation::DependsOn, LinkAction::Add)
+            state
+                .project
+                .link_items(&id, dep, LinkRelation::DependsOn, LinkAction::Add)
                 .map_err(map_core_error)?;
         }
     }
@@ -1562,11 +1707,15 @@ async fn update_task(
     if let Some(ref desired_blocks) = body.blocks {
         let (to_add, to_remove) = diff_vec(&fm.blocks, desired_blocks);
         for blk in &to_remove {
-            state.project.link_items(&id, blk, LinkRelation::Blocks, LinkAction::Remove)
+            state
+                .project
+                .link_items(&id, blk, LinkRelation::Blocks, LinkAction::Remove)
                 .map_err(map_core_error)?;
         }
         for blk in &to_add {
-            state.project.link_items(&id, blk, LinkRelation::Blocks, LinkAction::Add)
+            state
+                .project
+                .link_items(&id, blk, LinkRelation::Blocks, LinkAction::Add)
                 .map_err(map_core_error)?;
         }
     }
@@ -1575,11 +1724,15 @@ async fn update_task(
     if let Some(ref desired_related) = body.related {
         let (to_add, to_remove) = diff_vec(&fm.related, desired_related);
         for rel in &to_remove {
-            state.project.link_items(&id, rel, LinkRelation::Related, LinkAction::Remove)
+            state
+                .project
+                .link_items(&id, rel, LinkRelation::Related, LinkAction::Remove)
                 .map_err(map_core_error)?;
         }
         for rel in &to_add {
-            state.project.link_items(&id, rel, LinkRelation::Related, LinkAction::Add)
+            state
+                .project
+                .link_items(&id, rel, LinkRelation::Related, LinkAction::Add)
                 .map_err(map_core_error)?;
         }
     }
@@ -1595,20 +1748,19 @@ async fn delete_task(
     State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
 ) -> Result<Json<ApiResponse<TaskResponse>>, (StatusCode, Json<ApiError>)> {
-    parse_id(&id)
-        .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
+    parse_id(&id).map_err(|_| {
+        error_response(
+            StatusCode::BAD_REQUEST,
+            "invalid_id",
+            &format!("Invalid ID format: {}", id),
+        )
+    })?;
 
-    let doc: MarkplaneDocument<Task> = state
-        .project
-        .read_item(&id)
-        .map_err(map_core_error)?;
+    let doc: MarkplaneDocument<Task> = state.project.read_item(&id).map_err(map_core_error)?;
 
     let response = task_to_response(&doc);
 
-    state
-        .project
-        .archive_item(&id)
-        .map_err(map_core_error)?;
+    state.project.archive_item(&id).map_err(map_core_error)?;
 
     Ok(Json(ApiResponse { data: response }))
 }
@@ -1625,19 +1777,18 @@ async fn post_archive_item(
     State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
 ) -> Result<Json<ApiResponse<ArchiveResponse>>, (StatusCode, Json<ApiError>)> {
-    parse_id(&id)
-        .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
+    parse_id(&id).map_err(|_| {
+        error_response(
+            StatusCode::BAD_REQUEST,
+            "invalid_id",
+            &format!("Invalid ID format: {}", id),
+        )
+    })?;
 
-    state
-        .project
-        .archive_item(&id)
-        .map_err(map_core_error)?;
+    state.project.archive_item(&id).map_err(map_core_error)?;
 
     Ok(Json(ApiResponse {
-        data: ArchiveResponse {
-            success: true,
-            id,
-        },
+        data: ArchiveResponse { success: true, id },
     }))
 }
 
@@ -1645,19 +1796,18 @@ async fn post_unarchive_item(
     State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
 ) -> Result<Json<ApiResponse<ArchiveResponse>>, (StatusCode, Json<ApiError>)> {
-    parse_id(&id)
-        .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
+    parse_id(&id).map_err(|_| {
+        error_response(
+            StatusCode::BAD_REQUEST,
+            "invalid_id",
+            &format!("Invalid ID format: {}", id),
+        )
+    })?;
 
-    state
-        .project
-        .unarchive_item(&id)
-        .map_err(map_core_error)?;
+    state.project.unarchive_item(&id).map_err(map_core_error)?;
 
     Ok(Json(ApiResponse {
-        data: ArchiveResponse {
-            success: true,
-            id,
-        },
+        data: ArchiveResponse { success: true, id },
     }))
 }
 
@@ -1677,13 +1827,18 @@ async fn get_epics(
         .map_err(map_core_error)?;
     let tasks = state
         .project
-        .list_tasks(&QueryFilter { scope: ScanScope::All, ..Default::default() })
+        .list_tasks(&QueryFilter {
+            scope: ScanScope::All,
+            ..Default::default()
+        })
         .map_err(map_core_error)?;
 
-    let config = state.project.load_config()
-        .map_err(map_core_error)?;
+    let config = state.project.load_config().map_err(map_core_error)?;
     let total = epics.len();
-    let data: Vec<_> = epics.iter().map(|e| epic_to_response(e, &tasks, &config.workflows.task)).collect();
+    let data: Vec<_> = epics
+        .iter()
+        .map(|e| epic_to_response(e, &tasks, &config.workflows.task))
+        .collect();
 
     Ok(Json(ApiListResponse {
         data,
@@ -1695,20 +1850,24 @@ async fn get_epic(
     State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
 ) -> Result<Json<ApiResponse<EpicResponse>>, (StatusCode, Json<ApiError>)> {
-    parse_id(&id)
-        .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
+    parse_id(&id).map_err(|_| {
+        error_response(
+            StatusCode::BAD_REQUEST,
+            "invalid_id",
+            &format!("Invalid ID format: {}", id),
+        )
+    })?;
 
-    let doc: MarkplaneDocument<Epic> = state
-        .project
-        .read_item(&id)
-        .map_err(map_core_error)?;
+    let doc: MarkplaneDocument<Epic> = state.project.read_item(&id).map_err(map_core_error)?;
 
     let tasks = state
         .project
-        .list_tasks(&QueryFilter { scope: ScanScope::All, ..Default::default() })
+        .list_tasks(&QueryFilter {
+            scope: ScanScope::All,
+            ..Default::default()
+        })
         .map_err(map_core_error)?;
-    let config = state.project.load_config()
-        .map_err(map_core_error)?;
+    let config = state.project.load_config().map_err(map_core_error)?;
 
     Ok(Json(ApiResponse {
         data: epic_to_response(&doc, &tasks, &config.workflows.task),
@@ -1737,13 +1896,15 @@ async fn get_plan(
     State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
 ) -> Result<Json<ApiResponse<PlanResponse>>, (StatusCode, Json<ApiError>)> {
-    parse_id(&id)
-        .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
+    parse_id(&id).map_err(|_| {
+        error_response(
+            StatusCode::BAD_REQUEST,
+            "invalid_id",
+            &format!("Invalid ID format: {}", id),
+        )
+    })?;
 
-    let doc: MarkplaneDocument<Plan> = state
-        .project
-        .read_item(&id)
-        .map_err(map_core_error)?;
+    let doc: MarkplaneDocument<Plan> = state.project.read_item(&id).map_err(map_core_error)?;
 
     Ok(Json(ApiResponse {
         data: plan_to_response(&doc),
@@ -1772,13 +1933,15 @@ async fn get_note(
     State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
 ) -> Result<Json<ApiResponse<NoteResponse>>, (StatusCode, Json<ApiError>)> {
-    parse_id(&id)
-        .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
+    parse_id(&id).map_err(|_| {
+        error_response(
+            StatusCode::BAD_REQUEST,
+            "invalid_id",
+            &format!("Invalid ID format: {}", id),
+        )
+    })?;
 
-    let doc: MarkplaneDocument<Note> = state
-        .project
-        .read_item(&id)
-        .map_err(map_core_error)?;
+    let doc: MarkplaneDocument<Note> = state.project.read_item(&id).map_err(map_core_error)?;
 
     Ok(Json(ApiResponse {
         data: note_to_response(&doc),
@@ -1790,8 +1953,13 @@ async fn update_epic(
     Path(id): Path<String>,
     Json(body): Json<UpdateEpicRequest>,
 ) -> Result<Json<ApiResponse<EpicResponse>>, (StatusCode, Json<ApiError>)> {
-    parse_id(&id)
-        .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
+    parse_id(&id).map_err(|_| {
+        error_response(
+            StatusCode::BAD_REQUEST,
+            "invalid_id",
+            &format!("Invalid ID format: {}", id),
+        )
+    })?;
 
     // Read current state for diffing tags and links
     let current: MarkplaneDocument<Epic> = state.project.read_item(&id).map_err(map_core_error)?;
@@ -1808,36 +1976,56 @@ async fn update_epic(
     let started = match body.started {
         None => Patch::Unchanged,
         Some(ref s) if s.is_empty() => Patch::Clear,
-        Some(ref s) => Patch::Set(
-            chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
-                .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_date", "Invalid date format, expected YYYY-MM-DD"))?,
-        ),
+        Some(ref s) => Patch::Set(chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").map_err(
+            |_| {
+                error_response(
+                    StatusCode::BAD_REQUEST,
+                    "invalid_date",
+                    "Invalid date format, expected YYYY-MM-DD",
+                )
+            },
+        )?),
     };
     let target = match body.target {
         None => Patch::Unchanged,
         Some(ref s) if s.is_empty() => Patch::Clear,
-        Some(ref s) => Patch::Set(
-            chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
-                .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_date", "Invalid date format, expected YYYY-MM-DD"))?,
-        ),
+        Some(ref s) => Patch::Set(chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").map_err(
+            |_| {
+                error_response(
+                    StatusCode::BAD_REQUEST,
+                    "invalid_date",
+                    "Invalid date format, expected YYYY-MM-DD",
+                )
+            },
+        )?),
     };
 
     // Properties + body
-    let has_changes = body.title.is_some() || body.status.is_some() || body.priority.is_some()
-        || !add_tags.is_empty() || !remove_tags.is_empty()
-        || !matches!(started, Patch::Unchanged) || !matches!(target, Patch::Unchanged)
+    let has_changes = body.title.is_some()
+        || body.status.is_some()
+        || body.priority.is_some()
+        || !add_tags.is_empty()
+        || !remove_tags.is_empty()
+        || !matches!(started, Patch::Unchanged)
+        || !matches!(target, Patch::Unchanged)
         || body.body.is_some();
     if has_changes {
-        state.project.update_epic(&id, &EpicUpdate {
-            title: body.title,
-            status: body.status,
-            priority: body.priority,
-            add_tags,
-            remove_tags,
-            started,
-            target,
-            body: body.body,
-        }).map_err(map_core_error)?;
+        state
+            .project
+            .update_epic(
+                &id,
+                &EpicUpdate {
+                    title: body.title,
+                    status: body.status,
+                    priority: body.priority,
+                    add_tags,
+                    remove_tags,
+                    started,
+                    target,
+                    body: body.body,
+                },
+            )
+            .map_err(map_core_error)?;
     }
 
     // ── Links → link_items() per change ──────────────────────────────
@@ -1846,18 +2034,28 @@ async fn update_epic(
     if let Some(ref desired_related) = body.related {
         let (to_add, to_remove) = diff_vec(&fm.related, desired_related);
         for rel in &to_remove {
-            state.project.link_items(&id, rel, LinkRelation::Related, LinkAction::Remove)
+            state
+                .project
+                .link_items(&id, rel, LinkRelation::Related, LinkAction::Remove)
                 .map_err(map_core_error)?;
         }
         for rel in &to_add {
-            state.project.link_items(&id, rel, LinkRelation::Related, LinkAction::Add)
+            state
+                .project
+                .link_items(&id, rel, LinkRelation::Related, LinkAction::Add)
                 .map_err(map_core_error)?;
         }
     }
 
     // Re-read for response
     let doc: MarkplaneDocument<Epic> = state.project.read_item(&id).map_err(map_core_error)?;
-    let tasks = state.project.list_tasks(&QueryFilter { scope: ScanScope::All, ..Default::default() }).map_err(map_core_error)?;
+    let tasks = state
+        .project
+        .list_tasks(&QueryFilter {
+            scope: ScanScope::All,
+            ..Default::default()
+        })
+        .map_err(map_core_error)?;
     let config = state.project.load_config().map_err(map_core_error)?;
 
     Ok(Json(ApiResponse {
@@ -1870,8 +2068,13 @@ async fn update_plan(
     Path(id): Path<String>,
     Json(body): Json<UpdatePlanRequest>,
 ) -> Result<Json<ApiResponse<PlanResponse>>, (StatusCode, Json<ApiError>)> {
-    parse_id(&id)
-        .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
+    parse_id(&id).map_err(|_| {
+        error_response(
+            StatusCode::BAD_REQUEST,
+            "invalid_id",
+            &format!("Invalid ID format: {}", id),
+        )
+    })?;
 
     // Read current state for link diffing
     let current: MarkplaneDocument<Plan> = state.project.read_item(&id).map_err(map_core_error)?;
@@ -1879,11 +2082,17 @@ async fn update_plan(
     // Properties + body
     let has_changes = body.title.is_some() || body.status.is_some() || body.body.is_some();
     if has_changes {
-        state.project.update_plan(&id, &PlanUpdate {
-            title: body.title,
-            status: body.status,
-            body: body.body,
-        }).map_err(map_core_error)?;
+        state
+            .project
+            .update_plan(
+                &id,
+                &PlanUpdate {
+                    title: body.title,
+                    status: body.status,
+                    body: body.body,
+                },
+            )
+            .map_err(map_core_error)?;
     }
 
     // ── Links → link_items() per change ──────────────────────────────
@@ -1892,11 +2101,15 @@ async fn update_plan(
     if let Some(ref desired_related) = body.related {
         let (to_add, to_remove) = diff_vec(&current.frontmatter.related, desired_related);
         for rel in &to_remove {
-            state.project.link_items(&id, rel, LinkRelation::Related, LinkAction::Remove)
+            state
+                .project
+                .link_items(&id, rel, LinkRelation::Related, LinkAction::Remove)
                 .map_err(map_core_error)?;
         }
         for rel in &to_add {
-            state.project.link_items(&id, rel, LinkRelation::Related, LinkAction::Add)
+            state
+                .project
+                .link_items(&id, rel, LinkRelation::Related, LinkAction::Add)
                 .map_err(map_core_error)?;
         }
     }
@@ -1913,8 +2126,13 @@ async fn update_note(
     Path(id): Path<String>,
     Json(body): Json<UpdateNoteRequest>,
 ) -> Result<Json<ApiResponse<NoteResponse>>, (StatusCode, Json<ApiError>)> {
-    parse_id(&id)
-        .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
+    parse_id(&id).map_err(|_| {
+        error_response(
+            StatusCode::BAD_REQUEST,
+            "invalid_id",
+            &format!("Invalid ID format: {}", id),
+        )
+    })?;
 
     // Read current state for diffing tags and links
     let current: MarkplaneDocument<Note> = state.project.read_item(&id).map_err(map_core_error)?;
@@ -1927,19 +2145,27 @@ async fn update_note(
         (vec![], vec![])
     };
 
-    let has_changes = body.title.is_some() || body.status.is_some()
+    let has_changes = body.title.is_some()
+        || body.status.is_some()
         || body.note_type.is_some()
-        || !add_tags.is_empty() || !remove_tags.is_empty()
+        || !add_tags.is_empty()
+        || !remove_tags.is_empty()
         || body.body.is_some();
     if has_changes {
-        state.project.update_note(&id, &NoteUpdate {
-            title: body.title,
-            status: body.status,
-            note_type: body.note_type,
-            add_tags,
-            remove_tags,
-            body: body.body,
-        }).map_err(map_core_error)?;
+        state
+            .project
+            .update_note(
+                &id,
+                &NoteUpdate {
+                    title: body.title,
+                    status: body.status,
+                    note_type: body.note_type,
+                    add_tags,
+                    remove_tags,
+                    body: body.body,
+                },
+            )
+            .map_err(map_core_error)?;
     }
 
     // ── Links → link_items() per change ──────────────────────────────
@@ -1948,11 +2174,15 @@ async fn update_note(
     if let Some(ref desired_related) = body.related {
         let (to_add, to_remove) = diff_vec(&fm.related, desired_related);
         for rel in &to_remove {
-            state.project.link_items(&id, rel, LinkRelation::Related, LinkAction::Remove)
+            state
+                .project
+                .link_items(&id, rel, LinkRelation::Related, LinkAction::Remove)
                 .map_err(map_core_error)?;
         }
         for rel in &to_add {
-            state.project.link_items(&id, rel, LinkRelation::Related, LinkAction::Add)
+            state
+                .project
+                .link_items(&id, rel, LinkRelation::Related, LinkAction::Add)
                 .map_err(map_core_error)?;
         }
     }
@@ -1967,10 +2197,7 @@ async fn update_note(
 async fn post_sync(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<ApiResponse<SyncResponse>>, (StatusCode, Json<ApiError>)> {
-    state
-        .project
-        .sync_all()
-        .map_err(map_core_error)?;
+    state.project.sync_all().map_err(map_core_error)?;
 
     // Broadcast sync_complete event to all WebSocket clients
     let event = serde_json::json!({"type": "sync_complete"});
@@ -2013,7 +2240,10 @@ async fn post_link(
     State(state): State<Arc<AppState>>,
     Json(req): Json<LinkRequest>,
 ) -> Result<Json<ApiResponse<LinkResponse>>, (StatusCode, Json<ApiError>)> {
-    let relation: LinkRelation = req.relation.parse().map_err(|e: MarkplaneError| map_core_error(e))?;
+    let relation: LinkRelation = req
+        .relation
+        .parse()
+        .map_err(|e: MarkplaneError| map_core_error(e))?;
     let action = if req.remove {
         LinkAction::Remove
     } else {
@@ -2078,7 +2308,12 @@ async fn get_search(
         .list_tasks(&QueryFilter::default())
         .map_err(map_core_error)?;
     let archived_task_ids: HashSet<String> = if params.include_archived {
-        let archived = state.project.list_tasks(&QueryFilter { scope: ScanScope::Archived, ..Default::default() })
+        let archived = state
+            .project
+            .list_tasks(&QueryFilter {
+                scope: ScanScope::Archived,
+                ..Default::default()
+            })
             .map_err(map_core_error)?;
         let ids = archived.iter().map(|d| d.frontmatter.id.clone()).collect();
         tasks.extend(archived);
@@ -2091,10 +2326,21 @@ async fn get_search(
         let id_match = fm.id.to_lowercase().contains(&query);
         let title_match = fm.title.to_lowercase().contains(&query);
         let tag_match = fm.tags.iter().any(|t| t.to_lowercase().contains(&query));
-        let assignee_match = fm.assignee.as_ref().is_some_and(|a| a.to_lowercase().contains(&query));
+        let assignee_match = fm
+            .assignee
+            .as_ref()
+            .is_some_and(|a| a.to_lowercase().contains(&query));
         let body_match = doc.body.to_lowercase().contains(&query);
         if id_match || title_match || tag_match || assignee_match || body_match {
-            let score = if id_match { 3.0 } else if title_match { 2.0 } else if tag_match || assignee_match { 1.5 } else { 1.0 };
+            let score = if id_match {
+                3.0
+            } else if title_match {
+                2.0
+            } else if tag_match || assignee_match {
+                1.5
+            } else {
+                1.0
+            };
             let snippet = extract_snippet(&doc.body, &query);
             results.push(SearchResultResponse {
                 id: fm.id.clone(),
@@ -2110,12 +2356,11 @@ async fn get_search(
     }
 
     // Search epics
-    let mut epics = state
-        .project
-        .list_epics()
-        .map_err(map_core_error)?;
+    let mut epics = state.project.list_epics().map_err(map_core_error)?;
     let archived_epic_ids: HashSet<String> = if params.include_archived {
-        let archived = state.project.list_epics_filtered(true)
+        let archived = state
+            .project
+            .list_epics_filtered(true)
             .map_err(map_core_error)?;
         let ids = archived.iter().map(|d| d.frontmatter.id.clone()).collect();
         epics.extend(archived);
@@ -2130,7 +2375,15 @@ async fn get_search(
         let tag_match = fm.tags.iter().any(|t| t.to_lowercase().contains(&query));
         let body_match = doc.body.to_lowercase().contains(&query);
         if id_match || title_match || tag_match || body_match {
-            let score = if id_match { 3.0 } else if title_match { 2.0 } else if tag_match { 1.5 } else { 1.0 };
+            let score = if id_match {
+                3.0
+            } else if title_match {
+                2.0
+            } else if tag_match {
+                1.5
+            } else {
+                1.0
+            };
             let snippet = extract_snippet(&doc.body, &query);
             results.push(SearchResultResponse {
                 id: fm.id.clone(),
@@ -2146,12 +2399,11 @@ async fn get_search(
     }
 
     // Search plans
-    let mut plans = state
-        .project
-        .list_plans()
-        .map_err(map_core_error)?;
+    let mut plans = state.project.list_plans().map_err(map_core_error)?;
     let archived_plan_ids: HashSet<String> = if params.include_archived {
-        let archived = state.project.list_plans_filtered(true)
+        let archived = state
+            .project
+            .list_plans_filtered(true)
             .map_err(map_core_error)?;
         let ids = archived.iter().map(|d| d.frontmatter.id.clone()).collect();
         plans.extend(archived);
@@ -2165,7 +2417,13 @@ async fn get_search(
         let title_match = fm.title.to_lowercase().contains(&query);
         let body_match = doc.body.to_lowercase().contains(&query);
         if id_match || title_match || body_match {
-            let score = if id_match { 3.0 } else if title_match { 2.0 } else { 1.0 };
+            let score = if id_match {
+                3.0
+            } else if title_match {
+                2.0
+            } else {
+                1.0
+            };
             let snippet = extract_snippet(&doc.body, &query);
             results.push(SearchResultResponse {
                 id: fm.id.clone(),
@@ -2181,12 +2439,11 @@ async fn get_search(
     }
 
     // Search notes
-    let mut notes = state
-        .project
-        .list_notes()
-        .map_err(map_core_error)?;
+    let mut notes = state.project.list_notes().map_err(map_core_error)?;
     let archived_note_ids: HashSet<String> = if params.include_archived {
-        let archived = state.project.list_notes_filtered(true)
+        let archived = state
+            .project
+            .list_notes_filtered(true)
             .map_err(map_core_error)?;
         let ids = archived.iter().map(|d| d.frontmatter.id.clone()).collect();
         notes.extend(archived);
@@ -2201,7 +2458,15 @@ async fn get_search(
         let tag_match = fm.tags.iter().any(|t| t.to_lowercase().contains(&query));
         let body_match = doc.body.to_lowercase().contains(&query);
         if id_match || title_match || tag_match || body_match {
-            let score = if id_match { 3.0 } else if title_match { 2.0 } else if tag_match { 1.5 } else { 1.0 };
+            let score = if id_match {
+                3.0
+            } else if title_match {
+                2.0
+            } else if tag_match {
+                1.5
+            } else {
+                1.0
+            };
             let snippet = extract_snippet(&doc.body, &query);
             results.push(SearchResultResponse {
                 id: fm.id.clone(),
@@ -2293,8 +2558,7 @@ struct GraphResponse {
 async fn get_graph_all(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<ApiResponse<GraphResponse>>, (StatusCode, Json<ApiError>)> {
-    let graph = build_graph(&state.project, None)
-        .map_err(map_anyhow_error)?;
+    let graph = build_graph(&state.project, None).map_err(map_anyhow_error)?;
     Ok(Json(ApiResponse { data: graph }))
 }
 
@@ -2302,17 +2566,18 @@ async fn get_graph_focused(
     State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
 ) -> Result<Json<ApiResponse<GraphResponse>>, (StatusCode, Json<ApiError>)> {
-    parse_id(&id)
-        .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
-    let graph = build_graph(&state.project, Some(&id))
-        .map_err(map_anyhow_error)?;
+    parse_id(&id).map_err(|_| {
+        error_response(
+            StatusCode::BAD_REQUEST,
+            "invalid_id",
+            &format!("Invalid ID format: {}", id),
+        )
+    })?;
+    let graph = build_graph(&state.project, Some(&id)).map_err(map_anyhow_error)?;
     Ok(Json(ApiResponse { data: graph }))
 }
 
-fn build_graph(
-    project: &Project,
-    focus_id: Option<&str>,
-) -> anyhow::Result<GraphResponse> {
+fn build_graph(project: &Project, focus_id: Option<&str>) -> anyhow::Result<GraphResponse> {
     use std::collections::HashSet;
 
     let mut nodes_map: HashMap<String, GraphNodeResponse> = HashMap::new();

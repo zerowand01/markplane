@@ -1,7 +1,7 @@
 use std::env;
 use std::process::Command;
 
-use anyhow::{bail, Context};
+use anyhow::{Context, bail};
 use markplane_core::Project;
 
 pub fn run(id: String) -> anyhow::Result<()> {

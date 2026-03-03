@@ -52,7 +52,10 @@ fn digit_value(c: u8) -> Result<usize> {
         b'0'..=b'9' => Ok((c - b'0') as usize),
         b'A'..=b'Z' => Ok((c - b'A' + 10) as usize),
         b'a'..=b'z' => Ok((c - b'a' + 36) as usize),
-        _ => Err(pos_err(format!("invalid digit '{}' in position key", c as char))),
+        _ => Err(pos_err(format!(
+            "invalid digit '{}' in position key",
+            c as char
+        ))),
     }
 }
 
@@ -64,7 +67,10 @@ fn get_integer_length(head: u8) -> Result<usize> {
     match head {
         b'a'..=b'z' => Ok((head - b'a' + 2) as usize),
         b'A'..=b'Z' => Ok((b'Z' - head + 2) as usize),
-        _ => Err(pos_err(format!("invalid head character '{}' in position key", head as char))),
+        _ => Err(pos_err(format!(
+            "invalid head character '{}' in position key",
+            head as char
+        ))),
     }
 }
 
@@ -76,7 +82,10 @@ fn get_integer_part(key: &str) -> Result<&str> {
     let head = key.as_bytes()[0];
     let len = get_integer_length(head)?;
     if len > key.len() {
-        return Err(pos_err(format!("position key '{}' is too short for its prefix", key)));
+        return Err(pos_err(format!(
+            "position key '{}' is too short for its prefix",
+            key
+        )));
     }
     Ok(&key[..len])
 }
@@ -195,7 +204,11 @@ fn midpoint(a: &str, b: Option<&str>) -> Result<String> {
         let b_bytes = b_str.as_bytes();
         let mut n = 0;
         while n < b_bytes.len() {
-            let ca = if n < a_bytes.len() { a_bytes[n] } else { DIGITS[0] };
+            let ca = if n < a_bytes.len() {
+                a_bytes[n]
+            } else {
+                DIGITS[0]
+            };
             if ca == b_bytes[n] {
                 n += 1;
             } else {
@@ -204,15 +217,30 @@ fn midpoint(a: &str, b: Option<&str>) -> Result<String> {
         }
         if n > 0 {
             let rest_a = if n < a.len() { &a[n..] } else { "" };
-            return Ok(format!("{}{}", &b_str[..n], midpoint(rest_a, Some(&b_str[n..]))?));
+            return Ok(format!(
+                "{}{}",
+                &b_str[..n],
+                midpoint(rest_a, Some(&b_str[n..]))?
+            ));
         }
     }
 
     // First digits differ (or a is empty)
-    let idx_a = if !a.is_empty() { digit_value(a.as_bytes()[0])? } else { 0 };
-    let idx_b = b.map(|bs| {
-        if bs.is_empty() { Ok(BASE) } else { digit_value(bs.as_bytes()[0]) }
-    }).transpose()?.unwrap_or(BASE);
+    let idx_a = if !a.is_empty() {
+        digit_value(a.as_bytes()[0])?
+    } else {
+        0
+    };
+    let idx_b = b
+        .map(|bs| {
+            if bs.is_empty() {
+                Ok(BASE)
+            } else {
+                digit_value(bs.as_bytes()[0])
+            }
+        })
+        .transpose()?
+        .unwrap_or(BASE);
 
     if idx_b - idx_a > 1 {
         return Ok(String::from(DIGITS[(idx_a + idx_b) / 2] as char));
@@ -220,13 +248,18 @@ fn midpoint(a: &str, b: Option<&str>) -> Result<String> {
 
     // Digits are adjacent or equal — take b's first char if b has more digits
     if let Some(b_str) = b
-        && b_str.len() > 1 {
-            return Ok(String::from(DIGITS[idx_b] as char));
+        && b_str.len() > 1
+    {
+        return Ok(String::from(DIGITS[idx_b] as char));
     }
 
     // Extend: take a's digit, then recurse with no upper bound
     let rest_a = if a.len() > 1 { &a[1..] } else { "" };
-    Ok(format!("{}{}", DIGITS[idx_a] as char, midpoint(rest_a, None)?))
+    Ok(format!(
+        "{}{}",
+        DIGITS[idx_a] as char,
+        midpoint(rest_a, None)?
+    ))
 }
 
 /// Generate a position key that sorts between `a` and `b`.
@@ -250,7 +283,12 @@ pub fn generate_key_between(a: Option<&str>, b: Option<&str>) -> Result<Option<S
         }
     }
     if let (Some(a_val), Some(b_val)) = (a, b) {
-        debug_assert!(a_val < b_val, "generate_key_between: {} >= {}", a_val, b_val);
+        debug_assert!(
+            a_val < b_val,
+            "generate_key_between: {} >= {}",
+            a_val,
+            b_val
+        );
     }
 
     match (a, b) {
@@ -285,7 +323,11 @@ pub fn generate_key_between(a: Option<&str>, b: Option<&str>) -> Result<Option<S
             let frac_b = &b_key[int_b.len()..];
 
             if int_a == int_b {
-                Ok(Some(format!("{}{}", int_a, midpoint(frac_a, Some(frac_b))?)))
+                Ok(Some(format!(
+                    "{}{}",
+                    int_a,
+                    midpoint(frac_a, Some(frac_b))?
+                )))
             } else {
                 match increment_integer(int_a)? {
                     Some(inc) if inc.as_str() < b_key => Ok(Some(inc)),
@@ -351,17 +393,29 @@ mod tests {
 
     #[test]
     fn test_key_between_both_none() {
-        assert_eq!(generate_key_between(None, None).unwrap(), Some("a0".to_string()));
+        assert_eq!(
+            generate_key_between(None, None).unwrap(),
+            Some("a0".to_string())
+        );
     }
 
     #[test]
     fn test_key_between_after() {
         // After "a0" → "a1"
-        assert_eq!(generate_key_between(Some("a0"), None).unwrap(), Some("a1".to_string()));
+        assert_eq!(
+            generate_key_between(Some("a0"), None).unwrap(),
+            Some("a1".to_string())
+        );
         // After "az" → "b00"
-        assert_eq!(generate_key_between(Some("az"), None).unwrap(), Some("b00".to_string()));
+        assert_eq!(
+            generate_key_between(Some("az"), None).unwrap(),
+            Some("b00".to_string())
+        );
         // After "a5" → "a6"
-        assert_eq!(generate_key_between(Some("a5"), None).unwrap(), Some("a6".to_string()));
+        assert_eq!(
+            generate_key_between(Some("a5"), None).unwrap(),
+            Some("a6".to_string())
+        );
     }
 
     #[test]
@@ -376,11 +430,20 @@ mod tests {
     #[test]
     fn test_key_between_before() {
         // Before "a5" → decrement integer → "a4"
-        assert_eq!(generate_key_between(None, Some("a5")).unwrap(), Some("a4".to_string()));
+        assert_eq!(
+            generate_key_between(None, Some("a5")).unwrap(),
+            Some("a4".to_string())
+        );
         // Before "a1" → "a0"
-        assert_eq!(generate_key_between(None, Some("a1")).unwrap(), Some("a0".to_string()));
+        assert_eq!(
+            generate_key_between(None, Some("a1")).unwrap(),
+            Some("a0".to_string())
+        );
         // Before "b00" → "az"
-        assert_eq!(generate_key_between(None, Some("b00")).unwrap(), Some("az".to_string()));
+        assert_eq!(
+            generate_key_between(None, Some("b00")).unwrap(),
+            Some("az".to_string())
+        );
     }
 
     #[test]
@@ -413,7 +476,9 @@ mod tests {
     #[test]
     fn test_key_between_adjacent() {
         // Between "a3" and "a4" — adjacent integers, needs fractional
-        let key = generate_key_between(Some("a3"), Some("a4")).unwrap().unwrap();
+        let key = generate_key_between(Some("a3"), Some("a4"))
+            .unwrap()
+            .unwrap();
         assert!(key.as_str() > "a3", "{} should be > a3", key);
         assert!(key.as_str() < "a4", "{} should be < a4", key);
     }
@@ -432,16 +497,24 @@ mod tests {
         // Generate keys between sequential pairs and verify ordering
         let keys = sequential_keys(20);
         for i in 0..keys.len() - 1 {
-            let mid = generate_key_between(Some(&keys[i]), Some(&keys[i + 1])).unwrap().unwrap();
+            let mid = generate_key_between(Some(&keys[i]), Some(&keys[i + 1]))
+                .unwrap()
+                .unwrap();
             assert!(
                 keys[i].as_str() < mid.as_str(),
                 "{} should be < {} (between {} and {})",
-                keys[i], mid, keys[i], keys[i + 1]
+                keys[i],
+                mid,
+                keys[i],
+                keys[i + 1]
             );
             assert!(
                 mid.as_str() < keys[i + 1].as_str(),
                 "{} should be < {} (between {} and {})",
-                mid, keys[i + 1], keys[i], keys[i + 1]
+                mid,
+                keys[i + 1],
+                keys[i],
+                keys[i + 1]
             );
         }
     }
@@ -465,7 +538,9 @@ mod tests {
     fn test_key_between_uppercase_prefix() {
         // Keys produced by the npm package when dragging above the first item
         // These should not panic and should produce valid results
-        let key = generate_key_between(Some("Zy"), Some("Zz")).unwrap().unwrap();
+        let key = generate_key_between(Some("Zy"), Some("Zz"))
+            .unwrap()
+            .unwrap();
         assert!(key.as_str() > "Zy", "{} should be > Zy", key);
         assert!(key.as_str() < "Zz", "{} should be < Zz", key);
     }
@@ -489,7 +564,9 @@ mod tests {
     #[test]
     fn test_key_between_across_boundary() {
         // Between uppercase and lowercase range
-        let key = generate_key_between(Some("Zz"), Some("a1")).unwrap().unwrap();
+        let key = generate_key_between(Some("Zz"), Some("a1"))
+            .unwrap()
+            .unwrap();
         assert!(key.as_str() > "Zz", "{} should be > Zz", key);
         assert!(key.as_str() < "a1", "{} should be < a1", key);
     }

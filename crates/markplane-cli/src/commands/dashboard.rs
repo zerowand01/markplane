@@ -1,5 +1,7 @@
 use colored::Colorize;
-use markplane_core::{StatusCategory, Priority, Project, QueryFilter, ScanScope, find_blocked_items};
+use markplane_core::{
+    Priority, Project, QueryFilter, ScanScope, StatusCategory, find_blocked_items,
+};
 
 pub fn run() -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
@@ -11,16 +13,24 @@ pub fn run() -> anyhow::Result<()> {
     // Build category sets for filtering
     let active_statuses: std::collections::HashSet<&str> = workflow
         .statuses_in(StatusCategory::Active)
-        .iter().map(|s| s.as_str()).collect();
+        .iter()
+        .map(|s| s.as_str())
+        .collect();
     let completed_statuses: std::collections::HashSet<&str> = workflow
         .statuses_in(StatusCategory::Completed)
-        .iter().map(|s| s.as_str()).collect();
+        .iter()
+        .map(|s| s.as_str())
+        .collect();
     let cancelled_statuses: std::collections::HashSet<&str> = workflow
         .statuses_in(StatusCategory::Cancelled)
-        .iter().map(|s| s.as_str()).collect();
-    let closed_statuses: std::collections::HashSet<&str> = completed_statuses.iter()
+        .iter()
+        .map(|s| s.as_str())
+        .collect();
+    let closed_statuses: std::collections::HashSet<&str> = completed_statuses
+        .iter()
         .chain(cancelled_statuses.iter())
-        .copied().collect();
+        .copied()
+        .collect();
 
     println!(
         "{}",

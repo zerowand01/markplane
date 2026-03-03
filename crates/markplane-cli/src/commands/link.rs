@@ -1,9 +1,13 @@
-use markplane_core::{LinkRelation, LinkAction, Project};
+use markplane_core::{LinkAction, LinkRelation, Project};
 
 pub fn run(from: String, to: String, relation: String, remove: bool) -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
     let relation: LinkRelation = relation.parse()?;
-    let action = if remove { LinkAction::Remove } else { LinkAction::Add };
+    let action = if remove {
+        LinkAction::Remove
+    } else {
+        LinkAction::Add
+    };
 
     project.link_items(&from, &to, relation, action)?;
 

@@ -36,7 +36,10 @@ pub fn run(name: Option<String>, description: String, empty: bool) -> anyhow::Re
         println!();
         println!("Next steps:");
         println!("  markplane ls                  # See your starter tasks");
-        println!("  markplane show {}   # Review your setup checklist", ids[1]);
+        println!(
+            "  markplane show {}   # Review your setup checklist",
+            ids[1]
+        );
         println!("  markplane dashboard           # Project overview");
     } else {
         println!();

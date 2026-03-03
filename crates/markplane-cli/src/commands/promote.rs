@@ -1,6 +1,4 @@
-use markplane_core::{
-    parse_id, Effort, IdPrefix, MarkplaneDocument, Note, Priority, Project,
-};
+use markplane_core::{Effort, IdPrefix, MarkplaneDocument, Note, Priority, Project, parse_id};
 
 pub fn run(id: String, priority: String, effort: String) -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
@@ -27,10 +25,7 @@ pub fn run(id: String, priority: String, effort: String) -> anyhow::Result<()> {
         None,
     )?;
 
-    println!(
-        "Promoted {} → {} — {}",
-        id, item.id, item.title
-    );
+    println!("Promoted {} → {} — {}", id, item.id, item.title);
 
     Ok(())
 }

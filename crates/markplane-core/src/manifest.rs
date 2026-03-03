@@ -54,7 +54,10 @@ pub fn validate_template_name(name: &str) -> Result<(), String> {
     if name.is_empty() {
         return Err("Template name must not be empty".to_string());
     }
-    if !name.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-') {
+    if !name
+        .bytes()
+        .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+    {
         return Err(format!(
             "Invalid template name '{name}': only [a-zA-Z0-9_-] allowed"
         ));
@@ -150,7 +153,10 @@ mod tests {
 
         let task = &manifest["task"];
         assert_eq!(task.default.as_deref(), Some("default"));
-        assert_eq!(task.type_defaults.get("bug").map(|s| s.as_str()), Some("bug"));
+        assert_eq!(
+            task.type_defaults.get("bug").map(|s| s.as_str()),
+            Some("bug")
+        );
         assert!(task.templates.contains_key("default"));
         assert!(task.templates.contains_key("bug"));
     }
@@ -170,30 +176,66 @@ mod tests {
 
     #[test]
     fn test_builtin_template_task() {
-        assert_eq!(builtin_template("task", "default"), templates::TASK_TEMPLATE);
-        assert_eq!(builtin_template("task", "bug"), templates::TASK_BUG_TEMPLATE);
-        assert_eq!(builtin_template("task", "anything"), templates::TASK_TEMPLATE);
+        assert_eq!(
+            builtin_template("task", "default"),
+            templates::TASK_TEMPLATE
+        );
+        assert_eq!(
+            builtin_template("task", "bug"),
+            templates::TASK_BUG_TEMPLATE
+        );
+        assert_eq!(
+            builtin_template("task", "anything"),
+            templates::TASK_TEMPLATE
+        );
     }
 
     #[test]
     fn test_builtin_template_epic() {
-        assert_eq!(builtin_template("epic", "default"), templates::EPIC_TEMPLATE);
-        assert_eq!(builtin_template("epic", "anything"), templates::EPIC_TEMPLATE);
+        assert_eq!(
+            builtin_template("epic", "default"),
+            templates::EPIC_TEMPLATE
+        );
+        assert_eq!(
+            builtin_template("epic", "anything"),
+            templates::EPIC_TEMPLATE
+        );
     }
 
     #[test]
     fn test_builtin_template_plan() {
-        assert_eq!(builtin_template("plan", "default"), templates::PLAN_IMPLEMENTATION_TEMPLATE);
-        assert_eq!(builtin_template("plan", "implementation"), templates::PLAN_IMPLEMENTATION_TEMPLATE);
-        assert_eq!(builtin_template("plan", "refactor"), templates::PLAN_REFACTOR_TEMPLATE);
+        assert_eq!(
+            builtin_template("plan", "default"),
+            templates::PLAN_IMPLEMENTATION_TEMPLATE
+        );
+        assert_eq!(
+            builtin_template("plan", "implementation"),
+            templates::PLAN_IMPLEMENTATION_TEMPLATE
+        );
+        assert_eq!(
+            builtin_template("plan", "refactor"),
+            templates::PLAN_REFACTOR_TEMPLATE
+        );
     }
 
     #[test]
     fn test_builtin_template_note() {
-        assert_eq!(builtin_template("note", "default"), templates::NOTE_GENERIC_TEMPLATE);
-        assert_eq!(builtin_template("note", "research"), templates::NOTE_RESEARCH_TEMPLATE);
-        assert_eq!(builtin_template("note", "analysis"), templates::NOTE_ANALYSIS_TEMPLATE);
-        assert_eq!(builtin_template("note", "anything"), templates::NOTE_GENERIC_TEMPLATE);
+        assert_eq!(
+            builtin_template("note", "default"),
+            templates::NOTE_GENERIC_TEMPLATE
+        );
+        assert_eq!(
+            builtin_template("note", "research"),
+            templates::NOTE_RESEARCH_TEMPLATE
+        );
+        assert_eq!(
+            builtin_template("note", "analysis"),
+            templates::NOTE_ANALYSIS_TEMPLATE
+        );
+        assert_eq!(
+            builtin_template("note", "anything"),
+            templates::NOTE_GENERIC_TEMPLATE
+        );
     }
 
     #[test]

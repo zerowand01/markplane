@@ -1,7 +1,7 @@
 use colored::Colorize;
 use markplane_core::{
-    validate_references, validate_task_statuses, validate_reciprocal_links, find_orphans,
-    detect_cycles, LinkAction, LinkRelation, Project,
+    LinkAction, LinkRelation, Project, detect_cycles, find_orphans, validate_reciprocal_links,
+    validate_references, validate_task_statuses,
 };
 
 fn field_to_relation(forward_field: &str) -> Option<LinkRelation> {
@@ -23,11 +23,7 @@ pub fn run(orphans: bool, fix: bool) -> anyhow::Result<()> {
     if broken.is_empty() {
         println!("{} No broken references found.", "✓".green());
     } else {
-        println!(
-            "{} {} broken reference(s):\n",
-            "✗".red(),
-            broken.len()
-        );
+        println!("{} {} broken reference(s):\n", "✗".red(), broken.len());
         for br in &broken {
             println!(
                 "  {} references {} (not found)",
@@ -60,11 +56,7 @@ pub fn run(orphans: bool, fix: bool) -> anyhow::Result<()> {
     if asymmetric.is_empty() {
         println!("{} All reciprocal links are symmetric.", "✓".green());
     } else {
-        println!(
-            "\n{} {} asymmetric link(s):\n",
-            "✗".red(),
-            asymmetric.len()
-        );
+        println!("\n{} {} asymmetric link(s):\n", "✗".red(), asymmetric.len());
         for link in &asymmetric {
             println!(
                 "  {} has {}: {} but {} is missing {}: {}",
@@ -124,16 +116,9 @@ pub fn run(orphans: bool, fix: bool) -> anyhow::Result<()> {
     if cycles.is_empty() {
         println!("{} No dependency cycles found.", "✓".green());
     } else {
-        println!(
-            "\n{} {} dependency cycle(s):\n",
-            "✗".red(),
-            cycles.len()
-        );
+        println!("\n{} {} dependency cycle(s):\n", "✗".red(), cycles.len());
         for cycle in &cycles {
-            println!(
-                "  {}",
-                cycle.path.join(" → ")
-            );
+            println!("  {}", cycle.path.join(" → "));
         }
     }
 
@@ -157,11 +142,17 @@ pub fn run(orphans: bool, fix: bool) -> anyhow::Result<()> {
     // Broken refs, invalid statuses, and cycles are never auto-fixable
     let unfixable = broken.len() + invalid_statuses.len() + cycles.len();
     if unfixable > 0 {
-        return Err(anyhow::anyhow!("Found {} issue(s)", unfixable + asymmetric.len()));
+        return Err(anyhow::anyhow!(
+            "Found {} issue(s)",
+            unfixable + asymmetric.len()
+        ));
     }
     // Asymmetric links are only an error if --fix wasn't used
     if !asymmetric.is_empty() && !fix {
-        return Err(anyhow::anyhow!("Found {} asymmetric link(s)", asymmetric.len()));
+        return Err(anyhow::anyhow!(
+            "Found {} asymmetric link(s)",
+            asymmetric.len()
+        ));
     }
 
     Ok(())

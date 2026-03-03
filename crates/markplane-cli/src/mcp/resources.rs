@@ -1,11 +1,11 @@
 use std::collections::HashSet;
 use std::fs;
 
-use markplane_core::{StatusCategory, Project, QueryFilter, parse_id, IdPrefix};
 use markplane_core::manifest;
-use serde_json::{json, Value};
+use markplane_core::{IdPrefix, Project, QueryFilter, StatusCategory, parse_id};
+use serde_json::{Value, json};
 
-use super::protocol::{JsonRpcResponse, INTERNAL_ERROR, INVALID_PARAMS};
+use super::protocol::{INTERNAL_ERROR, INVALID_PARAMS, JsonRpcResponse};
 
 /// Return the list of available resources.
 pub fn list_resources() -> Value {
@@ -75,28 +75,44 @@ pub fn read_resource(id: Value, project: &Project, uri: &str) -> JsonRpcResponse
         _ if uri.starts_with("markplane://task/") => {
             let item_id = &uri["markplane://task/".len()..];
             if item_id.is_empty() {
-                return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing item ID in resource URI: markplane://task/{id}".to_string());
+                return JsonRpcResponse::error(
+                    id,
+                    INVALID_PARAMS,
+                    "Missing item ID in resource URI: markplane://task/{id}".to_string(),
+                );
             }
             read_task_item(project, item_id)
         }
         _ if uri.starts_with("markplane://epic/") => {
             let item_id = &uri["markplane://epic/".len()..];
             if item_id.is_empty() {
-                return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing item ID in resource URI: markplane://epic/{id}".to_string());
+                return JsonRpcResponse::error(
+                    id,
+                    INVALID_PARAMS,
+                    "Missing item ID in resource URI: markplane://epic/{id}".to_string(),
+                );
             }
             read_epic_item(project, item_id)
         }
         _ if uri.starts_with("markplane://plan/") => {
             let item_id = &uri["markplane://plan/".len()..];
             if item_id.is_empty() {
-                return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing item ID in resource URI: markplane://plan/{id}".to_string());
+                return JsonRpcResponse::error(
+                    id,
+                    INVALID_PARAMS,
+                    "Missing item ID in resource URI: markplane://plan/{id}".to_string(),
+                );
             }
             read_plan_item(project, item_id)
         }
         _ if uri.starts_with("markplane://note/") => {
             let item_id = &uri["markplane://note/".len()..];
             if item_id.is_empty() {
-                return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing item ID in resource URI: markplane://note/{id}".to_string());
+                return JsonRpcResponse::error(
+                    id,
+                    INVALID_PARAMS,
+                    "Missing item ID in resource URI: markplane://note/{id}".to_string(),
+                );
             }
             read_note_item(project, item_id)
         }
@@ -166,7 +182,9 @@ fn read_summary(project: &Project) -> Result<String, String> {
 
 fn read_active_work(project: &Project) -> Result<String, String> {
     let config = project.load_config().map_err(|e| e.to_string())?;
-    let active_statuses: Vec<String> = config.workflows.task
+    let active_statuses: Vec<String> = config
+        .workflows
+        .task
         .statuses_in(StatusCategory::Active)
         .to_vec();
     let filter = QueryFilter {
@@ -178,9 +196,7 @@ fn read_active_work(project: &Project) -> Result<String, String> {
         ..Default::default()
     };
 
-    let items = project
-        .list_tasks(&filter)
-        .map_err(|e| e.to_string())?;
+    let items = project.list_tasks(&filter).map_err(|e| e.to_string())?;
 
     if items.is_empty() {
         return Ok("# Active Work\n\nNo items currently in progress.\n".to_string());
@@ -208,7 +224,9 @@ fn read_blocked(project: &Project) -> Result<String, String> {
     let blocked = markplane_core::find_blocked_items(&items, workflow);
     let completed_statuses: HashSet<&str> = workflow
         .statuses_in(StatusCategory::Completed)
-        .iter().map(|s| s.as_str()).collect();
+        .iter()
+        .map(|s| s.as_str())
+        .collect();
     let done_ids: HashSet<&str> = items
         .iter()
         .filter(|doc| completed_statuses.contains(doc.frontmatter.status.as_str()))

@@ -72,7 +72,9 @@ pub fn run(
         assignee: assignee_patch,
         position: position_patch,
         add_tags: add_tags.map(|s| parse_comma_list(&s)).unwrap_or_default(),
-        remove_tags: remove_tags.map(|s| parse_comma_list(&s)).unwrap_or_default(),
+        remove_tags: remove_tags
+            .map(|s| parse_comma_list(&s))
+            .unwrap_or_default(),
         started: started_patch,
         target: target_patch,
         note_type,

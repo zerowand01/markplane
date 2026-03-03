@@ -1,5 +1,5 @@
 use colored::Colorize;
-use markplane_core::{build_reference_graph, parse_id, Project};
+use markplane_core::{Project, build_reference_graph, parse_id};
 use std::collections::HashSet;
 
 pub fn run(id: String, depth: u32) -> anyhow::Result<()> {

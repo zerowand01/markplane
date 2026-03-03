@@ -7,7 +7,9 @@ pub fn run(focus: Option<String>) -> anyhow::Result<()> {
 
     if let Some(ref tag) = focus {
         // Generate and print the requested context view to stdout
-        let (generate, filename): (fn(&Project) -> markplane_core::Result<()>, &str) = match tag.as_str() {
+        let (generate, filename): (fn(&Project) -> markplane_core::Result<()>, &str) = match tag
+            .as_str()
+        {
             "active-work" => (Project::generate_context_active_work, "active-work.md"),
             "blocked" => (Project::generate_context_blocked, "blocked-items.md"),
             "metrics" => (Project::generate_context_metrics, "metrics.md"),
@@ -23,10 +25,7 @@ pub fn run(focus: Option<String>) -> anyhow::Result<()> {
         print!("{}", content);
     } else {
         project.generate_all_context()?;
-        println!(
-            "{} Context files regenerated in .context/",
-            "✓".green()
-        );
+        println!("{} Context files regenerated in .context/", "✓".green());
     }
 
     Ok(())

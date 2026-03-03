@@ -29,7 +29,8 @@ impl Project {
         let open_backlog = tasks
             .iter()
             .filter(|b| {
-                workflow.category_of(&b.frontmatter.status)
+                workflow
+                    .category_of(&b.frontmatter.status)
                     .is_none_or(|c| c.is_open())
             })
             .count();
@@ -55,12 +56,7 @@ impl Project {
              ## System Info\n\
              - Last sync: {}\n\
              - Config: [config.yaml](config.yaml)\n",
-            GENERATED_HEADER,
-            active_epics,
-            open_backlog,
-            active_plans,
-            active_notes,
-            now,
+            GENERATED_HEADER, active_epics, open_backlog, active_plans, active_notes, now,
         );
 
         // Project Documentation section (from configured documentation_paths)
@@ -93,7 +89,9 @@ impl Project {
         // Build sets for category-based filtering
         let completed_statuses: HashSet<&str> = workflow
             .statuses_in(StatusCategory::Completed)
-            .iter().map(|s| s.as_str()).collect();
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
         // Build done_ids set for blocked-item dependency resolution
         let done_ids: HashSet<&str> = items
             .iter()
@@ -103,15 +101,15 @@ impl Project {
 
         // Compute blocked items (items with unresolved depends_on)
         let blocked = find_blocked_items(&items, workflow);
-        let blocked_ids: HashSet<&str> = blocked
-            .iter()
-            .map(|i| i.frontmatter.id.as_str())
-            .collect();
+        let blocked_ids: HashSet<&str> =
+            blocked.iter().map(|i| i.frontmatter.id.as_str()).collect();
 
         // --- Active category statuses (In Progress equivalent) ---
         let active_statuses: HashSet<&str> = workflow
             .statuses_in(StatusCategory::Active)
-            .iter().map(|s| s.as_str()).collect();
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
         let in_progress: Vec<_> = items
             .iter()
             .filter(|i| active_statuses.contains(i.frontmatter.status.as_str()))
@@ -125,7 +123,11 @@ impl Project {
                 let epic_str = epic_cell(&fm.epic);
                 content.push_str(&format!(
                     "| {} | {} | {} | {} | {} |\n",
-                    item_link(&fm.id), fm.title, epic_str, fm.priority, fm.effort
+                    item_link(&fm.id),
+                    fm.title,
+                    epic_str,
+                    fm.priority,
+                    fm.effort
                 ));
             }
             content.push('\n');
@@ -147,7 +149,11 @@ impl Project {
                 let epic_str = epic_cell(&fm.epic);
                 content.push_str(&format!(
                     "| {} | {} | {} | {} | {} |\n",
-                    item_link(&fm.id), fm.title, unresolved.join(", "), epic_str, fm.priority
+                    item_link(&fm.id),
+                    fm.title,
+                    unresolved.join(", "),
+                    epic_str,
+                    fm.priority
                 ));
             }
             content.push('\n');
@@ -156,7 +162,9 @@ impl Project {
         // --- Planned category statuses (excluding blocked) ---
         let planned_statuses: HashSet<&str> = workflow
             .statuses_in(StatusCategory::Planned)
-            .iter().map(|s| s.as_str()).collect();
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
         let planned: Vec<_> = items
             .iter()
             .filter(|i| {
@@ -173,7 +181,11 @@ impl Project {
                 let epic_str = epic_cell(&fm.epic);
                 content.push_str(&format!(
                     "| {} | {} | {} | {} | {} |\n",
-                    item_link(&fm.id), fm.title, epic_str, fm.priority, fm.effort
+                    item_link(&fm.id),
+                    fm.title,
+                    epic_str,
+                    fm.priority,
+                    fm.effort
                 ));
             }
             content.push('\n');
@@ -182,7 +194,9 @@ impl Project {
         // --- Backlog category statuses (excluding blocked) ---
         let backlog_statuses: HashSet<&str> = workflow
             .statuses_in(StatusCategory::Backlog)
-            .iter().map(|s| s.as_str()).collect();
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
         let backlog: Vec<_> = items
             .iter()
             .filter(|i| {
@@ -199,7 +213,11 @@ impl Project {
                 let epic_str = epic_cell(&fm.epic);
                 content.push_str(&format!(
                     "| {} | {} | {} | {} | {} |\n",
-                    item_link(&fm.id), fm.title, epic_str, fm.priority, fm.effort
+                    item_link(&fm.id),
+                    fm.title,
+                    epic_str,
+                    fm.priority,
+                    fm.effort
                 ));
             }
             content.push('\n');
@@ -208,7 +226,9 @@ impl Project {
         // --- Draft category statuses (excluding blocked) ---
         let draft_statuses: HashSet<&str> = workflow
             .statuses_in(StatusCategory::Draft)
-            .iter().map(|s| s.as_str()).collect();
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
         let drafts: Vec<_> = items
             .iter()
             .filter(|i| {
@@ -225,7 +245,11 @@ impl Project {
                 let epic_str = epic_cell(&fm.epic);
                 content.push_str(&format!(
                     "| {} | {} | {} | {} | {} |\n",
-                    item_link(&fm.id), fm.title, epic_str, fm.priority, fm.effort
+                    item_link(&fm.id),
+                    fm.title,
+                    epic_str,
+                    fm.priority,
+                    fm.effort
                 ));
             }
             content.push('\n');
@@ -240,14 +264,13 @@ impl Project {
             })
             .collect();
         recently_done.sort_by(|a, b| {
-            b.frontmatter.updated.cmp(&a.frontmatter.updated)
+            b.frontmatter
+                .updated
+                .cmp(&a.frontmatter.updated)
                 .then_with(|| a.frontmatter.id.cmp(&b.frontmatter.id))
         });
         if !recently_done.is_empty() {
-            content.push_str(&format!(
-                "## Recently Done ({})\n\n",
-                recently_done.len()
-            ));
+            content.push_str(&format!("## Recently Done ({})\n\n", recently_done.len()));
             content.push_str("| ID | Title | Epic | Completed |\n");
             content.push_str("|----|-------|------|-----------|\n");
             for item in &recently_done {
@@ -255,7 +278,10 @@ impl Project {
                 let epic_str = epic_cell(&fm.epic);
                 content.push_str(&format!(
                     "| {} | {} | {} | {} |\n",
-                    item_link(&fm.id), fm.title, epic_str, fm.updated
+                    item_link(&fm.id),
+                    fm.title,
+                    epic_str,
+                    fm.updated
                 ));
             }
             content.push('\n');
@@ -362,7 +388,8 @@ impl Project {
             for plan in &done_plans {
                 content.push_str(&format!(
                     "- {} {}\n",
-                    item_link(&plan.frontmatter.id), plan.frontmatter.title
+                    item_link(&plan.frontmatter.id),
+                    plan.frontmatter.title
                 ));
             }
             content.push('\n');
@@ -415,7 +442,9 @@ impl Project {
             for note in &archived_notes {
                 content.push_str(&format!(
                     "- {} {} ({})\n",
-                    item_link(&note.frontmatter.id), note.frontmatter.title, note.frontmatter.note_type
+                    item_link(&note.frontmatter.id),
+                    note.frontmatter.title,
+                    note.frontmatter.note_type
                 ));
             }
             content.push('\n');
@@ -482,7 +511,11 @@ fn render_epic_with_items(
     };
     content.push_str(&format!(
         "### {} {} ({}/{}, {}%)\n\n",
-        item_link(epic_id), epic.frontmatter.title, done, total, pct
+        item_link(epic_id),
+        epic.frontmatter.title,
+        done,
+        total,
+        pct
     ));
 
     let epic_items: Vec<_> = tasks
@@ -499,7 +532,11 @@ fn render_epic_with_items(
             let fm = &item.frontmatter;
             content.push_str(&format!(
                 "| {} | {} | {} | {} | {} |\n",
-                cross_link(&fm.id), fm.title, fm.status, fm.priority, fm.effort
+                cross_link(&fm.id),
+                fm.title,
+                fm.status,
+                fm.priority,
+                fm.effort
             ));
         }
         content.push('\n');
@@ -508,13 +545,21 @@ fn render_epic_with_items(
 
 /// Count (done, total) tasks for a given epic.
 /// Cancelled tasks are excluded — they don't represent work to be done.
-fn epic_progress(epic_id: &str, items: &[MarkplaneDocument<Task>], workflow: &TaskWorkflow) -> (usize, usize) {
+fn epic_progress(
+    epic_id: &str,
+    items: &[MarkplaneDocument<Task>],
+    workflow: &TaskWorkflow,
+) -> (usize, usize) {
     let cancelled_statuses: HashSet<&str> = workflow
         .statuses_in(StatusCategory::Cancelled)
-        .iter().map(|s| s.as_str()).collect();
+        .iter()
+        .map(|s| s.as_str())
+        .collect();
     let completed_statuses: HashSet<&str> = workflow
         .statuses_in(StatusCategory::Completed)
-        .iter().map(|s| s.as_str()).collect();
+        .iter()
+        .map(|s| s.as_str())
+        .collect();
 
     let epic_items: Vec<_> = items
         .iter()
@@ -558,7 +603,9 @@ mod tests {
     #[test]
     fn test_generate_root_index_with_items() {
         let (_tmp, project) = setup_project();
-        project.create_epic("Phase 1", Priority::High, None).unwrap();
+        project
+            .create_epic("Phase 1", Priority::High, None)
+            .unwrap();
         project
             .create_task(
                 "Item 1",
@@ -616,13 +663,18 @@ mod tests {
                 None,
             )
             .unwrap();
-        project.update_status(&progress_task.id, "in-progress").unwrap();
+        project
+            .update_status(&progress_task.id, "in-progress")
+            .unwrap();
 
         project.generate_backlog_index().unwrap();
         let content = fs::read_to_string(project.root().join("backlog/INDEX.md")).unwrap();
         assert!(content.contains("## In Progress (1)"));
         assert!(content.contains("## Drafts (1)"));
-        assert!(content.contains(&format!("[{}](items/{}.md)", progress_task.id, progress_task.id)));
+        assert!(content.contains(&format!(
+            "[{}](items/{}.md)",
+            progress_task.id, progress_task.id
+        )));
         assert!(content.contains(&format!("[{}](items/{}.md)", draft_task.id, draft_task.id)));
     }
 
@@ -680,7 +732,9 @@ mod tests {
     #[test]
     fn test_generate_backlog_index_shows_epic_column() {
         let (_tmp, project) = setup_project();
-        let epic = project.create_epic("Phase 1", Priority::High, None).unwrap();
+        let epic = project
+            .create_epic("Phase 1", Priority::High, None)
+            .unwrap();
         project
             .create_task(
                 "Item in epic",
@@ -744,7 +798,10 @@ mod tests {
         project.generate_backlog_index().unwrap();
         let content = fs::read_to_string(project.root().join("backlog/INDEX.md")).unwrap();
         assert!(content.contains("## Blocked (1)"));
-        assert!(content.contains(&format!("[{}](../backlog/items/{}.md)", blocker.id, blocker.id))); // In the Blocked By column
+        assert!(content.contains(&format!(
+            "[{}](../backlog/items/{}.md)",
+            blocker.id, blocker.id
+        ))); // In the Blocked By column
         // blocker is in Drafts (not blocked), blocked task is in Blocked
         assert!(content.contains("## Drafts (1)"));
     }
@@ -850,7 +907,9 @@ mod tests {
         assert!(
             pos_b < pos_c && pos_c < pos_a,
             "Recently Done should be sorted by updated date descending: B({}) < C({}) < A({})",
-            pos_b, pos_c, pos_a
+            pos_b,
+            pos_c,
+            pos_a
         );
     }
 
@@ -892,15 +951,28 @@ mod tests {
         let pos_2 = content.find(&format!("[{}]", task_2.id)).unwrap();
         // IDs are random but deterministic — the lexicographically smaller ID should come first
         if task_1.id < task_2.id {
-            assert!(pos_1 < pos_2, "ID tiebreaker: {} should come before {}", task_1.id, task_2.id);
+            assert!(
+                pos_1 < pos_2,
+                "ID tiebreaker: {} should come before {}",
+                task_1.id,
+                task_2.id
+            );
         } else {
-            assert!(pos_2 < pos_1, "ID tiebreaker: {} should come before {}", task_2.id, task_1.id);
+            assert!(
+                pos_2 < pos_1,
+                "ID tiebreaker: {} should come before {}",
+                task_2.id,
+                task_1.id
+            );
         }
 
         // Verify stability: regenerating produces the same order
         project.generate_backlog_index().unwrap();
         let content2 = fs::read_to_string(project.root().join("backlog/INDEX.md")).unwrap();
-        assert_eq!(content, content2, "Sort order should be stable across repeated syncs");
+        assert_eq!(
+            content, content2,
+            "Sort order should be stable across repeated syncs"
+        );
     }
 
     #[test]
@@ -926,7 +998,9 @@ mod tests {
     #[test]
     fn test_generate_roadmap_index() {
         let (_tmp, project) = setup_project();
-        let now_epic = project.create_epic("Now Epic", Priority::High, None).unwrap();
+        let now_epic = project
+            .create_epic("Now Epic", Priority::High, None)
+            .unwrap();
         project.update_status(&now_epic.id, "now").unwrap();
         let later_epic = project
             .create_epic("Later Epic", Priority::Medium, None)
@@ -949,16 +1023,24 @@ mod tests {
         let content = fs::read_to_string(project.root().join("roadmap/INDEX.md")).unwrap();
         assert!(content.contains(GENERATED_HEADER));
         assert!(content.contains("## Now"));
-        assert!(content.contains(&format!("### [{}](items/{}.md) Now Epic (0/1, 0%)", now_epic.id, now_epic.id)));
+        assert!(content.contains(&format!(
+            "### [{}](items/{}.md) Now Epic (0/1, 0%)",
+            now_epic.id, now_epic.id
+        )));
         assert!(content.contains(&format!("[{}](../backlog/items/{}.md)", task.id, task.id)));
         assert!(content.contains("## Later"));
-        assert!(content.contains(&format!("### [{}](items/{}.md) Later Epic (0/0, 0%)", later_epic.id, later_epic.id)));
+        assert!(content.contains(&format!(
+            "### [{}](items/{}.md) Later Epic (0/0, 0%)",
+            later_epic.id, later_epic.id
+        )));
     }
 
     #[test]
     fn test_generate_roadmap_index_epic_with_items_table() {
         let (_tmp, project) = setup_project();
-        let epic = project.create_epic("Test Epic", Priority::High, None).unwrap();
+        let epic = project
+            .create_epic("Test Epic", Priority::High, None)
+            .unwrap();
         project.update_status(&epic.id, "now").unwrap();
 
         let task_a = project
@@ -987,16 +1069,27 @@ mod tests {
 
         project.generate_roadmap_index().unwrap();
         let content = fs::read_to_string(project.root().join("roadmap/INDEX.md")).unwrap();
-        assert!(content.contains(&format!("### [{}](items/{}.md) Test Epic (1/2, 50%)", epic.id, epic.id)));
+        assert!(content.contains(&format!(
+            "### [{}](items/{}.md) Test Epic (1/2, 50%)",
+            epic.id, epic.id
+        )));
         assert!(content.contains("| ID | Title | Status | Priority | Effort |"));
-        assert!(content.contains(&format!("[{}](../backlog/items/{}.md)", task_a.id, task_a.id)));
-        assert!(content.contains(&format!("[{}](../backlog/items/{}.md)", task_b.id, task_b.id)));
+        assert!(content.contains(&format!(
+            "[{}](../backlog/items/{}.md)",
+            task_a.id, task_a.id
+        )));
+        assert!(content.contains(&format!(
+            "[{}](../backlog/items/{}.md)",
+            task_b.id, task_b.id
+        )));
     }
 
     #[test]
     fn test_generate_roadmap_index_done_epics() {
         let (_tmp, project) = setup_project();
-        let done_epic = project.create_epic("Done Epic", Priority::High, None).unwrap();
+        let done_epic = project
+            .create_epic("Done Epic", Priority::High, None)
+            .unwrap();
         let task_a = project
             .create_task(
                 "Task A",
@@ -1027,7 +1120,9 @@ mod tests {
     #[test]
     fn test_generate_roadmap_index_includes_archived_tasks_in_progress() {
         let (_tmp, project) = setup_project();
-        let epic = project.create_epic("Test Epic", Priority::High, None).unwrap();
+        let epic = project
+            .create_epic("Test Epic", Priority::High, None)
+            .unwrap();
         project.update_status(&epic.id, "now").unwrap();
 
         // Create 5 tasks, complete 3 and archive them
@@ -1069,14 +1164,19 @@ mod tests {
         assert!(
             content.contains("(3/5, 60%)"),
             "Expected progress 3/5 (60%) but got: {}",
-            content.lines().find(|l| l.contains("Test Epic")).unwrap_or("not found")
+            content
+                .lines()
+                .find(|l| l.contains("Test Epic"))
+                .unwrap_or("not found")
         );
     }
 
     #[test]
     fn test_generate_roadmap_index_no_done_section_when_empty() {
         let (_tmp, project) = setup_project();
-        project.create_epic("Later Epic", Priority::High, None).unwrap();
+        project
+            .create_epic("Later Epic", Priority::High, None)
+            .unwrap();
 
         project.generate_roadmap_index().unwrap();
         let content = fs::read_to_string(project.root().join("roadmap/INDEX.md")).unwrap();
@@ -1107,7 +1207,10 @@ mod tests {
         project.generate_plans_index().unwrap();
         let content = fs::read_to_string(project.root().join("plans/INDEX.md")).unwrap();
         assert!(content.contains("Active Plans"));
-        assert!(content.contains(&format!("[{}](items/{}.md)", active_plan.id, active_plan.id)));
+        assert!(content.contains(&format!(
+            "[{}](items/{}.md)",
+            active_plan.id, active_plan.id
+        )));
         assert!(content.contains(&format!("[{}](../backlog/items/{}.md)", task.id, task.id)));
         assert!(content.contains("Completed Plans"));
         assert!(content.contains(&format!("[{}](items/{}.md)", done_plan.id, done_plan.id)));
@@ -1136,7 +1239,9 @@ mod tests {
     #[test]
     fn test_sync_all_indexes() {
         let (_tmp, project) = setup_project();
-        let epic = project.create_epic("Phase 1", Priority::High, None).unwrap();
+        let epic = project
+            .create_epic("Phase 1", Priority::High, None)
+            .unwrap();
         project
             .create_task(
                 "Item 1",
@@ -1152,21 +1257,31 @@ mod tests {
         project.sync_all_indexes().unwrap();
 
         // All index files should exist and be generated
-        assert!(fs::read_to_string(project.root().join("INDEX.md"))
-            .unwrap()
-            .contains(GENERATED_HEADER));
-        assert!(fs::read_to_string(project.root().join("backlog/INDEX.md"))
-            .unwrap()
-            .contains(GENERATED_HEADER));
-        assert!(fs::read_to_string(project.root().join("roadmap/INDEX.md"))
-            .unwrap()
-            .contains(GENERATED_HEADER));
-        assert!(fs::read_to_string(project.root().join("plans/INDEX.md"))
-            .unwrap()
-            .contains(GENERATED_HEADER));
-        assert!(fs::read_to_string(project.root().join("notes/INDEX.md"))
-            .unwrap()
-            .contains(GENERATED_HEADER));
+        assert!(
+            fs::read_to_string(project.root().join("INDEX.md"))
+                .unwrap()
+                .contains(GENERATED_HEADER)
+        );
+        assert!(
+            fs::read_to_string(project.root().join("backlog/INDEX.md"))
+                .unwrap()
+                .contains(GENERATED_HEADER)
+        );
+        assert!(
+            fs::read_to_string(project.root().join("roadmap/INDEX.md"))
+                .unwrap()
+                .contains(GENERATED_HEADER)
+        );
+        assert!(
+            fs::read_to_string(project.root().join("plans/INDEX.md"))
+                .unwrap()
+                .contains(GENERATED_HEADER)
+        );
+        assert!(
+            fs::read_to_string(project.root().join("notes/INDEX.md"))
+                .unwrap()
+                .contains(GENERATED_HEADER)
+        );
     }
 
     #[test]

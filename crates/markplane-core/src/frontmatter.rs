@@ -1,5 +1,5 @@
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 use crate::error::{MarkplaneError, Result};
 use crate::models::MarkplaneDocument;

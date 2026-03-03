@@ -33,10 +33,7 @@ pub struct QueryFilter {
 impl Project {
     /// List tasks, optionally filtered.
     /// Results are sorted by priority (critical first), then by ID.
-    pub fn list_tasks(
-        &self,
-        filter: &QueryFilter,
-    ) -> Result<Vec<MarkplaneDocument<Task>>> {
+    pub fn list_tasks(&self, filter: &QueryFilter) -> Result<Vec<MarkplaneDocument<Task>>> {
         let dir = self.item_dir(&IdPrefix::Task);
         let mut items = scan_directory::<Task>(&dir, filter.scope)?;
 
@@ -44,14 +41,16 @@ impl Project {
             let fm = &doc.frontmatter;
 
             if let Some(ref statuses) = filter.status
-                && !statuses.contains(&fm.status) {
-                    return false;
-                }
+                && !statuses.contains(&fm.status)
+            {
+                return false;
+            }
 
             if let Some(ref priorities) = filter.priority
-                && !priorities.contains(&fm.priority.to_string()) {
-                    return false;
-                }
+                && !priorities.contains(&fm.priority.to_string())
+            {
+                return false;
+            }
 
             if let Some(ref epic) = filter.epic {
                 match &fm.epic {
@@ -61,9 +60,10 @@ impl Project {
             }
 
             if let Some(ref tags) = filter.tags
-                && !tags.iter().any(|t| fm.tags.contains(t)) {
-                    return false;
-                }
+                && !tags.iter().any(|t| fm.tags.contains(t))
+            {
+                return false;
+            }
 
             if let Some(ref assignee) = filter.assignee {
                 match &fm.assignee {
@@ -73,9 +73,10 @@ impl Project {
             }
 
             if let Some(ref types) = filter.item_type
-                && !types.contains(&fm.item_type.to_string()) {
-                    return false;
-                }
+                && !types.contains(&fm.item_type.to_string())
+            {
+                return false;
+            }
 
             true
         });
@@ -85,14 +86,14 @@ impl Project {
             let pa = priority_rank(&a.frontmatter.priority);
             let pb = priority_rank(&b.frontmatter.priority);
             pa.cmp(&pb)
-                .then_with(|| {
-                    match (&a.frontmatter.position, &b.frontmatter.position) {
+                .then_with(
+                    || match (&a.frontmatter.position, &b.frontmatter.position) {
                         (Some(ap), Some(bp)) => ap.cmp(bp),
                         (Some(_), None) => std::cmp::Ordering::Less,
                         (None, Some(_)) => std::cmp::Ordering::Greater,
                         (None, None) => std::cmp::Ordering::Equal,
-                    }
-                })
+                    },
+                )
                 .then_with(|| b.frontmatter.updated.cmp(&a.frontmatter.updated))
                 .then_with(|| a.frontmatter.id.cmp(&b.frontmatter.id))
         });
@@ -103,12 +104,17 @@ impl Project {
     /// List all epics. Pass `archived: true` to list archived epics only.
     pub fn list_epics_filtered(&self, archived: bool) -> Result<Vec<MarkplaneDocument<Epic>>> {
         let dir = self.item_dir(&IdPrefix::Epic);
-        let scope = if archived { ScanScope::Archived } else { ScanScope::Active };
+        let scope = if archived {
+            ScanScope::Archived
+        } else {
+            ScanScope::Active
+        };
         let mut items = scan_directory::<Epic>(&dir, scope)?;
         items.sort_by(|a, b| {
             let pa = priority_rank(&a.frontmatter.priority);
             let pb = priority_rank(&b.frontmatter.priority);
-            pa.cmp(&pb).then_with(|| a.frontmatter.id.cmp(&b.frontmatter.id))
+            pa.cmp(&pb)
+                .then_with(|| a.frontmatter.id.cmp(&b.frontmatter.id))
         });
         Ok(items)
     }
@@ -121,7 +127,11 @@ impl Project {
     /// List all plans. Pass `archived: true` to list archived plans only.
     pub fn list_plans_filtered(&self, archived: bool) -> Result<Vec<MarkplaneDocument<Plan>>> {
         let dir = self.item_dir(&IdPrefix::Plan);
-        let scope = if archived { ScanScope::Archived } else { ScanScope::Active };
+        let scope = if archived {
+            ScanScope::Archived
+        } else {
+            ScanScope::Active
+        };
         let mut items = scan_directory::<Plan>(&dir, scope)?;
         items.sort_by(|a, b| a.frontmatter.id.cmp(&b.frontmatter.id));
         Ok(items)
@@ -135,7 +145,11 @@ impl Project {
     /// List all notes. Pass `archived: true` to list archived notes only.
     pub fn list_notes_filtered(&self, archived: bool) -> Result<Vec<MarkplaneDocument<Note>>> {
         let dir = self.item_dir(&IdPrefix::Note);
-        let scope = if archived { ScanScope::Archived } else { ScanScope::Active };
+        let scope = if archived {
+            ScanScope::Archived
+        } else {
+            ScanScope::Active
+        };
         let mut items = scan_directory::<Note>(&dir, scope)?;
         items.sort_by(|a, b| a.frontmatter.id.cmp(&b.frontmatter.id));
         Ok(items)
@@ -159,7 +173,10 @@ fn scan_dir_entries<T: serde::de::DeserializeOwned>(
     }
 
     let pattern = scan_dir.join("*.md").to_string_lossy().to_string();
-    for path in glob::glob(&pattern).unwrap_or_else(|_| glob::glob("").unwrap()).flatten() {
+    for path in glob::glob(&pattern)
+        .unwrap_or_else(|_| glob::glob("").unwrap())
+        .flatten()
+    {
         let filename = path.file_name().unwrap_or_default().to_string_lossy();
         if filename == "INDEX.md" || filename == "ideas.md" || filename == "decisions.md" {
             continue;
@@ -168,10 +185,7 @@ fn scan_dir_entries<T: serde::de::DeserializeOwned>(
         let content = match fs::read_to_string(&path) {
             Ok(c) => c,
             Err(e) => {
-                eprintln!(
-                    "warning: could not read {}: {e}",
-                    path.display()
-                );
+                eprintln!("warning: could not read {}: {e}", path.display());
                 continue;
             }
         };
@@ -179,10 +193,7 @@ fn scan_dir_entries<T: serde::de::DeserializeOwned>(
         match parse_frontmatter::<T>(&content) {
             Ok(doc) => results.push(doc),
             Err(e) => {
-                eprintln!(
-                    "warning: failed to parse {}: {e}",
-                    path.display()
-                );
+                eprintln!("warning: failed to parse {}: {e}", path.display());
                 continue;
             }
         }
@@ -408,8 +419,12 @@ mod tests {
     fn test_list_epics() {
         let (_tmp, project) = setup_project();
 
-        project.create_epic("Phase 1", Priority::High, None).unwrap();
-        project.create_epic("Phase 2", Priority::Medium, None).unwrap();
+        project
+            .create_epic("Phase 1", Priority::High, None)
+            .unwrap();
+        project
+            .create_epic("Phase 2", Priority::Medium, None)
+            .unwrap();
 
         let epics = project.list_epics().unwrap();
         assert_eq!(epics.len(), 2);
@@ -421,12 +436,8 @@ mod tests {
     fn test_list_plans() {
         let (_tmp, project) = setup_project();
 
-        project
-            .create_plan("Plan A", vec![], None)
-            .unwrap();
-        project
-            .create_plan("Plan B", vec![], None)
-            .unwrap();
+        project.create_plan("Plan A", vec![], None).unwrap();
+        project.create_plan("Plan B", vec![], None).unwrap();
 
         let plans = project.list_plans().unwrap();
         assert_eq!(plans.len(), 2);
@@ -454,10 +465,26 @@ mod tests {
         let (_tmp, project) = setup_project();
 
         let task1 = project
-            .create_task("Active task", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task(
+                "Active task",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
         let task2 = project
-            .create_task("To archive", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task(
+                "To archive",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
 
         // Archive one task
@@ -474,10 +501,26 @@ mod tests {
         let (_tmp, project) = setup_project();
 
         project
-            .create_task("Active task", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task(
+                "Active task",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
         let task2 = project
-            .create_task("To archive", "feature", Priority::Medium, Effort::Small, None, vec![], None)
+            .create_task(
+                "To archive",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
 
         project.archive_item(&task2.id).unwrap();
@@ -496,13 +539,37 @@ mod tests {
         let (_tmp, project) = setup_project();
 
         project
-            .create_task("Active", "feature", Priority::High, Effort::Small, None, vec![], None)
+            .create_task(
+                "Active",
+                "feature",
+                Priority::High,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
         let task2 = project
-            .create_task("Archived", "bug", Priority::Low, Effort::Medium, None, vec![], None)
+            .create_task(
+                "Archived",
+                "bug",
+                Priority::Low,
+                Effort::Medium,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
         let task3 = project
-            .create_task("Also archived", "chore", Priority::Medium, Effort::Xs, None, vec![], None)
+            .create_task(
+                "Also archived",
+                "chore",
+                Priority::Medium,
+                Effort::Xs,
+                None,
+                vec![],
+                None,
+            )
             .unwrap();
 
         project.archive_item(&task2.id).unwrap();
@@ -513,7 +580,12 @@ mod tests {
         assert_eq!(active.len(), 1);
 
         // Archived: task2 and task3
-        let archived = project.list_tasks(&QueryFilter { scope: ScanScope::Archived, ..Default::default() }).unwrap();
+        let archived = project
+            .list_tasks(&QueryFilter {
+                scope: ScanScope::Archived,
+                ..Default::default()
+            })
+            .unwrap();
         assert_eq!(archived.len(), 2);
     }
 
@@ -521,8 +593,12 @@ mod tests {
     fn test_list_epics_archived() {
         let (_tmp, project) = setup_project();
 
-        let epic1 = project.create_epic("Active epic", Priority::High, None).unwrap();
-        let epic2 = project.create_epic("Done epic", Priority::Medium, None).unwrap();
+        let epic1 = project
+            .create_epic("Active epic", Priority::High, None)
+            .unwrap();
+        let epic2 = project
+            .create_epic("Done epic", Priority::Medium, None)
+            .unwrap();
 
         project.archive_item(&epic2.id).unwrap();
 
@@ -556,8 +632,12 @@ mod tests {
     fn test_list_notes_archived() {
         let (_tmp, project) = setup_project();
 
-        project.create_note("Active note", "research", vec![], None).unwrap();
-        let note2 = project.create_note("Done note", "idea", vec![], None).unwrap();
+        project
+            .create_note("Active note", "research", vec![], None)
+            .unwrap();
+        let note2 = project
+            .create_note("Done note", "idea", vec![], None)
+            .unwrap();
 
         project.archive_item(&note2.id).unwrap();
 

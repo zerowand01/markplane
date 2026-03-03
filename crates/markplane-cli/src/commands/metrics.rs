@@ -1,5 +1,5 @@
 use colored::Colorize;
-use markplane_core::{StatusCategory, Priority, Project, QueryFilter, ScanScope};
+use markplane_core::{Priority, Project, QueryFilter, ScanScope, StatusCategory};
 
 pub fn run() -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
@@ -9,7 +9,10 @@ pub fn run() -> anyhow::Result<()> {
     let epics = project.list_epics()?;
     let plans = project.list_plans()?;
 
-    println!("{}", format!("Markplane Metrics — {}", config.project.name).bold());
+    println!(
+        "{}",
+        format!("Markplane Metrics — {}", config.project.name).bold()
+    );
     println!("{}", "─".repeat(50).dimmed());
     println!();
 
@@ -18,8 +21,13 @@ pub fn run() -> anyhow::Result<()> {
     let count_category = |cat: StatusCategory| -> usize {
         let statuses: std::collections::HashSet<&str> = workflow
             .statuses_in(cat)
-            .iter().map(|s| s.as_str()).collect();
-        items.iter().filter(|i| statuses.contains(i.frontmatter.status.as_str())).count()
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
+        items
+            .iter()
+            .filter(|i| statuses.contains(i.frontmatter.status.as_str()))
+            .count()
     };
 
     let in_progress = count_category(StatusCategory::Active);
@@ -41,9 +49,11 @@ pub fn run() -> anyhow::Result<()> {
 
     // Priority distribution (open items only)
     let closed_statuses: std::collections::HashSet<&str> = workflow
-        .statuses_in(StatusCategory::Completed).iter()
+        .statuses_in(StatusCategory::Completed)
+        .iter()
         .chain(workflow.statuses_in(StatusCategory::Cancelled).iter())
-        .map(|s| s.as_str()).collect();
+        .map(|s| s.as_str())
+        .collect();
 
     let count_priority = |p: &Priority| {
         items
@@ -86,10 +96,14 @@ pub fn run() -> anyhow::Result<()> {
         })?;
         let cancelled_set: std::collections::HashSet<&str> = workflow
             .statuses_in(StatusCategory::Cancelled)
-            .iter().map(|s| s.as_str()).collect();
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
         let completed_set: std::collections::HashSet<&str> = workflow
             .statuses_in(StatusCategory::Completed)
-            .iter().map(|s| s.as_str()).collect();
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
         println!("{}", "Epic Progress".bold());
         for epic in &epics {
             let epic_items: Vec<_> = all_tasks
@@ -112,12 +126,7 @@ pub fn run() -> anyhow::Result<()> {
             let bar = progress_bar(pct, 20);
             println!(
                 "  {} {} {}  {}/{} ({}%)",
-                epic.frontmatter.id,
-                epic.frontmatter.title,
-                bar,
-                epic_done,
-                epic_total,
-                pct
+                epic.frontmatter.id, epic.frontmatter.title, bar, epic_done, epic_total, pct
             );
         }
         println!();

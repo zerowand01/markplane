@@ -6,9 +6,9 @@ use std::io::{self, BufRead, Read, Write};
 use std::path::PathBuf;
 
 use markplane_core::Project;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use protocol::{JsonRpcRequest, JsonRpcResponse, INVALID_REQUEST, METHOD_NOT_FOUND, PARSE_ERROR};
+use protocol::{INVALID_REQUEST, JsonRpcRequest, JsonRpcResponse, METHOD_NOT_FOUND, PARSE_ERROR};
 
 /// Run the MCP server over stdin/stdout.
 pub fn run(project_path: Option<PathBuf>) -> anyhow::Result<()> {
@@ -31,7 +31,10 @@ pub fn run(project_path: Option<PathBuf>) -> anyhow::Result<()> {
 
     loop {
         line.clear();
-        match (&mut reader).take(MAX_LINE_LENGTH as u64).read_line(&mut line) {
+        match (&mut reader)
+            .take(MAX_LINE_LENGTH as u64)
+            .read_line(&mut line)
+        {
             Ok(0) => break, // EOF
             Ok(_) => {}
             Err(e) => {
@@ -61,7 +64,10 @@ pub fn run(project_path: Option<PathBuf>) -> anyhow::Result<()> {
             let response = JsonRpcResponse::error(
                 Value::Null,
                 PARSE_ERROR,
-                format!("Input line exceeds maximum length of {} bytes", MAX_LINE_LENGTH),
+                format!(
+                    "Input line exceeds maximum length of {} bytes",
+                    MAX_LINE_LENGTH
+                ),
             );
             write_response(&mut stdout, &response);
             continue;
@@ -75,11 +81,8 @@ pub fn run(project_path: Option<PathBuf>) -> anyhow::Result<()> {
         let request: JsonRpcRequest = match serde_json::from_str(trimmed) {
             Ok(req) => req,
             Err(e) => {
-                let response = JsonRpcResponse::error(
-                    Value::Null,
-                    PARSE_ERROR,
-                    format!("Parse error: {}", e),
-                );
+                let response =
+                    JsonRpcResponse::error(Value::Null, PARSE_ERROR, format!("Parse error: {}", e));
                 write_response(&mut stdout, &response);
                 continue;
             }
@@ -97,10 +100,9 @@ pub fn run(project_path: Option<PathBuf>) -> anyhow::Result<()> {
 
         let response = handle_request(&project, &request);
 
-        if !is_notification
-            && let Some(resp) = response {
-                write_response(&mut stdout, &resp);
-            }
+        if !is_notification && let Some(resp) = response {
+            write_response(&mut stdout, &resp);
+        }
     }
 
     eprintln!("markplane-mcp: server shutting down");
@@ -188,15 +190,22 @@ fn build_instructions(project: &Project) -> String {
         .as_ref()
         .map(|c| {
             use markplane_core::StatusCategory;
-            StatusCategory::ALL.iter()
+            StatusCategory::ALL
+                .iter()
                 .filter_map(|cat| {
                     let statuses = c.workflows.task.statuses_in(*cat);
-                    if statuses.is_empty() { None } else { Some(statuses.join(", ")) }
+                    if statuses.is_empty() {
+                        None
+                    } else {
+                        Some(statuses.join(", "))
+                    }
                 })
                 .collect::<Vec<_>>()
                 .join(" → ")
         })
-        .unwrap_or_else(|| "draft → backlog → planned → in-progress → done (also cancelled)".to_string());
+        .unwrap_or_else(|| {
+            "draft → backlog → planned → in-progress → done (also cancelled)".to_string()
+        });
 
     format!(
         "Markplane is an AI-native, markdown-first project management system for the project \"{project_name}\". \
@@ -242,11 +251,7 @@ fn handle_tools_list(id: Value, project: &Project) -> JsonRpcResponse {
     JsonRpcResponse::success(id, tools::list_tools(project))
 }
 
-fn handle_tools_call(
-    id: Value,
-    project: &Project,
-    params: &Option<Value>,
-) -> JsonRpcResponse {
+fn handle_tools_call(id: Value, project: &Project, params: &Option<Value>) -> JsonRpcResponse {
     let params = match params {
         Some(p) => p,
         None => {
@@ -281,11 +286,7 @@ fn handle_resources_list(id: Value) -> JsonRpcResponse {
     JsonRpcResponse::success(id, resources::list_resources())
 }
 
-fn handle_resources_read(
-    id: Value,
-    project: &Project,
-    params: &Option<Value>,
-) -> JsonRpcResponse {
+fn handle_resources_read(id: Value, project: &Project, params: &Option<Value>) -> JsonRpcResponse {
     let params = match params {
         Some(p) => p,
         None => {

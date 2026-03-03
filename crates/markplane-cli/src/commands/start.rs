@@ -1,7 +1,7 @@
 use std::env;
 
 use chrono::Local;
-use markplane_core::{parse_id, StatusCategory, Task, IdPrefix, MarkplaneDocument, Project};
+use markplane_core::{IdPrefix, MarkplaneDocument, Project, StatusCategory, Task, parse_id};
 
 pub fn run(id: String, user: Option<String>) -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
@@ -16,7 +16,9 @@ pub fn run(id: String, user: Option<String>) -> anyhow::Result<()> {
     match prefix {
         IdPrefix::Task => {
             let config = project.load_config()?;
-            let active_status = config.workflows.task
+            let active_status = config
+                .workflows
+                .task
                 .statuses_in(StatusCategory::Active)
                 .first()
                 .cloned()

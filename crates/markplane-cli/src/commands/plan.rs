@@ -1,4 +1,6 @@
-use markplane_core::{parse_id, Task, IdPrefix, MarkplaneDocument, Project, LinkRelation, LinkAction};
+use markplane_core::{
+    IdPrefix, LinkAction, LinkRelation, MarkplaneDocument, Project, Task, parse_id,
+};
 
 pub fn run(id: String, title: Option<String>, template: Option<String>) -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
@@ -9,15 +11,10 @@ pub fn run(id: String, title: Option<String>, template: Option<String>) -> anyho
     }
 
     let doc: MarkplaneDocument<Task> = project.read_item(&id)?;
-    let plan_title = title.unwrap_or_else(|| {
-        format!("Implementation plan for {}", doc.frontmatter.title)
-    });
+    let plan_title =
+        title.unwrap_or_else(|| format!("Implementation plan for {}", doc.frontmatter.title));
 
-    let plan = project.create_plan(
-        &plan_title,
-        vec![],
-        template.as_deref(),
-    )?;
+    let plan = project.create_plan(&plan_title, vec![], template.as_deref())?;
 
     // Link the plan to the task via the centralized link system
     project.link_items(&id, &plan.id, LinkRelation::Plan, LinkAction::Add)?;

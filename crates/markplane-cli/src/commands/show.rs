@@ -1,9 +1,7 @@
 use colored::Colorize;
-use markplane_core::{
-    parse_id, Task, Epic, IdPrefix, MarkplaneDocument, Note, Plan, Project,
-};
+use markplane_core::{Epic, IdPrefix, MarkplaneDocument, Note, Plan, Project, Task, parse_id};
 
-use super::formatting::{colorize_status, colorize_priority};
+use super::formatting::{colorize_priority, colorize_status};
 
 pub fn run(id: String) -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
@@ -27,7 +25,10 @@ fn show_task(project: &Project, id: &str) -> anyhow::Result<()> {
     println!("{}", fm.id.bold());
     println!("{}", fm.title.bold().white());
     println!();
-    println!("  Status:   {}", colorize_status(&fm.status, config.task_category(&fm.status)));
+    println!(
+        "  Status:   {}",
+        colorize_status(&fm.status, config.task_category(&fm.status))
+    );
     println!(
         "  Priority: {}",
         colorize_priority(&fm.priority.to_string())
@@ -75,7 +76,10 @@ fn show_epic(project: &Project, id: &str) -> anyhow::Result<()> {
     println!("{}", fm.id.bold());
     println!("{}", fm.title.bold().white());
     println!();
-    println!("  Status:   {}", colorize_status(&fm.status.to_string(), None));
+    println!(
+        "  Status:   {}",
+        colorize_status(&fm.status.to_string(), None)
+    );
     println!(
         "  Priority: {}",
         colorize_priority(&fm.priority.to_string())
@@ -112,7 +116,10 @@ fn show_plan(project: &Project, id: &str) -> anyhow::Result<()> {
     println!("{}", fm.id.bold());
     println!("{}", fm.title.bold().white());
     println!();
-    println!("  Status:     {}", colorize_status(&fm.status.to_string(), None));
+    println!(
+        "  Status:     {}",
+        colorize_status(&fm.status.to_string(), None)
+    );
 
     if !fm.implements.is_empty() {
         println!("  Implements: {}", fm.implements.join(", "));
@@ -139,7 +146,10 @@ fn show_note(project: &Project, id: &str) -> anyhow::Result<()> {
     println!("{}", fm.id.bold());
     println!("{}", fm.title.bold().white());
     println!();
-    println!("  Status:  {}", colorize_status(&fm.status.to_string(), None));
+    println!(
+        "  Status:  {}",
+        colorize_status(&fm.status.to_string(), None)
+    );
     println!("  Type:    {}", fm.note_type);
 
     if !fm.tags.is_empty() {

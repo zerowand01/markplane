@@ -1,7 +1,5 @@
 use colored::Colorize;
-use markplane_core::{
-    EpicStatus, NoteStatus, PlanStatus, Project, QueryFilter,
-};
+use markplane_core::{EpicStatus, NoteStatus, PlanStatus, Project, QueryFilter};
 
 pub fn run(id: Option<String>, all_done: bool, dry_run: bool) -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
@@ -30,7 +28,10 @@ pub fn run(id: Option<String>, all_done: bool, dry_run: bool) -> anyhow::Result<
     let tasks = project.list_tasks(&QueryFilter::default())?;
     for doc in &tasks {
         let fm = &doc.frontmatter;
-        if workflow.category_of(&fm.status).is_some_and(|c| c.is_closed()) {
+        if workflow
+            .category_of(&fm.status)
+            .is_some_and(|c| c.is_closed())
+        {
             to_archive.push((fm.id.clone(), format!("{} ({})", fm.title, fm.status)));
         }
     }
@@ -83,11 +84,7 @@ pub fn run(id: Option<String>, all_done: bool, dry_run: bool) -> anyhow::Result<
             project.archive_item(id)?;
             println!("  {} Archived {}", "✓".green(), id);
         }
-        println!(
-            "\n{} Archived {} item(s).",
-            "✓".green(),
-            count
-        );
+        println!("\n{} Archived {} item(s).", "✓".green(), count);
     }
 
     Ok(())

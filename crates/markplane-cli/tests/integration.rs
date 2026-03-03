@@ -40,10 +40,19 @@ fn test_init_creates_structure() {
     let tmp = TempDir::new().unwrap();
     cmd()
         .current_dir(tmp.path())
-        .args(["init", "--name", "My Project", "--description", "A test", "--empty"])
+        .args([
+            "init",
+            "--name",
+            "My Project",
+            "--description",
+            "A test",
+            "--empty",
+        ])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Initialized Markplane project: My Project"))
+        .stdout(predicate::str::contains(
+            "Initialized Markplane project: My Project",
+        ))
         .stdout(predicate::str::contains(".markplane/"));
 
     assert!(tmp.path().join(".markplane/config.yaml").is_file());
@@ -158,14 +167,22 @@ fn test_add_basic() {
         .args(["add", "Fix login bug"])
         .output()
         .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let task_id = extract_id(&output.stdout);
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Created"));
     assert!(stdout.contains(&task_id));
     assert!(stdout.contains("Fix login bug"));
 
-    assert!(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id)).is_file());
+    assert!(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id))
+            .is_file()
+    );
 }
 
 #[test]
@@ -187,12 +204,19 @@ fn test_add_with_flags() {
         ])
         .output()
         .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let task_id = extract_id(&output.stdout);
 
     // Verify the file contains the right metadata
-    let content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    let content = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id)),
+    )
+    .unwrap();
     assert!(content.contains("priority: high"));
     assert!(content.contains("type: feature"));
     assert!(content.contains("effort: large"));
@@ -209,7 +233,11 @@ fn test_add_with_epic() {
         .args(["epic", "Phase 1"])
         .output()
         .unwrap();
-    assert!(epic_output.status.success(), "stderr: {}", String::from_utf8_lossy(&epic_output.stderr));
+    assert!(
+        epic_output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&epic_output.stderr)
+    );
     let epic_id = extract_id(&epic_output.stdout);
 
     let output = cmd()
@@ -217,11 +245,18 @@ fn test_add_with_epic() {
         .args(["add", "Task in epic", "--epic", &epic_id])
         .output()
         .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let task_id = extract_id(&output.stdout);
 
-    let content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    let content = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id)),
+    )
+    .unwrap();
     assert!(content.contains(&format!("epic: {}", epic_id)));
 }
 
@@ -233,7 +268,11 @@ fn test_add_random_ids() {
         .args(["add", "First"])
         .output()
         .unwrap();
-    assert!(out1.status.success(), "stderr: {}", String::from_utf8_lossy(&out1.stderr));
+    assert!(
+        out1.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out1.stderr)
+    );
     let id1 = extract_id(&out1.stdout);
     assert!(id1.starts_with("TASK-"));
 
@@ -242,7 +281,11 @@ fn test_add_random_ids() {
         .args(["add", "Second"])
         .output()
         .unwrap();
-    assert!(out2.status.success(), "stderr: {}", String::from_utf8_lossy(&out2.stderr));
+    assert!(
+        out2.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out2.stderr)
+    );
     let id2 = extract_id(&out2.stdout);
     assert!(id2.starts_with("TASK-"));
 
@@ -251,7 +294,11 @@ fn test_add_random_ids() {
         .args(["add", "Third"])
         .output()
         .unwrap();
-    assert!(out3.status.success(), "stderr: {}", String::from_utf8_lossy(&out3.stderr));
+    assert!(
+        out3.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out3.stderr)
+    );
     let id3 = extract_id(&out3.stdout);
     assert!(id3.starts_with("TASK-"));
 
@@ -271,7 +318,11 @@ fn test_show_task() {
         .args(["add", "Show me", "--priority", "high"])
         .output()
         .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let task_id = extract_id(&output.stdout);
 
     cmd()
@@ -302,7 +353,11 @@ fn test_show_epic() {
         .args(["epic", "Phase 1", "--priority", "high"])
         .output()
         .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let epic_id = extract_id(&output.stdout);
 
     cmd()
@@ -335,7 +390,11 @@ fn test_ls_with_items() {
         .args(["add", "Task A"])
         .output()
         .unwrap();
-    assert!(out1.status.success(), "stderr: {}", String::from_utf8_lossy(&out1.stderr));
+    assert!(
+        out1.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out1.stderr)
+    );
     let id1 = extract_id(&out1.stdout);
 
     let out2 = cmd()
@@ -343,7 +402,11 @@ fn test_ls_with_items() {
         .args(["add", "Task B"])
         .output()
         .unwrap();
-    assert!(out2.status.success(), "stderr: {}", String::from_utf8_lossy(&out2.stderr));
+    assert!(
+        out2.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out2.stderr)
+    );
     let id2 = extract_id(&out2.stdout);
 
     cmd()
@@ -365,14 +428,22 @@ fn test_ls_filter_status() {
         .args(["add", "Draft item"])
         .output()
         .unwrap();
-    assert!(out1.status.success(), "stderr: {}", String::from_utf8_lossy(&out1.stderr));
+    assert!(
+        out1.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out1.stderr)
+    );
 
     let out2 = cmd()
         .current_dir(tmp.path())
         .args(["add", "Progress item"])
         .output()
         .unwrap();
-    assert!(out2.status.success(), "stderr: {}", String::from_utf8_lossy(&out2.stderr));
+    assert!(
+        out2.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out2.stderr)
+    );
     let id2 = extract_id(&out2.stdout);
 
     cmd()
@@ -398,7 +469,11 @@ fn test_ls_epics() {
         .args(["epic", "Phase 1"])
         .output()
         .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let epic_id = extract_id(&output.stdout);
 
     cmd()
@@ -418,7 +493,11 @@ fn test_ls_plans() {
         .args(["add", "Some task"])
         .output()
         .unwrap();
-    assert!(task_out.status.success(), "stderr: {}", String::from_utf8_lossy(&task_out.stderr));
+    assert!(
+        task_out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&task_out.stderr)
+    );
     let task_id = extract_id(&task_out.stdout);
 
     let plan_out = cmd()
@@ -426,7 +505,11 @@ fn test_ls_plans() {
         .args(["plan", &task_id])
         .output()
         .unwrap();
-    assert!(plan_out.status.success(), "stderr: {}", String::from_utf8_lossy(&plan_out.stderr));
+    assert!(
+        plan_out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&plan_out.stderr)
+    );
     let plan_id = extract_id(&plan_out.stdout);
 
     cmd()
@@ -445,7 +528,11 @@ fn test_ls_notes() {
         .args(["note", "Research topic", "--type", "research"])
         .output()
         .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let note_id = extract_id(&output.stdout);
 
     cmd()
@@ -467,7 +554,11 @@ fn test_status_update() {
         .args(["add", "Status test"])
         .output()
         .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let task_id = extract_id(&output.stdout);
 
     cmd()
@@ -516,22 +607,14 @@ fn test_sync() {
         .assert()
         .success();
 
-    cmd()
-        .current_dir(tmp.path())
-        .arg("sync")
-        .assert()
-        .success();
+    cmd().current_dir(tmp.path()).arg("sync").assert().success();
 
     // INDEX.md files should be regenerated
-    let root_index =
-        std::fs::read_to_string(tmp.path().join(".markplane/INDEX.md")).unwrap();
+    let root_index = std::fs::read_to_string(tmp.path().join(".markplane/INDEX.md")).unwrap();
     assert!(root_index.contains("Generated by markplane sync"));
 
     // Context files should exist
-    assert!(tmp
-        .path()
-        .join(".markplane/.context/summary.md")
-        .is_file());
+    assert!(tmp.path().join(".markplane/.context/summary.md").is_file());
 }
 
 // ── Start / Done ─────────────────────────────────────────────────────────
@@ -544,7 +627,11 @@ fn test_start_and_done() {
         .args(["add", "Start/done test"])
         .output()
         .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let task_id = extract_id(&output.stdout);
 
     cmd()
@@ -556,8 +643,11 @@ fn test_start_and_done() {
         .stdout(predicate::str::contains("alice"));
 
     // Verify status and assignee
-    let content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    let content = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id)),
+    )
+    .unwrap();
     assert!(content.contains("status: in-progress"));
     assert!(content.contains("assignee: alice"));
 
@@ -579,17 +669,22 @@ fn test_epic_creation() {
         .args(["epic", "Phase 1", "--priority", "high"])
         .output()
         .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let epic_id = extract_id(&output.stdout);
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Created"));
     assert!(stdout.contains(&epic_id));
     assert!(stdout.contains("Phase 1"));
 
-    assert!(tmp
-        .path()
-        .join(format!(".markplane/roadmap/items/{}.md", epic_id))
-        .is_file());
+    assert!(
+        tmp.path()
+            .join(format!(".markplane/roadmap/items/{}.md", epic_id))
+            .is_file()
+    );
 }
 
 #[test]
@@ -597,20 +692,32 @@ fn test_note_creation() {
     let tmp = setup_project();
     let output = cmd()
         .current_dir(tmp.path())
-        .args(["note", "Research caching", "--type", "research", "--tags", "cache,perf"])
+        .args([
+            "note",
+            "Research caching",
+            "--type",
+            "research",
+            "--tags",
+            "cache,perf",
+        ])
         .output()
         .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let note_id = extract_id(&output.stdout);
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Created"));
     assert!(stdout.contains(&note_id));
     assert!(stdout.contains("Research caching"));
 
-    assert!(tmp
-        .path()
-        .join(format!(".markplane/notes/items/{}.md", note_id))
-        .is_file());
+    assert!(
+        tmp.path()
+            .join(format!(".markplane/notes/items/{}.md", note_id))
+            .is_file()
+    );
 }
 
 #[test]
@@ -621,7 +728,11 @@ fn test_plan_creation() {
         .args(["add", "Dark mode"])
         .output()
         .unwrap();
-    assert!(task_out.status.success(), "stderr: {}", String::from_utf8_lossy(&task_out.stderr));
+    assert!(
+        task_out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&task_out.stderr)
+    );
     let task_id = extract_id(&task_out.stdout);
 
     let plan_out = cmd()
@@ -629,7 +740,11 @@ fn test_plan_creation() {
         .args(["plan", &task_id, "--title", "Dark mode plan"])
         .output()
         .unwrap();
-    assert!(plan_out.status.success(), "stderr: {}", String::from_utf8_lossy(&plan_out.stderr));
+    assert!(
+        plan_out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&plan_out.stderr)
+    );
     let plan_id = extract_id(&plan_out.stdout);
     let stdout = String::from_utf8_lossy(&plan_out.stdout);
     assert!(stdout.contains("Created"));
@@ -638,8 +753,11 @@ fn test_plan_creation() {
     assert!(stdout.contains(&format!("Linked to {}", task_id)));
 
     // Verify task has plan linked
-    let content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    let content = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id)),
+    )
+    .unwrap();
     assert!(content.contains(&plan_id));
 }
 
@@ -653,7 +771,11 @@ fn test_promote_note_to_task() {
         .args(["note", "Good idea", "--type", "idea", "--tags", "cool"])
         .output()
         .unwrap();
-    assert!(note_out.status.success(), "stderr: {}", String::from_utf8_lossy(&note_out.stderr));
+    assert!(
+        note_out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&note_out.stderr)
+    );
     let note_id = extract_id(&note_out.stdout);
 
     let promote_out = cmd()
@@ -661,7 +783,11 @@ fn test_promote_note_to_task() {
         .args(["promote", &note_id, "--priority", "high"])
         .output()
         .unwrap();
-    assert!(promote_out.status.success(), "stderr: {}", String::from_utf8_lossy(&promote_out.stderr));
+    assert!(
+        promote_out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&promote_out.stderr)
+    );
     let stdout = String::from_utf8_lossy(&promote_out.stdout);
     assert!(stdout.contains(&format!("Promoted {}", note_id)));
     // Extract the TASK ID from "Promoted NOTE-xxx → TASK-yyy — title"
@@ -671,10 +797,11 @@ fn test_promote_note_to_task() {
         .expect("No TASK ID found in promote output")
         .to_string();
 
-    assert!(tmp
-        .path()
-        .join(format!(".markplane/backlog/items/{}.md", task_id))
-        .is_file());
+    assert!(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id))
+            .is_file()
+    );
 }
 
 #[test]
@@ -705,7 +832,11 @@ fn test_update_assignee() {
         .args(["add", "Update assignee test"])
         .output()
         .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let task_id = extract_id(&output.stdout);
 
     cmd()
@@ -715,8 +846,11 @@ fn test_update_assignee() {
         .success()
         .stdout(predicate::str::contains(format!("Updated {}", task_id)));
 
-    let content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    let content = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id)),
+    )
+    .unwrap();
     assert!(content.contains("assignee: daniel"));
 }
 
@@ -745,8 +879,11 @@ fn test_update_clear_assignee() {
         .assert()
         .success();
 
-    let content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    let content = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id)),
+    )
+    .unwrap();
     assert!(!content.contains("assignee: daniel"));
 }
 
@@ -767,8 +904,11 @@ fn test_update_tags() {
         .assert()
         .success();
 
-    let content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    let content = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id)),
+    )
+    .unwrap();
     assert!(content.contains("- ui\n"));
     assert!(content.contains("- frontend\n"));
 
@@ -779,8 +919,11 @@ fn test_update_tags() {
         .assert()
         .success();
 
-    let content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    let content = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id)),
+    )
+    .unwrap();
     assert!(!content.contains("- ui\n"));
     assert!(content.contains("- frontend\n"));
 }
@@ -798,12 +941,22 @@ fn test_update_effort_priority() {
 
     cmd()
         .current_dir(tmp.path())
-        .args(["update", &task_id, "--effort", "large", "--priority", "high"])
+        .args([
+            "update",
+            &task_id,
+            "--effort",
+            "large",
+            "--priority",
+            "high",
+        ])
         .assert()
         .success();
 
-    let content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    let content = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id)),
+    )
+    .unwrap();
     assert!(content.contains("effort: large"));
     assert!(content.contains("priority: high"));
 }
@@ -821,12 +974,22 @@ fn test_update_title_and_type() {
 
     cmd()
         .current_dir(tmp.path())
-        .args(["update", &task_id, "--title", "Renamed task", "--type", "bug"])
+        .args([
+            "update",
+            &task_id,
+            "--title",
+            "Renamed task",
+            "--type",
+            "bug",
+        ])
         .assert()
         .success();
 
-    let content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    let content = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id)),
+    )
+    .unwrap();
     assert!(content.contains("title: Renamed task"));
     assert!(content.contains("type: bug"));
 }
@@ -849,8 +1012,11 @@ fn test_update_position() {
         .assert()
         .success();
 
-    let content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    let content = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id)),
+    )
+    .unwrap();
     assert!(content.contains("position: aaa"));
 
     // Clear position
@@ -860,8 +1026,11 @@ fn test_update_position() {
         .assert()
         .success();
 
-    let content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    let content = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id)),
+    )
+    .unwrap();
     assert!(!content.contains("position: aaa"));
 }
 
@@ -879,12 +1048,22 @@ fn test_update_epic_dates() {
     // Set started and target dates
     cmd()
         .current_dir(tmp.path())
-        .args(["update", &epic_id, "--started", "2026-02-20", "--target", "2026-06-01"])
+        .args([
+            "update",
+            &epic_id,
+            "--started",
+            "2026-02-20",
+            "--target",
+            "2026-06-01",
+        ])
         .assert()
         .success();
 
-    let content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/roadmap/items/{}.md", epic_id))).unwrap();
+    let content = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/roadmap/items/{}.md", epic_id)),
+    )
+    .unwrap();
     assert!(content.contains("started: 2026-02-20"));
     assert!(content.contains("target: 2026-06-01"));
 
@@ -895,8 +1074,11 @@ fn test_update_epic_dates() {
         .assert()
         .success();
 
-    let content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/roadmap/items/{}.md", epic_id))).unwrap();
+    let content = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/roadmap/items/{}.md", epic_id)),
+    )
+    .unwrap();
     assert!(!content.contains("started: 2026-02-20"));
     assert!(content.contains("target: 2026-06-01"));
 }
@@ -919,8 +1101,11 @@ fn test_update_note_type() {
         .assert()
         .success();
 
-    let content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/notes/items/{}.md", note_id))).unwrap();
+    let content = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/notes/items/{}.md", note_id)),
+    )
+    .unwrap();
     assert!(content.contains("type: decision"));
 }
 
@@ -954,7 +1139,11 @@ fn test_link_blocks() {
         .args(["add", "Blocker"])
         .output()
         .unwrap();
-    assert!(out1.status.success(), "stderr: {}", String::from_utf8_lossy(&out1.stderr));
+    assert!(
+        out1.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out1.stderr)
+    );
     let id1 = extract_id(&out1.stdout);
 
     let out2 = cmd()
@@ -962,7 +1151,11 @@ fn test_link_blocks() {
         .args(["add", "Blocked"])
         .output()
         .unwrap();
-    assert!(out2.status.success(), "stderr: {}", String::from_utf8_lossy(&out2.stderr));
+    assert!(
+        out2.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out2.stderr)
+    );
     let id2 = extract_id(&out2.stdout);
 
     cmd()
@@ -973,12 +1166,18 @@ fn test_link_blocks() {
         .stdout(predicate::str::contains(format!("{} blocks {}", id1, id2)));
 
     // Verify bidirectional
-    let blocker =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", id1))).unwrap();
+    let blocker = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", id1)),
+    )
+    .unwrap();
     assert!(blocker.contains(&id2));
 
-    let blocked =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", id2))).unwrap();
+    let blocked = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", id2)),
+    )
+    .unwrap();
     assert!(blocked.contains(&id1));
 }
 
@@ -1026,8 +1225,11 @@ fn test_link_epic() {
         .assert()
         .success();
 
-    let task_content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    let task_content = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id)),
+    )
+    .unwrap();
     assert!(task_content.contains(&epic_id));
 }
 
@@ -1048,11 +1250,18 @@ fn test_link_plan() {
         .args(["plan", &task_id])
         .output()
         .unwrap();
-    assert!(plan_out.status.success(), "stderr: {}", String::from_utf8_lossy(&plan_out.stderr));
+    assert!(
+        plan_out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&plan_out.stderr)
+    );
 
     // Verify task.plan is set
-    let task_content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    let task_content = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id)),
+    )
+    .unwrap();
     assert!(task_content.contains("plan: PLAN-"));
 }
 
@@ -1089,8 +1298,11 @@ fn test_link_remove() {
         .assert()
         .success();
 
-    let content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", id1))).unwrap();
+    let content = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", id1)),
+    )
+    .unwrap();
     assert!(!content.contains(&id2));
 }
 
@@ -1121,12 +1333,24 @@ fn test_link_related_bidirectional() {
         .success();
 
     // Verify both files contain the reciprocal link
-    let content1 =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", id1))).unwrap();
-    let content2 =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", id2))).unwrap();
-    assert!(content1.contains(&id2), "Task A should have related link to Task B");
-    assert!(content2.contains(&id1), "Task B should have related link to Task A");
+    let content1 = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", id1)),
+    )
+    .unwrap();
+    let content2 = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", id2)),
+    )
+    .unwrap();
+    assert!(
+        content1.contains(&id2),
+        "Task A should have related link to Task B"
+    );
+    assert!(
+        content2.contains(&id1),
+        "Task B should have related link to Task A"
+    );
 }
 
 // ── Check ────────────────────────────────────────────────────────────────
@@ -1175,7 +1399,9 @@ fn test_check_asymmetric_links() {
         .success();
 
     // Manually corrupt: remove depends_on from the blocked task
-    let item_path = tmp.path().join(format!(".markplane/backlog/items/{}.md", id2));
+    let item_path = tmp
+        .path()
+        .join(format!(".markplane/backlog/items/{}.md", id2));
     let content = std::fs::read_to_string(&item_path).unwrap();
     let content = content.replace(&format!("depends_on:\n- {}", id1), "depends_on: []");
     std::fs::write(&item_path, content).unwrap();
@@ -1215,7 +1441,9 @@ fn test_check_fix_repairs_links() {
         .success();
 
     // Manually corrupt: remove depends_on from the blocked task
-    let item_path = tmp.path().join(format!(".markplane/backlog/items/{}.md", id2));
+    let item_path = tmp
+        .path()
+        .join(format!(".markplane/backlog/items/{}.md", id2));
     let content = std::fs::read_to_string(&item_path).unwrap();
     let content = content.replace(&format!("depends_on:\n- {}", id1), "depends_on: []");
     std::fs::write(&item_path, content).unwrap();
@@ -1234,7 +1462,9 @@ fn test_check_fix_repairs_links() {
         .arg("check")
         .assert()
         .success()
-        .stdout(predicate::str::contains("All reciprocal links are symmetric"));
+        .stdout(predicate::str::contains(
+            "All reciprocal links are symmetric",
+        ));
 }
 
 // ── Metrics ──────────────────────────────────────────────────────────────
@@ -1288,11 +1518,7 @@ fn test_commands_fail_without_init() {
         .assert()
         .failure();
 
-    cmd()
-        .current_dir(tmp.path())
-        .arg("ls")
-        .assert()
-        .failure();
+    cmd().current_dir(tmp.path()).arg("ls").assert().failure();
 
     cmd()
         .current_dir(tmp.path())
@@ -1360,11 +1586,17 @@ fn test_stale_with_old_items() {
         .args(["add", "Old item"])
         .output()
         .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let task_id = extract_id(&output.stdout);
 
     // Manually backdate the item's updated field to make it stale
-    let item_path = tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id));
+    let item_path = tmp
+        .path()
+        .join(format!(".markplane/backlog/items/{}.md", task_id));
     let content = std::fs::read_to_string(&item_path).unwrap();
     let old_date = "2020-01-01";
     let today = chrono::Local::now()
@@ -1414,7 +1646,11 @@ fn test_archive_dry_run() {
         .args(["add", "To archive"])
         .output()
         .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let task_id = extract_id(&output.stdout);
 
     cmd()
@@ -1432,7 +1668,11 @@ fn test_archive_dry_run() {
         .stdout(predicate::str::contains(&task_id));
 
     // File should still be in active dir (not moved)
-    assert!(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id)).is_file());
+    assert!(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id))
+            .is_file()
+    );
 }
 
 #[test]
@@ -1443,7 +1683,11 @@ fn test_archive_actual() {
         .args(["add", "To archive"])
         .output()
         .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let task_id = extract_id(&output.stdout);
 
     cmd()
@@ -1461,11 +1705,16 @@ fn test_archive_actual() {
         .stdout(predicate::str::contains(format!("Archived {}", task_id)));
 
     // File should be in archive dir
-    assert!(tmp
-        .path()
-        .join(format!(".markplane/backlog/archive/{}.md", task_id))
-        .is_file());
-    assert!(!tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id)).is_file());
+    assert!(
+        tmp.path()
+            .join(format!(".markplane/backlog/archive/{}.md", task_id))
+            .is_file()
+    );
+    assert!(
+        !tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id))
+            .is_file()
+    );
 }
 
 #[test]
@@ -1476,7 +1725,11 @@ fn test_archive_keep_cancelled() {
         .args(["add", "To cancel"])
         .output()
         .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let task_id = extract_id(&output.stdout);
 
     cmd()
@@ -1494,10 +1747,11 @@ fn test_archive_keep_cancelled() {
         .stdout(predicate::str::contains("Archived"));
 
     // File should be in archive dir
-    assert!(tmp
-        .path()
-        .join(format!(".markplane/backlog/archive/{}.md", task_id))
-        .is_file());
+    assert!(
+        tmp.path()
+            .join(format!(".markplane/backlog/archive/{}.md", task_id))
+            .is_file()
+    );
 }
 
 #[test]
@@ -1508,7 +1762,11 @@ fn test_unarchive() {
         .args(["add", "To archive and restore"])
         .output()
         .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let task_id = extract_id(&output.stdout);
 
     // Archive it
@@ -1518,7 +1776,11 @@ fn test_unarchive() {
         .assert()
         .success();
 
-    assert!(tmp.path().join(format!(".markplane/backlog/archive/{}.md", task_id)).is_file());
+    assert!(
+        tmp.path()
+            .join(format!(".markplane/backlog/archive/{}.md", task_id))
+            .is_file()
+    );
 
     // Unarchive it
     cmd()
@@ -1528,8 +1790,16 @@ fn test_unarchive() {
         .success()
         .stdout(predicate::str::contains(format!("Restored {}", task_id)));
 
-    assert!(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id)).is_file());
-    assert!(!tmp.path().join(format!(".markplane/backlog/archive/{}.md", task_id)).is_file());
+    assert!(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id))
+            .is_file()
+    );
+    assert!(
+        !tmp.path()
+            .join(format!(".markplane/backlog/archive/{}.md", task_id))
+            .is_file()
+    );
 }
 
 #[test]
@@ -1540,7 +1810,11 @@ fn test_ls_archived() {
         .args(["add", "Active item"])
         .output()
         .unwrap();
-    assert!(out1.status.success(), "stderr: {}", String::from_utf8_lossy(&out1.stderr));
+    assert!(
+        out1.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out1.stderr)
+    );
     let id1 = extract_id(&out1.stdout);
 
     let out2 = cmd()
@@ -1548,7 +1822,11 @@ fn test_ls_archived() {
         .args(["add", "Archived item"])
         .output()
         .unwrap();
-    assert!(out2.status.success(), "stderr: {}", String::from_utf8_lossy(&out2.stderr));
+    assert!(
+        out2.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out2.stderr)
+    );
     let id2 = extract_id(&out2.stdout);
 
     // Archive second item
@@ -1587,7 +1865,11 @@ fn test_graph() {
         .args(["add", "Blocker"])
         .output()
         .unwrap();
-    assert!(out1.status.success(), "stderr: {}", String::from_utf8_lossy(&out1.stderr));
+    assert!(
+        out1.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out1.stderr)
+    );
     let id1 = extract_id(&out1.stdout);
 
     let out2 = cmd()
@@ -1595,7 +1877,11 @@ fn test_graph() {
         .args(["add", "Blocked"])
         .output()
         .unwrap();
-    assert!(out2.status.success(), "stderr: {}", String::from_utf8_lossy(&out2.stderr));
+    assert!(
+        out2.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out2.stderr)
+    );
     let id2 = extract_id(&out2.stdout);
 
     cmd()
@@ -1625,10 +1911,7 @@ fn test_context_regenerate() {
         .success()
         .stdout(predicate::str::contains("Context files regenerated"));
 
-    assert!(tmp
-        .path()
-        .join(".markplane/.context/summary.md")
-        .is_file());
+    assert!(tmp.path().join(".markplane/.context/summary.md").is_file());
 }
 
 #[test]
@@ -1778,7 +2061,11 @@ fn test_full_workflow() {
         .args(["epic", "Phase 1", "--priority", "high"])
         .output()
         .unwrap();
-    assert!(epic_out.status.success(), "stderr: {}", String::from_utf8_lossy(&epic_out.stderr));
+    assert!(
+        epic_out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&epic_out.stderr)
+    );
     let epic_id = extract_id(&epic_out.stdout);
 
     // Create tasks
@@ -1796,7 +2083,11 @@ fn test_full_workflow() {
         ])
         .output()
         .unwrap();
-    assert!(task1_out.status.success(), "stderr: {}", String::from_utf8_lossy(&task1_out.stderr));
+    assert!(
+        task1_out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&task1_out.stderr)
+    );
     let task1_id = extract_id(&task1_out.stdout);
 
     let task2_out = cmd()
@@ -1813,7 +2104,11 @@ fn test_full_workflow() {
         ])
         .output()
         .unwrap();
-    assert!(task2_out.status.success(), "stderr: {}", String::from_utf8_lossy(&task2_out.stderr));
+    assert!(
+        task2_out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&task2_out.stderr)
+    );
     let task2_id = extract_id(&task2_out.stdout);
 
     // Link
@@ -1845,11 +2140,7 @@ fn test_full_workflow() {
         .success();
 
     // Sync everything
-    cmd()
-        .current_dir(tmp.path())
-        .arg("sync")
-        .assert()
-        .success();
+    cmd().current_dir(tmp.path()).arg("sync").assert().success();
 
     // Check references
     cmd()
@@ -1892,11 +2183,18 @@ fn test_add_with_template_bug() {
         .args(["add", "Login crash", "--type", "bug", "--template", "bug"])
         .output()
         .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let task_id = extract_id(&output.stdout);
 
-    let content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/backlog/items/{}.md", task_id))).unwrap();
+    let content = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/backlog/items/{}.md", task_id)),
+    )
+    .unwrap();
     assert!(content.contains("## Steps to Reproduce"));
 }
 
@@ -1908,7 +2206,11 @@ fn test_plan_with_template_refactor() {
         .args(["add", "Refactor auth"])
         .output()
         .unwrap();
-    assert!(task_out.status.success(), "stderr: {}", String::from_utf8_lossy(&task_out.stderr));
+    assert!(
+        task_out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&task_out.stderr)
+    );
     let task_id = extract_id(&task_out.stdout);
 
     let plan_out = cmd()
@@ -1916,11 +2218,18 @@ fn test_plan_with_template_refactor() {
         .args(["plan", &task_id, "--template", "refactor"])
         .output()
         .unwrap();
-    assert!(plan_out.status.success(), "stderr: {}", String::from_utf8_lossy(&plan_out.stderr));
+    assert!(
+        plan_out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&plan_out.stderr)
+    );
     let plan_id = extract_id(&plan_out.stdout);
 
-    let content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/plans/items/{}.md", plan_id))).unwrap();
+    let content = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/plans/items/{}.md", plan_id)),
+    )
+    .unwrap();
     assert!(content.contains("## Motivation"));
     assert!(content.contains("## Current State"));
 }
@@ -1933,11 +2242,18 @@ fn test_note_with_template_research() {
         .args(["note", "Caching study", "--template", "research"])
         .output()
         .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let note_id = extract_id(&output.stdout);
 
-    let content =
-        std::fs::read_to_string(tmp.path().join(format!(".markplane/notes/items/{}.md", note_id))).unwrap();
+    let content = std::fs::read_to_string(
+        tmp.path()
+            .join(format!(".markplane/notes/items/{}.md", note_id)),
+    )
+    .unwrap();
     assert!(content.contains("## Findings"));
     assert!(content.contains("## Recommendations"));
 }

@@ -572,10 +572,7 @@ mod tests {
 
     #[test]
     fn test_render_template_special_chars_in_values() {
-        let result = render_template(
-            "Title: {TITLE}",
-            &[("{TITLE}", "C++ & Rust <3 \"code\"")],
-        );
+        let result = render_template("Title: {TITLE}", &[("{TITLE}", "C++ & Rust <3 \"code\"")]);
         assert_eq!(result, "Title: C++ & Rust <3 \"code\"");
     }
 

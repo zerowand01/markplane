@@ -20,7 +20,12 @@ pub fn run(
     let tags = tags.map(|t| parse_comma_list(&t)).unwrap_or_default();
 
     let item = project.create_task(
-        &title, item_type, priority, effort, epic, tags,
+        &title,
+        item_type,
+        priority,
+        effort,
+        epic,
+        tags,
         template.as_deref(),
     )?;
 

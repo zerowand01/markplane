@@ -29,16 +29,24 @@ impl Project {
         let workflow = &config.workflows.task;
         let completed_statuses: HashSet<&str> = workflow
             .statuses_in(StatusCategory::Completed)
-            .iter().map(|s| s.as_str()).collect();
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
         let cancelled_statuses: HashSet<&str> = workflow
             .statuses_in(StatusCategory::Cancelled)
-            .iter().map(|s| s.as_str()).collect();
-        let closed_statuses: HashSet<&str> = completed_statuses.iter()
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
+        let closed_statuses: HashSet<&str> = completed_statuses
+            .iter()
             .chain(cancelled_statuses.iter())
-            .copied().collect();
+            .copied()
+            .collect();
         let active_statuses: HashSet<&str> = workflow
             .statuses_in(StatusCategory::Active)
-            .iter().map(|s| s.as_str()).collect();
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
 
         // All tasks (active + archived) for accurate epic progress
         let all_tasks = self.list_tasks(&QueryFilter {
@@ -96,7 +104,10 @@ impl Project {
                     .unwrap_or_default();
                 content.push_str(&format!(
                     "- {}: {} ({}{})\n",
-                    item.frontmatter.id, item.frontmatter.title, item.frontmatter.priority, assignee_str
+                    item.frontmatter.id,
+                    item.frontmatter.title,
+                    item.frontmatter.priority,
+                    assignee_str
                 ));
             }
             // Also show in-progress plans
@@ -148,7 +159,10 @@ impl Project {
         let cutoff = today - chrono::Duration::days(recent_days as i64);
         let recent_done: Vec<_> = tasks
             .iter()
-            .filter(|i| completed_statuses.contains(i.frontmatter.status.as_str()) && i.frontmatter.updated >= cutoff)
+            .filter(|i| {
+                completed_statuses.contains(i.frontmatter.status.as_str())
+                    && i.frontmatter.updated >= cutoff
+            })
             .collect();
         if !recent_done.is_empty() {
             content.push_str(&format!(
@@ -167,10 +181,14 @@ impl Project {
         // Priority queue (next items: planned/backlog, sorted by priority)
         let planned_statuses: HashSet<&str> = workflow
             .statuses_in(StatusCategory::Planned)
-            .iter().map(|s| s.as_str()).collect();
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
         let backlog_statuses: HashSet<&str> = workflow
             .statuses_in(StatusCategory::Backlog)
-            .iter().map(|s| s.as_str()).collect();
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
         let next_up: Vec<_> = tasks
             .iter()
             .filter(|i| {
@@ -240,7 +258,9 @@ impl Project {
         let workflow = &config.workflows.task;
         let active_statuses: HashSet<&str> = workflow
             .statuses_in(StatusCategory::Active)
-            .iter().map(|s| s.as_str()).collect();
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
 
         let tasks = self.list_tasks(&QueryFilter::default())?;
         let plans = self.list_plans()?;
@@ -325,7 +345,9 @@ impl Project {
         let workflow = &config.workflows.task;
         let completed_statuses: HashSet<&str> = workflow
             .statuses_in(StatusCategory::Completed)
-            .iter().map(|s| s.as_str()).collect();
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
 
         let tasks = self.list_tasks(&QueryFilter::default())?;
         let now = Local::now().format("%Y-%m-%d").to_string();
@@ -390,8 +412,13 @@ impl Project {
         let count_category = |cat: StatusCategory| -> usize {
             let statuses: HashSet<&str> = workflow
                 .statuses_in(cat)
-                .iter().map(|s| s.as_str()).collect();
-            tasks.iter().filter(|i| statuses.contains(i.frontmatter.status.as_str())).count()
+                .iter()
+                .map(|s| s.as_str())
+                .collect();
+            tasks
+                .iter()
+                .filter(|i| statuses.contains(i.frontmatter.status.as_str()))
+                .count()
         };
 
         // Overall counts
@@ -415,9 +442,11 @@ impl Project {
 
         // Priority distribution (open items only)
         let closed_statuses: HashSet<&str> = workflow
-            .statuses_in(StatusCategory::Completed).iter()
+            .statuses_in(StatusCategory::Completed)
+            .iter()
             .chain(workflow.statuses_in(StatusCategory::Cancelled).iter())
-            .map(|s| s.as_str()).collect();
+            .map(|s| s.as_str())
+            .collect();
         content.push_str("## Priority Distribution (open items)\n");
         let priority_order = [
             ("Critical", Priority::Critical),
@@ -441,10 +470,14 @@ impl Project {
         // Epic progress (uses all tasks including archived for accurate counts)
         let cancelled_statuses: HashSet<&str> = workflow
             .statuses_in(StatusCategory::Cancelled)
-            .iter().map(|s| s.as_str()).collect();
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
         let completed_statuses: HashSet<&str> = workflow
             .statuses_in(StatusCategory::Completed)
-            .iter().map(|s| s.as_str()).collect();
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
         if !epics.is_empty() {
             let all_tasks = self.list_tasks(&QueryFilter {
                 scope: ScanScope::All,
@@ -584,8 +617,7 @@ mod tests {
     fn test_generate_context_summary_empty() {
         let (_tmp, project) = setup_project();
         project.generate_context_summary().unwrap();
-        let content =
-            fs::read_to_string(project.root().join(".context/summary.md")).unwrap();
+        let content = fs::read_to_string(project.root().join(".context/summary.md")).unwrap();
         assert!(content.contains(GENERATED_HEADER));
         assert!(content.contains("Project: Test Project"));
         assert!(content.contains("Key Metrics"));
@@ -595,7 +627,9 @@ mod tests {
     #[test]
     fn test_generate_context_summary_with_items() {
         let (_tmp, project) = setup_project();
-        let epic = project.create_epic("Phase 1", Priority::High, None).unwrap();
+        let epic = project
+            .create_epic("Phase 1", Priority::High, None)
+            .unwrap();
         project.update_status(&epic.id, "now").unwrap();
 
         let task1 = project
@@ -625,8 +659,7 @@ mod tests {
         project.update_status(&task2.id, "planned").unwrap();
 
         project.generate_context_summary().unwrap();
-        let content =
-            fs::read_to_string(project.root().join(".context/summary.md")).unwrap();
+        let content = fs::read_to_string(project.root().join(".context/summary.md")).unwrap();
         assert!(content.contains("Now"));
         assert!(content.contains(&epic.id));
         assert!(content.contains("In-Progress Work"));
@@ -638,37 +671,62 @@ mod tests {
     #[test]
     fn test_generate_context_summary_includes_archived_in_epic_progress() {
         let (_tmp, project) = setup_project();
-        let epic = project.create_epic("Test Epic", Priority::High, None).unwrap();
+        let epic = project
+            .create_epic("Test Epic", Priority::High, None)
+            .unwrap();
         project.update_status(&epic.id, "now").unwrap();
 
         // Create 3 tasks: 2 done+archived, 1 active
         let task1 = project
-            .create_task("Done 1", "feature", Priority::Medium, Effort::Small,
-                Some(epic.id.clone()), vec![], None)
+            .create_task(
+                "Done 1",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                Some(epic.id.clone()),
+                vec![],
+                None,
+            )
             .unwrap();
         project.update_status(&task1.id, "done").unwrap();
         project.archive_item(&task1.id).unwrap();
 
         let task2 = project
-            .create_task("Done 2", "feature", Priority::Medium, Effort::Small,
-                Some(epic.id.clone()), vec![], None)
+            .create_task(
+                "Done 2",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                Some(epic.id.clone()),
+                vec![],
+                None,
+            )
             .unwrap();
         project.update_status(&task2.id, "done").unwrap();
         project.archive_item(&task2.id).unwrap();
 
         project
-            .create_task("Active", "feature", Priority::Medium, Effort::Small,
-                Some(epic.id.clone()), vec![], None)
+            .create_task(
+                "Active",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                Some(epic.id.clone()),
+                vec![],
+                None,
+            )
             .unwrap();
 
         project.generate_context_summary().unwrap();
-        let content =
-            fs::read_to_string(project.root().join(".context/summary.md")).unwrap();
+        let content = fs::read_to_string(project.root().join(".context/summary.md")).unwrap();
         // Should show 66% (2/3), not 0% (0/1)
         assert!(
             content.contains("66% complete, 1 items remaining"),
             "Expected 66% with 1 remaining but got: {}",
-            content.lines().find(|l| l.contains(&epic.id)).unwrap_or("not found")
+            content
+                .lines()
+                .find(|l| l.contains(&epic.id))
+                .unwrap_or("not found")
         );
     }
 
@@ -706,8 +764,7 @@ mod tests {
         project.write_item(&blocked.id, &doc).unwrap();
 
         project.generate_context_summary().unwrap();
-        let content =
-            fs::read_to_string(project.root().join(".context/summary.md")).unwrap();
+        let content = fs::read_to_string(project.root().join(".context/summary.md")).unwrap();
         assert!(content.contains("Blocked Items"));
         assert!(content.contains(&blocked.id));
         assert!(content.contains(&format!("blocked by {}", blocker.id)));
@@ -717,8 +774,7 @@ mod tests {
     fn test_generate_context_active_work_empty() {
         let (_tmp, project) = setup_project();
         project.generate_context_active_work().unwrap();
-        let content =
-            fs::read_to_string(project.root().join(".context/active-work.md")).unwrap();
+        let content = fs::read_to_string(project.root().join(".context/active-work.md")).unwrap();
         assert!(content.contains("No items currently in progress"));
     }
 
@@ -739,8 +795,7 @@ mod tests {
         project.update_status(&task.id, "in-progress").unwrap();
 
         project.generate_context_active_work().unwrap();
-        let content =
-            fs::read_to_string(project.root().join(".context/active-work.md")).unwrap();
+        let content = fs::read_to_string(project.root().join(".context/active-work.md")).unwrap();
         assert!(content.contains(&task.id));
         assert!(content.contains("Active item"));
         assert!(content.contains("critical"));
@@ -750,8 +805,7 @@ mod tests {
     fn test_generate_context_blocked_empty() {
         let (_tmp, project) = setup_project();
         project.generate_context_blocked().unwrap();
-        let content =
-            fs::read_to_string(project.root().join(".context/blocked-items.md")).unwrap();
+        let content = fs::read_to_string(project.root().join(".context/blocked-items.md")).unwrap();
         assert!(content.contains("No blocked items"));
     }
 
@@ -785,8 +839,7 @@ mod tests {
         project.write_item(&blocked.id, &doc).unwrap();
 
         project.generate_context_blocked().unwrap();
-        let content =
-            fs::read_to_string(project.root().join(".context/blocked-items.md")).unwrap();
+        let content = fs::read_to_string(project.root().join(".context/blocked-items.md")).unwrap();
         assert!(content.contains("1 blocked items"));
         assert!(content.contains(&blocked.id));
         assert!(content.contains(&format!("[[{}]]", blocker.id)));
@@ -795,7 +848,9 @@ mod tests {
     #[test]
     fn test_generate_context_metrics() {
         let (_tmp, project) = setup_project();
-        let epic = project.create_epic("Phase 1", Priority::High, None).unwrap();
+        let epic = project
+            .create_epic("Phase 1", Priority::High, None)
+            .unwrap();
         project
             .create_task(
                 "Item 1",
@@ -820,8 +875,7 @@ mod tests {
             .unwrap();
 
         project.generate_context_metrics().unwrap();
-        let content =
-            fs::read_to_string(project.root().join(".context/metrics.md")).unwrap();
+        let content = fs::read_to_string(project.root().join(".context/metrics.md")).unwrap();
         assert!(content.contains("Project Metrics"));
         assert!(content.contains("Total: 2"));
         assert!(content.contains("Draft: 2"));
@@ -834,36 +888,61 @@ mod tests {
     #[test]
     fn test_generate_context_metrics_includes_archived_in_epic_progress() {
         let (_tmp, project) = setup_project();
-        let epic = project.create_epic("Test Epic", Priority::High, None).unwrap();
+        let epic = project
+            .create_epic("Test Epic", Priority::High, None)
+            .unwrap();
 
         // 2 done+archived, 1 active
         let t1 = project
-            .create_task("Done 1", "feature", Priority::Medium, Effort::Small,
-                Some(epic.id.clone()), vec![], None)
+            .create_task(
+                "Done 1",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                Some(epic.id.clone()),
+                vec![],
+                None,
+            )
             .unwrap();
         project.update_status(&t1.id, "done").unwrap();
         project.archive_item(&t1.id).unwrap();
 
         let t2 = project
-            .create_task("Done 2", "feature", Priority::Medium, Effort::Small,
-                Some(epic.id.clone()), vec![], None)
+            .create_task(
+                "Done 2",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                Some(epic.id.clone()),
+                vec![],
+                None,
+            )
             .unwrap();
         project.update_status(&t2.id, "done").unwrap();
         project.archive_item(&t2.id).unwrap();
 
         project
-            .create_task("Open", "feature", Priority::Medium, Effort::Small,
-                Some(epic.id.clone()), vec![], None)
+            .create_task(
+                "Open",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                Some(epic.id.clone()),
+                vec![],
+                None,
+            )
             .unwrap();
 
         project.generate_context_metrics().unwrap();
-        let content =
-            fs::read_to_string(project.root().join(".context/metrics.md")).unwrap();
+        let content = fs::read_to_string(project.root().join(".context/metrics.md")).unwrap();
         // Epic progress should be 2/3 (66%), not 0/1
         assert!(
             content.contains("2/3 (66%)"),
             "Expected 2/3 (66%) in epic progress but got: {}",
-            content.lines().find(|l| l.contains(&epic.id)).unwrap_or("not found")
+            content
+                .lines()
+                .find(|l| l.contains(&epic.id))
+                .unwrap_or("not found")
         );
     }
 
@@ -881,7 +960,9 @@ mod tests {
     #[test]
     fn test_sync_all() {
         let (_tmp, project) = setup_project();
-        let epic = project.create_epic("Phase 1", Priority::High, None).unwrap();
+        let epic = project
+            .create_epic("Phase 1", Priority::High, None)
+            .unwrap();
         project
             .create_task(
                 "Item 1",
@@ -901,12 +982,10 @@ mod tests {
         assert!(root_index.contains(GENERATED_HEADER));
 
         // Context files should be generated
-        let summary =
-            fs::read_to_string(project.root().join(".context/summary.md")).unwrap();
+        let summary = fs::read_to_string(project.root().join(".context/summary.md")).unwrap();
         assert!(summary.contains("Test Project"));
 
-        let metrics =
-            fs::read_to_string(project.root().join(".context/metrics.md")).unwrap();
+        let metrics = fs::read_to_string(project.root().join(".context/metrics.md")).unwrap();
         assert!(metrics.contains("Total: 1"));
     }
 
@@ -922,8 +1001,7 @@ mod tests {
         project.save_config(&config).unwrap();
 
         project.generate_context_summary().unwrap();
-        let content =
-            fs::read_to_string(project.root().join(".context/summary.md")).unwrap();
+        let content = fs::read_to_string(project.root().join(".context/summary.md")).unwrap();
         assert!(content.contains("## Key Documentation"));
         assert!(content.contains("- architecture"));
     }
@@ -932,8 +1010,7 @@ mod tests {
     fn test_generate_context_summary_no_documentation_when_empty() {
         let (_tmp, project) = setup_project();
         project.generate_context_summary().unwrap();
-        let content =
-            fs::read_to_string(project.root().join(".context/summary.md")).unwrap();
+        let content = fs::read_to_string(project.root().join(".context/summary.md")).unwrap();
         assert!(!content.contains("Key Documentation"));
     }
 }

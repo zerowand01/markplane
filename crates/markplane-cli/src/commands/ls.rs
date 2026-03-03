@@ -1,8 +1,8 @@
 use markplane_core::{Project, QueryFilter, ScanScope};
 use tabled::{Table, Tabled};
 
-use super::{parse_comma_list, LsKind};
-use super::formatting::{truncate, colorize_status, colorize_priority};
+use super::formatting::{colorize_priority, colorize_status, truncate};
+use super::{LsKind, parse_comma_list};
 
 #[derive(Tabled)]
 struct TaskRow {
@@ -73,7 +73,9 @@ pub fn run(
         Some(LsKind::Epics) => list_epics(&project, archived),
         Some(LsKind::Plans) => list_plans(&project, archived),
         Some(LsKind::Notes) => list_notes(&project, archived),
-        None => list_tasks(&project, status, priority, epic, tags, assignee, item_type, archived),
+        None => list_tasks(
+            &project, status, priority, epic, tags, assignee, item_type, archived,
+        ),
     }
 }
 
@@ -96,7 +98,11 @@ fn list_tasks(
         tags: tags.map(|s| parse_comma_list(&s)),
         assignee,
         item_type: item_type.map(|s| parse_comma_list(&s)),
-        scope: if archived { ScanScope::Archived } else { ScanScope::Active },
+        scope: if archived {
+            ScanScope::Archived
+        } else {
+            ScanScope::Active
+        },
     };
 
     let items = project.list_tasks(&filter)?;

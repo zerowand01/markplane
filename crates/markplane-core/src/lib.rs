@@ -1,30 +1,32 @@
-pub mod models;
+pub mod context;
+pub mod error;
 pub mod frontmatter;
+pub mod index;
+pub mod links;
+pub mod manifest;
+pub mod models;
+pub mod position;
 pub mod project;
 pub mod query;
 pub mod references;
-pub mod index;
-pub mod context;
 pub mod templates;
-pub mod manifest;
-pub mod position;
-pub mod error;
-pub mod links;
 
 pub use error::{MarkplaneError, Result};
-pub use models::{
-    Task, StatusCategory, TaskWorkflow, WorkflowConfig, Config, Effort, Epic,
-    EpicStatus, IdPrefix, MarkplaneDocument, Note, NoteStatus, Plan, PlanStatus,
-    Priority, generate_random_id, parse_id, default_task_types, default_note_types,
-    default_task_workflow,
-};
 pub use frontmatter::{parse_frontmatter, parse_frontmatter_raw, write_frontmatter};
+pub use links::{LinkAction, LinkRelation};
+pub use models::{
+    Config, Effort, Epic, EpicStatus, IdPrefix, MarkplaneDocument, Note, NoteStatus, Plan,
+    PlanStatus, Priority, StatusCategory, Task, TaskWorkflow, WorkflowConfig, default_note_types,
+    default_task_types, default_task_workflow, generate_random_id, parse_id,
+};
 pub use project::{
-    Project, find_blocked_items, apply_tag_changes,
-    Patch, TaskUpdate, EpicUpdate, PlanUpdate, NoteUpdate, UpdateFields,
-    MoveDirective,
+    EpicUpdate, MoveDirective, NoteUpdate, Patch, PlanUpdate, Project, TaskUpdate, UpdateFields,
+    apply_tag_changes, find_blocked_items,
 };
 pub use query::{QueryFilter, ScanScope};
-pub use references::{extract_references, validate_references, validate_task_statuses, validate_reciprocal_links, find_orphans, detect_cycles, BrokenReference, AsymmetricLink, DependencyCycle, build_reference_graph};
+pub use references::{
+    AsymmetricLink, BrokenReference, DependencyCycle, build_reference_graph, detect_cycles,
+    extract_references, find_orphans, validate_reciprocal_links, validate_references,
+    validate_task_statuses,
+};
 pub use templates::render_template;
-pub use links::{LinkRelation, LinkAction};

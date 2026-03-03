@@ -1,33 +1,33 @@
-mod init;
 mod add;
-mod show;
+mod archive;
+mod check;
+mod claude_md;
+mod context;
+mod dashboard;
+mod done;
 mod edit;
+mod epic;
+mod formatting;
+mod graph;
+mod init;
+mod link;
 mod ls;
+mod mcp;
+mod metrics;
+mod note;
+mod plan;
+mod promote;
+mod serve;
+mod show;
+mod stale;
+mod start;
 mod status;
 mod sync;
-mod start;
-mod done;
-mod promote;
-mod plan;
-mod epic;
-mod note;
-mod update;
-mod link;
-mod check;
-mod stale;
-mod archive;
 mod unarchive;
-mod context;
-mod formatting;
-mod metrics;
-mod graph;
-mod claude_md;
-mod dashboard;
-mod serve;
-mod mcp;
+mod update;
 
-use std::path::PathBuf;
 use clap::Subcommand;
+use std::path::PathBuf;
 
 #[derive(Subcommand)]
 pub enum Commands {
@@ -348,7 +348,11 @@ pub enum LsKind {
 
 pub fn execute(cmd: Commands) -> anyhow::Result<()> {
     match cmd {
-        Commands::Init { name, description, empty } => init::run(name, description, empty),
+        Commands::Init {
+            name,
+            description,
+            empty,
+        } => init::run(name, description, empty),
         Commands::Add {
             title,
             r#type,
@@ -369,23 +373,66 @@ pub fn execute(cmd: Commands) -> anyhow::Result<()> {
             assignee,
             r#type,
             archived,
-        } => ls::run(kind, status, priority, epic, tags, assignee, r#type, archived),
+        } => ls::run(
+            kind, status, priority, epic, tags, assignee, r#type, archived,
+        ),
         Commands::Status { id, new_status } => status::run(id, new_status),
         Commands::Sync { normalize } => sync::run(normalize),
         Commands::Start { id, user } => start::run(id, user),
         Commands::Done { id } => done::run(id),
-        Commands::Promote { id, priority, effort } => promote::run(id, priority, effort),
-        Commands::Plan { id, title, template } => plan::run(id, title, template),
+        Commands::Promote {
+            id,
+            priority,
+            effort,
+        } => promote::run(id, priority, effort),
+        Commands::Plan {
+            id,
+            title,
+            template,
+        } => plan::run(id, title, template),
         Commands::Epic { title, priority } => epic::run(title, priority),
-        Commands::Note { title, r#type, tags, template } => note::run(title, r#type, tags, template),
+        Commands::Note {
+            title,
+            r#type,
+            tags,
+            template,
+        } => note::run(title, r#type, tags, template),
         Commands::Update {
-            id, title, status, priority, effort, r#type, assignee,
-            clear_assignee, position, clear_position, add_tag, remove_tag,
-            started, clear_started, target, clear_target, note_type,
+            id,
+            title,
+            status,
+            priority,
+            effort,
+            r#type,
+            assignee,
+            clear_assignee,
+            position,
+            clear_position,
+            add_tag,
+            remove_tag,
+            started,
+            clear_started,
+            target,
+            clear_target,
+            note_type,
         } => update::run(
-            id, title, status, priority, effort, r#type, assignee,
-            clear_assignee, position, clear_position, add_tag, remove_tag,
-            started, clear_started, target, clear_target, note_type,
+            id,
+            title,
+            status,
+            priority,
+            effort,
+            r#type,
+            assignee,
+            clear_assignee,
+            position,
+            clear_position,
+            add_tag,
+            remove_tag,
+            started,
+            clear_started,
+            target,
+            clear_target,
+            note_type,
         ),
         Commands::Link {
             from,
@@ -395,7 +442,11 @@ pub fn execute(cmd: Commands) -> anyhow::Result<()> {
         } => link::run(from, to, relation, remove),
         Commands::Check { orphans, fix } => check::run(orphans, fix),
         Commands::Stale { days } => stale::run(days),
-        Commands::Archive { id, all_done, dry_run } => archive::run(id, all_done, dry_run),
+        Commands::Archive {
+            id,
+            all_done,
+            dry_run,
+        } => archive::run(id, all_done, dry_run),
         Commands::Unarchive { id } => unarchive::run(id),
         Commands::Context { focus } => context::run(focus),
         Commands::Metrics => metrics::run(),

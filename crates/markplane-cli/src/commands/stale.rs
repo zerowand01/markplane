@@ -32,8 +32,7 @@ pub fn run(days: u32) -> anyhow::Result<()> {
         .iter()
         .filter(|doc| {
             let fm = &doc.frontmatter;
-            workflow.category_of(&fm.status).is_none_or(|c| c.is_open())
-                && fm.updated < cutoff
+            workflow.category_of(&fm.status).is_none_or(|c| c.is_open()) && fm.updated < cutoff
         })
         .map(|doc| {
             let fm = &doc.frontmatter;
