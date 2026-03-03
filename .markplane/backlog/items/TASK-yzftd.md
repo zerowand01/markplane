@@ -1,7 +1,7 @@
 ---
 id: TASK-yzftd
 title: Set up GitHub Actions CI pipeline
-status: planned
+status: done
 priority: high
 type: chore
 effort: medium
@@ -18,7 +18,7 @@ tags:
 - release
 position: a0
 created: 2026-02-13
-updated: 2026-03-02
+updated: 2026-03-03
 ---
 
 # Set up GitHub Actions CI pipeline
@@ -38,7 +38,7 @@ Create a GitHub Actions CI workflow that runs on every push and PR. Should valid
 - [ ] Uses `dtolnay/rust-toolchain` with explicit `components: clippy, rustfmt` (minimal profile omits them)
 - [ ] Uses Rust toolchain caching (`Swatinem/rust-cache@v2`, placed after toolchain setup)
 - [ ] Uses Node.js with npm caching (`actions/setup-node` with `cache: 'npm'`)
-- [ ] Add `.nvmrc` file in `crates/markplane-web/ui/` pinning Node.js 22
+- [ ] Add `.nvmrc` file in `crates/markplane-web/ui/` pinning Node.js 24
 - [ ] Add `concurrency` group with conditional `cancel-in-progress` (cancel on branches, not on `master`)
 
 ## Decisions
@@ -55,7 +55,7 @@ Create a GitHub Actions CI workflow that runs on every push and PR. Should valid
 
 - Rust stable toolchain pinned to 1.93.0 (edition 2024, matches `rust-version` in Cargo.toml)
 - No `rust-toolchain.toml` exists — pin version via `dtolnay/rust-toolchain` action config with `components: clippy, rustfmt` (minimal profile excludes them)
-- Node.js 22 LTS — Next.js 16 requires Node 18+
+- Node.js 24 LTS (Active) — Next.js 16 requires Node 18+
 - No frontend test framework configured (ESLint only for static analysis) — no `npm test` step needed
 - `notify` crate uses macOS fsevent backend but compiles conditionally; Linux uses inotify — tests should pass on Ubuntu
 - Step ordering for fast failure: fmt → clippy → test → frontend (lint + build)
