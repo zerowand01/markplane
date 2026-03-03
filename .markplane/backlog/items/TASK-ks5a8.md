@@ -1,7 +1,7 @@
 ---
 id: TASK-ks5a8
 title: Convert position.rs panics to Result error handling
-status: planned
+status: done
 priority: high
 type: bug
 effort: medium
@@ -17,7 +17,7 @@ tags:
 - pre-release
 position: a3
 created: 2026-03-02
-updated: 2026-03-02
+updated: 2026-03-03
 ---
 
 # Convert position.rs panics to Result error handling
@@ -48,6 +48,26 @@ All panic paths should be converted to return `Result<_, MarkplaneError>` and er
 - [ ] Malformed position keys via the web UI's drag-and-drop return HTTP 400/422, not HTTP 500
 - [ ] All existing tests pass
 - [ ] New tests cover invalid position key inputs
+
+## Implementation Notes
+
+**New error variant**: `MarkplaneError::InvalidPosition(String)` added to `error.rs`. Mapped to HTTP 422 (Unprocessable Entity) in `serve.rs` `map_core_error()`. Diagram in `docs/architecture.md` updated.
+
+**position.rs changes** — all internal functions converted from panic to `Result`:
+- `digit_value()` → `Result<usize>`
+- `get_integer_length()` → `Result<usize>`
+- `get_integer_part()` → `Result<&str>` (with empty-string guard)
+- `midpoint()` → `Result<String>`
+- `increment_integer()` / `decrement_integer()` → `Result<Option<String>>`
+- `generate_key_between()` → `Result<Option<String>>` (public API change)
+
+Module-local `type Result<T>` alias and `pos_err()` helper keep the code concise.
+
+`validate_order_key()` retained as debug-only (assert-based) — unchanged per task spec.
+
+**project.rs**: `.expect("moved task must be in list")` replaced with `.ok_or_else(|| MarkplaneError::NotFound(...))`.
+
+**Tests**: 12 new test cases covering invalid inputs to `digit_value`, `get_integer_length`, `get_integer_part`, `increment_integer`, `decrement_integer`, and `midpoint`. All 429 tests pass, clippy clean.
 
 ## References
 

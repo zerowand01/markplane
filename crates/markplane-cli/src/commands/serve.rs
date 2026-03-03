@@ -466,6 +466,7 @@ fn map_core_error(e: MarkplaneError) -> (StatusCode, Json<ApiError>) {
             error_response(StatusCode::BAD_REQUEST, "invalid_status", &e.to_string())
         }
         MarkplaneError::InvalidLink(_) => error_response(StatusCode::BAD_REQUEST, "invalid_link", &e.to_string()),
+        MarkplaneError::InvalidPosition(_) => error_response(StatusCode::UNPROCESSABLE_ENTITY, "invalid_position", &e.to_string()),
         MarkplaneError::DuplicateId(_) => error_response(StatusCode::CONFLICT, "duplicate_id", &e.to_string()),
         MarkplaneError::BrokenReference(_) => error_response(StatusCode::BAD_REQUEST, "broken_reference", &e.to_string()),
         MarkplaneError::Config(_) | MarkplaneError::Frontmatter(_) => {

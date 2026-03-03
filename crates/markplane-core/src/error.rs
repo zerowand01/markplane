@@ -37,6 +37,9 @@ pub enum MarkplaneError {
 
     #[error("Frontmatter error: {0}")]
     Frontmatter(String),
+
+    #[error("Invalid position key: {0}")]
+    InvalidPosition(String),
 }
 
 pub type Result<T> = std::result::Result<T, MarkplaneError>;

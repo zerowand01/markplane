@@ -878,11 +878,11 @@ impl Project {
         let (insert_index, new_pos) = match &directive {
             MoveDirective::Top => {
                 let first_pos = others.first().and_then(|t| t.frontmatter.position.as_deref());
-                (0, generate_key_between(None, first_pos))
+                (0, generate_key_between(None, first_pos)?)
             }
             MoveDirective::Bottom => {
                 let last_pos = others.last().and_then(|t| t.frontmatter.position.as_deref());
-                (others.len(), generate_key_between(last_pos, None))
+                (others.len(), generate_key_between(last_pos, None)?)
             }
             MoveDirective::Before(target_id) => {
                 if target_id == id {
@@ -893,7 +893,7 @@ impl Project {
                 let idx = self.find_move_target(&others, target_id, id, &priority)?;
                 let before = if idx > 0 { others[idx - 1].frontmatter.position.as_deref() } else { None };
                 let after = others[idx].frontmatter.position.as_deref();
-                (idx, generate_key_between(before, after))
+                (idx, generate_key_between(before, after)?)
             }
             MoveDirective::After(target_id) => {
                 if target_id == id {
@@ -904,7 +904,7 @@ impl Project {
                 let idx = self.find_move_target(&others, target_id, id, &priority)?;
                 let before = others[idx].frontmatter.position.as_deref();
                 let after = others.get(idx + 1).and_then(|t| t.frontmatter.position.as_deref());
-                (idx + 1, generate_key_between(before, after))
+                (idx + 1, generate_key_between(before, after)?)
             }
         };
 
@@ -920,7 +920,9 @@ impl Project {
                     .filter(|t| t.frontmatter.id != id)
                     .collect();
                 let moved = tasks.iter().find(|t| t.frontmatter.id == id)
-                    .expect("moved task must be in list");
+                    .ok_or_else(|| MarkplaneError::NotFound(format!(
+                        "task {} not found in priority group during move", id
+                    )))?;
                 let at = insert_index.min(ordered.len());
                 ordered.insert(at, moved);
 
