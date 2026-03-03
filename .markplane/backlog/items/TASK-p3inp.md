@@ -1,7 +1,7 @@
 ---
 id: TASK-p3inp
 title: Fix append_position using count instead of max existing position
-status: backlog
+status: planned
 priority: high
 type: bug
 effort: xs
@@ -17,7 +17,7 @@ tags:
 - web-ui
 position: a3x
 created: 2026-03-02
-updated: 2026-03-02
+updated: 2026-03-03
 ---
 
 # Fix append_position using count instead of max existing position

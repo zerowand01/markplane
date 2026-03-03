@@ -1,7 +1,7 @@
 ---
 id: TASK-ifkq2
 title: Frontmatter and file format robustness
-status: planned
+status: done
 priority: high
 type: bug
 effort: medium
@@ -43,13 +43,23 @@ At `project.rs:1058`, `.file_name().unwrap()` can panic on edge-case paths. Repl
 
 ## Acceptance Criteria
 
-- [ ] Frontmatter parsing handles CRLF (`\r\n`) line endings correctly
-- [ ] Archive detection checks parent directory components, not path string matching
-- [ ] `scan_dir_entries` logs warnings on file read errors and parse failures
-- [ ] Malformed `manifest.yaml` produces a stderr warning
-- [ ] No `.unwrap()` on `file_name()` in production code
-- [ ] All existing tests pass
-- [ ] New test for CRLF frontmatter parsing
+- [x] Frontmatter parsing handles CRLF (`\r\n`) line endings correctly
+- [x] Archive detection checks parent directory components, not path string matching
+- [x] `scan_dir_entries` logs warnings on file read errors and parse failures
+- [x] Malformed `manifest.yaml` produces a stderr warning
+- [x] No `.unwrap()` on `file_name()` in production code
+- [x] All existing tests pass
+- [x] New test for CRLF frontmatter parsing
+
+## Implementation Notes
+
+- **CRLF**: Normalize `\r\n` → `\n` at entry to `parse_frontmatter_raw()`, before byte offset math. Conditional allocation avoids overhead on LF-only files. Two new tests (`test_parse_frontmatter_crlf`, `test_parse_frontmatter_crlf_typed`).
+- **Archive detection**: New `path_is_archived()` helper checks immediate parent directory name (`path.parent().file_name() == "archive"`) instead of scanning all path components or string matching. Matches the actual path structure: `{dir}/archive/{ID}.md` vs `{dir}/items/{ID}.md`.
+- **scan_dir_entries**: `eprintln!` warnings with file path and error for both `read_to_string` and `parse_frontmatter` failures. Updated doc comment.
+- **Manifest fallback**: Restructured `if let Ok(Some(m))` into explicit `match` that logs to stderr on `Err`, then falls through to default templates.
+- **file_name()**: Replaced `.unwrap()` with `let Some(...) else { continue }`.
+
+All changes in `markplane-core` only. No CLI, MCP, or data format changes. 418 tests pass, clippy clean.
 
 ## References
 

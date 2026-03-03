@@ -269,26 +269,37 @@ impl Project {
         // Determine the template name via the resolution chain
         let name = if let Some(name) = explicit {
             name.to_string()
-        } else if let Ok(Some(m)) = manifest::load_manifest(&self.root) {
-            if let Some(kind_config) = m.get(kind) {
-                if let Some(it) = item_type {
-                    kind_config
-                        .type_defaults
-                        .get(it)
-                        .cloned()
-                        .or_else(|| kind_config.default.clone())
-                        .unwrap_or_else(|| "default".to_string())
+        } else {
+            let manifest = match manifest::load_manifest(&self.root) {
+                Ok(m) => m,
+                Err(e) => {
+                    eprintln!(
+                        "warning: failed to parse manifest.yaml, using default templates: {e}"
+                    );
+                    None
+                }
+            };
+            if let Some(m) = manifest {
+                if let Some(kind_config) = m.get(kind) {
+                    if let Some(it) = item_type {
+                        kind_config
+                            .type_defaults
+                            .get(it)
+                            .cloned()
+                            .or_else(|| kind_config.default.clone())
+                            .unwrap_or_else(|| "default".to_string())
+                    } else {
+                        kind_config
+                            .default
+                            .clone()
+                            .unwrap_or_else(|| "default".to_string())
+                    }
                 } else {
-                    kind_config
-                        .default
-                        .clone()
-                        .unwrap_or_else(|| "default".to_string())
+                    "default".to_string()
                 }
             } else {
                 "default".to_string()
             }
-        } else {
-            "default".to_string()
         };
 
         // Validate template name to prevent path traversal
@@ -985,7 +996,7 @@ impl Project {
         let source = self.item_path(id)?;
 
         // Don't archive if already in archive
-        if source.to_string_lossy().contains("/archive/") {
+        if path_is_archived(&source) {
             return Err(MarkplaneError::NotFound(format!(
                 "Item {} is already archived",
                 id
@@ -1005,7 +1016,7 @@ impl Project {
         let source = self.item_path(id)?;
 
         // Only unarchive if currently in archive
-        if !source.to_string_lossy().contains("/archive/") {
+        if !path_is_archived(&source) {
             return Err(MarkplaneError::Config(format!(
                 "Item {} is not archived",
                 id
@@ -1022,7 +1033,7 @@ impl Project {
     /// Check whether an item is currently archived.
     pub fn is_archived(&self, id: &str) -> Result<bool> {
         let path = self.item_path(id)?;
-        Ok(path.to_string_lossy().contains("/archive/"))
+        Ok(path_is_archived(&path))
     }
 
     // ── Documentation ────────────────────────────────────────────────────
@@ -1057,7 +1068,10 @@ impl Project {
                 .collect();
             entries.sort();
             for entry in entries {
-                let file_name = entry.file_name().unwrap().to_string_lossy().to_string();
+                let Some(file_name_os) = entry.file_name() else {
+                    continue;
+                };
+                let file_name = file_name_os.to_string_lossy().to_string();
                 let rel_path = format!("../{}/{}", doc_path, file_name);
                 let display = file_name.trim_end_matches(".md").to_string();
                 docs.push((display, rel_path));
@@ -1256,6 +1270,13 @@ impl Project {
 
         Ok(vec![epic_id, setup_task_id, import_task_id, plan_id, note_id])
     }
+}
+
+/// Check whether an item file lives inside an `archive/` parent directory.
+fn path_is_archived(path: &Path) -> bool {
+    path.parent()
+        .and_then(|p| p.file_name())
+        .is_some_and(|name| name == "archive")
 }
 
 /// Validate that a title does not exceed the maximum length.

@@ -148,7 +148,8 @@ impl Project {
 }
 
 /// Scan a single directory for `.md` files, parse each one, and append to `results`.
-/// Skips INDEX.md, ideas.md, decisions.md, and any files that fail to parse.
+/// Skips INDEX.md, ideas.md, decisions.md. Logs warnings to stderr for unreadable
+/// or unparseable files and continues scanning.
 fn scan_dir_entries<T: serde::de::DeserializeOwned>(
     scan_dir: &std::path::Path,
     results: &mut Vec<MarkplaneDocument<T>>,
@@ -166,12 +167,24 @@ fn scan_dir_entries<T: serde::de::DeserializeOwned>(
 
         let content = match fs::read_to_string(&path) {
             Ok(c) => c,
-            Err(_) => continue,
+            Err(e) => {
+                eprintln!(
+                    "warning: could not read {}: {e}",
+                    path.display()
+                );
+                continue;
+            }
         };
 
         match parse_frontmatter::<T>(&content) {
             Ok(doc) => results.push(doc),
-            Err(_) => continue,
+            Err(e) => {
+                eprintln!(
+                    "warning: failed to parse {}: {e}",
+                    path.display()
+                );
+                continue;
+            }
         }
     }
 }

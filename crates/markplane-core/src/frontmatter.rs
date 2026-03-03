@@ -18,6 +18,15 @@ const FRONTMATTER_DELIMITER: &str = "---";
 ///
 /// Returns `(yaml_string, body_string)`.
 pub fn parse_frontmatter_raw(content: &str) -> Result<(String, String)> {
+    // Normalize CRLF to LF so byte offsets are correct on Windows / mixed-ending files
+    let normalized;
+    let content = if content.contains('\r') {
+        normalized = content.replace("\r\n", "\n");
+        normalized.as_str()
+    } else {
+        content
+    };
+
     let trimmed = content.trim_start();
 
     if !trimmed.starts_with(FRONTMATTER_DELIMITER) {
@@ -226,5 +235,23 @@ Some description here.
         assert!(doc.body.contains("Paragraph one."));
         assert!(doc.body.contains("Paragraph two."));
         assert!(doc.body.contains("- list item"));
+    }
+
+    #[test]
+    fn test_parse_frontmatter_crlf() {
+        let content = "---\r\nid: TASK-001\r\ntitle: Test\r\n---\r\n\r\n# Body\r\n";
+        let (yaml, body) = parse_frontmatter_raw(content).unwrap();
+        assert!(yaml.contains("id: TASK-001"));
+        assert!(yaml.contains("title: Test"));
+        assert!(body.contains("# Body"));
+    }
+
+    #[test]
+    fn test_parse_frontmatter_crlf_typed() {
+        let content = "---\r\nid: TASK-042\r\ntitle: CRLF test\r\nstatus: draft\r\npriority: low\r\ntype: chore\r\neffort: xs\r\ncreated: 2026-01-01\r\nupdated: 2026-01-01\r\n---\r\n\r\n# CRLF body\r\n";
+        let doc: MarkplaneDocument<Task> = parse_frontmatter(content).unwrap();
+        assert_eq!(doc.frontmatter.id, "TASK-042");
+        assert_eq!(doc.frontmatter.title, "CRLF test");
+        assert!(doc.body.contains("# CRLF body"));
     }
 }
