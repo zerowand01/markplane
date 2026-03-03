@@ -259,11 +259,13 @@ impl Project {
     /// Compute a position key that appends to the end of a priority group.
     fn append_position(&self, priority: &Priority) -> Result<String> {
         let tasks = self.list_tasks(&crate::query::QueryFilter::default())?;
-        let count = tasks
+        let max_pos = tasks
             .iter()
             .filter(|t| &t.frontmatter.priority == priority)
-            .count();
-        Ok(crate::position::index_to_key(count))
+            .filter_map(|t| t.frontmatter.position.as_deref())
+            .max();
+        Ok(crate::position::generate_key_between(max_pos, None)?
+            .expect("generate_key_between(_, None) always returns Some"))
     }
 
     // ── Template Resolution ──────────────────────────────────────────────

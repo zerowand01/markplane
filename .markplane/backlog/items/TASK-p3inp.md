@@ -1,7 +1,7 @@
 ---
 id: TASK-p3inp
 title: Fix append_position using count instead of max existing position
-status: planned
+status: done
 priority: high
 type: bug
 effort: xs
