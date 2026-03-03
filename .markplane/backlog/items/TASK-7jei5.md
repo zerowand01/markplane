@@ -13,7 +13,7 @@ related: []
 assignee: null
 tags:
 - mcp
-position: a6
+position: a4
 created: 2026-02-10
 updated: 2026-02-23
 ---

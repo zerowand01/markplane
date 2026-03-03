@@ -15,7 +15,7 @@ tags:
 - sync
 - serve
 - architecture
-position: a2
+position: a3
 created: 2026-02-20
 updated: 2026-02-21
 ---

@@ -15,7 +15,7 @@ assignee: null
 tags:
 - release
 - homebrew
-position: ZzV
+position: a0
 created: 2026-02-13
 updated: 2026-02-23
 ---

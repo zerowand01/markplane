@@ -16,9 +16,9 @@ tags:
 - web-ui
 - settings
 - templates
-position: a6
+position: a3
 created: 2026-02-28
-updated: 2026-02-28
+updated: 2026-03-02
 ---
 
 # Template management UI

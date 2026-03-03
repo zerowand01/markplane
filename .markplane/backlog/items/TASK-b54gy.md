@@ -5,15 +5,15 @@ status: backlog
 priority: low
 type: feature
 effort: xl
-tags:
-- core
 epic: EPIC-c5uem
 plan: null
 depends_on: []
 blocks: []
 related: []
 assignee: null
-position: a6V
+tags:
+- core
+position: a4
 created: 2026-02-10
 updated: 2026-02-28
 ---
