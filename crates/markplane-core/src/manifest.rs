@@ -47,8 +47,25 @@ pub fn load_manifest(root: &Path) -> Result<Option<Manifest>, String> {
     Ok(Some(manifest))
 }
 
+/// Validate that a template name contains only safe characters: `[a-zA-Z0-9_-]`.
+/// Rejects names containing `/`, `\`, `..`, or any other characters that could
+/// enable path traversal.
+pub fn validate_template_name(name: &str) -> Result<(), String> {
+    if name.is_empty() {
+        return Err("Template name must not be empty".to_string());
+    }
+    if !name.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-') {
+        return Err(format!(
+            "Invalid template name '{name}': only [a-zA-Z0-9_-] allowed"
+        ));
+    }
+    Ok(())
+}
+
 /// Map a (kind, template name) pair to a filename.
 /// "default" → `"{kind}.md"`, anything else → `"{kind}-{name}.md"`.
+///
+/// The caller must validate `name` with [`validate_template_name`] first.
 pub fn template_filename(kind: &str, name: &str) -> String {
     if name == "default" {
         format!("{kind}.md")
@@ -177,6 +194,26 @@ mod tests {
         assert_eq!(builtin_template("note", "research"), templates::NOTE_RESEARCH_TEMPLATE);
         assert_eq!(builtin_template("note", "analysis"), templates::NOTE_ANALYSIS_TEMPLATE);
         assert_eq!(builtin_template("note", "anything"), templates::NOTE_GENERIC_TEMPLATE);
+    }
+
+    #[test]
+    fn test_validate_template_name_valid() {
+        assert!(validate_template_name("default").is_ok());
+        assert!(validate_template_name("bug").is_ok());
+        assert!(validate_template_name("my-template").is_ok());
+        assert!(validate_template_name("my_template").is_ok());
+        assert!(validate_template_name("Template123").is_ok());
+    }
+
+    #[test]
+    fn test_validate_template_name_rejects_traversal() {
+        assert!(validate_template_name("x/../../README").is_err());
+        assert!(validate_template_name("../etc/passwd").is_err());
+        assert!(validate_template_name("..").is_err());
+        assert!(validate_template_name("foo/bar").is_err());
+        assert!(validate_template_name("foo\\bar").is_err());
+        assert!(validate_template_name("").is_err());
+        assert!(validate_template_name("foo.bar").is_err());
     }
 
     #[test]

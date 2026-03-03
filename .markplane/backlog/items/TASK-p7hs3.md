@@ -1,7 +1,7 @@
 ---
 id: TASK-p7hs3
 title: Input validation and path traversal prevention
-status: planned
+status: done
 priority: high
 type: bug
 effort: xs

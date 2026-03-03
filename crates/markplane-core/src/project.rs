@@ -265,7 +265,7 @@ impl Project {
         kind: &str,
         explicit: Option<&str>,
         item_type: Option<&str>,
-    ) -> String {
+    ) -> Result<String> {
         // Determine the template name via the resolution chain
         let name = if let Some(name) = explicit {
             name.to_string()
@@ -291,15 +291,19 @@ impl Project {
             "default".to_string()
         };
 
+        // Validate template name to prevent path traversal
+        manifest::validate_template_name(&name)
+            .map_err(MarkplaneError::Config)?;
+
         // Try reading from disk first
         let filename = manifest::template_filename(kind, &name);
         let path = self.root.join("templates").join(&filename);
         if let Ok(content) = fs::read_to_string(&path) {
-            return content;
+            return Ok(content);
         }
 
         // Fall back to built-in
-        manifest::builtin_template(kind, &name).to_string()
+        Ok(manifest::builtin_template(kind, &name).to_string())
     }
 
     // ── Validation ─────────────────────────────────────────────────────────
@@ -366,7 +370,7 @@ impl Project {
         let id = self.next_id(&IdPrefix::Task)?;
         let today = Local::now().date_naive();
         let position = self.append_position(&priority)?;
-        let tmpl = self.resolve_template_body("task", template, Some(item_type));
+        let tmpl = self.resolve_template_body("task", template, Some(item_type))?;
 
         let task = Task {
             id,
@@ -423,7 +427,7 @@ impl Project {
             updated: today,
         };
 
-        let tmpl = self.resolve_template_body("epic", template, None);
+        let tmpl = self.resolve_template_body("epic", template, None)?;
         let body = render_template(&tmpl, &[("{TITLE}", title)]);
         let doc = MarkplaneDocument { frontmatter: &epic, body };
         let content = write_frontmatter(&doc)?;
@@ -457,7 +461,7 @@ impl Project {
             updated: today,
         };
 
-        let tmpl = self.resolve_template_body("plan", template, None);
+        let tmpl = self.resolve_template_body("plan", template, None)?;
         let body = render_template(&tmpl, &[("{TITLE}", title)]);
         let doc = MarkplaneDocument { frontmatter: &plan, body };
         let content = write_frontmatter(&doc)?;
@@ -482,7 +486,7 @@ impl Project {
         self.validate_note_type(note_type)?;
         let id = self.next_id(&IdPrefix::Note)?;
         let today = Local::now().date_naive();
-        let tmpl = self.resolve_template_body("note", template, Some(note_type));
+        let tmpl = self.resolve_template_body("note", template, Some(note_type))?;
 
         let note = Note {
             id,
@@ -1028,10 +1032,20 @@ impl Project {
         let repo_root = self.root().parent().ok_or_else(|| {
             MarkplaneError::Config("Cannot determine repo root".into())
         })?;
+        let canonical_root = repo_root.canonicalize().map_err(|e| {
+            MarkplaneError::Config(format!("Cannot canonicalize repo root: {e}"))
+        })?;
         let mut docs = Vec::new();
         for doc_path in &config.documentation_paths {
             let abs_dir = repo_root.join(doc_path);
             if !abs_dir.is_dir() {
+                continue;
+            }
+            // Verify the resolved path is within the repo root
+            let canonical_dir = abs_dir.canonicalize().map_err(|e| {
+                MarkplaneError::Config(format!("Cannot canonicalize path '{}': {e}", doc_path))
+            })?;
+            if !canonical_dir.starts_with(&canonical_root) {
                 continue;
             }
             let pattern = abs_dir.join("*.md").to_string_lossy().to_string();
@@ -1949,6 +1963,39 @@ mod tests {
         assert!(docs.is_empty());
     }
 
+    #[test]
+    fn test_list_documentation_files_rejects_traversal() {
+        let (tmp, project) = setup_project();
+        // repo_root = tmp.path() (parent of .markplane/)
+        // Create a docs dir that exists but is reached via traversal outside repo root.
+        // Place it inside the repo root but reference it via a path that escapes first.
+        let docs_dir = tmp.path().join("docs");
+        fs::create_dir_all(&docs_dir).unwrap();
+        fs::write(docs_dir.join("secret.md"), "# Secret").unwrap();
+
+        // Get the repo root dir name so we can construct a traversal that
+        // escapes and re-enters: "../{dirname}/docs" canonicalizes to the
+        // same place as "docs", but the non-canonical path leaves repo_root.
+        // Actually, canonicalize() resolves this back inside, so it would pass.
+        //
+        // Instead, test with a truly outside directory:
+        // Create a sibling directory next to the tmp dir
+        let parent = tmp.path().parent().unwrap();
+        let outside_name = format!("markplane_test_outside_{}", std::process::id());
+        let outside_dir = parent.join(&outside_name);
+        fs::create_dir_all(&outside_dir).unwrap();
+        fs::write(outside_dir.join("secret.md"), "# Secret").unwrap();
+
+        let mut config = project.load_config().unwrap();
+        config.documentation_paths = vec![format!("../{outside_name}")];
+        project.save_config(&config).unwrap();
+
+        let docs = project.list_documentation_files().unwrap();
+        // Clean up the outside dir before asserting
+        let _ = fs::remove_dir_all(&outside_dir);
+        assert!(docs.is_empty(), "Path traversal should be blocked");
+    }
+
     // ── unarchive_item ──────────────────────────────────────────────────
 
     #[test]
@@ -2312,14 +2359,14 @@ mod tests {
         let _ = fs::remove_file(project.root().join("templates/task.md"));
         let _ = fs::remove_file(project.root().join("templates/manifest.yaml"));
 
-        let body = project.resolve_template_body("task", None, None);
+        let body = project.resolve_template_body("task", None, None).unwrap();
         assert!(body.contains("## Description"));
     }
 
     #[test]
     fn test_resolve_template_explicit_override() {
         let (_tmp, project) = setup_project();
-        let body = project.resolve_template_body("task", Some("bug"), None);
+        let body = project.resolve_template_body("task", Some("bug"), None).unwrap();
         assert!(body.contains("## Steps to Reproduce"));
     }
 
@@ -2327,7 +2374,7 @@ mod tests {
     fn test_resolve_template_type_defaults() {
         let (_tmp, project) = setup_project();
         // With manifest present, bug type should resolve to bug template
-        let body = project.resolve_template_body("task", None, Some("bug"));
+        let body = project.resolve_template_body("task", None, Some("bug")).unwrap();
         assert!(body.contains("## Steps to Reproduce"));
     }
 
@@ -2335,7 +2382,7 @@ mod tests {
     fn test_resolve_template_kind_default() {
         let (_tmp, project) = setup_project();
         // Plan kind default is "implementation"
-        let body = project.resolve_template_body("plan", None, None);
+        let body = project.resolve_template_body("plan", None, None).unwrap();
         assert!(body.contains("## Phases"));
     }
 
@@ -2348,8 +2395,16 @@ mod tests {
             "# {TITLE}\n\nCustom template body.\n",
         ).unwrap();
 
-        let body = project.resolve_template_body("task", Some("custom"), None);
+        let body = project.resolve_template_body("task", Some("custom"), None).unwrap();
         assert!(body.contains("Custom template body."));
+    }
+
+    #[test]
+    fn test_resolve_template_rejects_path_traversal() {
+        let (_tmp, project) = setup_project();
+        assert!(project.resolve_template_body("task", Some("x/../../README"), None).is_err());
+        assert!(project.resolve_template_body("task", Some("../etc/passwd"), None).is_err());
+        assert!(project.resolve_template_body("task", Some("foo\\bar"), None).is_err());
     }
 
     #[test]
