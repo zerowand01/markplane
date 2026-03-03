@@ -655,7 +655,7 @@ markplane serve [OPTIONS]
 |--------|---------|-------------|
 | `--port <PORT>` | `4200` | Port to listen on |
 | `--open` | `false` | Open browser automatically after starting |
-| `--dev` | `false` | Dev mode: API only, no static file serving (use with Next.js dev server) |
+| `--dev` | `false` | Dev mode: API only, no static file serving, permissive CORS (use with Next.js dev server) |
 
 Starts an HTTP server that serves the web dashboard and a REST API backed by `markplane-core`. Also runs a WebSocket server at `/ws` that broadcasts real-time file change events.
 

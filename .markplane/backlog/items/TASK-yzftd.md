@@ -1,7 +1,7 @@
 ---
 id: TASK-yzftd
 title: Set up GitHub Actions CI pipeline
-status: backlog
+status: planned
 priority: high
 type: chore
 effort: medium

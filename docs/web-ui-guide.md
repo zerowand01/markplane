@@ -173,7 +173,7 @@ npm install   # first time only
 npm run dev
 ```
 
-In dev mode (`--dev`), the Rust server only serves the API (no static files). The Next.js dev server runs on port 3000 and proxies `/api/*` and `/ws` requests to the Rust server on port 4200. You get hot reload for frontend changes this way.
+In dev mode (`--dev`), the Rust server only serves the API (no static files) and enables permissive CORS (allowing the Next.js dev server's origin). In production mode, CORS is restricted to `localhost` and `127.0.0.1` on the server's port. The Next.js dev server runs on port 3000 and proxies `/api/*` and `/ws` requests to the Rust server on port 4200. You get hot reload for frontend changes this way.
 
 ## Production Build
 

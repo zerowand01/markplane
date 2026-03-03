@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use axum::extract::{Path, Query, State};
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
-use axum::http::StatusCode;
+use axum::http::{HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Json};
 use axum::routing::{get, post};
 use axum::Router;
@@ -14,6 +14,7 @@ use futures::SinkExt;
 use futures::stream::StreamExt;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
+use tower_http::compression::CompressionLayer;
 use tower_http::cors::CorsLayer;
 #[cfg(not(feature = "embed-ui"))]
 use tower_http::services::ServeDir;
@@ -36,6 +37,8 @@ struct WebAssets;
 struct AppState {
     project: Project,
     ws_tx: broadcast::Sender<String>,
+    port: u16,
+    dev: bool,
 }
 
 // ── Documentation Manifest ───────────────────────────────────────────────
@@ -67,6 +70,8 @@ pub async fn run(port: u16, open: bool, dev: bool) -> anyhow::Result<()> {
     let state = Arc::new(AppState {
         project,
         ws_tx: ws_tx.clone(),
+        port,
+        dev,
     });
 
     // Start file watcher for WebSocket events
@@ -104,16 +109,31 @@ pub async fn run(port: u16, open: bool, dev: bool) -> anyhow::Result<()> {
         .route("/ws", get(ws_handler))
         .with_state(state.clone());
 
+    let cors = if dev {
+        CorsLayer::permissive()
+    } else {
+        let localhost = format!("http://localhost:{}", port).parse::<HeaderValue>().unwrap();
+        let loopback = format!("http://127.0.0.1:{}", port).parse::<HeaderValue>().unwrap();
+        CorsLayer::new()
+            .allow_origin([localhost, loopback])
+            .allow_methods(tower_http::cors::Any)
+            .allow_headers(tower_http::cors::Any)
+    };
+
     let app = if dev {
         // In dev mode, just serve the API — Next.js dev server proxies to us
-        api.layer(CorsLayer::permissive())
+        api.layer(cors)
+            .layer(axum::extract::DefaultBodyLimit::max(2_097_152))
+            .layer(CompressionLayer::new())
     } else {
         // Try embedded assets first (when compiled with --features embed-ui),
         // fall back to filesystem serving for development builds.
         #[cfg(feature = "embed-ui")]
         {
             api.fallback(get(serve_embedded))
-                .layer(CorsLayer::permissive())
+                .layer(cors)
+                .layer(axum::extract::DefaultBodyLimit::max(2_097_152))
+                .layer(CompressionLayer::new())
         }
         #[cfg(not(feature = "embed-ui"))]
         {
@@ -122,7 +142,9 @@ pub async fn run(port: u16, open: bool, dev: bool) -> anyhow::Result<()> {
             let serve_dir = ServeDir::new(&ui_dir)
                 .append_index_html_on_directories(true);
             api.fallback_service(serve_dir)
-                .layer(CorsLayer::permissive())
+                .layer(cors)
+                .layer(axum::extract::DefaultBodyLimit::max(2_097_152))
+                .layer(CompressionLayer::new())
         }
     };
 
@@ -305,10 +327,31 @@ async fn run_file_watcher(
 // ── WebSocket Handler ────────────────────────────────────────────────────
 
 async fn ws_handler(
+    headers: axum::http::HeaderMap,
     ws: WebSocketUpgrade,
     State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_ws(socket, state))
+) -> Result<impl IntoResponse, (StatusCode, Json<ApiError>)> {
+    // Validate Origin header in non-dev mode
+    if !state.dev {
+        let allowed_localhost = format!("http://localhost:{}", state.port);
+        let allowed_loopback = format!("http://127.0.0.1:{}", state.port);
+        match headers.get(axum::http::header::ORIGIN) {
+            Some(origin) => {
+                let origin_str = origin.to_str().unwrap_or("");
+                if origin_str != allowed_localhost && origin_str != allowed_loopback {
+                    return Err(error_response(
+                        StatusCode::FORBIDDEN,
+                        "forbidden",
+                        "WebSocket origin not allowed",
+                    ));
+                }
+            }
+            None => {
+                // No Origin header — allow (same-origin requests may omit it)
+            }
+        }
+    }
+    Ok(ws.on_upgrade(move |socket| handle_ws(socket, state)))
 }
 
 async fn handle_ws(socket: WebSocket, state: Arc<AppState>) {
@@ -428,8 +471,29 @@ fn map_core_error(e: MarkplaneError) -> (StatusCode, Json<ApiError>) {
         MarkplaneError::Config(_) | MarkplaneError::Frontmatter(_) => {
             error_response(StatusCode::BAD_REQUEST, "invalid_field", &e.to_string())
         }
-        MarkplaneError::NotInitialized(_) | MarkplaneError::Io(_) | MarkplaneError::Yaml(_) => {
+        MarkplaneError::NotInitialized(_) => {
             error_response(StatusCode::INTERNAL_SERVER_ERROR, "internal_error", &e.to_string())
+        }
+        MarkplaneError::Io(_) => {
+            eprintln!("Internal IO error: {e}");
+            error_response(StatusCode::INTERNAL_SERVER_ERROR, "internal_error", "An internal I/O error occurred")
+        }
+        MarkplaneError::Yaml(_) => {
+            eprintln!("Internal YAML error: {e}");
+            error_response(StatusCode::INTERNAL_SERVER_ERROR, "internal_error", "An internal data parsing error occurred")
+        }
+    }
+}
+
+/// Map an `anyhow::Error` to a generic HTTP error response.
+/// Logs the full error server-side to avoid leaking internal details.
+fn map_anyhow_error(e: anyhow::Error) -> (StatusCode, Json<ApiError>) {
+    // Try to downcast to MarkplaneError for variant-specific mapping
+    match e.downcast::<MarkplaneError>() {
+        Ok(me) => map_core_error(me),
+        Err(e) => {
+            eprintln!("Internal error: {e}");
+            error_response(StatusCode::INTERNAL_SERVER_ERROR, "internal_error", "An internal error occurred")
         }
     }
 }
@@ -824,17 +888,17 @@ async fn get_summary(
 
     let config = project
         .load_config()
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "config_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
     let tasks = project
         .list_tasks(&QueryFilter::default())
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
     // All tasks (active + archived) for accurate epic progress
     let all_tasks = project
         .list_tasks(&QueryFilter { scope: ScanScope::All, ..Default::default() })
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
     let epics = project
         .list_epics()
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
 
     let workflow = &config.workflows.task;
     let blocked = find_blocked_items(&tasks, workflow);
@@ -949,7 +1013,7 @@ async fn get_config(
     let config = state
         .project
         .load_config()
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "config_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
 
     Ok(Json(ApiResponse {
         data: config_to_response(config),
@@ -1015,7 +1079,7 @@ async fn patch_config(
     let mut config = state
         .project
         .load_config()
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "config_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
 
     // Helper: validate a type list — trim, lowercase, reject empty/duplicate, require ≥1
     fn validate_types(raw: Vec<String>, field_name: &str) -> Result<Vec<String>, (StatusCode, Json<ApiError>)> {
@@ -1135,7 +1199,7 @@ async fn patch_config(
     state
         .project
         .save_config(&config)
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "config_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
 
     Ok(Json(ApiResponse {
         data: config_to_response(config),
@@ -1172,7 +1236,7 @@ async fn get_tasks(
     let tasks = state
         .project
         .list_tasks(&filter)
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
 
     let total = tasks.len();
     let data: Vec<_> = tasks.iter().map(task_to_response).collect();
@@ -1194,7 +1258,7 @@ async fn get_task(
     let doc: MarkplaneDocument<Task> = state
         .project
         .read_item(&id)
-        .map_err(|e| error_response(StatusCode::NOT_FOUND, "not_found", &e.to_string()))?;
+        .map_err(map_core_error)?;
 
     Ok(Json(ApiResponse {
         data: task_to_response(&doc),
@@ -1205,45 +1269,27 @@ async fn create_task(
     State(state): State<Arc<AppState>>,
     Json(body): Json<CreateTaskRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<TaskResponse>>), (StatusCode, Json<ApiError>)> {
-    let config = state.project.load_config().map_err(|e| {
-        error_response(StatusCode::INTERNAL_SERVER_ERROR, "config_error", &e.to_string())
-    })?;
+    let config = state.project.load_config().map_err(map_core_error)?;
     let item_type = body.item_type.as_deref().unwrap_or(config.default_task_type());
     let priority: Priority = body
         .priority
         .parse()
-        .map_err(|e: markplane_core::MarkplaneError| {
-            error_response(StatusCode::BAD_REQUEST, "invalid_priority", &e.to_string())
-        })?;
+        .map_err(|e: MarkplaneError| map_core_error(e))?;
     let effort: Effort = body
         .effort
         .parse()
-        .map_err(|e: markplane_core::MarkplaneError| {
-            error_response(StatusCode::BAD_REQUEST, "invalid_effort", &e.to_string())
-        })?;
+        .map_err(|e: MarkplaneError| map_core_error(e))?;
 
     let task = state
         .project
         .create_task(&body.title, item_type, priority, effort, body.epic, body.tags, None)
-        .map_err(|e| {
-            error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "create_error",
-                &e.to_string(),
-            )
-        })?;
+        .map_err(map_core_error)?;
 
     // Read the created task back to get the full document with body
     let doc: MarkplaneDocument<Task> = state
         .project
         .read_item(&task.id)
-        .map_err(|e| {
-            error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "read_error",
-                &e.to_string(),
-            )
-        })?;
+        .map_err(map_core_error)?;
 
     Ok((
         StatusCode::CREATED,
@@ -1260,31 +1306,17 @@ async fn create_epic(
     let priority: Priority = body
         .priority
         .parse()
-        .map_err(|e: MarkplaneError| {
-            error_response(StatusCode::BAD_REQUEST, "invalid_priority", &e.to_string())
-        })?;
+        .map_err(|e: MarkplaneError| map_core_error(e))?;
 
     let epic = state
         .project
         .create_epic(&body.title, priority, None)
-        .map_err(|e| {
-            error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "create_error",
-                &e.to_string(),
-            )
-        })?;
+        .map_err(map_core_error)?;
 
     let doc: MarkplaneDocument<Epic> = state
         .project
         .read_item(&epic.id)
-        .map_err(|e| {
-            error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "read_error",
-                &e.to_string(),
-            )
-        })?;
+        .map_err(map_core_error)?;
 
     // New epic has no tasks yet
     let tasks: Vec<MarkplaneDocument<Task>> = vec![];
@@ -1309,13 +1341,7 @@ async fn create_plan(
     let plan = state
         .project
         .create_plan(&body.title, implements, None)
-        .map_err(|e| {
-            error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "create_error",
-                &e.to_string(),
-            )
-        })?;
+        .map_err(map_core_error)?;
 
     // If task_id provided, link the plan back to the task
     if let Some(ref task_id) = body.task_id
@@ -1332,13 +1358,7 @@ async fn create_plan(
     let doc: MarkplaneDocument<Plan> = state
         .project
         .read_item(&plan.id)
-        .map_err(|e| {
-            error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "read_error",
-                &e.to_string(),
-            )
-        })?;
+        .map_err(map_core_error)?;
 
     Ok((
         StatusCode::CREATED,
@@ -1352,31 +1372,17 @@ async fn create_note(
     State(state): State<Arc<AppState>>,
     Json(body): Json<CreateNoteRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<NoteResponse>>), (StatusCode, Json<ApiError>)> {
-    let config = state.project.load_config().map_err(|e| {
-        error_response(StatusCode::INTERNAL_SERVER_ERROR, "config_error", &e.to_string())
-    })?;
+    let config = state.project.load_config().map_err(map_core_error)?;
     let note_type = body.note_type.as_deref().unwrap_or(config.default_note_type());
     let note = state
         .project
         .create_note(&body.title, note_type, body.tags, None)
-        .map_err(|e| {
-            error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "create_error",
-                &e.to_string(),
-            )
-        })?;
+        .map_err(map_core_error)?;
 
     let doc: MarkplaneDocument<Note> = state
         .project
         .read_item(&note.id)
-        .map_err(|e| {
-            error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "read_error",
-                &e.to_string(),
-            )
-        })?;
+        .map_err(map_core_error)?;
 
     Ok((
         StatusCode::CREATED,
@@ -1539,20 +1545,14 @@ async fn delete_task(
     let doc: MarkplaneDocument<Task> = state
         .project
         .read_item(&id)
-        .map_err(|e| error_response(StatusCode::NOT_FOUND, "not_found", &e.to_string()))?;
+        .map_err(map_core_error)?;
 
     let response = task_to_response(&doc);
 
     state
         .project
         .archive_item(&id)
-        .map_err(|e| {
-            error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "archive_error",
-                &e.to_string(),
-            )
-        })?;
+        .map_err(map_core_error)?;
 
     Ok(Json(ApiResponse { data: response }))
 }
@@ -1575,7 +1575,7 @@ async fn post_archive_item(
     state
         .project
         .archive_item(&id)
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "archive_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
 
     Ok(Json(ApiResponse {
         data: ArchiveResponse {
@@ -1595,7 +1595,7 @@ async fn post_unarchive_item(
     state
         .project
         .unarchive_item(&id)
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "unarchive_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
 
     Ok(Json(ApiResponse {
         data: ArchiveResponse {
@@ -1618,14 +1618,14 @@ async fn get_epics(
     let epics = state
         .project
         .list_epics_filtered(params.archived)
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
     let tasks = state
         .project
         .list_tasks(&QueryFilter { scope: ScanScope::All, ..Default::default() })
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
 
     let config = state.project.load_config()
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "config_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
     let total = epics.len();
     let data: Vec<_> = epics.iter().map(|e| epic_to_response(e, &tasks, &config.workflows.task)).collect();
 
@@ -1645,14 +1645,14 @@ async fn get_epic(
     let doc: MarkplaneDocument<Epic> = state
         .project
         .read_item(&id)
-        .map_err(|e| error_response(StatusCode::NOT_FOUND, "not_found", &e.to_string()))?;
+        .map_err(map_core_error)?;
 
     let tasks = state
         .project
         .list_tasks(&QueryFilter { scope: ScanScope::All, ..Default::default() })
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
     let config = state.project.load_config()
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "config_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
 
     Ok(Json(ApiResponse {
         data: epic_to_response(&doc, &tasks, &config.workflows.task),
@@ -1666,7 +1666,7 @@ async fn get_plans(
     let plans = state
         .project
         .list_plans_filtered(params.archived)
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
 
     let total = plans.len();
     let data: Vec<_> = plans.iter().map(plan_to_response).collect();
@@ -1687,7 +1687,7 @@ async fn get_plan(
     let doc: MarkplaneDocument<Plan> = state
         .project
         .read_item(&id)
-        .map_err(|e| error_response(StatusCode::NOT_FOUND, "not_found", &e.to_string()))?;
+        .map_err(map_core_error)?;
 
     Ok(Json(ApiResponse {
         data: plan_to_response(&doc),
@@ -1701,7 +1701,7 @@ async fn get_notes(
     let notes = state
         .project
         .list_notes_filtered(params.archived)
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
 
     let total = notes.len();
     let data: Vec<_> = notes.iter().map(note_to_response).collect();
@@ -1722,7 +1722,7 @@ async fn get_note(
     let doc: MarkplaneDocument<Note> = state
         .project
         .read_item(&id)
-        .map_err(|e| error_response(StatusCode::NOT_FOUND, "not_found", &e.to_string()))?;
+        .map_err(map_core_error)?;
 
     Ok(Json(ApiResponse {
         data: note_to_response(&doc),
@@ -1914,7 +1914,7 @@ async fn post_sync(
     state
         .project
         .sync_all()
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "sync_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
 
     // Broadcast sync_complete event to all WebSocket clients
     let event = serde_json::json!({"type": "sync_complete"});
@@ -1957,9 +1957,7 @@ async fn post_link(
     State(state): State<Arc<AppState>>,
     Json(req): Json<LinkRequest>,
 ) -> Result<Json<ApiResponse<LinkResponse>>, (StatusCode, Json<ApiError>)> {
-    let relation: LinkRelation = req.relation.parse().map_err(|e: markplane_core::MarkplaneError| {
-        error_response(StatusCode::BAD_REQUEST, "invalid_relation", &e.to_string())
-    })?;
+    let relation: LinkRelation = req.relation.parse().map_err(|e: MarkplaneError| map_core_error(e))?;
     let action = if req.remove {
         LinkAction::Remove
     } else {
@@ -1969,7 +1967,7 @@ async fn post_link(
     state
         .project
         .link_items(&req.from, &req.to, relation, action)
-        .map_err(|e| error_response(StatusCode::BAD_REQUEST, "link_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
 
     let action_str = if req.remove { "removed" } else { "added" };
 
@@ -2009,7 +2007,7 @@ async fn get_search(
     Query(params): Query<SearchParams>,
 ) -> Result<Json<ApiListResponse<SearchResultResponse>>, (StatusCode, Json<ApiError>)> {
     let query = params.q.to_lowercase();
-    if query.len() < 2 {
+    if query.len() < 2 || query.len() > 500 {
         return Ok(Json(ApiListResponse {
             data: vec![],
             meta: ListMeta { total: 0 },
@@ -2022,10 +2020,10 @@ async fn get_search(
     let mut tasks = state
         .project
         .list_tasks(&QueryFilter::default())
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
     let archived_task_ids: HashSet<String> = if params.include_archived {
         let archived = state.project.list_tasks(&QueryFilter { scope: ScanScope::Archived, ..Default::default() })
-            .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+            .map_err(map_core_error)?;
         let ids = archived.iter().map(|d| d.frontmatter.id.clone()).collect();
         tasks.extend(archived);
         ids
@@ -2059,10 +2057,10 @@ async fn get_search(
     let mut epics = state
         .project
         .list_epics()
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
     let archived_epic_ids: HashSet<String> = if params.include_archived {
         let archived = state.project.list_epics_filtered(true)
-            .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+            .map_err(map_core_error)?;
         let ids = archived.iter().map(|d| d.frontmatter.id.clone()).collect();
         epics.extend(archived);
         ids
@@ -2095,10 +2093,10 @@ async fn get_search(
     let mut plans = state
         .project
         .list_plans()
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
     let archived_plan_ids: HashSet<String> = if params.include_archived {
         let archived = state.project.list_plans_filtered(true)
-            .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+            .map_err(map_core_error)?;
         let ids = archived.iter().map(|d| d.frontmatter.id.clone()).collect();
         plans.extend(archived);
         ids
@@ -2130,10 +2128,10 @@ async fn get_search(
     let mut notes = state
         .project
         .list_notes()
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+        .map_err(map_core_error)?;
     let archived_note_ids: HashSet<String> = if params.include_archived {
         let archived = state.project.list_notes_filtered(true)
-            .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "query_error", &e.to_string()))?;
+            .map_err(map_core_error)?;
         let ids = archived.iter().map(|d| d.frontmatter.id.clone()).collect();
         notes.extend(archived);
         ids
@@ -2240,7 +2238,7 @@ async fn get_graph_all(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<ApiResponse<GraphResponse>>, (StatusCode, Json<ApiError>)> {
     let graph = build_graph(&state.project, None)
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "graph_error", &e.to_string()))?;
+        .map_err(map_anyhow_error)?;
     Ok(Json(ApiResponse { data: graph }))
 }
 
@@ -2251,7 +2249,7 @@ async fn get_graph_focused(
     parse_id(&id)
         .map_err(|_| error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid ID format: {}", id)))?;
     let graph = build_graph(&state.project, Some(&id))
-        .map_err(|e| error_response(StatusCode::INTERNAL_SERVER_ERROR, "graph_error", &e.to_string()))?;
+        .map_err(map_anyhow_error)?;
     Ok(Json(ApiResponse { data: graph }))
 }
 

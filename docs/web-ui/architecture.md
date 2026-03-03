@@ -311,7 +311,7 @@ The link endpoint accepts `{ from, to, relation, remove? }` where `relation` is 
 | `GET` | `/api/graph/:id` | Dependency graph for an item (2 hops) |
 | `GET` | `/api/graph` | Full project dependency graph |
 | `POST` | `/api/sync` | Trigger `markplane sync` (regenerate INDEX.md + .context/) |
-| `GET` | `/api/search?q=...` | Full-text search across all items (min 2 chars) |
+| `GET` | `/api/search?q=...` | Full-text search across all items (2–500 chars) |
 | `GET` | `/api/config` | Get project configuration (project info, context settings, documentation paths, types, workflows) |
 | `PATCH` | `/api/config` | Update project configuration (partial updates at every level; validates, trims, deduplicates) |
 

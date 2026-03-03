@@ -33,6 +33,16 @@ Even a simple static token (generated at `markplane init`, stored in `config.yam
 
 This is an architectural decision — the implementation approach (static token, session cookie, etc.) and how the web UI authenticates need to be designed before implementation.
 
+## Analysis (2026-03-02)
+
+**Recommendation: Not needed for current architecture.** The server binds `127.0.0.1` only — no network exposure. The real security boundary is CORS (see [[TASK-hv5xv]]). Once CORS is restricted to `localhost:{port}`, cross-origin attacks are blocked. Local processes already have direct file access to `.markplane/`, so a token adds no meaningful protection against them.
+
+**Revisit if any of these change:**
+- Server gains a `--host` flag or binds `0.0.0.0` (network exposure)
+- Markplane executes code or runs scripts based on task content
+- Markplane stores secrets (API keys, credentials)
+- Multi-user or remote access becomes a requirement
+
 ## Acceptance Criteria
 
 - [ ] Web server requires authentication for all mutating endpoints

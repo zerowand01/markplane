@@ -218,6 +218,14 @@ Core errors are typed and specific. CLI commands convert them to user-friendly m
 - **Random IDs**: `next_id()` generates random 5-character alphanumeric IDs — no shared counter, safe for parallel git branches.
 - **Atomic file creation**: All item creation uses `File::create_new()` (`O_CREAT | O_EXCL`), which atomically fails if the file already exists. This prevents TOCTOU races where two concurrent processes generate the same random ID.
 
+### Web Server (`markplane serve`)
+- **CORS policy**: In production mode, CORS is restricted to `http://localhost:{port}` and `http://127.0.0.1:{port}`. In `--dev` mode, CORS is permissive (required for the Next.js dev server on a different port).
+- **Request body limit**: 2 MB maximum via `DefaultBodyLimit`. Requests with larger bodies are rejected.
+- **Search query limit**: Queries must be between 2 and 500 characters.
+- **Response compression**: Gzip compression enabled via `tower-http` `CompressionLayer`.
+- **WebSocket origin validation**: WebSocket upgrade requests must originate from `localhost:{port}` or `127.0.0.1:{port}`.
+- **Error sanitization**: `Io` and `Yaml` errors return generic messages to HTTP clients — filesystem paths are not exposed. Full errors are logged server-side.
+
 ### MCP-Specific
 - **Stdin line limit**: 1 MB maximum per line — oversized inputs are rejected with a parse error, preventing memory exhaustion from malformed requests.
 
