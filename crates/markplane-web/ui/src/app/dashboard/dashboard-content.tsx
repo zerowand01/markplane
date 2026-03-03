@@ -267,13 +267,10 @@ export function DashboardContent() {
   );
 }
 
-function ContextFreshness({ lastSynced }: { lastSynced: string | null }) {
-  if (!lastSynced) return null;
-
+function computeFreshness(lastSynced: string): { label: string; isFresh: boolean } {
   const syncTime = new Date(lastSynced).getTime();
   const ageMinutes = (Date.now() - syncTime) / 60_000;
   const isFresh = ageMinutes < 5;
-
   const label = isFresh
     ? "fresh"
     : ageMinutes < 60
@@ -281,6 +278,13 @@ function ContextFreshness({ lastSynced }: { lastSynced: string | null }) {
       : ageMinutes < 1440
         ? `${Math.round(ageMinutes / 60)}h ago`
         : `${Math.round(ageMinutes / 1440)}d ago`;
+  return { label, isFresh };
+}
+
+function ContextFreshness({ lastSynced }: { lastSynced: string | null }) {
+  if (!lastSynced) return null;
+
+  const { label, isFresh } = computeFreshness(lastSynced);
 
   return (
     <span

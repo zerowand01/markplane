@@ -70,16 +70,28 @@ export const WikiLink = Node.create({
   },
 
   addStorage() {
+    interface MarkdownSerializerState { write(text: string): void; }
+    interface MarkdownNode { attrs: { id: string }; }
+    interface MarkdownItState {
+      src: string;
+      pos: number;
+      push(type: string, tag: string, nesting: number): { content: string };
+    }
+    interface MarkdownIt {
+      inline: { ruler: { push(name: string, fn: (state: MarkdownItState, silent: boolean) => boolean): void } };
+      renderer: { rules: Record<string, (tokens: { content: string }[], idx: number) => string> };
+    }
+
     return {
       markdown: {
-        serialize(state: any, node: any) {
+        serialize(state: MarkdownSerializerState, node: MarkdownNode) {
           state.write(`[[${node.attrs.id}]]`);
         },
         parse: {
-          setup(markdownit: any) {
+          setup(markdownit: MarkdownIt) {
             markdownit.inline.ruler.push(
               "wiki_link",
-              (state: any, silent: boolean) => {
+              (state: MarkdownItState, silent: boolean) => {
                 const src = state.src.slice(state.pos);
                 const match = src.match(WIKI_LINK_RE);
 
@@ -95,7 +107,7 @@ export const WikiLink = Node.create({
             );
 
             markdownit.renderer.rules.wiki_link = (
-              tokens: any[],
+              tokens: { content: string }[],
               idx: number
             ) => {
               const id = tokens[idx].content;

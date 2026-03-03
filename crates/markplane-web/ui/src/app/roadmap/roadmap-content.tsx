@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEpics } from "@/lib/hooks/use-epics";
 import { useTasks } from "@/lib/hooks/use-tasks";
 import { useConfig } from "@/lib/hooks/use-config";
 import { useUpdateEpic } from "@/lib/hooks/use-mutations";
-import { CATEGORY_CONFIG, categoryOf } from "@/lib/constants";
+import { CATEGORY_CONFIG } from "@/lib/constants";
 import { EpicDetailSheet } from "@/components/domain/epic-detail-sheet";
 import { TaskDetailSheet } from "@/components/domain/task-detail-sheet";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,9 @@ import {
 } from "@dnd-kit/core";
 import type { DragStartEvent, DragEndEvent, CollisionDetection } from "@dnd-kit/core";
 import type { Epic, EpicStatus, Task, Priority, StatusCategory } from "@/lib/types";
+
+/** Categories shown in the Now card breakdown. */
+const BREAKDOWN_CATEGORIES: StatusCategory[] = ["active", "planned", "backlog", "completed"];
 
 const PRIORITY_RANK: Record<Priority, number> = {
   critical: 0,
@@ -87,7 +90,6 @@ function NowCard({
   } = useDraggable({ id: epic.id, data: { epic } });
 
   // Group epic tasks by category for the status breakdown
-  const BREAKDOWN_CATEGORIES: StatusCategory[] = ["active", "planned", "backlog", "completed"];
   const statusGroups = useMemo(() => {
     if (!nowCardWorkflow) return [];
     return BREAKDOWN_CATEGORIES
@@ -284,18 +286,13 @@ export function RoadmapContent() {
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [activeEpic, setActiveEpic] = useState<Epic | null>(null);
-  const [pendingEpics, setPendingEpics] = useState<Epic[] | null>(null);
+  const [pendingEpics, setPendingEpics] = useState<{ data: Epic[]; snapshot: Epic[] } | null>(null);
 
   const selectedEpicId = searchParams.get("epic");
 
-  const epics = epicsData ?? [];
+  const epics = useMemo(() => epicsData ?? [], [epicsData]);
   const tasks = tasksData ?? [];
-  const displayEpics = pendingEpics ?? epics;
-
-  // Clear optimistic state when server data arrives
-  useEffect(() => {
-    setPendingEpics(null);
-  }, [epics]);
+  const displayEpics = pendingEpics?.snapshot === epics ? pendingEpics.data : epics;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -320,15 +317,16 @@ export function RoadmapContent() {
 
       const currentEpic = displayEpics.find((e) => e.id === epicId);
       if (currentEpic && currentEpic.status !== targetStatus) {
-        setPendingEpics(
-          displayEpics.map((e) =>
+        setPendingEpics({
+          data: displayEpics.map((e) =>
             e.id === epicId ? { ...e, status: targetStatus } : e
-          )
-        );
+          ),
+          snapshot: epics,
+        });
         updateEpic.mutate({ id: epicId, status: targetStatus });
       }
     },
-    [displayEpics, updateEpic]
+    [displayEpics, updateEpic, epics]
   );
 
   const { now, next, later, done } = useMemo(() => ({

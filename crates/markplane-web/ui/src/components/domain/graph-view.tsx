@@ -958,7 +958,6 @@ export default function GraphView({
   const [activeLayers, setActiveLayers] = useState<Set<string>>(DEFAULT_LAYERS);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [direction, setDirection] = useState<LayoutDirection>("TB");
-  const [isLayouting, setIsLayouting] = useState(false);
   const [layoutTrigger, setLayoutTrigger] = useState(0);
 
   const useCompound = activeLayers.has("epics");
@@ -1013,7 +1012,6 @@ export default function GraphView({
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   // Track layout version and previous positions for incremental layout
-  const layoutVersionRef = useRef(0);
   const prevPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
   const [layoutKey, setLayoutKey] = useState(0);
 
@@ -1022,30 +1020,35 @@ export default function GraphView({
     setLayoutKey((prev) => prev + 1);
   }, []);
 
+  const [isLayouting, setIsLayouting] = useState(true);
+  const layoutVersionRef = useRef(0);
+
   useEffect(() => {
     const version = ++layoutVersionRef.current;
-    setIsLayouting(true);
 
-    buildLayout(graphData, activeLayers, allowedNodes, direction, prevPositionsRef.current, graphWorkflow)
-      .then((result) => {
-        if (version !== layoutVersionRef.current) return;
+    // Use async chain so setState calls are never synchronous in effect body
+    Promise.resolve().then(() => {
+      if (version !== layoutVersionRef.current) return;
+      setIsLayouting(true);
+      return buildLayout(graphData, activeLayers, allowedNodes, direction, prevPositionsRef.current, graphWorkflow);
+    }).then((result) => {
+      if (!result || version !== layoutVersionRef.current) return;
 
-        // Store positions for next incremental layout
-        const posMap = new Map<string, { x: number; y: number }>();
-        for (const node of result.nodes) {
-          posMap.set(node.id, node.position);
-        }
-        prevPositionsRef.current = posMap;
+      // Store positions for next incremental layout
+      const posMap = new Map<string, { x: number; y: number }>();
+      for (const node of result.nodes) {
+        posMap.set(node.id, node.position);
+      }
+      prevPositionsRef.current = posMap;
 
-        setNodes(result.nodes);
-        setEdges(result.edges);
-        setLayoutTrigger((prev) => prev + 1);
-      })
-      .finally(() => {
-        if (version !== layoutVersionRef.current) return;
-        setIsLayouting(false);
-      });
-  }, [graphData, activeLayers, allowedNodes, direction, layoutKey, setNodes, setEdges, graphWorkflow]);
+      setNodes(result.nodes);
+      setEdges(result.edges);
+      setLayoutTrigger((prev) => prev + 1);
+    }).finally(() => {
+      if (version !== layoutVersionRef.current) return;
+      setIsLayouting(false);
+    });
+  }, [graphData, activeLayers, allowedNodes, direction, layoutKey, graphWorkflow, setNodes, setEdges]);
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     if (onNodeClickProp) {

@@ -105,9 +105,11 @@ export function DocsContent() {
   );
 
   // Keep refs in sync
-  currentMatchIndexRef.current = currentMatchIndex;
-  selectedSlugRef.current = selectedSlug;
-  allResultsRef.current = allResults;
+  useEffect(() => {
+    currentMatchIndexRef.current = currentMatchIndex;
+    selectedSlugRef.current = selectedSlug;
+    allResultsRef.current = allResults;
+  }, [currentMatchIndex, selectedSlug, allResults]);
 
   // Docs that have search results (preserves original order)
   const filteredDocs = useMemo(() => {
@@ -117,10 +119,12 @@ export function DocsContent() {
     return docs.filter((doc) => slugsWithResults.has(doc.slug));
   }, [docs, searchQuery, searchResults]);
 
-  // Reset match index when query changes
-  useEffect(() => {
+  // Reset match index when query changes (state-during-render pattern)
+  const [prevSearchQuery, setPrevSearchQuery] = useState(searchQuery);
+  if (prevSearchQuery !== searchQuery) {
+    setPrevSearchQuery(searchQuery);
     setCurrentMatchIndex(0);
-  }, [searchQuery]);
+  }
 
   // Stable navigation — reads from refs so no stale closures
   const navigateTo = useCallback(

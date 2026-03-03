@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
-  CommandDialog,
+  Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
@@ -11,6 +11,13 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useTasks } from "@/lib/hooks/use-tasks";
 import { useEpics } from "@/lib/hooks/use-epics";
 import { usePlans } from "@/lib/hooks/use-plans";
@@ -59,6 +66,40 @@ const CREATE_ITEMS = [
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
+
+  // Cmd+K listener
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setOpen((prev) => !prev);
+      }
+    };
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, []);
+
+  // Custom event listener for sidebar search trigger
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener("open-command-palette", handler);
+    return () => window.removeEventListener("open-command-palette", handler);
+  }, []);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogHeader className="sr-only">
+        <DialogTitle>Command Palette</DialogTitle>
+        <DialogDescription>Search for a command to run...</DialogDescription>
+      </DialogHeader>
+      <DialogContent className="overflow-hidden p-0 sm:max-w-3xl" showCloseButton={false}>
+        {open && <CommandPaletteContent onClose={() => setOpen(false)} />}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CommandPaletteContent({ onClose }: { onClose: () => void }) {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [includeArchived, setIncludeArchived] = useState(false);
@@ -81,7 +122,6 @@ export function CommandPalette() {
   const isSearchMode = debouncedQuery.length >= 2;
 
   // Client-side filtering for action items during search mode.
-  // In browse mode, cmdk handles filtering via shouldFilter={true}.
   const queryLower = query.toLowerCase();
   const filteredNavItems = isSearchMode
     ? NAVIGATION_ITEMS.filter((item) => item.label.toLowerCase().includes(queryLower))
@@ -103,52 +143,24 @@ export function CommandPalette() {
     };
   }, [query]);
 
-  // Reset query when closing
-  useEffect(() => {
-    if (!open) {
-      setQuery("");
-      setDebouncedQuery("");
-      setIncludeArchived(false);
-    }
-  }, [open]);
-
-  // Cmd+K listener
-  useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setOpen((prev) => !prev);
-      }
-    };
-    document.addEventListener("keydown", down);
-    return () => document.removeEventListener("keydown", down);
-  }, []);
-
-  // Custom event listener for sidebar search trigger
-  useEffect(() => {
-    const handler = () => setOpen(true);
-    window.addEventListener("open-command-palette", handler);
-    return () => window.removeEventListener("open-command-palette", handler);
-  }, []);
-
   const navigate = useCallback(
     (path: string) => {
-      setOpen(false);
+      onClose();
       router.push(path);
     },
-    [router]
+    [router, onClose]
   );
 
   const triggerSync = useCallback(async () => {
-    setOpen(false);
+    onClose();
     await postAction("/api/sync");
     queryClient.invalidateQueries();
-  }, [queryClient]);
+  }, [queryClient, onClose]);
 
   const createItem = useCallback((kind: string) => {
-    setOpen(false);
+    onClose();
     window.dispatchEvent(new CustomEvent("create-item", { detail: { kind } }));
-  }, []);
+  }, [onClose]);
 
   function resultRoute(result: SearchResult) {
     const prefix = result.id.split("-")[0];
@@ -158,12 +170,7 @@ export function CommandPalette() {
   }
 
   return (
-    <CommandDialog
-      open={open}
-      onOpenChange={setOpen}
-      shouldFilter={!isSearchMode}
-      className="sm:max-w-3xl"
-    >
+    <Command shouldFilter={!isSearchMode} className="[&_[cmdk-group-heading]]:text-muted-foreground **:data-[slot=command-input-wrapper]:h-12 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
       <div className="relative">
         <CommandInput
           placeholder="Search items, commands, or navigate..."
@@ -389,6 +396,6 @@ export function CommandPalette() {
           </>
         )}
       </CommandList>
-    </CommandDialog>
+    </Command>
   );
 }

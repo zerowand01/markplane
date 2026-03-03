@@ -36,7 +36,10 @@ SyntaxHighlighter.registerLanguage("toml", toml);
 function stripBackgrounds(theme: Record<string, CSSProperties>): Record<string, CSSProperties> {
   const result: Record<string, CSSProperties> = {};
   for (const [key, value] of Object.entries(theme)) {
-    const { background, backgroundColor, ...rest } = value as CSSProperties & { background?: string; backgroundColor?: string };
+    const entry = { ...value };
+    delete (entry as Record<string, unknown>).background;
+    delete (entry as Record<string, unknown>).backgroundColor;
+    const rest = entry;
     result[key] = rest;
   }
   return result;

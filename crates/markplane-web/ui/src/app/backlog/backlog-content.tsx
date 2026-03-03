@@ -124,7 +124,7 @@ export function BacklogContent() {
   }, [searchParams]);
 
   const { data: tasks, isLoading, error, refetch } = useTasks();
-  const { data: epics } = useEpics();
+  useEpics();
   const { data: projectConfig, isLoading: configLoading } = useConfig();
   const workflow = projectConfig?.workflows.task;
 
@@ -456,13 +456,8 @@ function KanbanView({
 
   // Optimistic local state — updated synchronously on drop so the card
   // appears in the target column before the async mutation fires.
-  const [pendingUpdate, setPendingUpdate] = useState<Task[] | null>(null);
-  const displayTasks = pendingUpdate ?? tasks;
-
-  // Clear optimistic state when server data arrives
-  useEffect(() => {
-    setPendingUpdate(null);
-  }, [tasks]);
+  const [pendingUpdate, setPendingUpdate] = useState<{ data: Task[]; snapshot: Task[] } | null>(null);
+  const displayTasks = pendingUpdate?.snapshot === tasks ? pendingUpdate.data : tasks;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -470,8 +465,6 @@ function KanbanView({
 
   const kanbanColumnIds = useMemo(() => new Set(kanbanColumns.map(c => c.status)), [kanbanColumns]);
   const kanbanCollisionDetection = useMemo(() => makeKanbanCollisionDetection(kanbanColumnIds), [kanbanColumnIds]);
-
-  const firstPlannedStatus = workflow.planned?.[0];
 
   const cancelledStatuses = useMemo(() => {
     return new Set(workflow.cancelled ?? []);
@@ -520,15 +513,16 @@ function KanbanView({
       // Only update if status actually changed
       const currentTask = displayTasks.find((t) => t.id === taskId);
       if (currentTask && currentTask.status !== targetStatus) {
-        setPendingUpdate(
-          displayTasks.map((t) =>
+        setPendingUpdate({
+          data: displayTasks.map((t) =>
             t.id === taskId ? { ...t, status: targetStatus } : t
-          )
-        );
+          ),
+          snapshot: tasks,
+        });
         updateTask.mutate({ id: taskId, status: targetStatus });
       }
     },
-    [displayTasks, updateTask, kanbanColumnIds]
+    [displayTasks, updateTask, kanbanColumnIds, tasks]
   );
 
   return (
@@ -717,13 +711,8 @@ function BacklogListView({
 
   // Optimistic local state — updated synchronously on drop so dnd-kit
   // sees the new order before CSS transforms are removed.
-  const [pendingReorder, setPendingReorder] = useState<Task[] | null>(null);
-  const displayTasks = pendingReorder ?? tasks;
-
-  // Clear optimistic state when server data arrives
-  useEffect(() => {
-    setPendingReorder(null);
-  }, [tasks]);
+  const [pendingReorder, setPendingReorder] = useState<{ data: Task[]; snapshot: Task[] } | null>(null);
+  const displayTasks = pendingReorder?.snapshot === tasks ? pendingReorder.data : tasks;
 
   const isManualSort = sortKey === "manual";
 
@@ -813,7 +802,7 @@ function BacklogListView({
       // state so the card disappears without a snap-back animation.
       if (overId === "promote-to-board") {
         if (!firstPlannedStatus) return;
-        setPendingReorder(displayTasks.filter((t) => t.id !== taskId));
+        setPendingReorder({ data: displayTasks.filter((t) => t.id !== taskId), snapshot: tasks });
         updateTask.mutate({ id: taskId, status: firstPlannedStatus });
         return;
       }
@@ -874,8 +863,8 @@ function BacklogListView({
         // Apply optimistic reorder synchronously — this is batched with
         // setActiveTask(null) above so React renders both in one pass,
         // before dnd-kit removes CSS transforms.
-        setPendingReorder(
-          displayTasks.map((t) =>
+        setPendingReorder({
+          data: displayTasks.map((t) =>
             t.id === taskId
               ? {
                   ...t,
@@ -883,8 +872,9 @@ function BacklogListView({
                   ...(priorityChanged ? { priority: targetPriority } : {}),
                 }
               : t
-          )
-        );
+          ),
+          snapshot: tasks,
+        });
 
         const updates: { id: string; priority?: Priority; position?: string } = { id: taskId };
         if (priorityChanged) updates.priority = targetPriority;
@@ -892,7 +882,7 @@ function BacklogListView({
         updateTask.mutate(updates);
       }
     },
-    [displayTasks, tasksByPriority, updateTask, isManualSort]
+    [displayTasks, tasksByPriority, updateTask, isManualSort, firstPlannedStatus, tasks]
   );
 
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Plus, X } from "lucide-react";
 import { useConfig } from "@/lib/hooks/use-config";
 import { useUpdateConfig } from "@/lib/hooks/use-mutations";
@@ -11,75 +11,10 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageTransition } from "@/components/domain/page-transition";
+import type { ProjectConfig } from "@/lib/types";
 
 export function GeneralSection() {
-  const { data: config, isLoading } = useConfig();
-  const updateConfig = useUpdateConfig();
-
-  // Local state for text fields (save on blur)
-  const [projectName, setProjectName] = useState("");
-  const [projectDescription, setProjectDescription] = useState("");
-  const [tokenBudget, setTokenBudget] = useState("");
-  const [recentDays, setRecentDays] = useState("");
-  const [newDocPath, setNewDocPath] = useState("");
-
-  // Sync local state from server data
-  useEffect(() => {
-    if (config) {
-      setProjectName(config.project.name);
-      setProjectDescription(config.project.description);
-      setTokenBudget(String(config.context.token_budget));
-      setRecentDays(String(config.context.recent_days));
-    }
-  }, [config]);
-
-  const saveProject = useCallback(
-    (name: string, description: string) => {
-      if (!config) return;
-      if (name === config.project.name && description === config.project.description) return;
-      updateConfig.mutate({ project: { name, description } });
-    },
-    [config, updateConfig],
-  );
-
-  const saveContext = useCallback(
-    (field: "token_budget" | "recent_days", raw: string) => {
-      if (!config) return;
-      const num = parseInt(raw, 10);
-      if (isNaN(num)) return;
-      if (num === config.context[field]) return;
-      updateConfig.mutate({ context: { [field]: num } });
-    },
-    [config, updateConfig],
-  );
-
-  const handleAutoGenerateToggle = useCallback(
-    (checked: boolean) => {
-      updateConfig.mutate({ context: { auto_generate: checked } });
-    },
-    [updateConfig],
-  );
-
-  const handleAddDocPath = useCallback(() => {
-    if (!config) return;
-    const trimmed = newDocPath.trim();
-    if (!trimmed) return;
-    if (config.documentation_paths.includes(trimmed)) return;
-    setNewDocPath("");
-    updateConfig.mutate({
-      documentation_paths: [...config.documentation_paths, trimmed],
-    });
-  }, [config, newDocPath, updateConfig]);
-
-  const handleRemoveDocPath = useCallback(
-    (index: number) => {
-      if (!config) return;
-      updateConfig.mutate({
-        documentation_paths: config.documentation_paths.filter((_, i) => i !== index),
-      });
-    },
-    [config, updateConfig],
-  );
+  const { data: config, isLoading, dataUpdatedAt } = useConfig();
 
   if (isLoading || !config) {
     return (
@@ -97,6 +32,63 @@ export function GeneralSection() {
       </div>
     );
   }
+
+  return <GeneralSectionForm key={dataUpdatedAt} config={config} />;
+}
+
+function GeneralSectionForm({ config }: { config: ProjectConfig }) {
+  const updateConfig = useUpdateConfig();
+
+  // Local state for text fields (save on blur) — initialized from config props
+  const [projectName, setProjectName] = useState(config.project.name);
+  const [projectDescription, setProjectDescription] = useState(config.project.description);
+  const [tokenBudget, setTokenBudget] = useState(String(config.context.token_budget));
+  const [recentDays, setRecentDays] = useState(String(config.context.recent_days));
+  const [newDocPath, setNewDocPath] = useState("");
+
+  const saveProject = useCallback(
+    (name: string, description: string) => {
+      if (name === config.project.name && description === config.project.description) return;
+      updateConfig.mutate({ project: { name, description } });
+    },
+    [config, updateConfig],
+  );
+
+  const saveContext = useCallback(
+    (field: "token_budget" | "recent_days", raw: string) => {
+      const num = parseInt(raw, 10);
+      if (isNaN(num)) return;
+      if (num === config.context[field]) return;
+      updateConfig.mutate({ context: { [field]: num } });
+    },
+    [config, updateConfig],
+  );
+
+  const handleAutoGenerateToggle = useCallback(
+    (checked: boolean) => {
+      updateConfig.mutate({ context: { auto_generate: checked } });
+    },
+    [updateConfig],
+  );
+
+  const handleAddDocPath = useCallback(() => {
+    const trimmed = newDocPath.trim();
+    if (!trimmed) return;
+    if (config.documentation_paths.includes(trimmed)) return;
+    setNewDocPath("");
+    updateConfig.mutate({
+      documentation_paths: [...config.documentation_paths, trimmed],
+    });
+  }, [config, newDocPath, updateConfig]);
+
+  const handleRemoveDocPath = useCallback(
+    (index: number) => {
+      updateConfig.mutate({
+        documentation_paths: config.documentation_paths.filter((_, i) => i !== index),
+      });
+    },
+    [config, updateConfig],
+  );
 
   return (
     <PageTransition>

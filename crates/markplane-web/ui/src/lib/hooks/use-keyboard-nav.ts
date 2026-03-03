@@ -32,7 +32,8 @@ export function isInputFocused(): boolean {
 export function useKeyboardNav() {
   const router = useRouter();
   const routerRef = useRef<AppRouterInstance>(router);
-  routerRef.current = router;
+
+  useEffect(() => { routerRef.current = router; }, [router]);
 
   const chordPending = useRef(false);
   const chordTimer = useRef<ReturnType<typeof setTimeout> | null>(null);

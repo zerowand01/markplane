@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import { SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
@@ -17,21 +17,16 @@ export function ResizableSheetContent({
   className,
   ...props
 }: React.ComponentProps<typeof SheetContent>) {
-  const [width, setWidth] = useState(DEFAULT_WIDTH);
-  const widthRef = useRef(DEFAULT_WIDTH);
-
-  // Load persisted width on mount
-  useEffect(() => {
+  const [width, setWidth] = useState(() => {
+    if (typeof window === 'undefined') return DEFAULT_WIDTH;
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = parseInt(stored, 10);
-      if (!isNaN(parsed)) {
-        const clamped = Math.max(MIN_WIDTH, Math.min(getMaxWidth(), parsed));
-        setWidth(clamped);
-        widthRef.current = clamped;
-      }
+      if (!isNaN(parsed)) return Math.max(MIN_WIDTH, Math.min(getMaxWidth(), parsed));
     }
-  }, []);
+    return DEFAULT_WIDTH;
+  });
+  const widthRef = useRef(width);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
