@@ -45,6 +45,13 @@ fn extract_id_from_response(response: &Value) -> String {
     result["id"].as_str().unwrap().to_string()
 }
 
+/// Assert that a tool call returned an error via isError: true in the result.
+/// Tool-level errors are returned as successful JSON-RPC responses with isError flag.
+fn assert_tool_error(response: &Value, msg: &str) {
+    assert!(response["error"].is_null(), "{}: should not be a JSON-RPC error", msg);
+    assert_eq!(response["result"]["isError"], true, "{}: should have isError: true", msg);
+}
+
 // ── Initialize ──────────────────────────────────────────────────────────
 
 #[test]
@@ -186,8 +193,8 @@ fn test_tools_list() {
     assert!(tool_names.contains(&"markplane_show"));
     assert!(tool_names.contains(&"markplane_add"));
     assert!(tool_names.contains(&"markplane_update"));
-    assert!(tool_names.contains(&"markplane_start"));
-    assert!(tool_names.contains(&"markplane_done"));
+    assert!(!tool_names.contains(&"markplane_start"), "markplane_start should be removed");
+    assert!(!tool_names.contains(&"markplane_done"), "markplane_done should be removed");
     assert!(tool_names.contains(&"markplane_sync"));
     assert!(tool_names.contains(&"markplane_context"));
     assert!(tool_names.contains(&"markplane_graph"));
@@ -199,7 +206,7 @@ fn test_tools_list() {
     assert!(tool_names.contains(&"markplane_unarchive"));
     assert!(tool_names.contains(&"markplane_move"));
     assert!(!tool_names.contains(&"markplane_stale"), "markplane_stale should be removed");
-    assert_eq!(tool_names.len(), 17, "Expected 17 tools, got: {:?}", tool_names);
+    assert_eq!(tool_names.len(), 15, "Expected 15 tools, got: {:?}", tool_names);
 }
 
 // ── Resources List ───────────────────────────────────────────────────────
@@ -319,7 +326,7 @@ fn test_tool_add_missing_title() {
     );
 
     // Should be an error because title is required
-    assert!(response["error"].is_object());
+    assert_tool_error(&response, "missing title");
 }
 
 #[test]
@@ -398,7 +405,7 @@ fn test_tool_add_invalid_kind() {
         }),
     );
 
-    assert!(response["error"].is_object());
+    assert_tool_error(&response, "invalid kind");
 }
 
 // ── Tool: markplane_show ─────────────────────────────────────────────────
@@ -456,7 +463,7 @@ fn test_tool_show_invalid_id() {
         }),
     );
 
-    assert!(response["error"].is_object());
+    assert_tool_error(&response, "invalid id");
 }
 
 // ── Tool: markplane_query ────────────────────────────────────────────────
@@ -712,7 +719,7 @@ fn test_tool_query_invalid_kind() {
         }),
     );
 
-    assert!(response["error"].is_object());
+    assert_tool_error(&response, "invalid kind");
 }
 
 // ── Tool: markplane_update ───────────────────────────────────────────────
@@ -767,78 +774,6 @@ fn test_tool_update() {
     );
     let text = show["result"]["content"][0]["text"].as_str().unwrap();
     assert!(text.contains("in-progress"));
-}
-
-// ── Tool: markplane_start ────────────────────────────────────────────────
-
-#[test]
-fn test_tool_start() {
-    let tmp = setup_project();
-    let add_response = send_request(
-        &tmp,
-        &json!({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/call",
-            "params": {
-                "name": "markplane_add",
-                "arguments": { "title": "Start me" }
-            }
-        }),
-    );
-    let task_id = extract_id_from_response(&add_response);
-
-    let response = send_request(
-        &tmp,
-        &json!({
-            "jsonrpc": "2.0",
-            "id": 60,
-            "method": "tools/call",
-            "params": {
-                "name": "markplane_start",
-                "arguments": { "id": task_id }
-            }
-        }),
-    );
-
-    assert!(response["error"].is_null());
-    let text = response["result"]["content"][0]["text"].as_str().unwrap();
-    assert!(text.contains("success"));
-}
-
-// ── Tool: markplane_done ─────────────────────────────────────────────────
-
-#[test]
-fn test_tool_done() {
-    let tmp = setup_project();
-    let add_response = send_request(
-        &tmp,
-        &json!({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/call",
-            "params": {
-                "name": "markplane_add",
-                "arguments": { "title": "Finish me" }
-            }
-        }),
-    );
-    let task_id = extract_id_from_response(&add_response);
-
-    let response = send_request(
-        &tmp,
-        &json!({
-            "jsonrpc": "2.0",
-            "id": 70,
-            "method": "tools/call",
-            "params": {
-                "name": "markplane_done",
-                "arguments": { "id": task_id }
-            }
-        }),
-    );
-
-    assert!(response["error"].is_null());
 }
 
 // ── Tool: markplane_sync ─────────────────────────────────────────────────
@@ -1226,7 +1161,7 @@ fn test_tool_link_missing_params() {
         }),
     );
 
-    assert!(response["error"].is_object());
+    assert_tool_error(&response, "link missing params");
 }
 
 #[test]
@@ -1511,6 +1446,7 @@ fn test_unknown_tool_returns_error() {
     );
 
     assert!(response["error"].is_object());
+    assert_eq!(response["error"]["code"].as_i64().unwrap(), -32601, "Unknown tool should return METHOD_NOT_FOUND (-32601)");
     assert!(response["error"]["message"]
         .as_str()
         .unwrap()
@@ -2401,7 +2337,7 @@ fn test_tool_move_different_priority_error() {
             }
         }),
     );
-    assert!(response["error"].is_object(), "should error for different priorities");
+    assert_tool_error(&response, "should error for different priorities");
 }
 
 #[test]
@@ -2421,7 +2357,7 @@ fn test_tool_move_self_reference_error() {
             }
         }),
     );
-    assert!(response["error"].is_object(), "should error for self-reference");
+    assert_tool_error(&response, "should error for self-reference");
 }
 
 #[test]
@@ -2451,7 +2387,7 @@ fn test_tool_move_invalid_directive() {
             }
         }),
     );
-    assert!(response["error"].is_object(), "should error with no directive");
+    assert_tool_error(&response, "should error with no directive");
 
     // Invalid 'to' value
     let response = send_request(
@@ -2466,7 +2402,7 @@ fn test_tool_move_invalid_directive() {
             }
         }),
     );
-    assert!(response["error"].is_object(), "should error with invalid 'to'");
+    assert_tool_error(&response, "should error with invalid 'to'");
 }
 
 #[test]
@@ -2486,7 +2422,7 @@ fn test_tool_move_nonexistent_target() {
             }
         }),
     );
-    assert!(response["error"].is_object(), "should error for nonexistent target");
+    assert_tool_error(&response, "should error for nonexistent target");
 }
 
 #[test]
@@ -2510,7 +2446,7 @@ fn test_tool_move_non_task_error() {
             }
         }),
     );
-    assert!(response["error"].is_object(), "should error for non-task");
+    assert_tool_error(&response, "should error for non-task");
 }
 
 #[test]
@@ -2533,7 +2469,7 @@ fn test_tool_update_rejects_invalid_field_for_type() {
             }
         }),
     );
-    assert!(response["error"].is_object());
+    assert_tool_error(&response, "invalid field for plan");
 }
 
 // ── Template param ──────────────────────────────────────────────────

@@ -2,7 +2,7 @@ pub mod protocol;
 pub mod resources;
 pub mod tools;
 
-use std::io::{self, BufRead, Write};
+use std::io::{self, BufRead, Read, Write};
 use std::path::PathBuf;
 
 use markplane_core::Project;
@@ -31,7 +31,7 @@ pub fn run(project_path: Option<PathBuf>) -> anyhow::Result<()> {
 
     loop {
         line.clear();
-        match reader.read_line(&mut line) {
+        match (&mut reader).take(MAX_LINE_LENGTH as u64).read_line(&mut line) {
             Ok(0) => break, // EOF
             Ok(_) => {}
             Err(e) => {
@@ -40,11 +40,24 @@ pub fn run(project_path: Option<PathBuf>) -> anyhow::Result<()> {
             }
         }
 
-        if line.len() > MAX_LINE_LENGTH {
+        // If we hit the take limit without finding a newline, the line is oversized
+        if line.len() >= MAX_LINE_LENGTH && !line.ends_with('\n') {
             eprintln!(
                 "markplane-mcp: input line exceeds {} bytes, skipping",
                 MAX_LINE_LENGTH
             );
+            // Drain remaining bytes until newline or EOF without allocating
+            while let Ok(buf) = reader.fill_buf() {
+                if buf.is_empty() {
+                    break;
+                }
+                if let Some(pos) = buf.iter().position(|&b| b == b'\n') {
+                    reader.consume(pos + 1);
+                    break;
+                }
+                let len = buf.len();
+                reader.consume(len);
+            }
             let response = JsonRpcResponse::error(
                 Value::Null,
                 PARSE_ERROR,
@@ -72,9 +85,9 @@ pub fn run(project_path: Option<PathBuf>) -> anyhow::Result<()> {
             }
         };
 
-        // Notifications (no id) don't get a response
-        let is_notification = request.id.is_none()
-            || request.id.as_ref().is_some_and(|v| v.is_null());
+        // Per JSON-RPC 2.0, only requests without an `id` member are notifications.
+        // `"id": null` is a valid ID that MUST receive a response.
+        let is_notification = request.id.is_none();
 
         if request.method == "notifications/initialized" || request.method == "initialized" {
             // Client acknowledgement, no response needed
@@ -204,7 +217,7 @@ Files are the source of truth, git is the changelog.\n\
 2. Use markplane_show to read full details of any item by ID\n\
 3. Use markplane_add to create new items (creates template with placeholder content)\n\
 4. Edit the markdown file directly to fill in the body content\n\
-5. Use markplane_update/markplane_start/markplane_done to track progress\n\
+5. Use markplane_update to track progress\n\
 6. Use markplane_move to reorder tasks within a priority group (top, bottom, before/after another task)\n\
 7. Use markplane_archive/markplane_unarchive to manage completed items\n\
 8. Use markplane_sync to regenerate indexes and context summaries\n\

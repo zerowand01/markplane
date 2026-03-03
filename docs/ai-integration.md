@@ -111,8 +111,8 @@ Individual items are kept under 2000 tokens each.
 4. markplane_context           -> get focused context including dependencies
    { item: "TASK-rm6d3" }
 5. (implement the feature)
-6. markplane_done              -> mark the item complete
-   { id: "TASK-rm6d3" }
+6. markplane_update             -> mark the item complete
+   { id: "TASK-rm6d3", status: "done" }
 7. markplane_sync              -> regenerate indexes and context files
 ```
 

@@ -55,9 +55,9 @@ The CLI crate provides the user-facing terminal interface and the integrated MCP
 - **Formatting**: `commands/formatting.rs` — shared helpers for truncation, status/priority colorization (via `colored`), table output (via `tabled`)
 - **MCP module** (`src/mcp/`): The `markplane mcp` subcommand runs the MCP server enabling AI tools (Claude, Cursor, etc.) to interact with the project
   - **Protocol**: JSON-RPC 2.0 over stdio (one JSON object per line)
-  - **Tools**: 17 tools — `markplane_summary`, `markplane_context`, `markplane_query`, `markplane_show`, `markplane_graph`, `markplane_add`, `markplane_update`, `markplane_start`, `markplane_move`, `markplane_done`, `markplane_promote`, `markplane_plan`, `markplane_link`, `markplane_archive`, `markplane_unarchive`, `markplane_sync`, `markplane_check`
+  - **Tools**: 15 tools — `markplane_summary`, `markplane_context`, `markplane_query`, `markplane_show`, `markplane_graph`, `markplane_add`, `markplane_update`, `markplane_move`, `markplane_promote`, `markplane_plan`, `markplane_link`, `markplane_archive`, `markplane_unarchive`, `markplane_sync`, `markplane_check`
   - **Resources**: 3 static resources (`markplane://summary`, `markplane://active-work`, `markplane://blocked`) + 4 dynamic templates (`markplane://task/{id}`, `markplane://epic/{id}`, `markplane://plan/{id}`, `markplane://note/{id}`)
-  - **Error handling**: Tool handlers return `Result<String, String>`; errors map to JSON-RPC error codes
+  - **Error handling**: Tool handlers return `Result<String, String>`; errors return `isError: true` in tool results; protocol errors use JSON-RPC error codes
 - **Error handling**: `anyhow::Result` at the top level
 
 ## Data Model

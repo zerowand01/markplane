@@ -74,18 +74,30 @@ pub fn read_resource(id: Value, project: &Project, uri: &str) -> JsonRpcResponse
         "markplane://templates" => read_templates(project),
         _ if uri.starts_with("markplane://task/") => {
             let item_id = &uri["markplane://task/".len()..];
+            if item_id.is_empty() {
+                return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing item ID in resource URI: markplane://task/{id}".to_string());
+            }
             read_task_item(project, item_id)
         }
         _ if uri.starts_with("markplane://epic/") => {
             let item_id = &uri["markplane://epic/".len()..];
+            if item_id.is_empty() {
+                return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing item ID in resource URI: markplane://epic/{id}".to_string());
+            }
             read_epic_item(project, item_id)
         }
         _ if uri.starts_with("markplane://plan/") => {
             let item_id = &uri["markplane://plan/".len()..];
+            if item_id.is_empty() {
+                return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing item ID in resource URI: markplane://plan/{id}".to_string());
+            }
             read_plan_item(project, item_id)
         }
         _ if uri.starts_with("markplane://note/") => {
             let item_id = &uri["markplane://note/".len()..];
+            if item_id.is_empty() {
+                return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing item ID in resource URI: markplane://note/{id}".to_string());
+            }
             read_note_item(project, item_id)
         }
         _ => {

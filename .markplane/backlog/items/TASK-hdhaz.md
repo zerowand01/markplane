@@ -1,7 +1,7 @@
 ---
 id: TASK-hdhaz
 title: MCP protocol compliance fixes
-status: backlog
+status: done
 priority: critical
 type: bug
 effort: medium
@@ -47,14 +47,14 @@ These are convenience wrappers over `update_status` that add tool surface area w
 
 ## Acceptance Criteria
 
-- [ ] `read_line()` allocation bounded to `MAX_LINE_LENGTH` before parsing
-- [ ] Requests with `"id": null` receive a response (not treated as notifications)
-- [ ] Unknown tools return `METHOD_NOT_FOUND (-32601)`
-- [ ] User input errors return `INVALID_PARAMS (-32602)` or `isError: true`
-- [ ] Empty resource URIs return a descriptive error
-- [ ] `markplane_start` and `markplane_done` removed from MCP tool list and dispatch
-- [ ] MCP `instructions` updated to not reference start/done tools
-- [ ] All existing MCP integration tests updated and pass
+- [x] `read_line()` allocation bounded to `MAX_LINE_LENGTH` before parsing
+- [x] Requests with `"id": null` receive a response (not treated as notifications)
+- [x] Unknown tools return `METHOD_NOT_FOUND (-32601)`
+- [x] User input errors return `INVALID_PARAMS (-32602)` or `isError: true`
+- [x] Empty resource URIs return a descriptive error
+- [x] `markplane_start` and `markplane_done` removed from MCP tool list and dispatch
+- [x] MCP `instructions` updated to not reference start/done tools
+- [x] All existing MCP integration tests updated and pass
 
 ## Implementation Notes
 

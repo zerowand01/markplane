@@ -2,13 +2,13 @@ use std::collections::HashMap;
 use std::fs;
 
 use markplane_core::{
-    Task, StatusCategory, Effort, IdPrefix, LinkAction, LinkRelation,
+    Task, StatusCategory, Effort, LinkAction, LinkRelation,
     MarkplaneDocument, MoveDirective, Note, Patch, Priority, Project, QueryFilter,
-    ScanScope, UpdateFields, build_reference_graph, parse_id, validate_references,
+    ScanScope, UpdateFields, build_reference_graph, validate_references,
 };
 use serde_json::{json, Value};
 
-use super::protocol::{JsonRpcResponse, INTERNAL_ERROR, INVALID_PARAMS};
+use super::protocol::{JsonRpcResponse, METHOD_NOT_FOUND};
 
 /// Return the list of available tools with their JSON Schema input descriptions.
 pub fn list_tools(project: &Project) -> Value {
@@ -209,20 +209,6 @@ pub fn list_tools(project: &Project) -> Value {
                 }
             },
             {
-                "name": "markplane_start",
-                "description": "Set a task to in-progress status. For epics, use markplane_update with status: now/next/later/done instead.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "id": {
-                            "type": "string",
-                            "description": "Task ID to start"
-                        }
-                    },
-                    "required": ["id"]
-                }
-            },
-            {
                 "name": "markplane_move",
                 "description": "Move a task to a new position within its priority group. Handles fractional-indexing math automatically.",
                 "inputSchema": {
@@ -244,20 +230,6 @@ pub fn list_tools(project: &Project) -> Value {
                         "after": {
                             "type": "string",
                             "description": "Task ID to position after"
-                        }
-                    },
-                    "required": ["id"]
-                }
-            },
-            {
-                "name": "markplane_done",
-                "description": "Mark a task as done. Also works for epics, plans, and notes.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "id": {
-                            "type": "string",
-                            "description": "Task ID to complete"
                         }
                     },
                     "required": ["id"]
@@ -424,9 +396,7 @@ pub fn call_tool(id: Value, project: &Project, name: &str, args: Value) -> JsonR
         "markplane_show" => handle_show(project, &args),
         "markplane_add" => handle_add(project, &args),
         "markplane_update" => handle_update(project, &args),
-        "markplane_start" => handle_start(project, &args),
         "markplane_move" => handle_move(project, &args),
-        "markplane_done" => handle_done(project, &args),
         "markplane_sync" => handle_sync(project),
         "markplane_context" => handle_context(project, &args),
         "markplane_graph" => handle_graph(project, &args),
@@ -439,7 +409,7 @@ pub fn call_tool(id: Value, project: &Project, name: &str, args: Value) -> JsonR
         _ => {
             return JsonRpcResponse::error(
                 id,
-                INVALID_PARAMS,
+                METHOD_NOT_FOUND,
                 format!("Unknown tool: {}", name),
             );
         }
@@ -455,7 +425,16 @@ pub fn call_tool(id: Value, project: &Project, name: &str, args: Value) -> JsonR
                 }]
             }),
         ),
-        Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, e),
+        Err(e) => JsonRpcResponse::success(
+            id,
+            json!({
+                "content": [{
+                    "type": "text",
+                    "text": e
+                }],
+                "isError": true
+            }),
+        ),
     }
 }
 
@@ -795,31 +774,6 @@ fn handle_update(project: &Project, args: &Value) -> Result<String, String> {
     Ok(r#"{"success":true}"#.to_string())
 }
 
-fn handle_start(project: &Project, args: &Value) -> Result<String, String> {
-    let id = args
-        .get("id")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| "Missing required parameter: id".to_string())?;
-
-    let (prefix, _) = parse_id(id).map_err(|e| e.to_string())?;
-    let active_status = if prefix == IdPrefix::Task {
-        let config = project.load_config().map_err(|e| e.to_string())?;
-        config.workflows.task
-            .statuses_in(StatusCategory::Active)
-            .first()
-            .cloned()
-            .unwrap_or_else(|| "in-progress".to_string())
-    } else {
-        "in-progress".to_string()
-    };
-
-    project
-        .update_status(id, &active_status)
-        .map_err(|e| e.to_string())?;
-
-    Ok(r#"{"success":true}"#.to_string())
-}
-
 fn handle_move(project: &Project, args: &Value) -> Result<String, String> {
     let id = args
         .get("id")
@@ -847,31 +801,6 @@ fn handle_move(project: &Project, args: &Value) -> Result<String, String> {
 
     project
         .move_item(id, directive)
-        .map_err(|e| e.to_string())?;
-
-    Ok(r#"{"success":true}"#.to_string())
-}
-
-fn handle_done(project: &Project, args: &Value) -> Result<String, String> {
-    let id = args
-        .get("id")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| "Missing required parameter: id".to_string())?;
-
-    let (prefix, _) = parse_id(id).map_err(|e| e.to_string())?;
-    let done_status = if prefix == IdPrefix::Task {
-        let config = project.load_config().map_err(|e| e.to_string())?;
-        config.workflows.task
-            .statuses_in(StatusCategory::Completed)
-            .first()
-            .cloned()
-            .unwrap_or_else(|| "done".to_string())
-    } else {
-        "done".to_string()
-    };
-
-    project
-        .update_status(id, &done_status)
         .map_err(|e| e.to_string())?;
 
     Ok(r#"{"success":true}"#.to_string())
