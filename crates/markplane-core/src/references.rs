@@ -6,9 +6,14 @@ use crate::frontmatter;
 use crate::models::{parse_id, Epic, IdPrefix, Note, Plan, Task};
 use crate::project::Project;
 
-/// Return a glob pattern for scanning .md files in a directory.
+/// Return a glob pattern for scanning .md files in the items subdirectory.
 fn scan_pattern(dir: &Path) -> String {
     dir.join("items").join("*.md").to_string_lossy().to_string()
+}
+
+/// Return a glob pattern for scanning .md files in the archive subdirectory.
+fn archive_scan_pattern(dir: &Path) -> String {
+    dir.join("archive").join("*.md").to_string_lossy().to_string()
 }
 
 /// A broken reference found during validation.
@@ -137,6 +142,10 @@ pub fn validate_task_statuses(project: &Project) -> Result<Vec<BrokenReference>>
 }
 
 /// Find orphan items — items with no incoming references from other items.
+///
+/// Also scans archived items as reference sources — if an archived item
+/// references an active item, that active item is not considered an orphan.
+/// Archived items themselves are not reported as orphans.
 pub fn find_orphans(project: &Project) -> Result<Vec<String>> {
     // Build a set of all item IDs and a set of all referenced IDs
     let mut all_ids: HashSet<String> = HashSet::new();
@@ -154,6 +163,8 @@ pub fn find_orphans(project: &Project) -> Result<Vec<String>> {
         if !dir.exists() {
             continue;
         }
+
+        // Scan active items: add to all_ids and collect references
         let pattern = scan_pattern(&dir);
         for path in glob::glob(&pattern).unwrap_or_else(|_| glob::glob("").unwrap()).flatten() {
             let filename = path.file_name().unwrap_or_default().to_string_lossy();
@@ -170,6 +181,19 @@ pub fn find_orphans(project: &Project) -> Result<Vec<String>> {
                 referenced_ids.insert(ref_id);
             }
 
+            let content_refs = extract_frontmatter_references(&content);
+            for ref_id in content_refs {
+                referenced_ids.insert(ref_id);
+            }
+        }
+
+        // Scan archived items: only collect their references (don't add to all_ids)
+        let archive_pattern = archive_scan_pattern(&dir);
+        for path in glob::glob(&archive_pattern).unwrap_or_else(|_| glob::glob("").unwrap()).flatten() {
+            let content = std::fs::read_to_string(&path)?;
+            for ref_id in extract_references(&content) {
+                referenced_ids.insert(ref_id);
+            }
             let content_refs = extract_frontmatter_references(&content);
             for ref_id in content_refs {
                 referenced_ids.insert(ref_id);
@@ -483,6 +507,106 @@ pub fn validate_reciprocal_links(project: &Project) -> Result<Vec<AsymmetricLink
     });
 
     Ok(asymmetric)
+}
+
+/// A cycle found in the dependency graph.
+#[derive(Debug)]
+pub struct DependencyCycle {
+    /// The IDs forming the cycle, in traversal order.
+    pub path: Vec<String>,
+}
+
+/// Detect cycles in the blocks/depends_on graph among all active tasks.
+///
+/// Uses iterative DFS with coloring: WHITE (unvisited), GRAY (in progress),
+/// BLACK (finished). A back-edge to a GRAY node indicates a cycle.
+pub fn detect_cycles(project: &Project) -> Result<Vec<DependencyCycle>> {
+    // Build adjacency list from blocks edges
+    let mut adj: HashMap<String, Vec<String>> = HashMap::new();
+    let task_dir = project.item_dir(&IdPrefix::Task);
+    if !task_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let pattern = scan_pattern(&task_dir);
+    for path in glob::glob(&pattern).unwrap_or_else(|_| glob::glob("").unwrap()).flatten() {
+        let content = std::fs::read_to_string(&path)?;
+        if let Ok(doc) = frontmatter::parse_frontmatter::<Task>(&content) {
+            let id = doc.frontmatter.id.clone();
+            let edges = adj.entry(id).or_default();
+            for blocked in &doc.frontmatter.blocks {
+                edges.push(blocked.clone());
+            }
+        }
+    }
+
+    #[derive(Clone, Copy, PartialEq)]
+    enum Color { White, Gray, Black }
+
+    let mut color: HashMap<String, Color> = adj.keys().map(|k| (k.clone(), Color::White)).collect();
+    let mut cycles = Vec::new();
+
+    // For cycle path reconstruction, track parent pointers during DFS
+    for start in adj.keys().cloned().collect::<Vec<_>>() {
+        if color.get(&start) != Some(&Color::White) {
+            continue;
+        }
+
+        // Iterative DFS with explicit stack
+        // Stack entries: (node, iterator index, parent_chain)
+        let mut stack: Vec<(String, usize)> = Vec::new();
+        let mut path_stack: Vec<String> = Vec::new();
+
+        color.insert(start.clone(), Color::Gray);
+        stack.push((start.clone(), 0));
+        path_stack.push(start.clone());
+
+        while let Some((node, idx)) = stack.last_mut() {
+            let node_key = node.clone();
+            let neighbor_count = adj.get(&node_key).map_or(0, Vec::len);
+            if *idx < neighbor_count {
+                let neighbor = adj[&node_key][*idx].clone();
+                *idx += 1;
+
+                match color.get(&neighbor) {
+                    Some(Color::Gray) => {
+                        // Found a cycle — extract the cycle path
+                        if let Some(pos) = path_stack.iter().position(|n| n == &neighbor) {
+                            let mut cycle_path: Vec<String> = path_stack[pos..].to_vec();
+                            cycle_path.push(neighbor);
+                            cycles.push(DependencyCycle { path: cycle_path });
+                        }
+                    }
+                    Some(Color::White) | None => {
+                        color.insert(neighbor.clone(), Color::Gray);
+                        stack.push((neighbor.clone(), 0));
+                        path_stack.push(neighbor);
+                    }
+                    Some(Color::Black) => {}
+                }
+            } else {
+                color.insert(node_key, Color::Black);
+                stack.pop();
+                path_stack.pop();
+            }
+        }
+    }
+
+    // Deduplicate cycles: normalize each by rotating to smallest ID
+    let mut seen: HashSet<Vec<String>> = HashSet::new();
+    cycles.retain(|c| {
+        // Remove trailing duplicate (cycle closes on itself)
+        let path = &c.path[..c.path.len() - 1];
+        if path.is_empty() {
+            return false;
+        }
+        let min_pos = path.iter().enumerate().min_by(|a, b| a.1.cmp(b.1)).map(|(i, _)| i).unwrap_or(0);
+        let mut normalized: Vec<String> = path[min_pos..].to_vec();
+        normalized.extend_from_slice(&path[..min_pos]);
+        seen.insert(normalized)
+    });
+
+    Ok(cycles)
 }
 
 #[cfg(test)]
@@ -876,5 +1000,131 @@ mod tests {
 
         let issues = validate_reciprocal_links(&project).unwrap();
         assert!(issues.is_empty(), "Expected no issues but found: {:?}", issues.iter().map(|i| format!("{} -> {} ({}/{})", i.source_id, i.target_id, i.forward_field, i.missing_field)).collect::<Vec<_>>());
+    }
+
+    // ── detect_cycles ─────────────────────────────────────────────────────
+
+    #[test]
+    fn test_detect_cycles_none() {
+        use tempfile::TempDir;
+        use crate::project::Project;
+        use crate::models::{Priority, Effort};
+        use crate::links::{LinkRelation, LinkAction};
+
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().join(".markplane");
+        let project = Project::init(root, "Test", "Test").unwrap();
+
+        let t1 = project.create_task("A", "feature", Priority::Medium, Effort::Small, None, vec![], None).unwrap();
+        let t2 = project.create_task("B", "feature", Priority::Medium, Effort::Small, None, vec![], None).unwrap();
+        let t3 = project.create_task("C", "feature", Priority::Medium, Effort::Small, None, vec![], None).unwrap();
+
+        project.link_items(&t1.id, &t2.id, LinkRelation::Blocks, LinkAction::Add).unwrap();
+        project.link_items(&t2.id, &t3.id, LinkRelation::Blocks, LinkAction::Add).unwrap();
+
+        let cycles = detect_cycles(&project).unwrap();
+        assert!(cycles.is_empty());
+    }
+
+    #[test]
+    fn test_detect_cycles_with_cycle() {
+        use tempfile::TempDir;
+        use crate::project::Project;
+        use crate::models::{Priority, Effort};
+        use crate::links::{LinkRelation, LinkAction};
+
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().join(".markplane");
+        let project = Project::init(root, "Test", "Test").unwrap();
+
+        let t1 = project.create_task("A", "feature", Priority::Medium, Effort::Small, None, vec![], None).unwrap();
+        let t2 = project.create_task("B", "feature", Priority::Medium, Effort::Small, None, vec![], None).unwrap();
+
+        // Create A blocks B normally
+        project.link_items(&t1.id, &t2.id, LinkRelation::Blocks, LinkAction::Add).unwrap();
+
+        // Manually corrupt B to also block A (bypassing cycle detection)
+        let mut doc_b: crate::models::MarkplaneDocument<Task> = project.read_item(&t2.id).unwrap();
+        doc_b.frontmatter.blocks.push(t1.id.clone());
+        project.write_item(&t2.id, &doc_b).unwrap();
+
+        let cycles = detect_cycles(&project).unwrap();
+        assert!(!cycles.is_empty(), "Expected at least one cycle");
+    }
+
+    // ── find_orphans with archive ─────────────────────────────────────────
+
+    #[test]
+    fn test_find_orphans_archived_refs_count() {
+        use tempfile::TempDir;
+        use crate::project::Project;
+        use crate::models::{Priority, Effort};
+
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().join(".markplane");
+        let project = Project::init(root, "Test", "Test").unwrap();
+
+        let task_a = project.create_task("Referenced", "feature", Priority::Medium, Effort::Small, None, vec![], None).unwrap();
+        let task_b = project.create_task("Will be archived", "feature", Priority::Medium, Effort::Small, None, vec![], None).unwrap();
+
+        // B references A in its body
+        let mut doc_b: crate::models::MarkplaneDocument<Task> = project.read_item(&task_b.id).unwrap();
+        doc_b.body = format!("# B\nSee [[{}]]\n", task_a.id);
+        project.write_item(&task_b.id, &doc_b).unwrap();
+
+        // Archive B — its references should still count
+        project.archive_item(&task_b.id).unwrap();
+
+        let orphans = find_orphans(&project).unwrap();
+        // task_a should NOT be an orphan because archived task_b references it
+        assert!(!orphans.contains(&task_a.id), "task_a should not be an orphan when referenced by archived task_b");
+    }
+
+    // ── archive cleanup ─────────────────────────────────────────────────
+
+    #[test]
+    fn test_archive_cleans_inbound_blocks() {
+        use tempfile::TempDir;
+        use crate::project::Project;
+        use crate::models::{Priority, Effort};
+        use crate::links::{LinkRelation, LinkAction};
+
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().join(".markplane");
+        let project = Project::init(root, "Test", "Test").unwrap();
+
+        let t1 = project.create_task("Blocker", "feature", Priority::Medium, Effort::Small, None, vec![], None).unwrap();
+        let t2 = project.create_task("Blocked", "feature", Priority::Medium, Effort::Small, None, vec![], None).unwrap();
+
+        project.link_items(&t1.id, &t2.id, LinkRelation::Blocks, LinkAction::Add).unwrap();
+
+        // Archive t1 — should clean up t2's depends_on
+        project.archive_item(&t1.id).unwrap();
+
+        let doc2: crate::models::MarkplaneDocument<Task> = project.read_item(&t2.id).unwrap();
+        assert!(!doc2.frontmatter.depends_on.contains(&t1.id), "depends_on should be cleaned after archiving blocker");
+    }
+
+    #[test]
+    fn test_archive_cleans_inbound_related() {
+        use tempfile::TempDir;
+        use crate::project::Project;
+        use crate::models::{Priority, Effort};
+        use crate::links::{LinkRelation, LinkAction};
+
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().join(".markplane");
+        let project = Project::init(root, "Test", "Test").unwrap();
+
+        let t1 = project.create_task("Task A", "feature", Priority::Medium, Effort::Small, None, vec![], None).unwrap();
+        let t2 = project.create_task("Task B", "feature", Priority::Medium, Effort::Small, None, vec![], None).unwrap();
+
+        project.link_items(&t1.id, &t2.id, LinkRelation::Related, LinkAction::Add).unwrap();
+
+        // Archive t1 — should clean up t2's related
+        project.archive_item(&t1.id).unwrap();
+
+        let doc2: crate::models::MarkplaneDocument<Task> = project.read_item(&t2.id).unwrap();
+        assert!(!doc2.frontmatter.related.contains(&t1.id), "related should be cleaned after archiving");
     }
 }

@@ -1,7 +1,7 @@
 ---
 id: TASK-p2tub
 title: Data consistency and cross-reference integrity
-status: planned
+status: done
 priority: high
 type: bug
 effort: large
@@ -49,14 +49,30 @@ No `--cascade` flag when archiving to optionally clean up references in other it
 
 ## Acceptance Criteria
 
-- [ ] `create_plan` validates `task_id` format before writing the plan file
-- [ ] `create_plan` returns an error if reciprocal linking fails (not just stderr warning)
-- [ ] Workflow update validates or migrates tasks with removed statuses
-- [ ] `archive_item` warns about or cleans inbound references
-- [ ] `find_orphans` considers archived items as reference sources
-- [ ] Graph edges deduplicated for reciprocal relationships
-- [ ] Circular dependency detection exists (in `link_items` and/or `check`)
-- [ ] All existing tests pass
+- [x] `create_plan` validates `task_id` format before writing the plan file
+- [x] `create_plan` returns an error if reciprocal linking fails (not just stderr warning)
+- [x] Workflow update validates or migrates tasks with removed statuses
+- [x] `archive_item` warns about or cleans inbound references
+- [x] `find_orphans` considers archived items as reference sources
+- [x] Graph edges deduplicated for reciprocal relationships
+- [x] Circular dependency detection exists (in `link_items` and/or `check`)
+- [x] All existing tests pass
+
+## Implementation Notes
+
+**Cycle detection** — `has_path()` BFS in `links.rs` prevents new cycles at link time; `detect_cycles()` iterative DFS in `references.rs` reports existing cycles via `check`. Both `check` CLI and MCP `markplane_check` report cycles.
+
+**create_plan validation** — Validates task_id format (must be TASK prefix), verifies task exists (404), and rolls back the plan file if `link_items()` fails.
+
+**Workflow validation** — `PATCH /api/config` returns 409 Conflict with affected task IDs if workflow changes would strand active tasks using removed statuses.
+
+**Archive cleanup** — `archive_item()` calls `find_inbound_references()` before moving the file, then does best-effort removal of inbound refs (blocks, depends_on, related, plan, epic) from active items.
+
+**Orphan detection** — `find_orphans()` now scans `archive/*.md` files for references (but doesn't treat archived items themselves as orphan candidates).
+
+**Graph dedup** — Skips `depends_on` edges (covered by `blocks`) and `task.plan` edges (covered by `plan.implements`).
+
+**Files changed**: `links.rs`, `references.rs`, `project.rs`, `lib.rs`, `serve.rs`, `check.rs`, `mcp/tools.rs`, plus docs updates to `cli-reference.md`, `mcp-setup.md`, `architecture.md`, `web-ui-guide.md`. 441 tests passing, clippy clean.
 
 ## References
 

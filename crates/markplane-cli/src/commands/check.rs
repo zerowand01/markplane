@@ -1,7 +1,7 @@
 use colored::Colorize;
 use markplane_core::{
     validate_references, validate_task_statuses, validate_reciprocal_links, find_orphans,
-    LinkAction, LinkRelation, Project,
+    detect_cycles, LinkAction, LinkRelation, Project,
 };
 
 fn field_to_relation(forward_field: &str) -> Option<LinkRelation> {
@@ -119,6 +119,24 @@ pub fn run(orphans: bool, fix: bool) -> anyhow::Result<()> {
         }
     }
 
+    // Check for dependency cycles
+    let cycles = detect_cycles(&project)?;
+    if cycles.is_empty() {
+        println!("{} No dependency cycles found.", "✓".green());
+    } else {
+        println!(
+            "\n{} {} dependency cycle(s):\n",
+            "✗".red(),
+            cycles.len()
+        );
+        for cycle in &cycles {
+            println!(
+                "  {}",
+                cycle.path.join(" → ")
+            );
+        }
+    }
+
     if orphans {
         println!();
         let orphan_list = find_orphans(&project)?;
@@ -136,8 +154,8 @@ pub fn run(orphans: bool, fix: bool) -> anyhow::Result<()> {
         }
     }
 
-    // Broken refs and invalid statuses are never auto-fixable
-    let unfixable = broken.len() + invalid_statuses.len();
+    // Broken refs, invalid statuses, and cycles are never auto-fixable
+    let unfixable = broken.len() + invalid_statuses.len() + cycles.len();
     if unfixable > 0 {
         return Err(anyhow::anyhow!("Found {} issue(s)", unfixable + asymmetric.len()));
     }

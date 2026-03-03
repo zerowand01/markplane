@@ -98,6 +98,8 @@ The type and workflow editors let you:
 
 General settings fields save on blur or Enter (text/number inputs) or immediately on toggle (switches). Changes are reflected everywhere: create dialogs, detail sheet dropdowns, CLI defaults, and MCP tools. Other browser tabs stay in sync via WebSocket. Under the hood, changes write directly to `.markplane/config.yaml`.
 
+> **Workflow constraint**: Removing a status from the workflow is rejected (409 Conflict) if any active tasks currently use that status. Move or update those tasks first, then remove the status.
+
 ### Command Palette (`Cmd+K`)
 
 Press `Cmd+K` (or `Ctrl+K`) to open the command palette. It provides:
@@ -244,7 +246,7 @@ Error:             { "error": { "code": string, "message": string } }
 | POST | `/api/epics` | Create epic |
 | GET | `/api/plans` | List plans |
 | GET | `/api/plans/:id` | Plan detail |
-| POST | `/api/plans` | Create plan (optionally linked to a task) |
+| POST | `/api/plans` | Create plan (optionally linked to a task). Validates task_id format and existence; rolls back if linking fails. |
 | GET | `/api/notes` | List notes |
 | GET | `/api/notes/:id` | Note detail |
 | POST | `/api/notes` | Create note |
@@ -258,7 +260,7 @@ Error:             { "error": { "code": string, "message": string } }
 | POST | `/api/items/:id/archive` | Archive any item (task, epic, plan, note) |
 | POST | `/api/items/:id/unarchive` | Restore an archived item |
 | GET | `/api/config` | Get project configuration (project info, context settings, documentation paths, item types, note types, workflows) |
-| PATCH | `/api/config` | Update project configuration (partial updates supported at every level) |
+| PATCH | `/api/config` | Update project configuration (partial updates supported at every level). Returns 409 Conflict if workflow changes would strand active tasks using removed statuses. |
 
 All list endpoints (`/api/tasks`, `/api/epics`, `/api/plans`, `/api/notes`) accept an `?archived=true` query parameter to return archived items instead of active ones.
 

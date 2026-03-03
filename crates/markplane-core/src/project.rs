@@ -11,8 +11,10 @@ use tempfile::NamedTempFile;
 
 use crate::error::{MarkplaneError, Result};
 use crate::frontmatter::{parse_frontmatter, write_frontmatter};
+use crate::links::{LinkAction, LinkRelation};
 use crate::manifest;
 use crate::models::*;
+use crate::query::QueryFilter;
 use crate::templates::{self, render_template};
 
 // ── Patch<T> ────────────────────────────────────────────────────────────────
@@ -1050,7 +1052,75 @@ impl Project {
         Ok(())
     }
 
+    /// Find all active items that reference the given ID in their frontmatter fields.
+    ///
+    /// Returns a list of `(referencing_id, relation, action)` tuples that can be
+    /// used to remove the inbound references via `link_items()`.
+    pub fn find_inbound_references(&self, target_id: &str) -> Result<Vec<(String, LinkRelation, LinkAction)>> {
+        let mut refs = Vec::new();
+
+        // Scan tasks for references to target_id
+        let tasks = self.list_tasks(&QueryFilter::default())?;
+        for doc in &tasks {
+            let fm = &doc.frontmatter;
+            if fm.id == target_id { continue; }
+            if fm.blocks.iter().any(|b| b == target_id) {
+                refs.push((fm.id.clone(), LinkRelation::Blocks, LinkAction::Remove));
+            }
+            if fm.depends_on.iter().any(|d| d == target_id) {
+                refs.push((fm.id.clone(), LinkRelation::DependsOn, LinkAction::Remove));
+            }
+            if fm.epic.as_deref() == Some(target_id) {
+                refs.push((fm.id.clone(), LinkRelation::Epic, LinkAction::Remove));
+            }
+            if fm.plan.as_deref() == Some(target_id) {
+                refs.push((fm.id.clone(), LinkRelation::Plan, LinkAction::Remove));
+            }
+            if fm.related.iter().any(|r| r == target_id) {
+                refs.push((fm.id.clone(), LinkRelation::Related, LinkAction::Remove));
+            }
+        }
+
+        // Scan plans for references to target_id
+        let plans = self.list_plans()?;
+        for doc in &plans {
+            let fm = &doc.frontmatter;
+            if fm.id == target_id { continue; }
+            if fm.implements.iter().any(|i| i == target_id) {
+                refs.push((fm.id.clone(), LinkRelation::Implements, LinkAction::Remove));
+            }
+            if fm.related.iter().any(|r| r == target_id) {
+                refs.push((fm.id.clone(), LinkRelation::Related, LinkAction::Remove));
+            }
+        }
+
+        // Scan epics for references to target_id
+        let epics = self.list_epics()?;
+        for doc in &epics {
+            let fm = &doc.frontmatter;
+            if fm.id == target_id { continue; }
+            if fm.related.iter().any(|r| r == target_id) {
+                refs.push((fm.id.clone(), LinkRelation::Related, LinkAction::Remove));
+            }
+        }
+
+        // Scan notes for references to target_id
+        let notes = self.list_notes()?;
+        for doc in &notes {
+            let fm = &doc.frontmatter;
+            if fm.id == target_id { continue; }
+            if fm.related.iter().any(|r| r == target_id) {
+                refs.push((fm.id.clone(), LinkRelation::Related, LinkAction::Remove));
+            }
+        }
+
+        Ok(refs)
+    }
+
     /// Move an item to the archive/ subdirectory.
+    ///
+    /// Also cleans up inbound references from active items so they don't
+    /// point to an archived item.
     pub fn archive_item(&self, id: &str) -> Result<()> {
         let (prefix, _) = parse_id(id)?;
         let source = self.item_path(id)?;
@@ -1063,10 +1133,21 @@ impl Project {
             )));
         }
 
+        // Find inbound references before archiving
+        let inbound_refs = self.find_inbound_references(id)?;
+
+        // Move the file to archive
         let archive_dir = self.item_dir(&prefix).join("archive");
         fs::create_dir_all(&archive_dir)?;
         let archive_path = archive_dir.join(format!("{}.md", id));
         fs::rename(&source, &archive_path)?;
+
+        // Clean up inbound references from active items
+        for (source_id, relation, action) in inbound_refs {
+            // Best-effort: if cleanup fails, the item is still archived
+            let _ = self.link_items(&source_id, id, relation, action);
+        }
+
         Ok(())
     }
 

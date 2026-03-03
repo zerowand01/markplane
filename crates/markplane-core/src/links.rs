@@ -1,3 +1,4 @@
+use std::collections::{HashSet, VecDeque};
 use std::fmt;
 use std::fs::File;
 use std::str::FromStr;
@@ -197,6 +198,37 @@ fn collect_lock_ids(
     Ok(ids)
 }
 
+// ── Cycle detection ───────────────────────────────────────────────────────
+
+/// Check if there is a path from `from` to `to` following `blocks` edges (BFS).
+///
+/// Used to detect cycles before adding Blocks or DependsOn relationships.
+/// Returns `true` if `to` is reachable from `from` via transitive `blocks`.
+fn has_path(project: &Project, from: &str, to: &str) -> Result<bool> {
+    let mut visited = HashSet::new();
+    let mut queue = VecDeque::new();
+    queue.push_back(from.to_string());
+    visited.insert(from.to_string());
+
+    while let Some(current) = queue.pop_front() {
+        if current == to {
+            return Ok(true);
+        }
+
+        // Read the task's blocks list to find outgoing edges
+        if let Ok(doc) = project.read_item::<Task>(&current) {
+            for blocked in &doc.frontmatter.blocks {
+                if !visited.contains(blocked.as_str()) {
+                    visited.insert(blocked.clone());
+                    queue.push_back(blocked.clone());
+                }
+            }
+        }
+    }
+
+    Ok(false)
+}
+
 // ── Implementation ────────────────────────────────────────────────────────
 
 impl Project {
@@ -226,6 +258,32 @@ impl Project {
         let (from_prefix, _) = parse_id(from)?;
         let (to_prefix, _) = parse_id(to)?;
         let today = Local::now().date_naive();
+
+        // Cycle detection for dependency relationships
+        if action == LinkAction::Add {
+            match relation {
+                LinkRelation::Blocks => {
+                    // Adding from→blocks→to: check if to can already reach from via blocks
+                    if has_path(self, to, from)? {
+                        return Err(MarkplaneError::InvalidLink(format!(
+                            "Adding {} blocks {} would create a dependency cycle",
+                            from, to
+                        )));
+                    }
+                }
+                LinkRelation::DependsOn => {
+                    // Adding from→depends_on→to means to→blocks→from logically.
+                    // Check if from can already reach to via blocks.
+                    if has_path(self, from, to)? {
+                        return Err(MarkplaneError::InvalidLink(format!(
+                            "Adding {} depends_on {} would create a dependency cycle",
+                            from, to
+                        )));
+                    }
+                }
+                _ => {}
+            }
+        }
 
         // Acquire locks on all involved files in deterministic order.
         let lock_ids = collect_lock_ids(self, from, to, relation, action)?;
@@ -866,5 +924,103 @@ mod tests {
             epic_doc.frontmatter.related.iter().filter(|r| *r == &t1).count(),
             1
         );
+    }
+
+    // ── Cycle detection ──────────────────────────────────────────────────
+
+    #[test]
+    fn test_direct_cycle_blocks() {
+        let (_tmp, project) = setup_project();
+        let t1 = create_task(&project, "A");
+        let t2 = create_task(&project, "B");
+
+        // A blocks B
+        project
+            .link_items(&t1, &t2, LinkRelation::Blocks, LinkAction::Add)
+            .unwrap();
+
+        // B blocks A should fail (cycle)
+        let result = project.link_items(&t2, &t1, LinkRelation::Blocks, LinkAction::Add);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("cycle"));
+    }
+
+    #[test]
+    fn test_direct_cycle_depends_on() {
+        let (_tmp, project) = setup_project();
+        let t1 = create_task(&project, "A");
+        let t2 = create_task(&project, "B");
+
+        // A depends_on B (means B blocks A)
+        project
+            .link_items(&t1, &t2, LinkRelation::DependsOn, LinkAction::Add)
+            .unwrap();
+
+        // B depends_on A should fail (cycle: A depends_on B depends_on A)
+        let result = project.link_items(&t2, &t1, LinkRelation::DependsOn, LinkAction::Add);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("cycle"));
+    }
+
+    #[test]
+    fn test_transitive_cycle() {
+        let (_tmp, project) = setup_project();
+        let t1 = create_task(&project, "A");
+        let t2 = create_task(&project, "B");
+        let t3 = create_task(&project, "C");
+
+        // A blocks B, B blocks C
+        project
+            .link_items(&t1, &t2, LinkRelation::Blocks, LinkAction::Add)
+            .unwrap();
+        project
+            .link_items(&t2, &t3, LinkRelation::Blocks, LinkAction::Add)
+            .unwrap();
+
+        // C blocks A should fail (cycle: A→B→C→A)
+        let result = project.link_items(&t3, &t1, LinkRelation::Blocks, LinkAction::Add);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("cycle"));
+    }
+
+    #[test]
+    fn test_valid_chain_no_cycle() {
+        let (_tmp, project) = setup_project();
+        let t1 = create_task(&project, "A");
+        let t2 = create_task(&project, "B");
+        let t3 = create_task(&project, "C");
+
+        // A blocks B, B blocks C — this is a valid chain, no cycle
+        project
+            .link_items(&t1, &t2, LinkRelation::Blocks, LinkAction::Add)
+            .unwrap();
+        project
+            .link_items(&t2, &t3, LinkRelation::Blocks, LinkAction::Add)
+            .unwrap();
+
+        // Verify all links are in place
+        let doc1: MarkplaneDocument<Task> = project.read_item(&t1).unwrap();
+        let doc2: MarkplaneDocument<Task> = project.read_item(&t2).unwrap();
+        let doc3: MarkplaneDocument<Task> = project.read_item(&t3).unwrap();
+        assert!(doc1.frontmatter.blocks.contains(&t2));
+        assert!(doc2.frontmatter.blocks.contains(&t3));
+        assert!(doc3.frontmatter.depends_on.contains(&t2));
+    }
+
+    #[test]
+    fn test_mixed_blocks_depends_on_cycle() {
+        let (_tmp, project) = setup_project();
+        let t1 = create_task(&project, "A");
+        let t2 = create_task(&project, "B");
+
+        // A blocks B
+        project
+            .link_items(&t1, &t2, LinkRelation::Blocks, LinkAction::Add)
+            .unwrap();
+
+        // A depends_on B should fail (would create cycle via blocks reciprocal)
+        let result = project.link_items(&t1, &t2, LinkRelation::DependsOn, LinkAction::Add);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("cycle"));
     }
 }

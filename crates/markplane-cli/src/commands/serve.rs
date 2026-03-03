@@ -1198,7 +1198,33 @@ async fn patch_config(
                     ));
                 }
             }
-            config.workflows.task = markplane_core::TaskWorkflow(workflow_map);
+
+            // Validate that no active tasks use statuses being removed
+            let new_workflow = markplane_core::TaskWorkflow(workflow_map);
+            let new_statuses: HashSet<&str> = new_workflow.all_statuses().into_iter().collect();
+            let tasks = state.project.list_tasks(&QueryFilter::default()).map_err(map_core_error)?;
+            let mut stranded: Vec<(String, String)> = Vec::new();
+            for doc in &tasks {
+                let status_str = doc.frontmatter.status.to_string();
+                if !new_statuses.contains(status_str.as_str()) {
+                    stranded.push((doc.frontmatter.id.clone(), status_str));
+                }
+            }
+            if !stranded.is_empty() {
+                let details: Vec<String> = stranded.iter()
+                    .map(|(id, status)| format!("{} (status: {})", id, status))
+                    .collect();
+                return Err(error_response(
+                    StatusCode::CONFLICT,
+                    "active_tasks_conflict",
+                    &format!(
+                        "Cannot remove statuses used by active tasks: {}",
+                        details.join(", ")
+                    ),
+                ));
+            }
+
+            config.workflows.task = new_workflow;
     }
 
     state
@@ -1338,6 +1364,23 @@ async fn create_plan(
     State(state): State<Arc<AppState>>,
     Json(body): Json<CreatePlanRequest>,
 ) -> Result<(StatusCode, Json<ApiResponse<PlanResponse>>), (StatusCode, Json<ApiError>)> {
+    // Validate task_id if provided
+    if let Some(ref task_id) = body.task_id {
+        let (prefix, _) = parse_id(task_id).map_err(|_| {
+            error_response(StatusCode::BAD_REQUEST, "invalid_id", &format!("Invalid task ID format: {}", task_id))
+        })?;
+        if prefix != markplane_core::IdPrefix::Task {
+            return Err(error_response(
+                StatusCode::BAD_REQUEST,
+                "invalid_id",
+                &format!("task_id must be a TASK item, got {}", task_id),
+            ));
+        }
+        state.project.item_path(task_id).map_err(|_| {
+            error_response(StatusCode::NOT_FOUND, "not_found", &format!("Task {} not found", task_id))
+        })?;
+    }
+
     let implements = match &body.task_id {
         Some(id) => vec![id.clone()],
         None => vec![],
@@ -1357,7 +1400,15 @@ async fn create_plan(
             LinkAction::Add,
         )
     {
-        eprintln!("Warning: failed to link plan {} to task {}: {}", plan.id, task_id, e);
+        // Roll back: delete the plan file
+        let _ = std::fs::remove_file(
+            state.project.item_path(&plan.id).unwrap_or_default()
+        );
+        return Err(error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "link_error",
+            &format!("Failed to link plan {} to task {}: {}", plan.id, task_id, e),
+        ));
     }
 
     let doc: MarkplaneDocument<Plan> = state
@@ -2282,13 +2333,8 @@ fn build_graph(
                 tags: fm.tags.clone(),
             },
         );
-        for dep in &fm.depends_on {
-            edges.push(GraphEdgeResponse {
-                source: dep.clone(),
-                target: fm.id.clone(),
-                relation: "depends_on".to_string(),
-            });
-        }
+        // Only emit blocks edges (skip depends_on — blocks already covers the
+        // same relationship from the other side)
         for blk in &fm.blocks {
             edges.push(GraphEdgeResponse {
                 source: fm.id.clone(),
@@ -2303,6 +2349,7 @@ fn build_graph(
                 relation: "epic".to_string(),
             });
         }
+        // Skip task.plan edges — plan.implements covers the same relationship
         for rel in &fm.related {
             edges.push(GraphEdgeResponse {
                 source: fm.id.clone(),

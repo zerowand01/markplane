@@ -39,7 +39,7 @@ The core library contains all domain logic. It exposes a `Project` struct that r
 | `project` | `Project` struct — init, config, ID management, CRUD operations, archiving, `find_blocked_items()` |
 | `frontmatter` | Parse and serialize `---\nyaml\n---\nbody` format |
 | `query` | `QueryFilter` struct, `list_tasks()`, `list_epics()`, `list_plans()`, `list_notes()` with filtering and sorting |
-| `references` | `extract_references()` (wiki-link `[[ID]]` scanning), `validate_references()`, `find_orphans()`, `build_reference_graph()` |
+| `references` | `extract_references()` (wiki-link `[[ID]]` scanning), `validate_references()`, `find_orphans()`, `detect_cycles()`, `build_reference_graph()` |
 | `links` | `LinkRelation` enum (blocks, depends-on, epic, plan, implements, related), `LinkAction` enum, `Project::link_items()` — centralized cross-entity linking with type validation and reciprocal management |
 | `index` | INDEX.md generation for all directories (root, backlog, roadmap, plans, notes) |
 | `context` | `.context/` file generation — summary, active-work, blocked-items, metrics |
@@ -177,9 +177,15 @@ CLI: markplane check [--orphans] [--fix]
   │
   ├─ [--fix] For each AsymmetricLink: link_items(source, target, relation, Add)
   │
+  ├─ detect_cycles(project)
+  │    ├─ Build adjacency list from blocks edges (active tasks only)
+  │    ├─ Iterative DFS with White/Gray/Black coloring
+  │    └─ Return deduplicated DependencyCycle structs
+  │
   └─ [--orphans] find_orphans(project)
        ├─ Collect all item IDs from filenames
        ├─ Collect all referenced IDs (body [[refs]] + frontmatter fields)
+       ├─ Also scan archived items for references (but not as orphan candidates)
        └─ Return IDs with no incoming references
 ```
 
@@ -221,6 +227,8 @@ Core errors are typed and specific. CLI commands convert them to user-friendly m
 - **Atomic file updates**: `write_item()` writes to a temporary file in the same directory, then renames (`tempfile::NamedTempFile::persist()`). A crash mid-write can never leave a truncated or corrupted target file.
 - **Advisory file locking**: All update methods (`update_task()`, `update_epic()`, `update_plan()`, `update_note()`, `update_status()`) hold an `fs2` exclusive advisory lock on the item file for the full read-modify-write cycle, preventing lost updates from concurrent web API requests.
 - **Multi-file link safety**: `link_items()` acquires advisory locks on all involved files in deterministic (lexicographic by ID) order before any reads or writes, preventing deadlocks when concurrent requests modify the same pair of items.
+- **Cycle prevention**: `link_items()` detects dependency cycles before adding `blocks` or `depends_on` relationships. A BFS walk checks whether the new link would create a path from the target back to the source. Existing cycles are detected by `detect_cycles()` via iterative DFS and reported by `markplane check`.
+- **Archive reference cleanup**: `archive_item()` scans all active items for inbound references to the archived item and removes them, preventing dangling cross-references.
 
 ### Web Server (`markplane serve`)
 - **CORS policy**: In production mode, CORS is restricted to `http://localhost:{port}` and `http://127.0.0.1:{port}`. In `--dev` mode, CORS is permissive (required for the Next.js dev server on a different port).

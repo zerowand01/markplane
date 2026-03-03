@@ -876,7 +876,7 @@ fn test_tool_check_clean() {
 
     assert!(response["error"].is_null());
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
-    assert!(text.contains("All cross-references, task statuses, and reciprocal links are valid"));
+    assert!(text.contains("All cross-references, task statuses, reciprocal links, and dependency graphs are valid"));
 }
 
 #[test]

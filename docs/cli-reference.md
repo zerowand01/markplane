@@ -76,6 +76,8 @@ When archiving a single item, provide the ID. When using `--all-done`, all done/
 
 Archived items retain their status (no "archived" status) and remain resolvable via `[[ID]]` cross-references and `markplane show`.
 
+When an item is archived, inbound references from active items are automatically cleaned up. For example, if task A blocks task B and you archive A, the `depends_on: [A]` entry is removed from B's frontmatter. This prevents ghost references to archived items. The cleanup is best-effort — if a file is locked, the archive still succeeds. Note that unarchiving does not restore cleaned-up references; re-link them manually if needed.
+
 **Example:**
 
 ```bash
@@ -123,7 +125,7 @@ markplane unarchive TASK-fq2x8
 
 ## check
 
-Validate cross-references, task statuses, and reciprocal link integrity.
+Validate cross-references, task statuses, reciprocal link integrity, and dependency cycles.
 
 ```
 markplane check [OPTIONS]
@@ -136,9 +138,16 @@ markplane check [OPTIONS]
 | `--orphans` | `false` | Also show orphan items (items with no incoming references) |
 | `--fix` | `false` | Repair asymmetric reciprocal links |
 
-Scans all markdown files for `[[ITEM-xxxxx]]` references and verifies that each referenced item exists. Also validates task statuses against the configured workflow, and checks that reciprocal links (blocks/depends_on, plan/implements, related) are symmetric on both sides. Exits with a non-zero status if issues are found.
+Performs four validations:
 
-Use `--fix` to automatically repair asymmetric reciprocal links. This is safe — it uses the same idempotent `link_items` logic and only adds missing reciprocals.
+1. **Broken references** — scans all markdown files for `[[ITEM-xxxxx]]` references and verifies each referenced item exists.
+2. **Task statuses** — checks each task's status is recognized by the configured workflow.
+3. **Reciprocal links** — verifies blocks/depends_on, plan/implements, and related links are symmetric on both sides.
+4. **Dependency cycles** — detects circular dependencies in the blocks/depends_on graph (e.g. A blocks B blocks A).
+
+Exits with a non-zero status if issues are found. Use `--fix` to automatically repair asymmetric reciprocal links (safe — uses idempotent `link_items` logic). Cycles and broken references must be resolved manually.
+
+The `--orphans` flag scans both active and archived items as reference sources. An active item referenced only by an archived item is not considered an orphan.
 
 **Example:**
 
@@ -147,11 +156,13 @@ markplane check
 # ✓ No broken references found.
 # ✓ All task statuses are valid.
 # ✓ All reciprocal links are symmetric.
+# ✓ No dependency cycles found.
 
 markplane check --orphans
 # ✓ No broken references found.
 # ✓ All task statuses are valid.
 # ✓ All reciprocal links are symmetric.
+# ✓ No dependency cycles found.
 # ! 1 orphan item(s) (no incoming references):
 #   TASK-nq5w2
 
@@ -159,6 +170,10 @@ markplane check --fix
 # ✗ 1 asymmetric link(s):
 #   TASK-abc12 has blocks: TASK-def34 but TASK-def34 is missing depends_on: TASK-abc12
 #   ✓ Repaired blocks TASK-abc12 → TASK-def34
+
+# Cycle detection example:
+# ✗ 1 dependency cycle(s):
+#   TASK-abc12 → TASK-def34 → TASK-abc12
 ```
 
 ---
