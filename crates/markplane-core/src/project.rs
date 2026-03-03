@@ -4,8 +4,10 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use chrono::{Local, NaiveDate};
+use fs2::FileExt;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use tempfile::NamedTempFile;
 
 use crate::error::{MarkplaneError, Result};
 use crate::frontmatter::{parse_frontmatter, write_frontmatter};
@@ -136,6 +138,19 @@ fn write_new_file(path: &Path, content: &str) -> Result<()> {
         }
     })?;
     file.write_all(content.as_bytes())?;
+    Ok(())
+}
+
+/// Atomically write `content` to `path` by writing to a tempfile in the same
+/// directory, then renaming. The rename is atomic on the same filesystem,
+/// so a crash mid-write can never leave a truncated/corrupted target file.
+fn atomic_write(path: &Path, content: &[u8]) -> Result<()> {
+    let parent = path.parent().ok_or_else(|| {
+        MarkplaneError::Config(format!("Cannot determine parent directory of {}", path.display()))
+    })?;
+    let mut tmp = NamedTempFile::new_in(parent)?;
+    tmp.write_all(content)?;
+    tmp.persist(path)?;
     Ok(())
 }
 
@@ -530,17 +545,50 @@ impl Project {
     }
 
     /// Write any item by ID, serializing the frontmatter from type `T`.
+    ///
+    /// Uses atomic write (tempfile + rename) for crash safety. The caller is
+    /// responsible for holding an advisory lock if this is part of a
+    /// read-modify-write cycle — see [`lock_item`] and [`lock_items`].
     pub fn write_item<T: Serialize>(&self, id: &str, doc: &MarkplaneDocument<T>) -> Result<()> {
         let path = self.item_path(id)?;
         let content = write_frontmatter(doc)?;
-        fs::write(&path, content)?;
+        atomic_write(&path, content.as_bytes())?;
         Ok(())
     }
 
+    /// Acquire an advisory exclusive lock on an item file.
+    ///
+    /// Returns the locked `File` handle. The lock is held until the handle is
+    /// dropped. The caller must hold the returned handle for the duration of
+    /// the read-modify-write cycle.
+    pub fn lock_item(&self, id: &str) -> Result<File> {
+        let path = self.item_path(id)?;
+        let file = File::open(&path)?;
+        file.lock_exclusive()?;
+        Ok(file)
+    }
+
+    /// Acquire advisory exclusive locks on multiple item files in deterministic
+    /// (sorted) order to prevent deadlocks.
+    ///
+    /// Returns locked `File` handles. All locks are held until the handles are
+    /// dropped.
+    pub fn lock_items(&self, ids: &mut [&str]) -> Result<Vec<File>> {
+        ids.sort();
+        let mut locks = Vec::with_capacity(ids.len());
+        for id in ids {
+            locks.push(self.lock_item(id)?);
+        }
+        Ok(locks)
+    }
+
     /// Update the status field of any item (auto-detects type from ID prefix).
+    ///
+    /// Holds an advisory file lock for the full read-modify-write cycle.
     pub fn update_status(&self, id: &str, new_status: &str) -> Result<()> {
         let (prefix, _) = parse_id(id)?;
         let today = Local::now().date_naive();
+        let _lock = self.lock_item(id)?;
 
         match prefix {
             IdPrefix::Task => {
@@ -576,7 +624,10 @@ impl Project {
     // ── Typed Update Methods ──────────────────────────────────────────────
 
     /// Update properties on a Task.
+    ///
+    /// Holds an advisory file lock for the full read-modify-write cycle.
     pub fn update_task(&self, id: &str, u: &TaskUpdate) -> Result<()> {
+        let _lock = self.lock_item(id)?;
         let mut doc: MarkplaneDocument<Task> = self.read_item(id)?;
         let fm = &mut doc.frontmatter;
 
@@ -617,7 +668,10 @@ impl Project {
     }
 
     /// Update properties on an Epic.
+    ///
+    /// Holds an advisory file lock for the full read-modify-write cycle.
     pub fn update_epic(&self, id: &str, u: &EpicUpdate) -> Result<()> {
+        let _lock = self.lock_item(id)?;
         let mut doc: MarkplaneDocument<Epic> = self.read_item(id)?;
         let fm = &mut doc.frontmatter;
 
@@ -650,7 +704,10 @@ impl Project {
     }
 
     /// Update properties on a Plan.
+    ///
+    /// Holds an advisory file lock for the full read-modify-write cycle.
     pub fn update_plan(&self, id: &str, u: &PlanUpdate) -> Result<()> {
+        let _lock = self.lock_item(id)?;
         let mut doc: MarkplaneDocument<Plan> = self.read_item(id)?;
         let fm = &mut doc.frontmatter;
 
@@ -669,7 +726,10 @@ impl Project {
     }
 
     /// Update properties on a Note.
+    ///
+    /// Holds an advisory file lock for the full read-modify-write cycle.
     pub fn update_note(&self, id: &str, u: &NoteUpdate) -> Result<()> {
+        let _lock = self.lock_item(id)?;
         let mut doc: MarkplaneDocument<Note> = self.read_item(id)?;
         let fm = &mut doc.frontmatter;
 

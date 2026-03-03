@@ -483,6 +483,10 @@ fn map_core_error(e: MarkplaneError) -> (StatusCode, Json<ApiError>) {
             eprintln!("Internal YAML error: {e}");
             error_response(StatusCode::INTERNAL_SERVER_ERROR, "internal_error", "An internal data parsing error occurred")
         }
+        MarkplaneError::Persist(_) => {
+            eprintln!("Atomic write error: {e}");
+            error_response(StatusCode::INTERNAL_SERVER_ERROR, "internal_error", "An internal I/O error occurred")
+        }
     }
 }
 

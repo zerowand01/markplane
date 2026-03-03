@@ -1,4 +1,5 @@
 use std::fmt;
+use std::fs::File;
 use std::str::FromStr;
 
 use chrono::{Local, NaiveDate};
@@ -100,6 +101,8 @@ fn require_prefix(id: &str, actual: &IdPrefix, expected: &[IdPrefix]) -> Result<
 }
 
 /// Update the `related` vec on a single item (any entity type).
+///
+/// The caller is responsible for holding the appropriate file lock.
 fn update_related(
     project: &Project,
     id: &str,
@@ -149,10 +152,58 @@ fn update_related(
     Ok(())
 }
 
+/// Collect all item IDs involved in a link operation, for deterministic locking.
+///
+/// For most relations this is just `[from, to]`, but Plan/Implements may also
+/// involve an old plan that needs cleanup.
+fn collect_lock_ids(
+    project: &Project,
+    from: &str,
+    to: &str,
+    relation: LinkRelation,
+    action: LinkAction,
+) -> Result<Vec<String>> {
+    let mut ids = vec![from.to_string(), to.to_string()];
+
+    // Plan and Implements relations may need to clean up a previous plan link.
+    if action == LinkAction::Add {
+        match relation {
+            LinkRelation::Plan => {
+                // from=task, to=plan — check if task already has a different plan
+                let task_doc: MarkplaneDocument<Task> = project.read_item(from)?;
+                if let Some(ref old_plan_id) = task_doc.frontmatter.plan
+                    && old_plan_id != to
+                    && !ids.contains(old_plan_id)
+                {
+                    ids.push(old_plan_id.clone());
+                }
+            }
+            LinkRelation::Implements => {
+                // from=plan, to=task — check if task already has a different plan
+                let task_doc: MarkplaneDocument<Task> = project.read_item(to)?;
+                if let Some(ref old_plan_id) = task_doc.frontmatter.plan
+                    && old_plan_id != from
+                    && !ids.contains(old_plan_id)
+                {
+                    ids.push(old_plan_id.clone());
+                }
+            }
+            _ => {}
+        }
+    }
+
+    ids.sort();
+    ids.dedup();
+    Ok(ids)
+}
+
 // ── Implementation ────────────────────────────────────────────────────────
 
 impl Project {
     /// Add or remove a link between two items.
+    ///
+    /// Acquires advisory file locks on all involved items in deterministic
+    /// (sorted) order to prevent deadlocks, then performs atomic writes.
     pub fn link_items(
         &self,
         from: &str,
@@ -175,6 +226,12 @@ impl Project {
         let (from_prefix, _) = parse_id(from)?;
         let (to_prefix, _) = parse_id(to)?;
         let today = Local::now().date_naive();
+
+        // Acquire locks on all involved files in deterministic order.
+        let lock_ids = collect_lock_ids(self, from, to, relation, action)?;
+        let _locks: Vec<File> = self.lock_items(
+            &mut lock_ids.iter().map(String::as_str).collect::<Vec<_>>(),
+        )?;
 
         match relation {
             LinkRelation::Blocks => {
@@ -317,7 +374,8 @@ impl Project {
             }
 
             LinkRelation::Related => {
-                // Any item can be related to any other — bidirectional
+                // Any item can be related to any other — bidirectional.
+                // Locks already held above — update_related just reads/writes.
                 update_related(self, from, to, &from_prefix, action, today)?;
                 update_related(self, to, from, &to_prefix, action, today)?;
             }

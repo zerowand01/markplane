@@ -8,6 +8,9 @@ pub enum MarkplaneError {
     #[error("YAML parsing error: {0}")]
     Yaml(#[from] serde_yaml::Error),
 
+    #[error("Atomic write failed: {0}")]
+    Persist(#[from] tempfile::PersistError),
+
     #[error("Item not found: {0}")]
     NotFound(String),
 

@@ -218,6 +218,9 @@ Core errors are typed and specific. CLI commands convert them to user-friendly m
 ### Concurrency Safety
 - **Random IDs**: `next_id()` generates random 5-character alphanumeric IDs — no shared counter, safe for parallel git branches.
 - **Atomic file creation**: All item creation uses `File::create_new()` (`O_CREAT | O_EXCL`), which atomically fails if the file already exists. This prevents TOCTOU races where two concurrent processes generate the same random ID.
+- **Atomic file updates**: `write_item()` writes to a temporary file in the same directory, then renames (`tempfile::NamedTempFile::persist()`). A crash mid-write can never leave a truncated or corrupted target file.
+- **Advisory file locking**: All update methods (`update_task()`, `update_epic()`, `update_plan()`, `update_note()`, `update_status()`) hold an `fs2` exclusive advisory lock on the item file for the full read-modify-write cycle, preventing lost updates from concurrent web API requests.
+- **Multi-file link safety**: `link_items()` acquires advisory locks on all involved files in deterministic (lexicographic by ID) order before any reads or writes, preventing deadlocks when concurrent requests modify the same pair of items.
 
 ### Web Server (`markplane serve`)
 - **CORS policy**: In production mode, CORS is restricted to `http://localhost:{port}` and `http://127.0.0.1:{port}`. In `--dev` mode, CORS is permissive (required for the Next.js dev server on a different port).

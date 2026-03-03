@@ -1,7 +1,7 @@
 ---
 id: TASK-ns57e
 title: Write path safety - atomic writes and file locking
-status: planned
+status: done
 priority: high
 type: enhancement
 effort: large
