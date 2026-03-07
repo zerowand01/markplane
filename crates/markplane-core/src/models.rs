@@ -5,7 +5,7 @@ use std::str::FromStr;
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
-use rand::Rng;
+use rand::RngExt;
 
 use crate::error::{MarkplaneError, Result};
 
