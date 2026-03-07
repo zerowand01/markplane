@@ -9,8 +9,7 @@ epic: null
 plan: null
 depends_on: []
 blocks: []
-related:
-- TASK-hv5xv
+related: []
 assignee: null
 tags:
 - mcp
@@ -18,7 +17,7 @@ tags:
 - pre-release
 position: a0
 created: 2026-03-02
-updated: 2026-03-02
+updated: 2026-03-07
 ---
 
 # MCP protocol compliance fixes

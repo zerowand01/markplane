@@ -7,8 +7,7 @@ type: feature
 effort: large
 epic: null
 plan: null
-depends_on:
-- TASK-hv5xv
+depends_on: []
 blocks: []
 related: []
 assignee: null
@@ -18,7 +17,7 @@ tags:
 - pre-release
 position: Zz
 created: 2026-03-02
-updated: 2026-03-02
+updated: 2026-03-07
 ---
 
 # Add authentication to web server

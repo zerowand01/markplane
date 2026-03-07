@@ -8,8 +8,7 @@ effort: large
 epic: null
 plan: null
 depends_on: []
-blocks:
-- TASK-jejpq
+blocks: []
 related: []
 assignee: null
 tags:
@@ -17,7 +16,7 @@ tags:
 - pre-release
 position: a3l
 created: 2026-03-02
-updated: 2026-03-03
+updated: 2026-03-07
 ---
 
 # Write path safety - atomic writes and file locking

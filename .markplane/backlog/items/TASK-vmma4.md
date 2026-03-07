@@ -1,7 +1,7 @@
 ---
 id: TASK-vmma4
 title: Add GitHub repo scaffolding for open source readiness
-status: backlog
+status: done
 priority: high
 type: chore
 effort: small
@@ -16,7 +16,7 @@ tags:
 - github
 position: a0V
 created: 2026-03-02
-updated: 2026-03-02
+updated: 2026-03-07
 ---
 
 # Add GitHub repo scaffolding for open source readiness
@@ -25,7 +25,7 @@ updated: 2026-03-02
 
 Add the standard GitHub community and automation files that make the repo ready for open source. Currently the repo has README, LICENSE, and CONTRIBUTING but is missing security reporting instructions, issue/PR templates, dependency automation, and issue labels. These files are low-effort boilerplate that set expectations for contributors and automate maintenance.
 
-Also update CONTRIBUTING.md with an issue/support policy section covering what to file, bug report expectations, feature request policy, stale issue handling, and solo maintainer response time disclaimer.
+Also update CONTRIBUTING.md with an issue/support policy section covering what to file, bug report expectations, feature request policy, and stale issue handling.
 
 ## Acceptance Criteria
 
@@ -37,14 +37,13 @@ Also update CONTRIBUTING.md with an issue/support policy section covering what t
 - [ ] GitHub issue labels created: `bug`, `enhancement`, `good first issue`, `help wanted`, `breaking`, `wontfix`, `duplicate`, `needs reproduction`
 - [ ] CONTRIBUTING.md updated with "Issues & Support" section
 - [ ] CONTRIBUTING.md updated with Conventional Commits guideline for PR titles
-- [ ] README updated with solo-maintainer expectations ("solo-maintained, responses may be slow")
 
 ## Notes
 
-- SECURITY.md: Use a simple template. Private reporting via GitHub's security advisory feature or email.
-- Dependabot: Weekly schedule is fine for both ecosystems. Target `master` branch. Group minor/patch updates.
+- SECURITY.md: Use a simple template. Point to GitHub's built-in private vulnerability reporting (not email).
+- Dependabot: Weekly schedule, target `master` branch. Separate groups per ecosystem — cargo and npm each group minor+patch together, majors kept as individual PRs.
 - Labels: Can be created via `gh label create` or manually in GitHub settings.
-- CONTRIBUTING.md additions: Keep it solo-maintainer-friendly — "Issues and PRs are welcome, responses may be slow. Use reactions instead of +1 comments. Stale issues may be closed after 30 days."
+- CONTRIBUTING.md additions: "Issues and PRs are welcome. Use reactions instead of +1 comments. Stale issues may be closed after 30 days."
 - No CODE_OF_CONDUCT.md needed yet — add when the project has active contributors.
 - No CHANGELOG.md — GitHub Release notes serve this purpose.
 - Conventional Commits: Document as a PR title convention in CONTRIBUTING.md (`feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `!` for breaking). Not enforced by tooling — just a naming guideline. Enables future automated release notes/version bumping if needed.

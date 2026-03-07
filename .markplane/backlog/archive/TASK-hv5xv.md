@@ -8,10 +8,8 @@ effort: medium
 epic: null
 plan: null
 depends_on: []
-blocks:
-- TASK-r4mdt
-related:
-- TASK-hdhaz
+blocks: []
+related: []
 assignee: null
 tags:
 - security
@@ -19,7 +17,7 @@ tags:
 - pre-release
 position: a1
 created: 2026-03-02
-updated: 2026-03-02
+updated: 2026-03-07
 ---
 
 # Web server security hardening

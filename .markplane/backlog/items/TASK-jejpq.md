@@ -7,8 +7,7 @@ type: enhancement
 effort: medium
 epic: null
 plan: null
-depends_on:
-- TASK-ns57e
+depends_on: []
 blocks: []
 related: []
 assignee: null
@@ -18,7 +17,7 @@ tags:
 - pre-release
 position: a1
 created: 2026-03-02
-updated: 2026-03-02
+updated: 2026-03-07
 ---
 
 # Wrap sync I/O in spawn_blocking for async handlers

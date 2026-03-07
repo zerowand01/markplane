@@ -17,7 +17,7 @@ cargo --version
 ## Clone and Build
 
 ```bash
-git clone https://github.com/your-org/markplane.git
+git clone https://github.com/zerowand01/markplane.git
 cd markplane
 cargo build --workspace
 ```
@@ -97,6 +97,28 @@ Each crate uses a different error strategy appropriate to its role:
 - Keep commits focused — one logical change per commit.
 - Ensure `cargo test --workspace` and `cargo clippy --workspace` pass before committing.
 
-## Questions?
+### Conventional Commits
 
-Open an issue on the repository for questions, bugs, or feature proposals.
+Use [Conventional Commits](https://www.conventionalcommits.org/) style for PR titles:
+
+| Prefix | Use for |
+|--------|---------|
+| `feat:` | New features |
+| `fix:` | Bug fixes |
+| `chore:` | Maintenance, dependencies, CI |
+| `docs:` | Documentation changes |
+| `refactor:` | Code restructuring without behavior change |
+| `!` suffix | Breaking changes (e.g., `feat!:`, `fix!:`) |
+
+This is a naming guideline, not enforced by tooling. It enables future automated release notes and version bumping.
+
+## Issues & Support
+
+Issues and PRs are welcome. Before opening an issue:
+
+- **Bug reports**: Use the [bug report template](https://github.com/zerowand01/markplane/issues/new?template=bug_report.md). Include your Markplane version, OS, and steps to reproduce.
+- **Feature requests**: Use the [feature request template](https://github.com/zerowand01/markplane/issues/new?template=feature_request.md). Describe the problem you're solving, not just the solution.
+- **Questions**: Consider using [GitHub Discussions](https://github.com/zerowand01/markplane/discussions) for "how do I..." questions to keep issues focused on bugs and actionable feature requests.
+- **Security vulnerabilities**: See [SECURITY.md](SECURITY.md) for private reporting instructions. Do not open public issues for security vulnerabilities.
+
+Use reactions (thumbs up) instead of "+1" comments. Stale issues may be closed after 30 days of inactivity.
