@@ -54,6 +54,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed patterns, error handling, co
 - [MCP Setup](docs/mcp-setup.md) — AI tool integration, tool/resource catalog
 - [Web UI Guide](docs/web-ui-guide.md) — Dashboard usage and development workflow
 - [Getting Started](docs/getting-started.md) — Step-by-step tutorial
+- [Releasing](docs/releasing.md) — Release process and versioning
 
 ## Project Management
 

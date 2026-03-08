@@ -1,7 +1,7 @@
 ---
 id: TASK-gpxpw
 title: Build GitHub Actions release workflow with embedded web UI
-status: backlog
+status: in-progress
 priority: high
 type: chore
 effort: large
@@ -18,7 +18,7 @@ tags:
 - release
 position: a1
 created: 2026-02-13
-updated: 2026-03-02
+updated: 2026-03-08
 ---
 
 # Build GitHub Actions release workflow with embedded web UI
@@ -36,28 +36,32 @@ Create a GitHub Actions release workflow triggered by version tags (e.g. `v0.1.0
 - [ ] Builds Rust binary with `--release --features embed-ui` for:
   - macOS arm64 (Apple Silicon) — `aarch64-apple-darwin` on `macos-latest`
   - macOS x86_64 — `x86_64-apple-darwin` on `macos-latest`
-  - Linux x86_64 — `x86_64-unknown-linux-musl` on `ubuntu-latest` (via `cross` or musl target)
+  - Linux x86_64 — `x86_64-unknown-linux-musl` on `ubuntu-latest` (via `musl-tools`)
   - Windows x86_64 — `x86_64-pc-windows-msvc` on `windows-latest`
 - [ ] Smoke test each binary after build (`./markplane --version`)
 - [ ] Creates GitHub Release with binary assets and SHA256 checksums
 - [ ] Release notes auto-generated via `generate_release_notes: true`
-- [ ] Binaries named consistently (e.g. `markplane-v0.1.0-darwin-arm64.tar.gz`)
+- [ ] Binaries named with Rust target triples (e.g. `markplane-v0.1.0-aarch64-apple-darwin.tar.gz`, `.zip` for Windows)
 
 ## Decisions
 
 - **Separate per-architecture binaries (no universal binary)**: Follows Rust ecosystem convention (ripgrep, fd, bat all ship per-arch). Half the download size per binary. Simpler build — no `lipo` step. Package managers (Homebrew, cargo-binstall) handle arch selection. Can add a universal binary as an additional artifact later if requested.
+- **macOS x86_64 via cross-compile on arm64 runner**: `macos-latest` is arm64; add `x86_64-apple-darwin` target via `rustup target add`. Avoids needing a separate `macos-13` (Intel) runner.
+- **`musl-tools` apt package over `cross`**: `apt-get install musl-tools` + `rustup target add x86_64-unknown-linux-musl` on the Ubuntu runner. Avoids Docker overhead of `cross` and keeps the build straightforward.
 - **`npm ci` over `npm install`**: Deterministic installs from lockfile in CI.
 - **Smoke test each binary**: Near-zero cost (`--version` takes <1s). Catches dynamic linking failures, broken musl static linking, rust-embed initialization issues, and cross-compilation architecture mismatches before publishing.
 - **Tag-version validation**: Prevents publishing a binary where `markplane --version` and the GitHub Release version disagree. Simple 5-line shell check at workflow start.
 
 ## Notes
 
+- Pin Rust toolchain to 1.93.0 (matching CI) for reproducibility
+- Use `Swatinem/rust-cache@v2` — matrix builds are expensive without caching
+- Use `node-version-file: crates/markplane-web/ui/.nvmrc` (matching CI) instead of hardcoding Node version
+- Set `permissions: contents: write` at workflow level (required for release creation)
 - No OpenSSL or system library dependencies in the crate — simplifies cross-compilation
 - Frontend static export outputs to `out/` (configured via `output: "export"` in `next.config.ts`) — this is what `rust-embed` picks up
 - Next.js 16.1.6, React 19 — versions pinned in `package-lock.json`
-- Use `cross` or `cargo-zigbuild` for Linux musl target if native musl toolchain isn't available on Ubuntu runner
-- Native runners for macOS (arm64 + x86_64 both build on `macos-latest` which is arm64) and Windows
-- Job structure: `build-frontend` → `build-binaries` (matrix, `needs: build-frontend`) → `create-release` (needs: `build-binaries`)
+- Job structure: `validate` → `build-frontend` → `build-binaries` (matrix) → `create-release`
 - Use `softprops/action-gh-release@v2` for release creation
 
 ## References
@@ -65,3 +69,4 @@ Create a GitHub Actions release workflow triggered by version tags (e.g. `v0.1.0
 - [[EPIC-bb6pe]]
 - [[TASK-yzftd]]
 - [[TASK-8xvxq]]
+- [Release process](../../../docs/releasing.md)
