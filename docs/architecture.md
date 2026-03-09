@@ -51,12 +51,11 @@ The core library contains all domain logic. It exposes a `Project` struct that r
 The CLI crate provides the user-facing terminal interface and the integrated MCP server.
 
 - **Argument parsing**: `clap` with derive macros
-- **Commands**: 25 subcommands — `init`, `add`, `show`, `ls`, `status`, `sync`, `start`, `done`, `promote`, `plan`, `epic`, `note`, `update`, `link`, `check`, `stale`, `archive`, `unarchive`, `context`, `metrics`, `graph`, `claude-md`, `dashboard`, `serve`, `mcp`
+- **Commands**: `init`, `add`, `show`, `edit`, `ls`, `status`, `sync`, `start`, `done`, `promote`, `plan`, `epic`, `note`, `update`, `link`, `check`, `stale`, `archive`, `unarchive`, `context`, `metrics`, `graph`, `claude-md`, `dashboard`, `serve`, `mcp`
 - **Formatting**: `commands/formatting.rs` — shared helpers for truncation, status/priority colorization (via `colored`), table output (via `tabled`)
 - **MCP module** (`src/mcp/`): The `markplane mcp` subcommand runs the MCP server enabling AI tools (Claude, Cursor, etc.) to interact with the project
   - **Protocol**: JSON-RPC 2.0 over stdio (one JSON object per line)
-  - **Tools**: 15 tools — `markplane_summary`, `markplane_context`, `markplane_query`, `markplane_show`, `markplane_graph`, `markplane_add`, `markplane_update`, `markplane_move`, `markplane_promote`, `markplane_plan`, `markplane_link`, `markplane_archive`, `markplane_unarchive`, `markplane_sync`, `markplane_check`
-  - **Resources**: 3 static resources (`markplane://summary`, `markplane://active-work`, `markplane://blocked`) + 4 dynamic templates (`markplane://task/{id}`, `markplane://epic/{id}`, `markplane://plan/{id}`, `markplane://note/{id}`)
+  - **Tools**: See [MCP Setup Guide](../docs/mcp-setup.md) for the full tool and resource catalog
   - **Error handling**: Tool handlers return `Result<String, String>`; errors return `isError: true` in tool results; protocol errors use JSON-RPC error codes
 - **Error handling**: `anyhow::Result` at the top level
 

@@ -63,7 +63,7 @@ This prevents the common anti-pattern of loading an entire directory of files wh
 | Index | Contents |
 |-------|----------|
 | `.markplane/INDEX.md` | Root navigation: links to all directories with item counts |
-| `.markplane/roadmap/INDEX.md` | Epics (active, planned, done) with nested task tables and progress |
+| `.markplane/roadmap/INDEX.md` | Epics (now, next, later, done) with nested task tables and progress |
 | `.markplane/backlog/INDEX.md` | Prioritized kanban view (In Progress, Blocked, Planned, Backlog, Drafts, Recently Done) |
 | `.markplane/plans/INDEX.md` | All plans with status and linked tasks |
 | `.markplane/notes/INDEX.md` | All notes with type and status |

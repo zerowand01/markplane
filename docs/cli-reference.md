@@ -320,7 +320,7 @@ markplane epic <TITLE> [OPTIONS]
 |--------|---------|-------------|
 | `--priority <PRIORITY>` | `medium` | Priority: `critical`, `high`, `medium`, `low`, `someday` |
 
-New epics are created with status `planned`.
+New epics are created with status `later`.
 
 **Example:**
 
@@ -801,8 +801,8 @@ markplane status <ID> <NEW_STATUS>
 markplane status TASK-fq2x8 in-progress
 # TASK-fq2x8 → in-progress
 
-markplane status EPIC-xa7r2 active
-# EPIC-xa7r2 → active
+markplane status EPIC-xa7r2 now
+# EPIC-xa7r2 → now
 ```
 
 ---

@@ -1,18 +1,18 @@
 # Getting Started with Markplane
 
-This guide walks you through a realistic workflow — from initializing a project to managing work items through their lifecycle.
+This guide walks you through setting up Markplane and managing your project using the web UI, AI assistants, and CLI.
 
 ## Prerequisites
 
-Install Markplane (Rust 1.93.0+ required):
+See the [Markplane README](https://github.com/zerowand01/markplane#installation) for installation instructions. Verify the installation by running:
 
 ```bash
-cargo install --path crates/markplane-cli
+markplane --version
 ```
 
 ## 1. Initialize Your Project
 
-Navigate to your repository and run:
+Navigate to the root of your repository and run:
 
 ```bash
 markplane init --name "My App"
@@ -43,529 +43,192 @@ Next steps:
 
 This creates the `.markplane/` directory structure with config, templates, index files, and special note files (`ideas.md`, `decisions.md`). By default it also seeds the project with starter content — an onboarding epic, setup tasks, a migration plan, and a decision log note — that demonstrates correct format and gives you something to work with immediately. Use `markplane init --empty` to skip starter content.
 
-## How Items Relate
+### How Items Relate
 
-Markplane organizes work into four entity types, each with a distinct role:
+Markplane organizes work into four item types:
 
-| Entity | Role | Think of it as... |
-|--------|------|-------------------|
-| **Epic** | Strategic direction — *why* we're doing this | A goal or phase that groups related work |
-| **Task** | The *what* — a concrete piece of work | A bug, feature, chore, or spike to complete |
-| **Plan** | The *how* — implementation steps for one or more tasks | Phases, testing strategy, rollback steps, migration path |
-| **Note** | Captured thinking — research, analysis, ideas, decisions | Structured knowledge that may or may not become actionable |
+- **Epics** — Strategic goals or phases that group related tasks (*the why*).
+- **Tasks** — Your primary work units (bugs, features, chores, spikes, etc.). Tasks make up your backlog and move through status columns on the kanban board (*the what*).
+- **Plans** — An optional tool for planning out complex tasks, multi-task implementations, or standalone planning — however your workflow needs them (*the how*).
+- **Notes** — Research, ideas, analysis, decisions, etc. that don't need to be tracked as work. Notes can optionally be promoted to tasks if they become actionable.
 
-Items flow through a natural lifecycle:
+## 2. Start the Web UI
 
-```
-Note (explore) → Task (commit) → Plan (design) → Done → Archive
-```
-
-Not every task needs a plan — only create one when the implementation approach isn't obvious. Notes can be promoted to tasks with `markplane promote` once they become actionable.
-
-## 2. Create an Epic
-
-Epics represent strategic phases or major features. Create one to group related work:
+Launch the local web dashboard to see your project:
 
 ```bash
-markplane epic "User Authentication System" --priority high
+markplane serve --open
 ```
 
-Output:
+This opens `http://localhost:4200` in your browser. You'll see the seeded starter content on the dashboard — an epic, tasks, a plan, and a note.
 
-```
-Created EPIC-xa7r2 — User Authentication System
-```
+The web UI provides:
 
-Epics start with status `planned`. You can list them with:
+- **Dashboard** — Project overview with summary metrics, active work, blocked items, and epic progress
+- **Backlog** — Kanban board with drag-and-drop between status columns, plus list and table views. Filter by priority, type, tags, epic, and assignee
+- **Roadmap** — Epics with progress tracking and linked tasks
+- **Plans** — Implementation plans with status tracking
+- **Notes** — Free-form notes for research, ideas, decisions, or anything else
+- **Graph** — Interactive visual graph of your project's items and their relationships
+- **Archive** — Browse and restore completed items
+- **Search** — Full-text search across all items with `Cmd+K` command palette
+- **Settings** — Configure task types, note types, status workflows, and documentation paths
+- **Real-time updates** — Changes from CLI, MCP, or file edits appear instantly
 
-```bash
-markplane ls epics
-```
+Explore the seeded content to understand the structure — drag tasks between kanban columns, click items to view and edit details, and check the graph view.
 
-## 3. Add Tasks
+See the [Web UI Guide](web-ui-guide.md) for keyboard shortcuts, views, and more.
 
-Tasks capture *what* needs to be done — a bug to fix, a feature to build, a chore to complete. They're your primary work units. Create items linked to the epic:
+## 3. Connect Your AI Assistant
 
-```bash
-markplane add "Implement login page" --type feature --priority high --effort medium --epic EPIC-xa7r2 --tags "auth,frontend"
-```
+Markplane includes a built-in MCP server that lets AI coding assistants manage your project directly. Connect your assistant, then just tell it what to do in natural language.
 
-Output:
+You can configure MCP per-user (your local editor) or project-wide (shared with your team). Example with Claude Code:
 
-```
-Created TASK-fq2x8 — Implement login page
-```
-
-Add a few more items:
-
-```bash
-markplane add "Set up JWT token handling" --type feature --priority high --effort small --epic EPIC-xa7r2 --tags "auth,backend"
-markplane add "Fix password reset flow" --type bug --priority critical --effort small --tags "auth"
-markplane add "Add rate limiting to auth endpoints" --type enhancement --priority medium --effort medium --epic EPIC-xa7r2 --tags "auth,security"
-```
-
-### Available Options
-
-- **Types**: Configurable in `config.yaml` (`task_types`) or via the web UI Settings page. Defaults: `feature`, `bug`, `enhancement`, `chore`, `research`, `spike`
-- **Priorities**: `critical`, `high`, `medium`, `low`, `someday`
-- **Effort sizes**: `xs`, `small`, `medium`, `large`, `xl`
-
-All new tasks start with the default status from the first configured category (default: `draft`). Task statuses are configurable via `config.yaml` — see [File Format: Status Workflows](file-format.md#status-workflows) for details.
-
-## 4. List and Filter Items
-
-View all tasks:
+**Per-user** — adds Markplane to your local editor configuration:
 
 ```bash
-markplane ls
+claude mcp add --transport stdio markplane -- markplane mcp
 ```
 
-This displays a table with ID, title, status, priority, effort, and epic columns.
+**Project-wide** — add a `.mcp.json` file at the repo root so every team member gets the integration automatically:
 
-Filter by status, priority, tags, or other criteria:
-
-```bash
-# Only high and critical priority items
-markplane ls --priority high,critical
-
-# Items tagged with "auth"
-markplane ls --tags auth
-
-# Items linked to a specific epic
-markplane ls --epic EPIC-xa7r2
-
-# Combine filters
-markplane ls --status draft --priority high --tags auth
+```json
+{
+  "mcpServers": {
+    "markplane": {
+      "command": "markplane",
+      "args": ["mcp"]
+    }
+  }
+}
 ```
 
-You can also filter by type and assignee:
+Once connected, your AI assistant can create items, update statuses, set up dependencies, query your backlog, and more — using natural language. For example:
 
-```bash
-markplane ls --type bug
-markplane ls --assignee daniel
-```
+- "Create a high-priority feature task for user authentication, linked to EPIC-xa7r2"
+- "Show me what's currently blocked"
+- "Mark TASK-fq2x8 as done"
+- "Create a plan for the login page task"
+- "What tasks are in progress?"
 
-## 5. View Item Details
+See the [MCP Setup Guide](mcp-setup.md) for other editors, configuration options, and the full tool and resource catalog.
 
-Inspect a specific item:
+### How AI works with Markplane
 
-```bash
-markplane show TASK-fq2x8
-```
+Because every item is a plain markdown file, your AI assistant has two ways to interact with your project:
 
-Output:
+- **MCP tools** for structural operations — creating items, updating status/priority/tags, linking dependencies, querying the backlog, and syncing. These ensure frontmatter stays valid and relationships are maintained correctly.
+- **Direct file editing** for content — writing descriptions, acceptance criteria, plan details, and notes. The AI can read and edit `.markplane/` files just like any other file in your repo.
 
-```
-TASK-fq2x8
-Implement login page
+This is by design. Use MCP tools (or the CLI) for metadata and structure; edit the markdown body directly for content.
 
-  Status:   draft
-  Priority: high
-  Type:     feature
-  Effort:   medium
-  Tags:     auth, frontend
-  Epic:     EPIC-xa7r2
-  Created:  2026-02-09
-  Updated:  2026-02-09
+### CLAUDE.md
 
-────────────────────────────────────────────────────────────
-# Implement login page
-
-## Description
-...
-```
-
-This works for any item type — tasks, epics, plans, and notes.
-
-## 6. Move Items Through the Workflow
-
-### Update status manually
-
-```bash
-markplane status TASK-fq2x8 backlog
-markplane status TASK-fq2x8 planned
-```
-
-Output:
-
-```
-TASK-fq2x8 → planned
-```
-
-### Start working on an item
-
-The `start` command sets the status to `in-progress` and assigns the item to you:
-
-```bash
-markplane start TASK-fq2x8
-```
-
-Output:
-
-```
-TASK-fq2x8 → in-progress (assigned to daniel)
-```
-
-You can specify a different user:
-
-```bash
-markplane start TASK-d4p7m --user alice
-```
-
-### Mark an item as done
-
-```bash
-markplane done TASK-fq2x8
-```
-
-Output:
-
-```
-TASK-fq2x8 → done
-```
-
-### Update epic status
-
-```bash
-markplane status EPIC-xa7r2 active
-```
-
-## 7. Set Up Dependencies
-
-Link items that depend on each other:
-
-```bash
-# TASK-sv8r2 depends on TASK-d4p7m being completed first
-markplane link TASK-sv8r2 TASK-d4p7m -r depends-on
-
-# Equivalently, TASK-d4p7m blocks TASK-sv8r2
-markplane link TASK-d4p7m TASK-sv8r2 -r blocks
-```
-
-Both directions are automatically maintained — adding a `depends-on` link also adds the reverse `blocks` link on the target.
-
-The `link` command supports 6 relation types: `blocks`, `depends-on`, `epic`, `plan`, `implements`, `related`. The `related` type is bidirectional and works between any item types — useful for connecting items without implying a dependency:
-
-```bash
-# Link related items (any type to any type, bidirectional)
-markplane link TASK-fq2x8 NOTE-vt3k8 -r related
-markplane link TASK-sv8r2 TASK-d4p7m -r related
-
-# Remove a dependency
-markplane link TASK-sv8r2 TASK-d4p7m -r depends-on --remove
-```
-
-## 8. Update Item Properties
-
-Use the `update` command to change any property on an item:
-
-```bash
-# Assign a task
-markplane update TASK-hn5k3 --assignee @daniel
-
-# Add tags
-markplane update TASK-hn5k3 --add-tag "urgent,sprint-3"
-
-# Change effort and priority
-markplane update TASK-hn5k3 --effort large --priority high
-
-# Remove a tag
-markplane update TASK-hn5k3 --remove-tag urgent
-
-# Clear assignee
-markplane update TASK-hn5k3 --clear-assignee
-
-# Rename a task and change its type
-markplane update TASK-hn5k3 --title "New title" --type bug
-```
-
-Fields that don't apply to the item type are rejected (e.g. `--effort` on an epic).
-
-## 9. Create Notes and Promote Them
-
-Capture ideas, research, and decisions as notes:
-
-```bash
-markplane note "Evaluate OAuth providers" --type research --tags "auth,research"
-```
-
-Output:
-
-```
-Created NOTE-vt3k8 — Evaluate OAuth providers
-```
-
-Note types are configurable in `config.yaml` (`note_types`) or via the web UI Settings page. Defaults: `research`, `analysis`, `idea`, `decision`, `meeting`.
-
-When a note becomes actionable, promote it to a task:
-
-```bash
-markplane promote NOTE-vt3k8 --priority high --effort medium
-```
-
-Output:
-
-```
-Promoted NOTE-vt3k8 → TASK-jt9w4 — Evaluate OAuth providers
-```
-
-The new task inherits the note's title and tags.
-
-## 10. Create Implementation Plans
-
-Tasks capture *what* needs to be done; plans capture *how* to do it — the implementation steps, phases, testing strategy, and rollback approach. A plan can implement one or more tasks. For complex work where the approach isn't obvious, create a linked implementation plan:
-
-```bash
-markplane plan TASK-fq2x8
-```
-
-Output:
-
-```
-Created PLAN-ya8v2 — Implementation plan for Implement login page
-Linked to TASK-fq2x8
-```
-
-You can provide a custom title:
-
-```bash
-markplane plan TASK-d4p7m --title "JWT auth architecture"
-```
-
-The plan is automatically linked back to the task.
-
-List all plans:
-
-```bash
-markplane ls plans
-```
-
-## 11. Sync Index Files and Context
-
-After making changes, regenerate the INDEX.md files and AI context summaries:
-
-```bash
-markplane sync
-```
-
-Output:
-
-```
-Syncing...
-✓ All INDEX.md files and .context/ summaries regenerated.
-```
-
-You can also regenerate just the context files:
-
-```bash
-markplane context
-```
-
-Or generate and print a specific context view to stdout:
-
-```bash
-markplane context --focus active-work
-```
-
-## 12. Validate Cross-References
-
-Check for broken `[[ITEM-xxxxx]]` references across all files:
-
-```bash
-markplane check
-```
-
-Output (all good):
-
-```
-✓ No broken references found.
-```
-
-Output (with issues):
-
-```
-✗ 2 broken reference(s):
-
-  .markplane/backlog/items/TASK-hn5k3.md references TASK-zz9x1 (not found)
-  .markplane/plans/items/PLAN-ya8v2.md references TASK-dj7a4 (not found)
-```
-
-Include orphan detection to find items with no incoming references:
-
-```bash
-markplane check --orphans
-```
-
-## 13. Find Stale Items
-
-Identify items that haven't been updated recently:
-
-```bash
-markplane stale --days 14
-```
-
-Output:
-
-```
-! 2 item(s) not updated in 14 days:
-
- ID       | Title                  | Status   | Last Updated | Days Stale
- TASK-hn5k3 | Fix password reset ... | draft    | 2026-01-20   | 20
- TASK-sv8r2 | Add rate limiting ...  | planned  | 2026-01-25   | 15
-```
-
-The default threshold is 30 days.
-
-## 14. Archive Completed Work
-
-Move completed items to archive subdirectories. You can archive a single item or batch-archive all completed items:
-
-```bash
-# Archive a single item
-markplane archive TASK-fq2x8
-```
-
-Output:
-
-```
-✓ Archived TASK-fq2x8
-```
-
-For batch operations, preview first with `--dry-run`:
-
-```bash
-markplane archive --all-done --dry-run
-```
-
-Output:
-
-```
-→ Would archive 1 item(s):
-
-  TASK-fq2x8 Implement login page (done)
-
-Run without --dry-run to archive.
-```
-
-Then archive for real:
-
-```bash
-markplane archive --all-done
-```
-
-Items are moved to `{directory}/archive/` — they're preserved, not deleted, and can still be found by `markplane show`. To restore an archived item:
-
-```bash
-markplane unarchive TASK-fq2x8
-```
-
-To list archived items:
-
-```bash
-markplane ls --archived
-```
-
-## 15. View the Dashboard
-
-Get a project overview showing in-progress work, blocked items, and epic progress:
-
-```bash
-markplane dashboard
-```
-
-Output:
-
-```
-✈  My App — Project Dashboard
-══════════════════════════════════════════════════════
-
-In Progress
-  TASK-d4p7m Set up JWT token handling (high @alice)
-
-Blocked
-  TASK-sv8r2 Add rate limiting — blocked by TASK-d4p7m
-
-Now
-  EPIC-xa7r2 User Authentication System — 1/4 (25%)
-
-3 open items | 1 in-progress | 1 blocked | 1 critical
-```
-
-## 16. View Metrics
-
-Get detailed project statistics:
-
-```bash
-markplane metrics
-```
-
-This shows status distribution, priority breakdown, epic progress bars, and plan counts.
-
-## 17. Visualize Dependencies
-
-View the dependency graph for any item:
-
-```bash
-markplane graph TASK-sv8r2 --depth 3
-```
-
-Output:
-
-```
-Dependency graph for TASK-sv8r2
-
-TASK-sv8r2
-  └─ TASK-d4p7m
-
-Referenced by:
-  (none)
-```
-
-## 18. Connect Project Documentation
-
-Markplane handles project management; your repo's `docs/` directory (or similar) handles technical documentation — architecture, API references, user guides. The `documentation_paths` config option bridges the two, so AI agents and INDEX navigation can discover both.
-
-Add your docs directory to `.markplane/config.yaml`:
-
-```yaml
-documentation_paths:
-  - docs
-```
-
-Paths are relative to the repo root. You can list multiple directories:
-
-```yaml
-documentation_paths:
-  - docs
-  - design
-```
-
-When `markplane sync` runs, it scans the configured paths for `*.md` files and:
-
-- Adds a **"Project Documentation"** section to the root `INDEX.md` with links to each doc
-- Adds a **"Key Documentation"** section to `.context/summary.md` so AI tools see your docs alongside project state
-
-This keeps architecture docs, API specs, and other reference material in their conventional location while making them visible through Markplane's navigation and AI context layer.
-
-## 19. AI Integration
-
-### CLAUDE.md snippet
-
-Generate a CLAUDE.md snippet for AI coding tools:
+If you use Claude Code, Markplane has a built-in command to populate your `CLAUDE.md` with project context:
 
 ```bash
 markplane claude-md
 ```
 
-Add the output to your project's `CLAUDE.md` so AI assistants know where to find project context.
+This tells Claude where to find project state and how to use Markplane.
 
-### MCP server
+## 4. Working with Markplane
 
-For deeper AI integration, the `markplane mcp` subcommand runs an MCP server with typed tools for reading and managing project data. See the [MCP setup guide](mcp-setup.md) for configuration details.
+With the web UI running and your AI connected, here's how the pieces work together.
+
+### Creating items
+
+You can create items from any interface:
+
+- **AI**: "Create a bug task for the broken login redirect, priority critical, tag it auth"
+- **Web UI**: Use the "+" button on the kanban board or any list view
+- **CLI**: `markplane add "Fix login redirect" --type bug --priority critical --tags auth`
+
+Epics, notes, and plans:
+
+- **AI**: "Create an epic for the authentication system" / "Add a research note about OAuth providers" / "Create a plan for TASK-fq2x8"
+- **Web UI**: Use the "+" button on the respective page
+- **CLI**: `markplane epic "Auth System" --priority high` / `markplane note "OAuth research" --type research` / `markplane plan TASK-fq2x8`
+
+### Available options
+
+- **Task types**: `feature`, `bug`, `enhancement`, `chore`, `research`, `spike` (configurable in `config.yaml` or web UI Settings)
+- **Priorities**: `critical`, `high`, `medium`, `low`, `someday`
+- **Effort sizes**: `xs`, `small`, `medium`, `large`, `xl`
+- **Note types**: `research`, `analysis`, `idea`, `decision`, `meeting` (configurable)
+
+### Managing workflow
+
+Tasks move through configurable statuses: `draft` → `backlog` → `planned` → `in-progress` → `done` (also `cancelled`). Epics use: `later` → `next` → `now` → `done`.
+
+- **AI**: "Start working on TASK-fq2x8" / "Move the auth epic to now"
+- **Web UI**: Drag cards between kanban columns, or edit status inline in detail views
+- **CLI**: `markplane start TASK-fq2x8` / `markplane done TASK-fq2x8` / `markplane status EPIC-xa7r2 now`
+
+### Dependencies and relationships
+
+Link items that depend on each other. Both directions are automatically maintained — adding a `depends-on` link also adds the reverse `blocks` link.
+
+- **AI**: "TASK-sv8r2 depends on TASK-d4p7m" / "Link TASK-fq2x8 to NOTE-vt3k8 as related"
+- **Web UI**: Add dependencies in the item detail view
+- **CLI**: `markplane link TASK-sv8r2 TASK-d4p7m -r depends-on`
+
+Relation types: `blocks`, `depends-on`, `epic`, `plan`, `implements`, `related`.
+
+### Archiving
+
+Move completed items out of the active views:
+
+- **AI**: "Archive TASK-fq2x8" / "Archive all done tasks"
+- **Web UI**: Archive items individually or in bulk, or browse and restore archived items on the Archive page
+- **CLI**: `markplane archive TASK-fq2x8` / `markplane archive --all-done`
+
+Archived items are preserved (not deleted) and can be restored from the AI, web UI, or CLI (`markplane unarchive`).
+
+### Keeping things in sync
+
+Markplane auto-syncs index files and AI context summaries on `init`, `mcp` startup, and `serve` startup. You can also sync manually:
+
+```bash
+markplane sync       # Regenerate INDEX.md + .context/
+markplane check      # Validate cross-references
+```
+
+### Connect project documentation
+
+Bridge your repo's `docs/` directory with Markplane so AI agents and navigation can discover both project management and technical docs. Configure via the web UI Settings page or directly in `config.yaml`:
+
+```yaml
+# .markplane/config.yaml
+documentation_paths:
+  - docs
+```
+
+When `markplane sync` runs, it adds links to your docs in the root `INDEX.md` and `.context/summary.md`.
+
+## CLI Reference
+
+The CLI is a power-user interface for everything Markplane can do. A few commonly used commands:
+
+```bash
+markplane ls                          # List tasks
+markplane ls epics                    # List epics
+markplane ls --priority high,critical # Filter by priority
+markplane ls --tags auth              # Filter by tag
+markplane show TASK-fq2x8            # View item details
+markplane update TASK-fq2x8 --assignee @daniel --add-tag "sprint-3"
+markplane dashboard                   # Project overview in terminal
+markplane metrics                     # Status and priority breakdowns
+markplane graph TASK-sv8r2            # Dependency graph for an item
+markplane stale --days 14             # Find items not updated recently
+```
+
+See the [CLI Reference](cli-reference.md) for complete command documentation.
 
 ## Next Steps
 
-- Read the [CLI Reference](cli-reference.md) for complete command documentation
-- Explore the `.markplane/templates/` directory to see document templates
-- Set up the MCP server for AI tool integration
+- Explore the seeded starter content to understand the structure
 - Add `.markplane/` to version control to share project state with your team
+- Customize task types, note types, and status workflows in `config.yaml` or web UI Settings
+- Explore the `.markplane/templates/` directory to customize document templates

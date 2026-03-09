@@ -201,7 +201,7 @@ Values (highest to lowest): `critical`, `high`, `medium`, `low`, `someday`
 
 ### TaskType (Task only)
 
-Configurable via `task_types` in `config.yaml` or the web UI [Settings page](/docs/web-ui-guide.md#settings). Default values: `feature`, `bug`, `enhancement`, `chore`, `research`, `spike`. The first value in the list is the default for new tasks.
+Configurable via `task_types` in `config.yaml` or the web UI [Settings page](web-ui-guide.md#settings). Default values: `feature`, `bug`, `enhancement`, `chore`, `research`, `spike`. The first value in the list is the default for new tasks.
 
 ### Effort (Task only)
 
@@ -209,7 +209,7 @@ Values (smallest to largest): `xs`, `small`, `medium`, `large`, `xl`
 
 ### NoteType
 
-Configurable via `note_types` in `config.yaml` or the web UI [Settings page](/docs/web-ui-guide.md#settings). Default values: `research`, `analysis`, `idea`, `decision`, `meeting`. The first value in the list is the default for new notes.
+Configurable via `note_types` in `config.yaml` or the web UI [Settings page](web-ui-guide.md#settings). Default values: `research`, `analysis`, `idea`, `decision`, `meeting`. The first value in the list is the default for new notes.
 
 ## Timestamps
 
@@ -411,7 +411,7 @@ Each directory has an index:
 
 - **Root INDEX.md**: Quick navigation table with active item counts, last sync date
 - **backlog/INDEX.md**: Prioritized kanban view (In Progress, Blocked, Planned, Backlog, Drafts)
-- **roadmap/INDEX.md**: Epics (active, planned) with nested task tables and progress
+- **roadmap/INDEX.md**: Epics (now, next, later) with nested task tables and progress
 - **plans/INDEX.md**: Active and completed plans with their implements links
 - **notes/INDEX.md**: Active notes table with type/status/tags, archived notes list, special files links
 

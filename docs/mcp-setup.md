@@ -4,13 +4,7 @@ MCP (Model Context Protocol) is the standard protocol for connecting AI coding t
 
 ## Installation
 
-The MCP server is built into the `markplane` CLI as the `mcp` subcommand. Install it with:
-
-```bash
-cargo install --path crates/markplane-cli
-```
-
-This puts `markplane` in your Cargo bin directory (typically `~/.cargo/bin/`). Verify it's available:
+The MCP server is built into the `markplane` CLI as the `mcp` subcommand — no separate installation needed. See the [Markplane README](https://github.com/zerowand01/markplane#installation) for installation instructions. Verify it's available:
 
 ```bash
 markplane mcp --help
@@ -18,26 +12,17 @@ markplane mcp --help
 
 ## Configuration
 
-### Scopes
+Each AI tool has its own configuration format for MCP servers. The examples below all configure Markplane's stdio-based MCP server — only the file location and JSON structure differ. MCP tooling evolves quickly, so check your editor's documentation for the latest guidance.
 
-MCP servers can be configured at different scopes depending on who needs access:
-
-| Scope | Purpose | Storage |
-|-------|---------|---------|
-| **Local** (default) | Private to you, current project only | `~/.claude.json` (under project path) |
-| **Project** | Shared with your team via version control | `.mcp.json` at repo root |
-| **User** | Available to you across all projects | `~/.claude.json` |
+To point Markplane at a `.markplane/` directory in a different repo, add `--project /path/to/repo` to the args (after `mcp`).
 
 ### Claude Code
 
-The recommended approach is the `claude mcp add` command:
+Use the `claude mcp add` command:
 
 ```bash
 # Local scope (default) — just for you, this project
 claude mcp add --transport stdio markplane -- markplane mcp
-
-# Point at a different repo's .markplane/ (rare — only if it's not in your working directory)
-claude mcp add --transport stdio markplane -- markplane mcp --project /path/to/repo
 
 # User scope — available across all your projects
 claude mcp add --transport stdio --scope user markplane -- markplane mcp
@@ -53,31 +38,22 @@ claude mcp remove markplane      # Remove a server
 
 Inside Claude Code, use `/mcp` to check server status.
 
-### Project-wide (`.mcp.json`)
-
-To share the MCP server with your team, add a `.mcp.json` file at the repo root and commit it to version control:
+**Project-wide** — to share with your team, add a `.mcp.json` file at the repo root and commit it to version control:
 
 ```json
 {
   "mcpServers": {
     "markplane": {
       "command": "markplane",
-      "args": ["mcp"],
-      "env": {}
+      "args": ["mcp"]
     }
   }
 }
 ```
 
-Or create it via the CLI:
-
-```bash
-claude mcp add --transport stdio --scope project markplane -- markplane mcp
-```
+Or create it via the CLI: `claude mcp add --transport stdio --scope project markplane -- markplane mcp`
 
 Claude Code prompts for approval before using project-scoped servers. To reset approval choices: `claude mcp reset-project-choices`.
-
-The `.mcp.json` format supports environment variable expansion (`${VAR}` or `${VAR:-default}`) for machine-specific paths and secrets.
 
 ### Cursor
 
@@ -88,14 +64,72 @@ Add to `.cursor/mcp.json` in your project root:
   "mcpServers": {
     "markplane": {
       "command": "markplane",
-      "args": ["mcp"],
-      "env": {}
+      "args": ["mcp"]
     }
   }
 }
 ```
 
-To specify an explicit project path, add `"--project", "/path/to/repo"` to the `args` array (after `"mcp"`).
+### VS Code (GitHub Copilot)
+
+Add to `.vscode/mcp.json` in your project root:
+
+```json
+{
+  "servers": {
+    "markplane": {
+      "type": "stdio",
+      "command": "markplane",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Note: VS Code uses `servers` (not `mcpServers`) as the top-level key, and `type` must be set explicitly.
+
+### Windsurf
+
+Add to `~/.codeium/windsurf/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "markplane": {
+      "command": "markplane",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+### Zed
+
+Add to your Zed settings (`~/.config/zed/settings.json` or `.zed/settings.json` in your project):
+
+```json
+{
+  "context_servers": {
+    "markplane": {
+      "source": "custom",
+      "command": "markplane",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+### Continue
+
+Add to `~/.continue/config.yaml`:
+
+```yaml
+mcpServers:
+  - name: markplane
+    command: markplane
+    args:
+      - mcp
+```
 
 ## How It Works
 

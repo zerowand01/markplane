@@ -18,15 +18,13 @@ markplane serve --port 8080  # Custom port
 |------|-----|-------------|
 | Dashboard | `/dashboard` | Summary metrics, active work, blocked items, epic progress, AI context panel |
 | Backlog | `/backlog` | Kanban board, list view, and table view with filtering |
-| Epics | `/epics` | All epics with progress bars and status breakdowns |
-| Roadmap | `/roadmap` | Epic progress cards grouped by status |
+| Roadmap | `/roadmap` | Epics with progress tracking, status breakdowns, and linked tasks |
 | Plans | `/plans` | Implementation plans with detail view |
 | Notes | `/notes` | Research notes, ideas, and decisions |
 | Graph | `/graph` | Interactive dependency graph |
 | Archive | `/archive` | Archived items with restore action |
 | Docs | `/docs` | Searchable documentation viewer for user-facing guides |
 | Settings | `/settings/*` | Configure project info, task types, note types, workflow, and documentation paths |
-| Search | `/search` | Full-text search across all items |
 
 ## Views
 

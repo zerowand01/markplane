@@ -50,11 +50,6 @@ struct DocEntry {
 
 const DOC_MANIFEST: &[DocEntry] = &[
     DocEntry {
-        slug: "readme",
-        title: "README",
-        path: "README.md",
-    },
-    DocEntry {
         slug: "getting-started",
         title: "Getting Started",
         path: "docs/getting-started.md",
@@ -279,14 +274,6 @@ async fn run_file_watcher(root: PathBuf, tx: broadcast::Sender<String>) -> anyho
             .watcher()
             .watch(&docs_dir, notify::RecursiveMode::NonRecursive);
     }
-    let readme_path = repo.join("README.md");
-    if readme_path.is_file() {
-        // Watch the repo root non-recursively to catch README.md changes
-        let _ = debouncer
-            .watcher()
-            .watch(&repo, notify::RecursiveMode::NonRecursive);
-    }
-
     // Build lookup set of absolute doc paths for fast matching
     let doc_paths: HashMap<PathBuf, &'static str> = DOC_MANIFEST
         .iter()
