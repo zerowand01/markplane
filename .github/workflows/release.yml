@@ -136,6 +136,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: install.sh
+          sparse-checkout-cone-mode: false
+
       - uses: actions/download-artifact@v4
         with:
           pattern: binary-*
@@ -151,3 +156,4 @@ jobs:
           files: |
             markplane-v*
             checksums-sha256.txt
+            install.sh

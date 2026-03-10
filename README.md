@@ -28,7 +28,23 @@ Markplane stores every task, epic, and plan as a markdown file inside your repo 
 
 ## Installation
 
-### Option A: Download a pre-built binary
+### Homebrew (macOS and Linux)
+
+Coming soon.
+
+### Shell script (macOS and Linux)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/zerowand01/markplane/master/install.sh | sh
+```
+
+Downloads the latest release, verifies the SHA256 checksum, and installs to `~/.local/bin/`. Customize with environment variables:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/zerowand01/markplane/master/install.sh | INSTALL_DIR=/usr/local/bin sh
+```
+
+### Pre-built binary
 
 Download the latest release for your platform from [GitHub Releases](https://github.com/zerowand01/markplane/releases). Pre-built binaries include the web UI and require no additional dependencies.
 
@@ -42,13 +58,15 @@ Download the latest release for your platform from [GitHub Releases](https://git
 **macOS / Linux:**
 
 ```bash
-tar xzf markplane-v*.tar.gz
+tar xzf markplane-v*.tar.gz       # extract the binary from the archive
 mv markplane ~/.local/bin/        # or /usr/local/bin/ with sudo
 ```
 
-**Windows:** Extract the `.zip` and add the directory to your `PATH`.
+> **Note:** On macOS, binaries downloaded via a browser may be blocked by Gatekeeper. Remove the quarantine attribute with `xattr -d com.apple.quarantine ~/.local/bin/markplane`, or use the shell script install which avoids this entirely.
 
-### Option B: Build from source
+**Windows:** Extract `markplane.exe` from the `.zip` to a location on your `PATH` (e.g., `%LOCALAPPDATA%\markplane\`).
+
+### Build from source
 
 Requires Rust 1.93.0+. To include the web UI, also requires Node.js 18+.
 

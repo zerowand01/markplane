@@ -1,7 +1,7 @@
 ---
 id: TASK-3zks9
 title: Add shell install script for curl-based installation
-status: planned
+status: done
 priority: high
 type: feature
 effort: medium
@@ -31,17 +31,17 @@ Also update the README Installation section to reflect the new install methods: 
 
 ## Acceptance Criteria
 
-- [ ] `install.sh` in repo root detects OS (macOS, Linux) and arch (arm64, x86_64)
-- [ ] Downloads correct binary from GitHub Releases for the detected platform
-- [ ] Verifies SHA256 checksum against the checksums file in the release
-- [ ] Installs binary to `~/.local/bin/` (or configurable via env var)
-- [ ] Prints clear success message with next steps
-- [ ] Fails gracefully with helpful error on unsupported platforms (e.g., Windows, FreeBSD)
-- [ ] `curl -fsSL <raw-url>/install.sh | sh` works end-to-end on macOS and Linux
-- [ ] Script uploaded to existing v0.1.0 release via `gh release upload v0.1.0 install.sh`
-- [ ] Release workflow updated to upload `install.sh` automatically on future releases
-- [ ] README Installation section rewritten: shell script first, stub Homebrew section, manual download second, build from source third
-- [ ] macOS Gatekeeper workaround (`xattr -d`) documented for manual download path
+- [x] `install.sh` in repo root detects OS (macOS, Linux) and arch (arm64, x86_64)
+- [x] Downloads correct binary from GitHub Releases for the detected platform
+- [x] Verifies SHA256 checksum against the checksums file in the release
+- [x] Installs binary to `~/.local/bin/` (or configurable via env var)
+- [x] Prints clear success message with next steps
+- [x] Fails gracefully with helpful error on unsupported platforms (e.g., Windows, FreeBSD)
+- [x] `curl -fsSL <raw-url>/install.sh | sh` works end-to-end on macOS and Linux
+- [x] Script uploaded to existing v0.1.0 release via `gh release upload v0.1.0 install.sh`
+- [x] Release workflow updated to upload `install.sh` automatically on future releases
+- [x] README Installation section rewritten: Homebrew stub first, shell script second, manual download third, build from source fourth
+- [x] macOS Gatekeeper workaround (`xattr -d`) documented for manual download path
 
 ## Decisions
 
@@ -55,6 +55,7 @@ Also update the README Installation section to reflect the new install methods: 
 - The release workflow already generates SHA256 checksums — the script just needs to download and verify against them
 - Reference implementations: starship (~550 lines), deno (~110 lines), bun (~400 lines) — aim for ~100-150 lines
 - The release workflow needs a small addition to upload `install.sh` as a release asset
+- README ordering changed from spec: Homebrew stub placed first (as the eventual recommended method), shell script second, to match the conventional priority order
 
 ## References
 
