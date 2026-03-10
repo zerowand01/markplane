@@ -8,9 +8,7 @@ effort: medium
 epic: EPIC-bb6pe
 plan: null
 depends_on: []
-blocks:
-- TASK-gpxpw
-- TASK-hvwsk
+blocks: []
 related: []
 assignee: null
 tags:
@@ -18,7 +16,7 @@ tags:
 - release
 position: a0
 created: 2026-02-13
-updated: 2026-03-03
+updated: 2026-03-10
 ---
 
 # Set up GitHub Actions CI pipeline

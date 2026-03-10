@@ -30,7 +30,9 @@ Markplane stores every task, epic, and plan as a markdown file inside your repo 
 
 ### Homebrew (macOS and Linux)
 
-Coming soon.
+```bash
+brew install zerowand01/markplane/markplane
+```
 
 ### Shell script (macOS and Linux)
 

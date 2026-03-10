@@ -7,8 +7,7 @@ type: chore
 effort: xs
 epic: EPIC-bb6pe
 plan: null
-depends_on:
-- TASK-yzftd
+depends_on: []
 blocks: []
 related: []
 assignee: null
@@ -17,7 +16,7 @@ tags:
 - github
 position: a0l
 created: 2026-03-02
-updated: 2026-03-07
+updated: 2026-03-10
 ---
 
 # Configure GitHub branch protection for master

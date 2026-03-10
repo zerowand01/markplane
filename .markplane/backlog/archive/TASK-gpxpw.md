@@ -7,11 +7,8 @@ type: chore
 effort: large
 epic: EPIC-bb6pe
 plan: null
-depends_on:
-- TASK-yzftd
-blocks:
-- TASK-8xvxq
-- TASK-3zks9
+depends_on: []
+blocks: []
 related: []
 assignee: null
 tags:
@@ -19,7 +16,7 @@ tags:
 - release
 position: a1
 created: 2026-02-13
-updated: 2026-03-09
+updated: 2026-03-10
 ---
 
 # Build GitHub Actions release workflow with embedded web UI

@@ -7,18 +7,16 @@ type: feature
 effort: medium
 epic: EPIC-bb6pe
 plan: null
-depends_on:
-- TASK-gpxpw
+depends_on: []
 blocks: []
-related:
-- TASK-8xvxq
+related: []
 assignee: null
 tags:
 - release
 - install
 position: Zz
 created: 2026-03-09
-updated: 2026-03-09
+updated: 2026-03-10
 ---
 
 # Add shell install script for curl-based installation

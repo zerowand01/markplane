@@ -49,6 +49,7 @@ Markplane uses a tag-triggered release workflow. Pushing a `v*` tag to GitHub bu
    - Binary archives (e.g., `markplane-v0.2.0-aarch64-apple-darwin.tar.gz`)
    - SHA256 checksums
    - Auto-generated release notes
+6. **Updates the Homebrew tap** — computes SHA256 checksums for the 3 unix archives, renders `.github/formula-template.rb` with the new version and checksums, and pushes the updated formula to `zerowand01/homebrew-markplane`
 
 ## Naming Convention
 
@@ -58,6 +59,12 @@ Binary archives use Rust target triples:
 markplane-v{VERSION}-{TARGET}.tar.gz    (macOS, Linux)
 markplane-v{VERSION}-{TARGET}.zip       (Windows)
 ```
+
+## Secrets
+
+| Secret | Purpose |
+|--------|---------|
+| `TAP_GITHUB_TOKEN` | Fine-grained PAT scoped to `zerowand01/homebrew-markplane` (Contents read/write). Used by the `update-homebrew` job to push formula updates. See [[NOTE-29e3c]] for rotation procedure. |
 
 ## Notes
 
