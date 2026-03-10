@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" fill="none">
+  <rect width="1280" height="640" fill="#0f172a"/>
+  <svg x="262" y="190" width="756" height="200" viewBox="0 0 189 50">
+    <g transform="translate(18, 25) scale(0.195)">
+      <line x1="-70" y1="-25" x2="70" y2="-25" stroke="#006fea" stroke-width="16" stroke-linecap="round"/>
+      <line x1="-70" y1="25" x2="70" y2="25" stroke="#006fea" stroke-width="16" stroke-linecap="round"/>
+      <path d="M-60,85 Q10,0 -60,-85" stroke="#006fea" stroke-width="16" stroke-linecap="round"/>
+      <path d="M-10,85 Q60,0 -10,-85" stroke="#006fea" stroke-width="16" stroke-linecap="round"/>
+    </g>
+    <text x="43" y="34" font-family="GeistMono-SemiBold, Geist Mono, monospace" font-size="27" font-weight="600" fill="#f8fafc" letter-spacing="-0.5">Markplane</text>
+  </svg>
+  <text x="640" y="420" font-family="GeistMono-Regular, Geist Mono, monospace" font-size="30" font-weight="400" fill="#94a3b8" text-anchor="middle">AI-native project management</text>
+</svg>

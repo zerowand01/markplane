@@ -1,7 +1,7 @@
 ---
 id: TASK-gpxpw
 title: Build GitHub Actions release workflow with embedded web UI
-status: in-progress
+status: done
 priority: high
 type: chore
 effort: large
@@ -64,6 +64,7 @@ Create a GitHub Actions release workflow triggered by version tags (e.g. `v0.1.0
 - Next.js 16.1.6, React 19 — versions pinned in `package-lock.json`
 - Job structure: `validate` → `build-frontend` → `build-binaries` (matrix) → `create-release`
 - Use `softprops/action-gh-release@v2` for release creation
+- **v0.1.0 released successfully on 2026-03-09** — all 4 platform builds passed, macOS arm64 binary tested locally (init, add, ls, serve with embedded web UI all working). macOS Gatekeeper blocked the downloaded binary; resolved with `xattr -d com.apple.quarantine` — led to [[TASK-3zks9]] (install script) to avoid this for users.
 
 ## References
 
