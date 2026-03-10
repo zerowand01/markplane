@@ -11,6 +11,7 @@ depends_on:
 - TASK-yzftd
 blocks:
 - TASK-8xvxq
+- TASK-3zks9
 related: []
 assignee: null
 tags:
@@ -18,7 +19,7 @@ tags:
 - release
 position: a1
 created: 2026-02-13
-updated: 2026-03-08
+updated: 2026-03-09
 ---
 
 # Build GitHub Actions release workflow with embedded web UI
