@@ -10,21 +10,60 @@
   AI-native, markdown-first project management. Your repo is the project manager.
 </p>
 
+<p align="center">
+  <a href="https://github.com/zerowand01/markplane/releases"><img src="https://img.shields.io/github/v/release/zerowand01/markplane?label=release" alt="Release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/zerowand01/markplane" alt="License"></a>
+  <a href="https://github.com/zerowand01/markplane/stargazers"><img src="https://img.shields.io/github/stars/zerowand01/markplane" alt="Stars"></a>
+  <img src="https://img.shields.io/badge/MCP-Built--in-blue" alt="MCP Built-in">
+</p>
+
 ---
+
+<a href="https://github.com/user-attachments/assets/9d303e13-d14a-458f-bb58-20cd069082bc">
+  <video src="https://github.com/user-attachments/assets/9d303e13-d14a-458f-bb58-20cd069082bc" autoplay loop muted playsinline></video>
+</a>
 
 Project management that lives in your repo and speaks AI natively.
 
-Every developer using AI coding assistants has the same experience: the AI is brilliant at code, but clueless about the project. It doesn't know what you're building, what's blocked, or what's next. Meanwhile, your project data is locked in a SaaS tool that lives outside your codebase, outside your editor, outside your flow.
+Every developer using AI coding assistants hits the same wall: the AI is great at code, but clueless about the project. It doesn't know what you're building, what's blocked, or what's next. Meanwhile, your project data is locked in a SaaS tool that lives outside your codebase, outside your editor, outside your flow.
 
 Markplane stores every task, epic, and plan as a markdown file inside your repo — version-controlled with git, browsable with any editor, and automatically compressed into token-efficient summaries your AI assistant can read and act on. No database, no SaaS, no context-switching.
 
-### Why Markplane
+## Who is Markplane for?
 
-- **AI-native, not AI-retrofitted** — Generated `.context/` summaries compress full project state into ~1000 tokens. INDEX.md routing means AI loads only what it needs. Every design decision optimizes for LLM context windows.
-- **Files are the database** — No vendor, no subscription, no migration. `grep` your project management data. `git blame` your status changes. Branch your backlog like you branch your code.
-- **MCP server built in** — AI assistants don't just read your project state — they manage it. Typed tools let your AI query tasks, update status, create plans, and track dependencies without leaving your conversation.
+Markplane is for developers and small teams who:
+- live in Git + PRs,
+- use AI coding assistants (Claude Code, Cursor, Copilot, etc.),
+- want project context and task state to be *local, versioned, and accessible to your AI* — right alongside the code.
+
+If you want your repo to be the project manager — Markplane is it.
+
+## The 2-minute path to value
+
+1. Install `markplane` ([see below](#installation))
+2. Initialize in your project: `markplane init --name "My Project"` ([details](#initialization))
+3. Open the web UI: `markplane serve --open`
+4. Connect your AI via MCP ([setup guide](docs/mcp-setup.md))
+5. Just tell your AI what to do in plain English: *"Create a task for the login bug, mark it critical, and link it to the auth epic."*
+
+## Why Markplane
+
+- **AI-native, not AI-retrofitted** — `.context/` summaries compress full project state into ~1000 tokens. Your AI loads only what it needs. Every design decision optimizes for LLM context windows.
+- **Files are the database** — No vendor, no subscription, no migration. `grep` your tasks. `git blame` your status changes. Branch your backlog like you branch your code.
+- **MCP server built in** — AI assistants don't just read your project — they manage it. Query tasks, update status, create plans, and track dependencies without leaving your conversation.
 - **Zero infrastructure** — `markplane init` and you're done. No signup, no server, no Docker container. It's a single binary.
-- **Git-native collaboration** — Your project management data merges, branches, and reviews alongside your code. PRs include the task updates. History is `git log`.
+
+## Architecture
+
+```mermaid
+graph TD
+    A[".markplane/<br>Markdown + YAML frontmatter"] --> B[".context/<br>Token-optimized summaries"]
+    A --> C["Web UI"]
+    A --> D["CLI"]
+    A --> E["MCP server"]
+    B --> E
+    E --> F["AI assistants"]
+```
 
 ## Installation
 
@@ -84,7 +123,7 @@ cd crates/markplane-web/ui && npm install && npm run build && cd ../../..
 cargo install --path crates/markplane-cli --features embed-ui
 ```
 
-## Quick Start
+## Initialization
 
 Initialize Markplane in your project:
 
