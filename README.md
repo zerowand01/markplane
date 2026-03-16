@@ -7,14 +7,7 @@
 </p>
 
 <p align="center">
-  AI-native, markdown-first project management. Your repo is the project manager.
-</p>
-
-<p align="center">
-  <a href="https://github.com/zerowand01/markplane/releases"><img src="https://img.shields.io/github/v/release/zerowand01/markplane?label=release" alt="Release"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/zerowand01/markplane" alt="License"></a>
-  <a href="https://github.com/zerowand01/markplane/stargazers"><img src="https://img.shields.io/github/stars/zerowand01/markplane" alt="Stars"></a>
-  <img src="https://img.shields.io/badge/MCP-Built--in-blue" alt="MCP Built-in">
+  Project management in your repo, built for AI collaboration.
 </p>
 
 ---
@@ -23,28 +16,27 @@
   <video src="https://github.com/user-attachments/assets/9d303e13-d14a-458f-bb58-20cd069082bc" autoplay loop muted playsinline></video>
 </a>
 
-Project management that lives in your repo and speaks AI natively.
-
 Every developer using AI coding assistants hits the same wall: the AI is great at code, but clueless about the project. It doesn't know what you're building, what's blocked, or what's next. Meanwhile, your project data is locked in a SaaS tool that lives outside your codebase, outside your editor, outside your flow.
 
 Markplane stores every task, epic, and plan as a markdown file inside your repo — version-controlled with git, browsable with any editor, and automatically compressed into token-efficient summaries your AI assistant can read and act on. No database, no SaaS, no context-switching.
 
-## Who is Markplane for?
-
-Markplane is for developers and small teams who:
-- live in Git + PRs,
-- use AI coding assistants (Claude Code, Cursor, Copilot, etc.),
-- want project context and task state to be *local, versioned, and accessible to your AI* — right alongside the code.
-
-If you want your repo to be the project manager — Markplane is it.
-
-## The 2-minute path to value
+## Quickstart
 
 1. Install `markplane` ([see below](#installation))
 2. Initialize in your project: `markplane init --name "My Project"` ([details](#initialization))
 3. Open the web UI: `markplane serve --open`
 4. Connect your AI via MCP ([setup guide](docs/mcp-setup.md))
 5. Just tell your AI what to do in plain English: *"Create a task for the login bug, mark it critical, and link it to the auth epic."*
+
+## A day with Markplane
+
+**Morning** — You open your AI assistant and ask "what should we work on?" It pulls the project summary via MCP — 2 tasks in progress, 1 blocked on the auth migration, the payments epic is 60% done — and suggests the highest-priority planned task.
+
+**Mid-day** — You hit a design question. You talk it through with your AI, arrive at an approach, and say "create a task for this, and then let's work on an implementation plan." Markdown files appear in your repo, linked and ready.
+
+**Afternoon** — "Let's implement TASK-xyz." Your AI reads the plan, understands the dependencies and project context, and builds it. When you're happy with the result: "mark it done." The context layer updates.
+
+**End of day** — You commit. Your project state is versioned alongside your code. Tomorrow's session picks up where today left off — no re-explaining.
 
 ## Why Markplane
 
@@ -53,17 +45,22 @@ If you want your repo to be the project manager — Markplane is it.
 - **MCP server built in** — AI assistants don't just read your project — they manage it. Query tasks, update status, create plans, and track dependencies without leaving your conversation.
 - **Zero infrastructure** — `markplane init` and you're done. No signup, no server, no Docker container. It's a single binary.
 
-## Architecture
+## The Context Layer
 
-```mermaid
-graph TD
-    A[".markplane/<br>Markdown + YAML frontmatter"] --> B[".context/<br>Token-optimized summaries"]
-    A --> C["Web UI"]
-    A --> D["CLI"]
-    A --> E["MCP server"]
-    B --> E
-    E --> F["AI assistants"]
-```
+Markplane automatically generates a `.context/` directory with compressed, token-efficient summaries of your entire project state. This is what makes AI collaboration work — your assistant doesn't need to read every file to understand the project.
+
+| File | What it contains | Size |
+|------|-----------------|------|
+| `summary.md` | Active epics, in-progress work, blocked items, priority queue, key metrics | ~1000 tokens |
+| `active-work.md` | Detailed view of current work with dependencies and assignees | ~500 tokens |
+| `blocked-items.md` | Items waiting on unresolved dependencies | ~200-500 tokens |
+| `metrics.md` | Status distribution, priority breakdown, epic progress | ~500 tokens |
+
+Each directory also has an `INDEX.md` that lists all items with IDs and status — so an AI agent can scan the index (~200 tokens) and load only the specific items it needs, instead of reading everything.
+
+A typical monolithic `ROADMAP.md` + `BACKLOG.md` consumes 10,000-30,000 tokens with low signal-to-noise. Markplane's equivalent project state fits in ~1000 tokens.
+
+See the [AI Integration Guide](docs/ai-integration.md) for the full context layer design, token budgets, and recommended AI reading patterns.
 
 ## Installation
 
@@ -142,7 +139,7 @@ This creates the `.markplane/` directory with config, templates, and starter con
 ├── plans/                # Plans — the "how" to do it (PLAN-xxxxx)
 ├── notes/                # Notes — research, ideas, decisions (NOTE-xxxxx)
 ├── templates/            # Document templates
-└── .context/             # AI-generated summaries
+└── .context/             # Token-optimized summaries for AI
 ```
 
 ## Web UI
