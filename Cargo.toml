@@ -16,8 +16,8 @@ serde_yaml = "0.9"  # Deprecated but stable; serde_yml (0.0.x) is too immature
 serde_json = "1.0"
 
 # CLI
-clap = { version = "4.5", features = ["derive"] }
-clap_complete = "4.5"
+clap = { version = "4.6", features = ["derive"] }
+clap_complete = "4.6"
 
 # Date/Time
 chrono = { version = "0.4", features = ["serde"] }
