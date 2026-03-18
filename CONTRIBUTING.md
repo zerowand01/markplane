@@ -6,19 +6,30 @@ Thank you for your interest in contributing to Markplane! This guide covers ever
 
 - **Rust 1.93.0+** (edition 2024) — install via [rustup](https://rustup.rs/)
 - **Git** for version control
+- **Node.js 18+** — only needed if working on the web UI (`crates/markplane-web/ui/`)
 
 Verify your setup:
 
 ```bash
 rustc --version   # 1.93.0 or later
 cargo --version
+node --version    # 18.0.0 or later (optional, for web UI)
 ```
 
-## Clone and Build
+## Fork and Clone
+
+1. [Fork](https://github.com/zerowand01/markplane/fork) the repository to your GitHub account.
+2. Clone your fork and set up the upstream remote:
 
 ```bash
-git clone https://github.com/zerowand01/markplane.git
+git clone https://github.com/YOUR_USERNAME/markplane.git
 cd markplane
+git remote add upstream https://github.com/zerowand01/markplane.git
+```
+
+3. Build the workspace:
+
+```bash
 cargo build --workspace
 ```
 
@@ -91,6 +102,36 @@ Each crate uses a different error strategy appropriate to its role:
 3. Implement the handler function returning `Result<String, String>`.
 4. Write integration tests in `crates/markplane-cli/tests/mcp_integration.rs` that send JSON-RPC requests to the binary.
 
+## Branch Workflow
+
+1. Make sure your fork is up to date:
+
+```bash
+git fetch upstream
+git rebase upstream/master
+```
+
+2. Create a branch for your change:
+
+```bash
+git checkout -b feat/my-change
+```
+
+3. Make your changes, commit, and push to your fork:
+
+```bash
+git push origin feat/my-change
+```
+
+4. Open a pull request from your fork's branch to `zerowand01/markplane:master`.
+
+Keep branches focused on a single change. If `master` moves while you're working, rebase onto the latest:
+
+```bash
+git fetch upstream
+git rebase upstream/master
+```
+
 ## Commit Guidelines
 
 - Write clear commit messages summarizing the "why", not just the "what".
@@ -110,7 +151,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) style for PR ti
 | `refactor:` | Code restructuring without behavior change |
 | `!` suffix | Breaking changes (e.g., `feat!:`, `fix!:`) |
 
-This is a naming guideline, not enforced by tooling. It enables future automated release notes and version bumping.
+This is a naming guideline, not enforced by tooling. Do not bump version numbers in PRs — versioning and releases are handled by maintainers.
 
 ## Issues & Support
 
