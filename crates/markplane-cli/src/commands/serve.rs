@@ -33,6 +33,11 @@ use rust_embed::Embed;
 #[folder = "../markplane-web/ui/out"]
 struct WebAssets;
 
+#[cfg(feature = "embed-ui")]
+#[derive(Embed)]
+#[folder = "../../docs"]
+struct DocAssets;
+
 struct AppState {
     project: Project,
     ws_tx: broadcast::Sender<String>,
@@ -580,13 +585,41 @@ fn repo_root(project: &Project) -> PathBuf {
         .to_path_buf()
 }
 
+/// Map a manifest path (e.g. `"docs/foo.md"`) to the embedded asset key (`"foo.md"`).
+#[cfg(feature = "embed-ui")]
+fn embedded_doc_key(manifest_path: &str) -> &str {
+    manifest_path.strip_prefix("docs/").unwrap_or(manifest_path)
+}
+
+/// Read documentation content, preferring embedded assets over filesystem.
+fn read_doc_content(path: &str, project: &Project) -> Option<String> {
+    #[cfg(feature = "embed-ui")]
+    {
+        if let Some(file) = DocAssets::get(embedded_doc_key(path)) {
+            return String::from_utf8(file.data.into_owned()).ok();
+        }
+    }
+    let file_path = repo_root(project).join(path);
+    std::fs::read_to_string(&file_path).ok()
+}
+
+/// Check whether a doc file is available (embedded or on disk).
+fn doc_content_available(path: &str, project: &Project) -> bool {
+    #[cfg(feature = "embed-ui")]
+    {
+        if DocAssets::get(embedded_doc_key(path)).is_some() {
+            return true;
+        }
+    }
+    repo_root(project).join(path).is_file()
+}
+
 async fn get_docs(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<ApiListResponse<DocMetaResponse>>, (StatusCode, Json<ApiError>)> {
-    let root = repo_root(&state.project);
     let docs: Vec<DocMetaResponse> = DOC_MANIFEST
         .iter()
-        .filter(|entry| root.join(entry.path).is_file())
+        .filter(|entry| doc_content_available(entry.path, &state.project))
         .map(|entry| DocMetaResponse {
             slug: entry.slug.to_string(),
             title: entry.title.to_string(),
@@ -608,12 +641,11 @@ async fn get_doc(
         .find(|e| e.slug == slug)
         .ok_or_else(|| error_response(StatusCode::NOT_FOUND, "not_found", "Document not found"))?;
 
-    let file_path = repo_root(&state.project).join(entry.path);
-    let content = std::fs::read_to_string(&file_path).map_err(|_| {
+    let content = read_doc_content(entry.path, &state.project).ok_or_else(|| {
         error_response(
             StatusCode::NOT_FOUND,
             "not_found",
-            "Document file not found on disk",
+            "Document file not found",
         )
     })?;
 
