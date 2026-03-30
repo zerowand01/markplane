@@ -45,6 +45,12 @@ Markplane stores every task, epic, and plan as a markdown file inside your repo 
 - **MCP server built in** — AI assistants don't just read your project — they manage it. Query tasks, update status, create plans, and track dependencies without leaving your conversation.
 - **Zero infrastructure** — `markplane init` and you're done. No signup, no server, no Docker container. It's a single binary.
 
+## Agent Memory
+
+Markplane also works as structured memory for autonomous AI agents. Instead of unstructured daily logs that degrade over time, your agent gets typed tasks, decisions, and project state — compressed into a token-efficient summary that persists across sessions.
+
+For OpenClaw, see [`@zerowand/markplane-memory`](https://github.com/zerowand01/markplane-memory).
+
 ## The Context Layer
 
 Markplane automatically generates a `.context/` directory with compressed, token-efficient summaries of your entire project state. This is what makes AI collaboration work — your assistant doesn't need to read every file to understand the project.
