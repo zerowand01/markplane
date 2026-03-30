@@ -131,6 +131,10 @@ mcpServers:
       - mcp
 ```
 
+### OpenClaw
+
+See the [`@zerowand/markplane-memory`](https://github.com/zerowand01/markplane-memory) plugin for full setup including MCP server configuration and automatic context injection.
+
 ## How It Works
 
 The MCP server runs as a stdio process. It reads JSON-RPC 2.0 requests (one per line) from stdin and writes responses to stdout. Diagnostic messages go to stderr.
