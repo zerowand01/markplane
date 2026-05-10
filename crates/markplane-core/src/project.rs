@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::fs::{self, File};
+use std::fs::{self, File, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -574,14 +574,23 @@ impl Project {
         Ok(())
     }
 
-    /// Acquire an advisory exclusive lock on an item file.
+    /// Acquire an advisory exclusive lock for an item.
     ///
-    /// Returns the locked `File` handle. The lock is held until the handle is
-    /// dropped. The caller must hold the returned handle for the duration of
-    /// the read-modify-write cycle.
+    /// This locks a sidecar file instead of the markdown item itself. On
+    /// Windows, holding the target markdown file open prevents the atomic
+    /// tempfile persist used by `write_item` from replacing it, causing
+    /// `os error 33`. Project-local sidecar locks preserve serialization
+    /// without blocking the atomic replace of the item file.
     pub fn lock_item(&self, id: &str) -> Result<File> {
-        let path = self.item_path(id)?;
-        let file = File::open(&path)?;
+        let _ = self.item_path(id)?;
+        let lock_dir = self.root.join(".locks");
+        fs::create_dir_all(&lock_dir)?;
+        let lock_path = lock_dir.join(format!("{id}.lock"));
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(lock_path)?;
         file.lock_exclusive()?;
         Ok(file)
     }
