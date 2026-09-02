@@ -4,9 +4,11 @@ Describe the changes and the motivation behind them.
 
 ## How Tested
 
-- [ ] `cargo test --workspace` passes
-- [ ] `cargo clippy --workspace` passes (no warnings)
+- [ ] `cargo test --locked --workspace` passes
+- [ ] `cargo clippy --locked --workspace --all-targets -- -D warnings` passes
 - [ ] Manual testing (describe what you tested):
+
+CI runs these on both Linux and Windows; both must pass to merge.
 
 ## Breaking Changes
 

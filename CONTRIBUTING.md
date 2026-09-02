@@ -65,6 +65,34 @@ cargo clippy --workspace
 
 All code must be clippy-clean with no warnings.
 
+## Continuous Integration
+
+Every push and pull request runs CI on **both `ubuntu-latest` and
+`windows-latest`**. Both platform checks must pass before a PR can merge.
+
+| Step | Linux | Windows |
+|------|-------|---------|
+| `cargo fmt --check` | ✅ | — |
+| `cargo clippy --locked --workspace --all-targets -- -D warnings` | ✅ | ✅ |
+| `cargo test --locked --workspace` | ✅ | ✅ |
+| `npm ci && npm run lint && npm run build` | ✅ | — |
+
+Formatting and the frontend build are platform-independent, so they run once
+on Linux. Clippy and the test suite run on both, because that is where
+platform differences surface.
+
+Two failure modes this catches that testing on a single machine will not:
+
+- **Platform-specific behavior.** File locking, path separators, and line
+  endings differ on Windows. A change can pass locally on macOS or Linux and
+  still fail CI — this is not hypothetical, it is why the matrix exists.
+- **Stale lockfiles.** CI passes `--locked` to cargo and uses `npm ci`, so a
+  `Cargo.lock` or `package-lock.json` out of sync with its manifest fails the
+  build. Commit lockfile updates alongside dependency changes.
+
+macOS is not in the CI matrix; the release workflow builds and smoke-tests
+macOS binaries.
+
 ## Error Handling Conventions
 
 Each crate uses a different error strategy appropriate to its role:
@@ -136,7 +164,7 @@ git rebase upstream/master
 
 - Write clear commit messages summarizing the "why", not just the "what".
 - Keep commits focused — one logical change per commit.
-- Ensure `cargo test --workspace` and `cargo clippy --workspace` pass before committing.
+- Ensure `cargo test --locked --workspace` and `cargo clippy --locked --workspace --all-targets -- -D warnings` pass before committing — these are what CI runs.
 
 ### Conventional Commits
 
