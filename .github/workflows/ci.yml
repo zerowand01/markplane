@@ -15,9 +15,14 @@ concurrency:
 
 jobs:
   check:
-    name: Check
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    name: Check (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v4
@@ -29,7 +34,9 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      # Formatting is platform-independent — checking it once is enough.
       - name: Rustfmt
+        if: runner.os == 'Linux'
         run: cargo fmt --check
 
       - name: Clippy
@@ -38,13 +45,16 @@ jobs:
       - name: Test
         run: cargo test --locked --workspace
 
+      # The frontend build is platform-independent and slow; Linux only.
       - uses: actions/setup-node@v4
+        if: runner.os == 'Linux'
         with:
           node-version-file: crates/markplane-web/ui/.nvmrc
           cache: npm
           cache-dependency-path: crates/markplane-web/ui/package-lock.json
 
       - name: Frontend lint & build
+        if: runner.os == 'Linux'
         working-directory: crates/markplane-web/ui
         run: |
           npm ci
