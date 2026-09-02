@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::fs::{self, File};
+use std::fs::{self, File, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -574,14 +574,43 @@ impl Project {
         Ok(())
     }
 
-    /// Acquire an advisory exclusive lock on an item file.
+    /// Acquire an advisory exclusive lock for an item.
     ///
-    /// Returns the locked `File` handle. The lock is held until the handle is
-    /// dropped. The caller must hold the returned handle for the duration of
-    /// the read-modify-write cycle.
+    /// This locks a sidecar file under `.markplane/.locks/` rather than the
+    /// markdown item itself. Holding a lock on the item file is incompatible
+    /// with the atomic tempfile persist in [`write_item`]: on Windows a
+    /// byte-range lock blocks `MoveFileEx` from replacing the target, which
+    /// surfaces as `os error 33` (`ERROR_LOCK_VIOLATION`) on every mutating
+    /// operation. The sidecar preserves cross-process serialization while
+    /// leaving the item file free to be replaced.
+    ///
+    /// Lock files are intentionally never reclaimed. Deleting one races with
+    /// another process acquiring it — the deleter would unlink the inode a
+    /// second process is about to lock, and both would proceed. They are empty
+    /// and cheap; leaving them is the correct trade.
     pub fn lock_item(&self, id: &str) -> Result<File> {
-        let path = self.item_path(id)?;
-        let file = File::open(&path)?;
+        // Validate that the item exists before creating a lock for it.
+        let _ = self.item_path(id)?;
+
+        let lock_dir = self.root.join(".locks");
+        fs::create_dir_all(&lock_dir)?;
+
+        // Make the directory self-ignoring. Adding `.locks/` to the project
+        // .gitignore would only help projects created after this change, since
+        // that file is written once at init; this works for existing projects
+        // too, with no migration.
+        let ignore_path = lock_dir.join(".gitignore");
+        if !ignore_path.exists() {
+            fs::write(&ignore_path, "*\n")?;
+        }
+
+        let lock_path = lock_dir.join(format!("{id}.lock"));
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .open(lock_path)?;
         file.lock_exclusive()?;
         Ok(file)
     }
@@ -3285,5 +3314,91 @@ mod tests {
         assert_eq!(tasks.len(), 2);
         assert_eq!(plans.len(), 1);
         assert_eq!(notes.len(), 1);
+    }
+
+    /// Regression test for the Windows item-locking bug.
+    ///
+    /// `lock_item` used to lock the markdown item file itself, which is
+    /// incompatible with the atomic tempfile persist in `write_item`: on
+    /// Windows the byte-range lock blocks `MoveFileEx` from replacing the
+    /// target, failing with `os error 33`. This asserts the two are usable
+    /// together, which is what every mutating operation depends on.
+    ///
+    /// Note: this only fails on Windows. On Unix, flock never blocked rename,
+    /// so the bug was invisible — which is why CI covers windows-latest.
+    #[test]
+    fn test_write_item_while_lock_held() {
+        let (_tmp, project) = setup_project();
+        let task = project
+            .create_task(
+                "Locked item",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap();
+
+        let lock = project.lock_item(&task.id).unwrap();
+        let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
+        project
+            .write_item(&task.id, &doc)
+            .expect("write_item must succeed while an advisory lock is held");
+        drop(lock);
+
+        // The item survived the atomic replace intact.
+        let after: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
+        assert_eq!(after.frontmatter.title, "Locked item");
+    }
+
+    /// The full mutating path, which is what users actually hit: `update_status`
+    /// takes the lock and then atomically rewrites the file.
+    #[test]
+    fn test_update_status_under_lock_is_atomic() {
+        let (_tmp, project) = setup_project();
+        let task = project
+            .create_task(
+                "Status churn",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap();
+
+        for status in ["planned", "in-progress", "done"] {
+            project
+                .update_status(&task.id, status)
+                .unwrap_or_else(|e| panic!("update to {status} failed: {e}"));
+            let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
+            assert_eq!(doc.frontmatter.status, status);
+        }
+    }
+
+    /// Lock files must not land in the user's git history.
+    #[test]
+    fn test_lock_dir_is_self_ignoring() {
+        let (_tmp, project) = setup_project();
+        let task = project
+            .create_task(
+                "Ignored locks",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap();
+
+        drop(project.lock_item(&task.id).unwrap());
+
+        let ignore = project.root.join(".locks").join(".gitignore");
+        assert!(ignore.is_file(), ".locks/.gitignore must exist");
+        assert_eq!(fs::read_to_string(&ignore).unwrap(), "*\n");
     }
 }
