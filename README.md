@@ -73,8 +73,24 @@ See the [AI Integration Guide](docs/ai-integration.md) for the full context laye
 ### Homebrew (macOS and Linux)
 
 ```bash
+brew trust zerowand01/markplane
 brew install zerowand01/markplane/markplane
 ```
+
+Homebrew 6.0+ requires third-party taps to be trusted before their formulae
+will load. Formulae are executable Ruby, and only official taps are
+pre-reviewed, so Homebrew asks you to opt in explicitly. Without the first
+command you'll see `Error: Refusing to load formula ... from untrusted tap`.
+Trust is recorded in `~/.homebrew/trust.json` and is set once per machine.
+
+To upgrade later:
+
+```bash
+brew update && brew upgrade markplane
+```
+
+`brew update` refreshes the tap's metadata — without it Homebrew still
+believes your installed version is current and reports nothing to upgrade.
 
 ### Shell script (macOS and Linux)
 
