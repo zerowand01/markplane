@@ -34,7 +34,7 @@ anyhow = "1.0"
 
 # Terminal output
 colored = "3.1"
-tabled = "0.20"
+tabled = "0.21"
 
 # HTTP server
 axum = { version = "0.8", features = ["ws"] }
