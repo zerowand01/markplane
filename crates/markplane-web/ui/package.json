@@ -14,7 +14,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@tailwindcss/typography": "^0.5.20",
     "@tanstack/react-query": "^5.102.8",
-    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-table": "^9.2.4",
     "@tiptap/extension-link": "^3.30.5",
     "@tiptap/extension-task-item": "^3.30.5",
     "@tiptap/extension-task-list": "^3.30.5",
