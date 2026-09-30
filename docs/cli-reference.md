@@ -821,7 +821,7 @@ markplane sync [OPTIONS]
 |--------|---------|-------------|
 | `--normalize` | `false` | Also normalize task position keys (rewrites source files) |
 
-Updates all INDEX.md routing files and regenerates AI context summaries in `.context/`. These are derived files, gitignored within `.markplane/`. Run this after making bulk changes or after a fresh clone.
+Updates all INDEX.md routing files and regenerates AI context summaries in `.context/`. These are derived files, gitignored within `.markplane/`. Run this after making bulk changes or after a fresh clone. Sync also recreates any entity directories (e.g. `plans/`, `notes/`) that are missing because they had no items to commit.
 
 Sync also runs automatically on `markplane init`, `markplane mcp` startup, and `markplane serve` startup.
 

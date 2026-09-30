@@ -549,6 +549,7 @@ impl Project {
     /// Does NOT normalize positions — use `normalize_positions()` separately
     /// or `markplane sync --normalize` for that (it rewrites source files).
     pub fn sync_all(&self) -> Result<()> {
+        self.ensure_layout()?;
         self.sync_all_indexes()?;
         self.generate_all_context()?;
         Ok(())
