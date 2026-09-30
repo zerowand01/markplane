@@ -105,6 +105,29 @@ fn test_initialize() {
     assert!(instructions.contains("free-form markdown"));
 }
 
+#[test]
+fn test_startup_sync_with_missing_entity_dirs() {
+    // On a fresh clone, directories holding only gitignored files don't exist.
+    let tmp = setup_project();
+    let root = tmp.path().join(".markplane");
+    for dir in ["backlog", "roadmap", "plans", "notes", ".context"] {
+        std::fs::remove_dir_all(root.join(dir)).unwrap();
+    }
+
+    let input = format!("{}\n", json!({"jsonrpc": "2.0", "id": 1, "method": "ping"}));
+    let output = mcp_cmd()
+        .arg("--project")
+        .arg(tmp.path().to_str().unwrap())
+        .write_stdin(input)
+        .output()
+        .expect("failed to run markplane mcp");
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(!stderr.contains("sync warning"), "stderr: {stderr}");
+    assert!(root.join("plans/INDEX.md").is_file());
+    assert!(root.join(".context/summary.md").is_file());
+}
+
 // ── Ping ─────────────────────────────────────────────────────────────────
 
 #[test]

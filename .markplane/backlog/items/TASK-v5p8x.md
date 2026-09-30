@@ -1,7 +1,7 @@
 ---
 id: TASK-v5p8x
 title: sync fails on fresh clone when an entity directory is missing
-status: backlog
+status: done
 priority: high
 type: bug
 effort: small
@@ -61,10 +61,10 @@ Error: IO error: No such file or directory (os error 2)
 
 ## Acceptance Criteria
 
-- [ ] `sync` succeeds when any of `backlog/`, `roadmap/`, `plans/`, `notes/` is missing
-- [ ] `.context/` is also created if missing (it is gitignored too)
-- [ ] `markplane mcp` and `markplane serve` start cleanly on a fresh clone
-- [ ] Integration test covering sync with missing entity directories
+- [x] `sync` succeeds when any of `backlog/`, `roadmap/`, `plans/`, `notes/` is missing
+- [x] `.context/` is also created if missing (it is gitignored too)
+- [x] `markplane mcp` and `markplane serve` start cleanly on a fresh clone
+- [x] Integration test covering sync with missing entity directories
 
 ## Notes
 

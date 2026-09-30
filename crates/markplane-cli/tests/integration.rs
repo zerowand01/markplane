@@ -617,6 +617,25 @@ fn test_sync() {
     assert!(tmp.path().join(".markplane/.context/summary.md").is_file());
 }
 
+#[test]
+fn test_sync_with_missing_entity_dirs() {
+    // On a fresh clone, directories holding only gitignored files don't exist.
+    let tmp = setup_project();
+    let root = tmp.path().join(".markplane");
+    for dir in ["backlog", "roadmap", "plans", "notes", ".context"] {
+        std::fs::remove_dir_all(root.join(dir)).unwrap();
+    }
+
+    cmd().current_dir(tmp.path()).arg("sync").assert().success();
+
+    for dir in ["backlog", "roadmap", "plans", "notes"] {
+        assert!(root.join(dir).join("INDEX.md").is_file(), "{dir}/INDEX.md");
+        assert!(root.join(dir).join("items").is_dir(), "{dir}/items");
+        assert!(root.join(dir).join("archive").is_dir(), "{dir}/archive");
+    }
+    assert!(root.join(".context/summary.md").is_file());
+}
+
 // ── Start / Done ─────────────────────────────────────────────────────────
 
 #[test]

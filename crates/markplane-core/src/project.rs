@@ -159,6 +159,25 @@ fn atomic_write(path: &Path, content: &[u8]) -> Result<()> {
     Ok(())
 }
 
+/// Standard directory layout, relative to `.markplane/`.
+/// These can hold only gitignored files or nothing at all, so git may not
+/// carry them to a fresh clone; `ensure_layout()` recreates them.
+const LAYOUT_DIRS: &[&str] = &[
+    "roadmap",
+    "roadmap/items",
+    "roadmap/archive",
+    "backlog",
+    "backlog/items",
+    "backlog/archive",
+    "plans",
+    "plans/items",
+    "plans/archive",
+    "notes",
+    "notes/items",
+    "notes/archive",
+    ".context",
+];
+
 /// Represents a `.markplane/` project directory.
 pub struct Project {
     /// Path to the `.markplane/` directory.
@@ -190,6 +209,14 @@ impl Project {
     /// Get the root path of the `.markplane/` directory.
     pub fn root(&self) -> &Path {
         &self.root
+    }
+
+    /// Create any missing entity directories and `.context/`.
+    pub fn ensure_layout(&self) -> Result<()> {
+        for dir in LAYOUT_DIRS {
+            fs::create_dir_all(self.root.join(dir))?;
+        }
+        Ok(())
     }
 
     // ── Config ────────────────────────────────────────────────────────────
@@ -1327,24 +1354,7 @@ impl Project {
         let today = Local::now().date_naive().format("%Y-%m-%d").to_string();
 
         // Create directory structure
-        let dirs = [
-            "",
-            "roadmap",
-            "roadmap/items",
-            "roadmap/archive",
-            "backlog",
-            "backlog/items",
-            "backlog/archive",
-            "plans",
-            "plans/items",
-            "plans/archive",
-            "notes",
-            "notes/items",
-            "notes/archive",
-            "templates",
-            ".context",
-        ];
-        for dir in &dirs {
+        for dir in LAYOUT_DIRS.iter().chain(&["templates"]) {
             fs::create_dir_all(root.join(dir))?;
         }
 
