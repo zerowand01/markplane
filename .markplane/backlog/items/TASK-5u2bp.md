@@ -1,22 +1,23 @@
 ---
 id: TASK-5u2bp
 title: Improve MCP guidance so agents fill in template placeholders
-status: draft
+status: backlog
 priority: high
 type: enhancement
-effort: small
+effort: medium
 epic: null
 plan: null
 depends_on: []
 blocks: []
-related: []
+related:
+- TASK-4peyk
 assignee: null
 tags:
 - mcp
 - dx
 position: a6
 created: 2026-04-01
-updated: 2026-04-01
+updated: 2026-09-30
 ---
 
 # Improve MCP guidance so agents fill in template placeholders
@@ -74,17 +75,46 @@ After creating an item, its body contains [bracketed placeholder] text from the
 template — always replace these with real content before moving on.
 ```
 
+### 3. State the frontmatter boundary (`mcp/mod.rs` `build_instructions()`)
+
+The File Editing section currently says "edit them directly", which agents read
+as licence to hand-edit frontmatter (e.g. changing `title:` in the file). Add:
+
+```
+Edit only the body below the closing `---`. Change anything in the YAML
+frontmatter (title, status, priority, links, etc.) through the markplane tools.
+```
+
+### 4. Add `status` and `body` parameters to `markplane_add` (`mcp/tools.rs`)
+
+- `status` (optional): create the item directly in a given status, validated
+  against the configured workflow. Saves an `add` + `update` round trip for
+  projects that work from `backlog`. CLI equivalent: [[TASK-4peyk]].
+- `body` (optional): markdown body to use instead of the template. An agent that
+  supplies the body in the same call never leaves placeholders behind, which
+  addresses the core problem of this task directly. Core's update path already
+  accepts a body; `create_task` / `create_*` need to accept one too.
+
+When `body` is supplied, the return message should not include the
+"replace placeholders" reminder from change 1.
+
 ## Acceptance Criteria
 
 - [ ] `markplane_add` return message includes file path and edit reminder
 - [ ] MCP instructions steps 3-4 clarify placeholder obligation
 - [ ] File Editing section reinforces the fill-in expectation
-- [ ] Existing tests pass, no behavioral change to item creation logic
+- [ ] MCP instructions state that frontmatter is changed through tools, body is edited directly
+- [ ] `markplane_add` accepts optional `status` (validated) and `body` parameters
+- [ ] Omitting `status` / `body` keeps current behavior
+- [ ] Integration tests for the new parameters; MCP docs (`docs/mcp-setup.md`) updated
 
 ## Notes
 
 - Deliberately not prescribing create-then-edit vs interleaved workflow — both are valid
-- No new tools or parameters needed — this is purely about guidance
+- Changes 1–3 are purely guidance; change 4 adds optional parameters (added
+  2026-09-30 from external agent feedback on markplane friction)
 - Reported by a user who likes markplane but hit this friction repeatedly
 
 ## References
+
+- [[TASK-4peyk]]
