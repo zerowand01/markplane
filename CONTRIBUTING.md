@@ -153,6 +153,13 @@ git push origin feat/my-change
 
 4. Open a pull request from your fork's branch to `zerowand01/markplane:master`.
 
+5. A maintainer reviews the PR and squash-merges it once both CI checks pass,
+   so your branch lands on `master` as a single commit. If this is your first
+   contribution, CI starts after a maintainer approves the workflow run.
+   You don't need to squash your commits yourself: push follow-up fixes to
+   the same branch as new commits. After the merge, you can delete the
+   branch from your fork.
+
 Keep branches focused on a single change. If `master` moves while you're working, rebase onto the latest:
 
 ```bash
@@ -168,7 +175,10 @@ git rebase upstream/master
 
 ### Conventional Commits
 
-Use [Conventional Commits](https://www.conventionalcommits.org/) style for PR titles:
+Use [Conventional Commits](https://www.conventionalcommits.org/) style for PR
+titles and commit subjects. The squash commit on `master` takes its title
+from the commit when a PR has one commit, and from the PR title when it has
+several, so both should follow this format:
 
 | Prefix | Use for |
 |--------|---------|
