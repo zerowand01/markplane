@@ -9,14 +9,15 @@ epic: null
 plan: null
 depends_on: []
 blocks: []
-related: []
+related:
+- TASK-zesq4
 assignee: null
 tags:
 - web-ui
 - dependencies
 position: a6
 created: 2026-09-02
-updated: 2026-09-02
+updated: 2026-09-30
 ---
 
 # Upgrade TypeScript past 5.x when toolchain allows
