@@ -16,10 +16,12 @@ Markplane uses a tag-triggered release workflow. Pushing a `v*` tag to GitHub bu
    version = "0.2.0"
    ```
 
-   Commit and push to `master`:
+   Refresh `Cargo.lock` (it records the workspace crate versions, and CI and
+   release builds use `--locked`), then commit both files and push to `master`:
 
    ```bash
-   git add Cargo.toml
+   cargo update --workspace
+   git add Cargo.toml Cargo.lock
    git commit -m "chore: bump version to 0.2.0"
    git push
    ```
@@ -71,4 +73,5 @@ markplane-v{VERSION}-{TARGET}.zip       (Windows)
 - Regular pushes to `master` only trigger CI, not a release build
 - You can bump the version without tagging — no release happens until a tag is pushed
 - The tag must be on a commit where `Cargo.toml` has the matching version
+- The version bump must include `Cargo.lock` — a `Cargo.toml`-only bump fails CI and the release build, which both run with `--locked`
 - Rust toolchain is pinned to the `rust-version` in [`Cargo.toml`](../Cargo.toml) for reproducibility
