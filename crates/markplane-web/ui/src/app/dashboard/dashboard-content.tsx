@@ -117,7 +117,7 @@ export function DashboardContent() {
                     </span>
                     <span className="text-sm flex-1 truncate">{task.title}</span>
                     {task.depends_on.length > 0 && (
-                      <span className="text-xs text-muted-foreground shrink-0">
+                      <span className="text-xs text-muted-foreground truncate max-w-1/2">
                         blocked by {task.depends_on.join(", ")}
                       </span>
                     )}
@@ -183,7 +183,7 @@ export function DashboardContent() {
         </div>
 
         {/* Right column — strategic context */}
-        <div className="space-y-6">
+        <div className="space-y-6 min-w-0">
           {/* Epic progress */}
           {data.now_epics.length > 0 && (
             <section className="rounded-lg border p-4">

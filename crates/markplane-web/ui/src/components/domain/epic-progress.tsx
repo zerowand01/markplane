@@ -16,7 +16,7 @@ export function EpicProgress({
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center gap-2">
             <span
-              className="font-mono text-xs"
+              className="font-mono text-xs shrink-0"
               style={{ color: "var(--entity-epic)" }}
             >
               {epic.id}
