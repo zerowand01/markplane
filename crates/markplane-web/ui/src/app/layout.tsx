@@ -38,7 +38,7 @@ export default function RootLayout({
         <Providers>
           <SidebarProvider>
             <AppSidebar />
-            <SidebarInset>
+            <SidebarInset className="min-w-0">
               <MobileHeader />
               <main className="flex-1">
                 <ErrorBoundary>{children}</ErrorBoundary>
