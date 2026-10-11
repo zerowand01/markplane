@@ -114,14 +114,8 @@ export function BacklogContent() {
   const [filterTag, setFilterTag] = useState<string>("all");
   const [sortKey, setSortKey] = useState<SortKey>("manual");
   const [createOpen, setCreateOpen] = useState(false);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(
-    searchParams.get("task")
-  );
-
-  // Sync selectedTaskId when URL changes (e.g. WikiLinkChip navigation)
-  useEffect(() => {
-    setSelectedTaskId(searchParams.get("task"));
-  }, [searchParams]);
+  // The open task sheet is driven by the URL, as on the plans/notes/archive pages.
+  const selectedTaskId = searchParams.get("task");
 
   const { data: tasks, isLoading, error, refetch } = useTasks();
   useEpics();
@@ -179,7 +173,6 @@ export function BacklogContent() {
 
   const openTask = useCallback(
     (id: string) => {
-      setSelectedTaskId(id);
       const params = new URLSearchParams(searchParams.toString());
       params.set("task", id);
       router.replace(`?${params.toString()}`, { scroll: false });
@@ -188,7 +181,6 @@ export function BacklogContent() {
   );
 
   const closeTask = useCallback(() => {
-    setSelectedTaskId(null);
     const params = new URLSearchParams(searchParams.toString());
     params.delete("task");
     const qs = params.toString();
