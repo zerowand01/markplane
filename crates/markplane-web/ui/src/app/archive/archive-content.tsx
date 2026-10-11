@@ -275,7 +275,7 @@ export function ArchiveContent() {
                 </span>
 
                 {/* Title */}
-                <span className="text-base font-medium truncate flex-1">
+                <span title={item.title} className="text-base font-medium truncate flex-1">
                   {item.title}
                 </span>
 

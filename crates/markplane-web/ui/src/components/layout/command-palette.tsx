@@ -273,7 +273,7 @@ function CommandPaletteContent({ onClose }: { onClose: () => void }) {
                     >
                       {task.id}
                     </span>
-                    <span className="flex-1 truncate">{task.title}</span>
+                    <span title={task.title} className="flex-1 truncate">{task.title}</span>
                     <span className="text-xs text-muted-foreground ml-2">
                       {task.status}
                     </span>
@@ -296,7 +296,7 @@ function CommandPaletteContent({ onClose }: { onClose: () => void }) {
                     >
                       {epic.id}
                     </span>
-                    <span className="flex-1 truncate">{epic.title}</span>
+                    <span title={epic.title} className="flex-1 truncate">{epic.title}</span>
                     <span className="text-xs text-muted-foreground ml-2">
                       {epic.status}
                     </span>
@@ -319,7 +319,7 @@ function CommandPaletteContent({ onClose }: { onClose: () => void }) {
                     >
                       {plan.id}
                     </span>
-                    <span className="flex-1 truncate">{plan.title}</span>
+                    <span title={plan.title} className="flex-1 truncate">{plan.title}</span>
                     <span className="text-xs text-muted-foreground ml-2">
                       {plan.status}
                     </span>
@@ -342,7 +342,7 @@ function CommandPaletteContent({ onClose }: { onClose: () => void }) {
                     >
                       {note.id}
                     </span>
-                    <span className="flex-1 truncate">{note.title}</span>
+                    <span title={note.title} className="flex-1 truncate">{note.title}</span>
                     <span className="text-xs text-muted-foreground ml-2">
                       {note.status}
                     </span>

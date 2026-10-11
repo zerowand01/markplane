@@ -17,6 +17,10 @@ import { RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { PageTransition } from "@/components/domain/page-transition";
 
+function blockedBy(ids: string[]): string {
+  return `blocked by ${ids.join(", ")}`;
+}
+
 function relativeTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const minutes = Math.floor(diff / 60_000);
@@ -115,10 +119,10 @@ export function DashboardContent() {
                     <span className="font-mono text-xs text-muted-foreground shrink-0">
                       {task.id}
                     </span>
-                    <span className="text-sm flex-1 truncate">{task.title}</span>
+                    <span title={task.title} className="text-sm flex-1 truncate">{task.title}</span>
                     {task.depends_on.length > 0 && (
-                      <span className="text-xs text-muted-foreground truncate max-w-1/2">
-                        blocked by {task.depends_on.join(", ")}
+                      <span title={blockedBy(task.depends_on)} className="text-xs text-muted-foreground truncate max-w-1/2">
+                        {blockedBy(task.depends_on)}
                       </span>
                     )}
                   </button>
@@ -142,7 +146,7 @@ export function DashboardContent() {
                     <span className="font-mono text-xs text-muted-foreground shrink-0">
                       {task.id}
                     </span>
-                    <span className="text-sm flex-1 truncate">{task.title}</span>
+                    <span title={task.title} className="text-sm flex-1 truncate">{task.title}</span>
                     <StatusBadge status={task.status} />
                     {task.assignee && (
                       <span className="text-xs text-muted-foreground">
@@ -171,7 +175,7 @@ export function DashboardContent() {
                     <span className="font-mono text-xs text-muted-foreground shrink-0">
                       {task.id}
                     </span>
-                    <span className="text-sm flex-1 truncate text-muted-foreground line-through decoration-muted-foreground/40">{task.title}</span>
+                    <span title={task.title} className="text-sm flex-1 truncate text-muted-foreground line-through decoration-muted-foreground/40">{task.title}</span>
                     <span className="text-xs text-muted-foreground shrink-0">
                       {relativeTime(task.updated)}
                     </span>
@@ -213,7 +217,7 @@ export function DashboardContent() {
                     <span className="font-mono text-xs text-muted-foreground shrink-0">
                       {task.id}
                     </span>
-                    <span className="text-sm flex-1 truncate">{task.title}</span>
+                    <span title={task.title} className="text-sm flex-1 truncate">{task.title}</span>
                   </button>
                 ))}
               </div>

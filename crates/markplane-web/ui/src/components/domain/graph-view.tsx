@@ -526,7 +526,7 @@ function ItemNode({ data }: { data: Record<string, string | Position> }) {
           style={{ backgroundColor: data.statusColor as string }}
         />
       </div>
-      <p className="text-xs font-medium line-clamp-2 leading-tight">
+      <p title={data.label as string} className="text-xs font-medium line-clamp-2 leading-tight">
         {data.label as string}
       </p>
       <Handle type="source" position={sourcePos} />
@@ -554,7 +554,7 @@ function EpicGroupNode({ data }: { data: Record<string, string | Position> }) {
         <span className="font-mono text-[10px] font-semibold shrink-0 whitespace-nowrap" style={{ color: data.entityColor as string }}>
           {data.id as string}
         </span>
-        <span className="text-[11px] font-medium text-muted-foreground truncate">
+        <span title={data.label as string} className="text-[11px] font-medium text-muted-foreground truncate">
           {data.label as string}
         </span>
       </div>

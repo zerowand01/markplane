@@ -368,7 +368,7 @@ export function EpicDetailSheet({
                               <TableCell className="font-mono text-xs text-muted-foreground">
                                 {task.id}
                               </TableCell>
-                              <TableCell className="text-sm font-medium truncate max-w-[200px]">
+                              <TableCell title={task.title} className="text-sm font-medium truncate max-w-[200px]">
                                 {task.title}
                               </TableCell>
                               <TableCell>
@@ -399,7 +399,7 @@ export function EpicDetailSheet({
                                   <TableCell className="font-mono text-xs text-muted-foreground">
                                     {task.id}
                                   </TableCell>
-                                  <TableCell className="text-sm font-medium truncate max-w-[200px]">
+                                  <TableCell title={task.title} className="text-sm font-medium truncate max-w-[200px]">
                                     {task.title}
                                   </TableCell>
                                   <TableCell>

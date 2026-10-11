@@ -236,7 +236,7 @@ function LaterCard({ epic, onClick, isOverlay, isDone }: { epic: Epic; onClick: 
         >
           {epic.id}
         </span>
-        <span className="text-base font-medium truncate flex-1">{epic.title}</span>
+        <span title={epic.title} className="text-base font-medium truncate flex-1">{epic.title}</span>
         <span className="text-xs text-muted-foreground shrink-0">
           {epic.task_count} tasks
         </span>
