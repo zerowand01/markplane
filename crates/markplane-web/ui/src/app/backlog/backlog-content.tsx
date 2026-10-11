@@ -1048,7 +1048,7 @@ function BacklogRow({
           {task.id}
         </span>
         {isDraft && <StatusBadge status={task.status} />}
-        <span className="text-base font-medium truncate flex-1">{task.title}</span>
+        <span title={task.title} className="text-base font-medium truncate flex-1">{task.title}</span>
         {task.epic && (
           <span
             className="text-sm font-mono px-2 py-0.5 rounded shrink-0"

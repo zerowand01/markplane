@@ -117,7 +117,7 @@ export function NotesContent() {
                             {note.id}
                           </span>
                           {isDraft && <GenericStatusBadge status="draft" />}
-                          <span className="text-base font-medium truncate flex-1">
+                          <span title={note.title} className="text-base font-medium truncate flex-1">
                             {note.title}
                           </span>
                           {note.tags.length > 0 && (

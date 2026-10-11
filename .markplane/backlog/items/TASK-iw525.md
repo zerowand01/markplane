@@ -1,7 +1,7 @@
 ---
 id: TASK-iw525
 title: Show full title on hover for truncated titles in web UI lists
-status: planned
+status: done
 priority: medium
 type: enhancement
 effort: small
@@ -40,11 +40,11 @@ Constraints:
 
 ## Acceptance Criteria
 
-- [ ] Hovering a truncated title in the dashboard, backlog list, kanban board, roadmap, and
+- [x] Hovering a truncated title in the dashboard, backlog list, kanban board, roadmap, and
       epic detail sheet reveals the full title.
-- [ ] Drag and drop on the backlog list and kanban board behaves as before.
-- [ ] No visible change for titles that fit.
-- [ ] Approach is consistent across all list views (one pattern, not a mix).
+- [x] Drag and drop on the backlog list and kanban board behaves as before.
+- [x] No visible change for titles that fit.
+- [x] Approach is consistent across all list views (one pattern, not a mix).
 
 ## Notes
 

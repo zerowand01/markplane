@@ -93,7 +93,7 @@ export function EntityCombobox({
               <span className="font-mono text-xs text-muted-foreground mr-1.5 shrink-0">
                 {option.id}
               </span>
-              <span className="truncate min-w-0">{option.title}</span>
+              <span title={option.title} className="truncate min-w-0">{option.title}</span>
             </CommandItem>
           ))}
         </CommandGroup>

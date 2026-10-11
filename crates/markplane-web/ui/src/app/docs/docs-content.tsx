@@ -39,6 +39,7 @@ function TocPanel({ headings, activeId }: { headings: Heading[]; activeId: strin
         <a
           key={heading.id}
           href={`#${heading.id}`}
+          title={heading.text}
           onClick={(e) => {
             e.preventDefault();
             document.getElementById(heading.id)?.scrollIntoView({ behavior: "smooth" });
@@ -306,7 +307,7 @@ export function DocsContent() {
                         onClick={() => navigateTo(result.docSlug, result.anchor)}
                         className="w-full text-left px-3 py-1.5 rounded-md text-xs transition-colors hover:bg-accent/50 group"
                       >
-                        <span className="text-muted-foreground group-hover:text-foreground block truncate">
+                        <span title={result.heading} className="text-muted-foreground group-hover:text-foreground block truncate">
                           {result.heading}
                         </span>
                         <span className="text-muted-foreground/70 block truncate mt-0.5">
@@ -332,7 +333,7 @@ export function DocsContent() {
                       : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
                   }`}
                 >
-                  <span className="truncate">{doc.title}</span>
+                  <span title={doc.title} className="truncate">{doc.title}</span>
                 </button>
               </li>
             ))}

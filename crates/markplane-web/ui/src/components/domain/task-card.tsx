@@ -68,7 +68,7 @@ export function TaskCard({
             </span>
           )}
         </div>
-        <p className="text-base font-medium leading-snug line-clamp-2">
+        <p title={task.title} className="text-base font-medium leading-snug line-clamp-2">
           {task.title}
         </p>
         {hasMetadata && (
