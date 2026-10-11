@@ -18,12 +18,10 @@ export function InlineEdit({
   placeholder = "Untitled",
 }: InlineEditProps) {
   const [isEditing, setIsEditing] = useState(false);
+  // The draft only matters while editing; it is seeded from the saved value
+  // when editing starts, so a background refetch never wipes typed text.
   const [draft, setDraft] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    setDraft(value);
-  }, [value]);
 
   useEffect(() => {
     if (isEditing) {
@@ -68,7 +66,10 @@ export function InlineEdit({
   return (
     <button
       type="button"
-      onClick={() => setIsEditing(true)}
+      onClick={() => {
+        setDraft(value);
+        setIsEditing(true);
+      }}
       className={`text-left cursor-pointer hover:opacity-80 transition-opacity ${className ?? ""}`}
     >
       {value || placeholder}

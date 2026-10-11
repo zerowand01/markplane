@@ -875,9 +875,7 @@ function GraphCanvas({
   edgeCounts: Record<string, number>;
   useCompound: boolean;
 }) {
-  const { fitView, setCenter } = useReactFlow();
-  const nodesRef = useRef(nodes);
-  nodesRef.current = nodes;
+  const { fitView, setCenter, getNodes } = useReactFlow();
 
   useEffect(() => {
     if (layoutTrigger === 0) return;
@@ -885,7 +883,7 @@ function GraphCanvas({
     // Small delay to let React Flow render the new positions
     const timer = setTimeout(() => {
       if (focusId) {
-        const focusNode = nodesRef.current.find((n) => n.id === focusId);
+        const focusNode = getNodes().find((n) => n.id === focusId);
         if (focusNode) {
           setCenter(
             focusNode.position.x + NODE_WIDTH / 2,
