@@ -559,42 +559,13 @@ impl Project {
     /// Only writes files whose position actually changed.
     pub fn normalize_positions(&self) -> Result<()> {
         use crate::models::Priority;
-        use crate::position::sequential_keys;
 
         let tasks = self.list_tasks(&crate::query::QueryFilter::default())?;
-        if tasks.is_empty() {
-            return Ok(());
-        }
 
-        // Group tasks by priority (already sorted by position within each group)
-        let priorities = [
-            Priority::Critical,
-            Priority::High,
-            Priority::Medium,
-            Priority::Low,
-            Priority::Someday,
-        ];
-
-        for priority in &priorities {
-            let group: Vec<_> = tasks
-                .iter()
-                .filter(|t| &t.frontmatter.priority == priority)
-                .collect();
-
-            if group.is_empty() {
-                continue;
-            }
-
-            let keys = sequential_keys(group.len());
-
-            for (doc, new_pos) in group.iter().zip(keys.iter()) {
-                let current_pos = doc.frontmatter.position.as_deref();
-                if current_pos != Some(new_pos.as_str()) {
-                    let mut updated_doc = (*doc).clone();
-                    updated_doc.frontmatter.position = Some(new_pos.clone());
-                    self.write_item(&doc.frontmatter.id, &updated_doc)?;
-                }
-            }
+        // Tasks are already sorted by position within each priority group
+        for priority in Priority::ALL {
+            let group = tasks.iter().filter(|t| &t.frontmatter.priority == priority);
+            self.normalize_priority_group(group)?;
         }
 
         Ok(())

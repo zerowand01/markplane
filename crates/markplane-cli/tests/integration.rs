@@ -1991,6 +1991,103 @@ fn test_context_focus_invalid() {
 // ── Error Cases ──────────────────────────────────────────────────────────
 
 #[test]
+fn test_add_heals_malformed_position_keys() {
+    // Regression for GitHub issue #91: hand-written keys like `n0` made
+    // every subsequent `add` fail with "too short for its prefix".
+    let tmp = setup_project();
+    let out = cmd()
+        .current_dir(tmp.path())
+        .args(["add", "First"])
+        .output()
+        .unwrap();
+    let id = extract_id(&out.stdout);
+    let path = tmp
+        .path()
+        .join(".markplane/backlog/items")
+        .join(format!("{id}.md"));
+    let content = std::fs::read_to_string(&path).unwrap();
+    assert!(content.contains("position: a0"), "{content}");
+    std::fs::write(&path, content.replace("position: a0", "position: n0")).unwrap();
+
+    cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Second"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Created TASK-"));
+
+    let content = std::fs::read_to_string(&path).unwrap();
+    assert!(content.contains("position: a0"), "healed: {content}");
+}
+
+#[test]
+fn test_update_rejects_malformed_position_key() {
+    let tmp = setup_project();
+    let out = cmd()
+        .current_dir(tmp.path())
+        .args(["add", "First"])
+        .output()
+        .unwrap();
+    let id = extract_id(&out.stdout);
+
+    cmd()
+        .current_dir(tmp.path())
+        .args(["update", &id, "--position", "n0"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("too short for its prefix"))
+        .stderr(predicate::str::contains("markplane move"));
+
+    cmd()
+        .current_dir(tmp.path())
+        .args(["update", &id, "--position", "b00"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn test_check_reports_and_fixes_malformed_position_keys() {
+    let tmp = setup_project();
+    let out = cmd()
+        .current_dir(tmp.path())
+        .args(["add", "First"])
+        .output()
+        .unwrap();
+    let id = extract_id(&out.stdout);
+    let path = tmp
+        .path()
+        .join(".markplane/backlog/items")
+        .join(format!("{id}.md"));
+    let content = std::fs::read_to_string(&path).unwrap();
+    std::fs::write(&path, content.replace("position: a0", "position: n0")).unwrap();
+
+    cmd()
+        .current_dir(tmp.path())
+        .arg("check")
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("malformed position key"))
+        .stdout(predicate::str::contains("position:n0"));
+
+    cmd()
+        .current_dir(tmp.path())
+        .args(["check", "--fix"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Normalized position keys"));
+
+    let content = std::fs::read_to_string(&path).unwrap();
+    assert!(content.contains("position: a0"), "{content}");
+
+    cmd()
+        .current_dir(tmp.path())
+        .arg("check")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("All task position keys are valid"));
+}
+
+#[test]
 fn test_add_invalid_type() {
     let tmp = setup_project();
     cmd()

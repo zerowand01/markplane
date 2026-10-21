@@ -92,6 +92,16 @@ pub async fn run(port: u16, open: bool, dev: bool) -> anyhow::Result<()> {
     // Full sync on startup to ensure derived files are up-to-date
     project.sync_all()?;
 
+    // The web UI computes position keys client-side from its neighbours, so
+    // malformed keys in the files would break drag-and-drop. Repair them now.
+    let repaired = project.repair_malformed_positions()?;
+    if !repaired.is_empty() {
+        eprintln!(
+            "warning: repaired malformed position keys in priority group(s): {}",
+            repaired.join(", ")
+        );
+    }
+
     let (ws_tx, _) = broadcast::channel::<String>(256);
 
     let state = Arc::new(AppState {

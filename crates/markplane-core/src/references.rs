@@ -150,6 +150,41 @@ pub fn validate_task_statuses(project: &Project) -> Result<Vec<BrokenReference>>
     Ok(broken)
 }
 
+/// Validate that all task position keys are well-formed fractional-indexing keys.
+/// Returns a list of broken references (`target_id` = `position:<key>`) for tasks
+/// whose key the generator cannot build on (e.g. hand-written `n0`).
+pub fn validate_positions(project: &Project) -> Result<Vec<BrokenReference>> {
+    let mut broken = Vec::new();
+
+    let dir = project.item_dir(&IdPrefix::Task);
+    if !dir.exists() {
+        return Ok(broken);
+    }
+
+    let pattern = scan_pattern(&dir);
+    for path in glob::glob(&pattern)
+        .unwrap_or_else(|_| glob::glob("").unwrap())
+        .flatten()
+    {
+        let filename = path.file_name().unwrap_or_default().to_string_lossy();
+        if filename == "INDEX.md" {
+            continue;
+        }
+        let content = std::fs::read_to_string(&path)?;
+        if let Ok(doc) = frontmatter::parse_frontmatter::<Task>(&content)
+            && let Some(pos) = doc.frontmatter.position.as_deref()
+            && !crate::position::is_valid_key(pos)
+        {
+            broken.push(BrokenReference {
+                source_file: path.to_string_lossy().to_string(),
+                target_id: format!("position:{}", pos),
+            });
+        }
+    }
+
+    Ok(broken)
+}
+
 /// Find orphan items — items with no incoming references from other items.
 ///
 /// Also scans archived items as reference sources — if an archived item

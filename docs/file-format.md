@@ -98,6 +98,7 @@ Titles are always double-quoted in the YAML to safely handle special characters.
 | `blocks` | string[] | no | IDs this item blocks (default: `[]`) |
 | `related` | string[] | no | Related item IDs, any type (default: `[]`) |
 | `assignee` | string? | no | Assigned user (default: `null`) |
+| `position` | string? | no | Manual ordering key within the priority group (see [Position Keys](#position-keys), default: `null`) |
 | `created` | date | yes | Creation date (`YYYY-MM-DD`) |
 | `updated` | date | yes | Last modification date (`YYYY-MM-DD`, see [Timestamps](#timestamps)) |
 
@@ -210,6 +211,16 @@ Values (smallest to largest): `xs`, `small`, `medium`, `large`, `xl`
 ### NoteType
 
 Configurable via `note_types` in `config.yaml` or the web UI [Settings page](web-ui-guide.md#settings). Default values: `research`, `analysis`, `idea`, `decision`, `meeting`. The first value in the list is the default for new notes.
+
+## Position Keys
+
+Tasks carry an optional `position` key for manual ordering within their priority group. Keys use the [fractional-indexing](https://github.com/rocicorp/fractional-indexing) format (base-62, lexicographically sortable) so that the Rust core and the web UI generate compatible keys.
+
+A key is a head letter followed by a fixed number of base-62 digits (`0-9A-Za-z`), then an optional fractional part. The head letter determines how many integer digits follow: `a` takes one (`a0` … `az`), `b` takes two (`b00` … `bzz`), `c` takes three, and so on. Keys generated between two neighbours gain a fractional suffix, e.g. `a0V` sorts between `a0` and `a1`.
+
+Keys such as `b0` or `n0` are **not** valid (too few digits for their prefix). `markplane update --position` and the `markplane_update` MCP tool reject malformed keys. `markplane check` reports malformed keys already present in files. `markplane add`, `markplane move`, `markplane serve` startup and `markplane check --fix` normalize the affected priority group automatically, and `markplane sync --normalize` rewrites every key to clean sequential ones.
+
+Prefer `markplane move` (or `markplane_move` over MCP) over setting keys by hand.
 
 ## Timestamps
 

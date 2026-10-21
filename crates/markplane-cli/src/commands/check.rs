@@ -1,7 +1,7 @@
 use colored::Colorize;
 use markplane_core::{
-    LinkAction, LinkRelation, Project, detect_cycles, find_orphans, validate_reciprocal_links,
-    validate_references, validate_task_statuses,
+    LinkAction, LinkRelation, Project, detect_cycles, find_orphans, validate_positions,
+    validate_reciprocal_links, validate_references, validate_task_statuses,
 };
 
 fn field_to_relation(forward_field: &str) -> Option<LinkRelation> {
@@ -48,6 +48,38 @@ pub fn run(orphans: bool, fix: bool) -> anyhow::Result<()> {
                 "  {} has unknown status (not in configured workflow)",
                 br.source_file.dimmed(),
             );
+        }
+    }
+
+    // Check for malformed position keys
+    let malformed_positions = validate_positions(&project)?;
+    let mut positions_repaired = false;
+    if malformed_positions.is_empty() {
+        println!("{} All task position keys are valid.", "✓".green());
+    } else {
+        println!(
+            "\n{} {} malformed position key(s):\n",
+            "✗".red(),
+            malformed_positions.len()
+        );
+        for br in &malformed_positions {
+            println!(
+                "  {} has invalid {}",
+                br.source_file.dimmed(),
+                br.target_id.red()
+            );
+        }
+        if fix {
+            let repaired = project.repair_malformed_positions()?;
+            println!(
+                "\n  {} Normalized position keys in {} priority group(s): {}",
+                "✓".green(),
+                repaired.len(),
+                repaired.join(", ")
+            );
+            positions_repaired = true;
+        } else {
+            println!("\n  Run `markplane check --fix` or `markplane sync --normalize` to repair.");
         }
     }
 
@@ -152,6 +184,12 @@ pub fn run(orphans: bool, fix: bool) -> anyhow::Result<()> {
         return Err(anyhow::anyhow!(
             "Found {} asymmetric link(s)",
             asymmetric.len()
+        ));
+    }
+    if !malformed_positions.is_empty() && !positions_repaired {
+        return Err(anyhow::anyhow!(
+            "Found {} malformed position key(s)",
+            malformed_positions.len()
         ));
     }
 
