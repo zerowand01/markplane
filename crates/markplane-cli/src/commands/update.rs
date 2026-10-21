@@ -1,5 +1,5 @@
 use chrono::NaiveDate;
-use markplane_core::{Patch, Project, UpdateFields};
+use markplane_core::{MarkplaneError, Patch, Project, UpdateFields};
 
 use super::parse_comma_list;
 
@@ -80,7 +80,12 @@ pub fn run(
         note_type,
     };
 
-    project.update_item(&id, fields)?;
+    project.update_item(&id, fields).map_err(|e| match e {
+        MarkplaneError::InvalidPosition(_) => anyhow::anyhow!(
+            "{e}. Use `markplane move` to reorder tasks instead of setting keys by hand"
+        ),
+        other => other.into(),
+    })?;
     println!("Updated {}", id);
     Ok(())
 }

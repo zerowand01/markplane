@@ -204,7 +204,7 @@ pub fn list_tools(project: &Project) -> Value {
                         },
                         "position": {
                             "type": "string",
-                            "description": "Position key for manual ordering within priority group. Set to null to clear. Tasks only."
+                            "description": "Position key for manual ordering within priority group, in fractional-indexing format (a0 … az, b00 … bzz; invalid keys are rejected). Prefer markplane_move, which computes keys automatically. Set to null to clear. Tasks only."
                         },
                         "add_tags": {
                             "type": "array",
@@ -1087,13 +1087,16 @@ fn handle_check(project: &Project) -> Result<String, String> {
     let asymmetric =
         markplane_core::validate_reciprocal_links(project).map_err(|e| e.to_string())?;
     let cycles = markplane_core::detect_cycles(project).map_err(|e| e.to_string())?;
+    let malformed_positions =
+        markplane_core::validate_positions(project).map_err(|e| e.to_string())?;
 
     if broken_refs.is_empty()
         && broken_statuses.is_empty()
         && asymmetric.is_empty()
         && cycles.is_empty()
+        && malformed_positions.is_empty()
     {
-        return Ok("All cross-references, task statuses, reciprocal links, and dependency graphs are valid.".to_string());
+        return Ok("All cross-references, task statuses, position keys, reciprocal links, and dependency graphs are valid.".to_string());
     }
 
     let mut output = String::new();
@@ -1147,6 +1150,21 @@ fn handle_check(project: &Project) -> Result<String, String> {
         for cycle in &cycles {
             output.push_str(&format!("- {}\n", cycle.path.join(" → ")));
         }
+    }
+    if !malformed_positions.is_empty() {
+        output.push_str(&format!(
+            "\n{} malformed position key(s) found:\n\n",
+            malformed_positions.len()
+        ));
+        for br in &malformed_positions {
+            output.push_str(&format!(
+                "- {} has invalid {}\n",
+                br.source_file, br.target_id
+            ));
+        }
+        output.push_str(
+            "\nThese are repaired automatically by markplane_add and markplane_move, or run `markplane sync --normalize` to repair all at once.\n",
+        );
     }
     Ok(output)
 }

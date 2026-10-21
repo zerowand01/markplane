@@ -111,6 +111,18 @@ pub struct UpdateFields {
     pub note_type: Option<String>,
 }
 
+/// Whether any task in the iterator carries a position key that fails validation.
+fn has_malformed_position<'a>(
+    tasks: impl IntoIterator<Item = &'a MarkplaneDocument<Task>>,
+) -> bool {
+    tasks.into_iter().any(|t| {
+        t.frontmatter
+            .position
+            .as_deref()
+            .is_some_and(|pos| !crate::position::is_valid_key(pos))
+    })
+}
+
 /// Apply tag changes: retain non-removed tags, then push non-duplicate adds.
 pub fn apply_tag_changes(current: &mut Vec<String>, add: &[String], remove: &[String]) {
     current.retain(|t| !remove.contains(t));
@@ -287,15 +299,67 @@ impl Project {
     }
 
     /// Compute a position key that appends to the end of a priority group.
+    ///
+    /// If any existing key in the group is malformed (e.g. hand-written `n0`),
+    /// the group is normalized first so that `add` never fails on keys that
+    /// were written outside the generator.
     fn append_position(&self, priority: &Priority) -> Result<String> {
-        let tasks = self.list_tasks(&crate::query::QueryFilter::default())?;
+        let tasks = self.load_priority_group(priority, false)?;
         let max_pos = tasks
             .iter()
-            .filter(|t| &t.frontmatter.priority == priority)
             .filter_map(|t| t.frontmatter.position.as_deref())
             .max();
         Ok(crate::position::generate_key_between(max_pos, None)?
             .expect("generate_key_between(_, None) always returns Some"))
+    }
+
+    /// Load the active tasks of a priority group, sorted by position, healing
+    /// the group's position keys first if they are unusable for key generation.
+    ///
+    /// A group is healed (normalized to clean sequential keys) when any task has
+    /// a malformed position key, or, if `require_all` is set, when any task has
+    /// no position at all. Returns the (possibly re-read) tasks in sorted order.
+    fn load_priority_group(
+        &self,
+        priority: &Priority,
+        require_all: bool,
+    ) -> Result<Vec<MarkplaneDocument<Task>>> {
+        let filter = QueryFilter {
+            priority: Some(vec![priority.to_string()]),
+            ..Default::default()
+        };
+        let tasks = self.list_tasks(&filter)?;
+        let has_malformed = has_malformed_position(tasks.iter());
+        let has_missing = tasks.iter().any(|t| t.frontmatter.position.is_none());
+        if has_malformed || (require_all && has_missing) {
+            if has_malformed {
+                eprintln!(
+                    "warning: repaired malformed position keys in the '{}' priority group",
+                    priority
+                );
+            }
+            self.normalize_priority_group(tasks.iter())?;
+            self.list_tasks(&filter)
+        } else {
+            Ok(tasks)
+        }
+    }
+
+    /// Normalize every priority group that contains a malformed position key.
+    ///
+    /// Groups whose keys are all valid are left untouched. Returns the names of
+    /// the priority groups that were repaired.
+    pub fn repair_malformed_positions(&self) -> Result<Vec<String>> {
+        let tasks = self.list_tasks(&QueryFilter::default())?;
+        let mut repaired = Vec::new();
+        for priority in Priority::ALL {
+            let group = || tasks.iter().filter(|t| &t.frontmatter.priority == priority);
+            if has_malformed_position(group()) {
+                self.normalize_priority_group(group())?;
+                repaired.push(priority.to_string());
+            }
+        }
+        Ok(repaired)
     }
 
     // ── Template Resolution ──────────────────────────────────────────────
@@ -729,7 +793,15 @@ impl Project {
             Patch::Unchanged => {}
         }
         match &u.position {
-            Patch::Set(v) => fm.position = Some(v.clone()),
+            Patch::Set(v) => {
+                if let Err(MarkplaneError::InvalidPosition(msg)) = crate::position::validate_key(v)
+                {
+                    return Err(MarkplaneError::InvalidPosition(format!(
+                        "{msg} (expected fractional-indexing format: a0 … az, b00 … bzz, …)"
+                    )));
+                }
+                fm.position = Some(v.clone());
+            }
             Patch::Clear => fm.position = None,
             Patch::Unchanged => {}
         }
@@ -1017,20 +1089,10 @@ impl Project {
         let doc: MarkplaneDocument<Task> = self.read_item(id)?;
         let priority = doc.frontmatter.priority.clone();
 
-        // Get all tasks in the same priority group, sorted by position
-        let filter = crate::query::QueryFilter {
-            priority: Some(vec![priority.to_string()]),
-            ..Default::default()
-        };
-        let tasks = self.list_tasks(&filter)?;
-
-        // If any task lacks a position, normalize the group first and re-read
-        let tasks = if tasks.iter().any(|t| t.frontmatter.position.is_none()) {
-            self.normalize_priority_group(&tasks)?;
-            self.list_tasks(&filter)?
-        } else {
-            tasks
-        };
+        // Get all tasks in the same priority group, sorted by position. If any
+        // task lacks a position or has a malformed key, the group is normalized
+        // first.
+        let tasks = self.load_priority_group(&priority, true)?;
 
         // Build sorted list excluding the item being moved
         let others: Vec<_> = tasks.iter().filter(|t| t.frontmatter.id != id).collect();
@@ -1141,19 +1203,26 @@ impl Project {
     }
 
     /// Assign clean sequential position keys to every task in a list.
-    fn normalize_priority_group(&self, tasks: &[MarkplaneDocument<Task>]) -> Result<()> {
+    /// Rewrite the given tasks' position keys to clean sequential keys in the
+    /// order given, writing only the files whose key actually changes.
+    ///
+    /// Position is ordering metadata, not authored content, so `updated` is
+    /// deliberately left untouched.
+    pub(crate) fn normalize_priority_group<'a>(
+        &self,
+        tasks: impl IntoIterator<Item = &'a MarkplaneDocument<Task>>,
+    ) -> Result<()> {
         use crate::position::sequential_keys;
 
+        let tasks: Vec<_> = tasks.into_iter().collect();
         let keys = sequential_keys(tasks.len());
         for (doc, new_pos) in tasks.iter().zip(keys.iter()) {
             if doc.frontmatter.position.as_deref() != Some(new_pos.as_str()) {
-                self.update_task(
-                    &doc.frontmatter.id,
-                    &TaskUpdate {
-                        position: Patch::Set(new_pos.clone()),
-                        ..Default::default()
-                    },
-                )?;
+                let id = &doc.frontmatter.id;
+                let _lock = self.lock_item(id)?;
+                let mut updated_doc: MarkplaneDocument<Task> = self.read_item(id)?;
+                updated_doc.frontmatter.position = Some(new_pos.clone());
+                self.write_item(id, &updated_doc)?;
             }
         }
         Ok(())
@@ -3194,6 +3263,97 @@ mod tests {
         let p1 = get_position(&project, &t1).unwrap();
         let p2 = get_position(&project, &t2).unwrap();
         assert!(p2 < p1, "t2 ({}) should be before t1 ({})", p2, p1);
+    }
+
+    /// Helper: write a position key directly into a task file, bypassing
+    /// validation (simulates hand-edited or pre-validation files).
+    fn write_raw_position(project: &Project, id: &str, position: &str) {
+        let mut doc: MarkplaneDocument<Task> = project.read_item(id).unwrap();
+        doc.frontmatter.position = Some(position.to_string());
+        project.write_item(id, &doc).unwrap();
+    }
+
+    #[test]
+    fn test_update_task_rejects_malformed_position() {
+        let (_tmp, project) = setup_project();
+        let t1 = create_task_with_position(&project, "First", Priority::High, "a0");
+        let err = project
+            .update_task(
+                &t1,
+                &TaskUpdate {
+                    position: Patch::Set("n0".to_string()),
+                    ..Default::default()
+                },
+            )
+            .unwrap_err();
+        assert!(matches!(err, MarkplaneError::InvalidPosition(_)), "{err}");
+        assert!(err.to_string().contains("fractional-indexing"), "{err}");
+        assert_eq!(get_position(&project, &t1).as_deref(), Some("a0"));
+    }
+
+    #[test]
+    fn test_create_task_heals_malformed_positions() {
+        // Regression for GitHub issue #91: hand-written keys like `n0` used to
+        // make every subsequent `add` fail with "too short for its prefix".
+        let (_tmp, project) = setup_project();
+        let t1 = create_task_with_position(&project, "First", Priority::High, "a0");
+        let t2 = create_task_with_position(&project, "Second", Priority::High, "a1");
+        write_raw_position(&project, &t1, "b0");
+        write_raw_position(&project, &t2, "n0");
+        // A different priority group with a malformed key must be left alone.
+        let other = create_task_with_position(&project, "Other", Priority::Low, "a0");
+        write_raw_position(&project, &other, "m1");
+
+        let t3 = project
+            .create_task(
+                "Third",
+                "feature",
+                Priority::High,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap()
+            .id;
+
+        let p1 = get_position(&project, &t1).unwrap();
+        let p2 = get_position(&project, &t2).unwrap();
+        let p3 = get_position(&project, &t3).unwrap();
+        assert_eq!((p1.as_str(), p2.as_str(), p3.as_str()), ("a0", "a1", "a2"));
+        assert_eq!(get_position(&project, &other).as_deref(), Some("m1"));
+    }
+
+    #[test]
+    fn test_repair_malformed_positions_only_touches_affected_groups() {
+        let (_tmp, project) = setup_project();
+        let h1 = create_task_with_position(&project, "H1", Priority::High, "a0");
+        let h2 = create_task_with_position(&project, "H2", Priority::High, "a1");
+        write_raw_position(&project, &h2, "n0");
+        let l1 = create_task_with_position(&project, "L1", Priority::Low, "a5");
+
+        let repaired = project.repair_malformed_positions().unwrap();
+        assert_eq!(repaired, vec!["high".to_string()]);
+        assert_eq!(get_position(&project, &h1).as_deref(), Some("a0"));
+        assert_eq!(get_position(&project, &h2).as_deref(), Some("a1"));
+        assert_eq!(get_position(&project, &l1).as_deref(), Some("a5"));
+
+        assert!(project.repair_malformed_positions().unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_move_item_heals_malformed_positions() {
+        let (_tmp, project) = setup_project();
+        let t1 = create_task_with_position(&project, "First", Priority::High, "a0");
+        let t2 = create_task_with_position(&project, "Second", Priority::High, "a1");
+        write_raw_position(&project, &t2, "n0");
+
+        project.move_item(&t2, MoveDirective::Top).unwrap();
+        let p1 = get_position(&project, &t1).unwrap();
+        let p2 = get_position(&project, &t2).unwrap();
+        assert!(p2 < p1, "t2 ({}) should be before t1 ({})", p2, p1);
+        assert!(crate::position::is_valid_key(&p1));
+        assert!(crate::position::is_valid_key(&p2));
     }
 
     #[test]

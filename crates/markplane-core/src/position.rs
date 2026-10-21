@@ -90,17 +90,54 @@ fn get_integer_part(key: &str) -> Result<&str> {
     Ok(&key[..len])
 }
 
+/// Validate a position key against the Rocicorp fractional-indexing format.
+///
+/// A valid key has a head character (`a`–`z` or `A`–`Z`) that determines the
+/// integer length, followed by exactly that many base-62 digits, followed by an
+/// optional fractional part that must not end in `0`.
+///
+/// Use this before persisting user- or agent-supplied keys so that malformed
+/// keys (e.g. `b0`, `n0`) never reach the files and break later key generation.
+pub fn validate_key(key: &str) -> Result<()> {
+    if key.is_empty() {
+        return Err(pos_err("position key is empty"));
+    }
+    if !key.is_ascii() {
+        return Err(pos_err(format!(
+            "position key '{}' contains non-ASCII characters",
+            key
+        )));
+    }
+    if key == SMALLEST_INTEGER {
+        return Err(pos_err(format!(
+            "position key '{}' is the reserved smallest integer",
+            key
+        )));
+    }
+    let int_part = get_integer_part(key)?;
+    for &c in key.as_bytes()[1..].iter() {
+        digit_value(c)?;
+    }
+    let frac = &key[int_part.len()..];
+    if frac.ends_with(DIGITS[0] as char) {
+        return Err(pos_err(format!(
+            "position key '{}' has a trailing zero in its fractional part",
+            key
+        )));
+    }
+    Ok(())
+}
+
+/// Whether `key` is a well-formed position key. See [`validate_key`].
+pub fn is_valid_key(key: &str) -> bool {
+    validate_key(key).is_ok()
+}
+
 /// Validate an order key. Only called in debug builds.
 fn validate_order_key(key: &str) {
-    assert!(key.len() >= 2, "invalid order key: {}", key);
-    assert!(key != SMALLEST_INTEGER, "invalid order key: {}", key);
-    let int_part = get_integer_part(key).expect("invalid order key");
-    let frac = &key[int_part.len()..];
-    assert!(
-        !frac.ends_with(DIGITS[0] as char),
-        "invalid order key (trailing zero): {}",
-        key
-    );
+    if let Err(e) = validate_key(key) {
+        panic!("invalid order key: {}", e);
+    }
 }
 
 /// Increment the integer part by 1. Returns `Ok(None)` at the ceiling (`z` + max digits).
@@ -387,6 +424,57 @@ mod tests {
         let a1 = "a1";
         assert!(a0 < fractional);
         assert!(fractional < a1);
+    }
+
+    // ── validate_key tests ──────────────────────────────────────────────
+
+    #[test]
+    fn test_validate_key_accepts_generated_keys() {
+        for key in sequential_keys(200) {
+            assert!(is_valid_key(&key), "generated key {} should be valid", key);
+        }
+        for key in [
+            "a0",
+            "az",
+            "b00",
+            "bzz",
+            "c000",
+            "Zz",
+            "Yzz",
+            "a0V",
+            "a0Vz",
+            "zzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        ] {
+            assert!(is_valid_key(key), "{} should be valid", key);
+        }
+        // The generator emits SMALLEST_INTEGER + fraction below the floor, so
+        // only the bare SMALLEST_INTEGER is reserved.
+        let below_floor = format!("{}V", SMALLEST_INTEGER);
+        assert!(
+            is_valid_key(&below_floor),
+            "{} should be valid",
+            below_floor
+        );
+        assert_eq!(
+            generate_key_between(None, Some(&below_floor)).unwrap(),
+            Some(format!("{}F", SMALLEST_INTEGER))
+        );
+    }
+
+    #[test]
+    fn test_validate_key_rejects_malformed_keys() {
+        // Too short for the prefix (the shape reported in GitHub issue #91)
+        for key in ["b0", "n0", "m1", "c00", "Y0"] {
+            let err = validate_key(key).unwrap_err().to_string();
+            assert!(err.contains("too short"), "{}: {}", key, err);
+        }
+        assert!(validate_key("").is_err());
+        assert!(validate_key("0a").is_err(), "head must be a letter");
+        assert!(validate_key("a-").is_err(), "digits must be base-62");
+        assert!(validate_key("a0 ").is_err());
+        assert!(validate_key("a00").is_err(), "trailing zero in fraction");
+        assert!(validate_key("a0é").is_err(), "non-ASCII");
+        assert!(validate_key(SMALLEST_INTEGER).is_err());
     }
 
     // ── generate_key_between tests ──────────────────────────────────────

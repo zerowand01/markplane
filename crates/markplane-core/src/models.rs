@@ -379,6 +379,17 @@ pub enum Priority {
     Someday,
 }
 
+impl Priority {
+    /// All priorities, highest first.
+    pub const ALL: &'static [Priority] = &[
+        Priority::Critical,
+        Priority::High,
+        Priority::Medium,
+        Priority::Low,
+        Priority::Someday,
+    ];
+}
+
 impl fmt::Display for Priority {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
