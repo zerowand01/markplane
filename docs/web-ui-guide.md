@@ -121,6 +121,10 @@ The web UI stays in sync with changes made from any source:
 
 All changes are detected via filesystem watching and pushed to the browser over WebSocket within ~100ms. No manual refresh needed.
 
+### Data version mismatch
+
+If `.markplane/config.yaml` is updated to a data format newer than the running `markplane serve` binary supports (for example after pulling migrated data from a teammate), the server refuses every API request and the UI shows a persistent banner asking you to upgrade markplane and restart `markplane serve`. The banner clears on its own once the restarted server answers successfully. See [File Format: version](file-format.md#version).
+
 ## Keyboard Shortcuts
 
 ### Navigation (press `g` then a letter)

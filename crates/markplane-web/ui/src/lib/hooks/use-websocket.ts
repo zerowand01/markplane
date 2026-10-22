@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { WsEvent } from "@/lib/types";
+import { getDataVersionMismatch } from "@/lib/data-version";
 
 export function useWebSocket() {
   const queryClient = useQueryClient();
@@ -23,11 +24,27 @@ export function useWebSocket() {
           clearTimeout(reconnectTimer.current);
           reconnectTimer.current = null;
         }
+        // The /ws route sits behind the same data version gate as the API, so
+        // a successful connection while the banner is up means the server was
+        // restarted with an upgraded binary. Refetch so the banner clears and
+        // the pages fill in without a manual reload.
+        if (getDataVersionMismatch()) {
+          queryClient.invalidateQueries();
+        }
       };
 
       ws.onmessage = (event) => {
         try {
           const msg: WsEvent = JSON.parse(event.data);
+
+          // While the data version banner is up, every query that ran is in
+          // error state with retries off. Any change on the server (such as
+          // config.yaml being fixed) is a reason to refetch all of them, not
+          // just the keys this event names, so the banner can clear.
+          if (getDataVersionMismatch()) {
+            queryClient.invalidateQueries();
+            return;
+          }
 
           switch (msg.type) {
             case "file_changed": {
@@ -57,8 +74,10 @@ export function useWebSocket() {
 
       ws.onclose = () => {
         wsRef.current = null;
-        // Reconnect after 2 seconds
-        reconnectTimer.current = setTimeout(connect, 2000);
+        // Reconnect after 2 seconds; back off while the server is refusing
+        // connections over a data version mismatch.
+        const delay = getDataVersionMismatch() ? 5000 : 2000;
+        reconnectTimer.current = setTimeout(connect, delay);
       };
 
       ws.onerror = () => {

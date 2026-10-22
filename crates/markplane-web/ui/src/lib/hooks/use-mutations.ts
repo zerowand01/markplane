@@ -1,9 +1,18 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { patchJson, postJson, postAction } from "@/lib/api";
+import { patchJson, postJson, postAction, isDataVersionMismatch } from "@/lib/api";
 import { toast } from "sonner";
 import type { Task, Epic, Plan, Note, ProjectConfig, UpdateConfigRequest, CreateTaskRequest, CreateEpicRequest, CreatePlanRequest, CreateNoteRequest, UpdateTaskRequest, UpdateEpicRequest, UpdatePlanRequest, UpdateNoteRequest } from "@/lib/types";
+
+/**
+ * Toast a failed mutation. A data version mismatch is already explained by the
+ * persistent banner, so it is not repeated as a toast on every interaction.
+ */
+export function toastError(title: string, err: Error) {
+  if (isDataVersionMismatch(err)) return;
+  toast.error(title, { description: err.message });
+}
 
 // Ordered by display priority — first match wins when multiple fields change
 const TASK_FIELD_LABELS: [string, string][] = [
@@ -143,7 +152,7 @@ export function useUpdateTask() {
                 queryClient.invalidateQueries({ queryKey: ["summary"] });
               })
               .catch((err: Error) => {
-                toast.error("Undo failed", { description: err.message });
+                toastError("Undo failed", err);
               });
           }},
           duration: 5000,
@@ -153,7 +162,7 @@ export function useUpdateTask() {
       }
     },
     onError: (err, _vars, context) => {
-      toast.error("Failed to update task", { description: err.message });
+      toastError("Failed to update task", err);
       // Rollback all task list caches
       if (context?.previousQueries) {
         for (const [key, data] of context.previousQueries) {
@@ -185,7 +194,7 @@ export function useCreateTask() {
       queryClient.invalidateQueries({ queryKey: ["summary"] });
     },
     onError: (err) => {
-      toast.error("Failed to create task", { description: err.message });
+      toastError("Failed to create task", err);
     },
   });
 }
@@ -202,7 +211,7 @@ export function useCreateEpic() {
       queryClient.invalidateQueries({ queryKey: ["summary"] });
     },
     onError: (err) => {
-      toast.error("Failed to create epic", { description: err.message });
+      toastError("Failed to create epic", err);
     },
   });
 }
@@ -220,7 +229,7 @@ export function useCreatePlan() {
       queryClient.invalidateQueries({ queryKey: ["summary"] });
     },
     onError: (err) => {
-      toast.error("Failed to create plan", { description: err.message });
+      toastError("Failed to create plan", err);
     },
   });
 }
@@ -236,7 +245,7 @@ export function useCreateNote() {
       queryClient.invalidateQueries({ queryKey: ["notes"] });
     },
     onError: (err) => {
-      toast.error("Failed to create note", { description: err.message });
+      toastError("Failed to create note", err);
     },
   });
 }
@@ -299,7 +308,7 @@ export function useUpdateEpic() {
                 queryClient.invalidateQueries({ queryKey: ["summary"] });
               })
               .catch((err: Error) => {
-                toast.error("Undo failed", { description: err.message });
+                toastError("Undo failed", err);
               });
           }},
           duration: 5000,
@@ -309,7 +318,7 @@ export function useUpdateEpic() {
       }
     },
     onError: (err, _vars, context) => {
-      toast.error("Failed to update epic", { description: err.message });
+      toastError("Failed to update epic", err);
       if (context?.previousQueries) {
         for (const [key, data] of context.previousQueries) {
           queryClient.setQueryData(key, data);
@@ -359,7 +368,7 @@ export function useUpdatePlan() {
                 queryClient.invalidateQueries({ queryKey: ["plans"] });
               })
               .catch((err: Error) => {
-                toast.error("Undo failed", { description: err.message });
+                toastError("Undo failed", err);
               });
           }},
           duration: 5000,
@@ -369,7 +378,7 @@ export function useUpdatePlan() {
       }
     },
     onError: (err, _vars, context) => {
-      toast.error("Failed to update plan", { description: err.message });
+      toastError("Failed to update plan", err);
       if (context?.previousPlan) {
         queryClient.setQueryData(["plans", "detail", context.id], context.previousPlan);
       }
@@ -413,7 +422,7 @@ export function useUpdateNote() {
                 queryClient.invalidateQueries({ queryKey: ["notes"] });
               })
               .catch((err: Error) => {
-                toast.error("Undo failed", { description: err.message });
+                toastError("Undo failed", err);
               });
           }},
           duration: 5000,
@@ -423,7 +432,7 @@ export function useUpdateNote() {
       }
     },
     onError: (err, _vars, context) => {
-      toast.error("Failed to update note", { description: err.message });
+      toastError("Failed to update note", err);
       if (context?.previousNote) {
         queryClient.setQueryData(["notes", "detail", context.id], context.previousNote);
       }
@@ -459,14 +468,14 @@ export function useArchiveItem() {
               invalidateAllEntities(queryClient);
             })
             .catch((err: Error) => {
-              toast.error("Undo failed", { description: err.message });
+              toastError("Undo failed", err);
             });
         }},
         duration: 5000,
       });
     },
     onError: (err) => {
-      toast.error("Failed to archive", { description: err.message });
+      toastError("Failed to archive", err);
     },
   });
 }
@@ -491,14 +500,14 @@ export function useBatchArchive() {
               invalidateAllEntities(queryClient);
             })
             .catch((err: Error) => {
-              toast.error("Undo failed", { description: err.message });
+              toastError("Undo failed", err);
             });
         }},
         duration: 5000,
       });
     },
     onError: (err) => {
-      toast.error("Failed to archive items", { description: err.message });
+      toastError("Failed to archive items", err);
     },
   });
 }
@@ -532,7 +541,7 @@ export function useUpdateConfig() {
       toast.success("Settings updated");
     },
     onError: (err, _vars, context) => {
-      toast.error("Failed to update settings", { description: err.message });
+      toastError("Failed to update settings", err);
       if (context?.previous) {
         queryClient.setQueryData(["config"], context.previous);
       }
@@ -553,7 +562,7 @@ export function useUnarchiveItem() {
       invalidateAllEntities(queryClient);
     },
     onError: (err) => {
-      toast.error("Failed to restore", { description: err.message });
+      toastError("Failed to restore", err);
     },
   });
 }
