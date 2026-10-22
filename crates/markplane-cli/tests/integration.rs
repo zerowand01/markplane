@@ -1,4 +1,5 @@
 use assert_cmd::Command;
+use markplane_core::DATA_VERSION;
 use predicates::prelude::*;
 use tempfile::TempDir;
 
@@ -2372,4 +2373,69 @@ fn test_note_with_template_research() {
     .unwrap();
     assert!(content.contains("## Findings"));
     assert!(content.contains("## Recommendations"));
+}
+
+// ── Data version gate ────────────────────────────────────────────────────
+
+/// Rewrite the `version` field of config.yaml to the given version.
+fn set_data_version(tmp: &TempDir, version: u32) {
+    let path = tmp.path().join(".markplane/config.yaml");
+    let content = std::fs::read_to_string(&path).unwrap();
+    let current = format!("version: {DATA_VERSION}");
+    assert!(
+        content.contains(&current),
+        "config.yaml should contain {current}"
+    );
+    std::fs::write(
+        &path,
+        content.replacen(&current, &format!("version: {version}"), 1),
+    )
+    .unwrap();
+}
+
+#[test]
+fn test_data_version_newer_than_binary_refuses_commands() {
+    let tmp = setup_project();
+    set_data_version(&tmp, DATA_VERSION + 1);
+
+    cmd()
+        .current_dir(tmp.path())
+        .args(["ls"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Data version mismatch"))
+        .stderr(predicate::str::contains(format!(
+            "version {}",
+            DATA_VERSION + 1
+        )))
+        .stderr(predicate::str::contains("Upgrade markplane"));
+
+    // Mutating commands are refused too, and nothing is written.
+    cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Should not be created"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Data version mismatch"));
+    let items: Vec<_> = std::fs::read_dir(tmp.path().join(".markplane/backlog/items"))
+        .unwrap()
+        .collect();
+    assert!(
+        items.is_empty(),
+        "no task should be created on version mismatch"
+    );
+}
+
+#[test]
+fn test_data_version_older_than_binary_points_to_migrate() {
+    let tmp = setup_project();
+    set_data_version(&tmp, 0);
+
+    cmd()
+        .current_dir(tmp.path())
+        .args(["sync"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Data version mismatch"))
+        .stderr(predicate::str::contains("older"));
 }

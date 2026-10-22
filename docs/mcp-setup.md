@@ -379,6 +379,10 @@ The server uses standard JSON-RPC error codes:
 }
 ```
 
+### Data version mismatch
+
+If the `version` in `.markplane/config.yaml` does not match the version the binary supports, the server still starts (so the client gets a readable message rather than a dead connection), but every tool call returns `isError: true` and every resource read returns an internal error. The message says whether to upgrade markplane (data is newer) or that this release cannot upgrade the data (data is older). The check runs on every call, so a `git pull` that changes the data version mid-session is caught immediately. See [File Format: version](file-format.md#version).
+
 ## Notifications
 
 The server recognizes the `notifications/initialized` and `initialized` methods as client acknowledgment notifications. These do not produce a response.

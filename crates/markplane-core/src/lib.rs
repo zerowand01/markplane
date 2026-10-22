@@ -15,9 +15,9 @@ pub use error::{MarkplaneError, Result};
 pub use frontmatter::{parse_frontmatter, parse_frontmatter_raw, write_frontmatter};
 pub use links::{LinkAction, LinkRelation};
 pub use models::{
-    Config, Effort, Epic, EpicStatus, IdPrefix, MarkplaneDocument, Note, NoteStatus, Plan,
-    PlanStatus, Priority, StatusCategory, Task, TaskWorkflow, WorkflowConfig, default_note_types,
-    default_task_types, default_task_workflow, generate_random_id, parse_id,
+    Config, DATA_VERSION, Effort, Epic, EpicStatus, IdPrefix, MarkplaneDocument, Note, NoteStatus,
+    Plan, PlanStatus, Priority, StatusCategory, Task, TaskWorkflow, WorkflowConfig,
+    default_note_types, default_task_types, default_task_workflow, generate_random_id, parse_id,
 };
 pub use project::{
     EpicUpdate, MoveDirective, NoteUpdate, Patch, PlanUpdate, Project, TaskUpdate, UpdateFields,

@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 
 use chrono::{Local, NaiveDate};
 use fs2::FileExt;
-use serde::Serialize;
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 
 use crate::error::{MarkplaneError, Result};
@@ -202,8 +202,21 @@ impl Project {
         Project { root }
     }
 
-    /// Find `.markplane/` by walking up from the current working directory.
+    /// Find `.markplane/` by walking up from the current working directory
+    /// and verify its data version matches this binary.
+    ///
+    /// This is the entry point for every CLI command that operates on an
+    /// existing project, so the version gate lives here rather than in each
+    /// command. Use [`Project::discover`] to locate a project without the gate.
     pub fn from_current_dir() -> Result<Self> {
+        let project = Self::discover()?;
+        project.check_data_version()?;
+        Ok(project)
+    }
+
+    /// Find `.markplane/` by walking up from the current working directory
+    /// without checking its data version.
+    pub fn discover() -> Result<Self> {
         let mut dir = std::env::current_dir().map_err(MarkplaneError::Io)?;
         loop {
             let candidate = dir.join(".markplane");
@@ -215,6 +228,36 @@ impl Project {
                     "No .markplane/ directory found in current or parent directories".into(),
                 ));
             }
+        }
+    }
+
+    /// Verify that `config.yaml`'s `version` matches [`DATA_VERSION`].
+    ///
+    /// Returns [`MarkplaneError::DataVersion`] when the data is newer than this
+    /// binary (upgrade markplane) or older (run `markplane migrate`). Reading
+    /// or writing data in an unknown format could silently drop fields, so
+    /// callers must refuse to proceed on mismatch.
+    pub fn check_data_version(&self) -> Result<()> {
+        // Parse only the version field. A breaking change to the config
+        // schema is exactly what bumps the version, so deserializing the full
+        // `Config` here would fail with a YAML error before the comparison
+        // runs and the user would never see the mismatch message.
+        #[derive(Deserialize)]
+        struct VersionOnly {
+            version: u32,
+        }
+        let path = self.root.join("config.yaml");
+        let content = fs::read_to_string(&path).map_err(|e| {
+            MarkplaneError::NotInitialized(format!("Cannot read config.yaml: {}", e))
+        })?;
+        let found = serde_yaml::from_str::<VersionOnly>(&content)?.version;
+        if found == DATA_VERSION {
+            Ok(())
+        } else {
+            Err(MarkplaneError::DataVersion {
+                found,
+                supported: DATA_VERSION,
+            })
         }
     }
 
@@ -1713,6 +1756,66 @@ mod tests {
         assert!(root.join("templates/note-analysis.md").is_file());
         assert!(root.join(".context").is_dir());
         assert!(root.join(".gitignore").is_file());
+    }
+
+    /// Rewrite the `version` field of config.yaml in place.
+    fn set_data_version(project: &Project, version: u32) {
+        let path = project.root().join("config.yaml");
+        let content = fs::read_to_string(&path).unwrap();
+        let rewritten = content.replacen(
+            &format!("version: {}", DATA_VERSION),
+            &format!("version: {}", version),
+            1,
+        );
+        assert_ne!(content, rewritten, "config.yaml should contain the version");
+        fs::write(&path, rewritten).unwrap();
+    }
+
+    #[test]
+    fn test_check_data_version_matches() {
+        let (_tmp, project) = setup_project();
+        project.check_data_version().unwrap();
+    }
+
+    #[test]
+    fn test_check_data_version_newer_than_binary() {
+        let (_tmp, project) = setup_project();
+        set_data_version(&project, DATA_VERSION + 1);
+        let err = project.check_data_version().unwrap_err();
+        assert!(matches!(
+            err,
+            MarkplaneError::DataVersion { found, supported }
+                if found == DATA_VERSION + 1 && supported == DATA_VERSION
+        ));
+        let msg = err.to_string();
+        assert!(msg.contains("Upgrade markplane"), "{msg}");
+        assert!(!msg.contains("migrate"), "{msg}");
+    }
+
+    #[test]
+    fn test_check_data_version_reports_mismatch_before_schema_errors() {
+        // A future config schema that the current Config struct cannot parse
+        // must still produce the version mismatch, not a YAML error.
+        let (_tmp, project) = setup_project();
+        fs::write(
+            project.root().join("config.yaml"),
+            format!("version: {}\nproject: not-a-map\n", DATA_VERSION + 1),
+        )
+        .unwrap();
+        assert!(project.load_config().is_err());
+        let err = project.check_data_version().unwrap_err();
+        assert!(matches!(err, MarkplaneError::DataVersion { .. }), "{err}");
+    }
+
+    #[test]
+    fn test_check_data_version_older_than_binary() {
+        let (_tmp, project) = setup_project();
+        set_data_version(&project, 0);
+        let err = project.check_data_version().unwrap_err();
+        assert!(matches!(err, MarkplaneError::DataVersion { found: 0, .. }));
+        let msg = err.to_string();
+        assert!(msg.contains("older"), "{msg}");
+        assert!(!msg.contains("Upgrade markplane"), "{msg}");
     }
 
     #[test]

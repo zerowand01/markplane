@@ -1,4 +1,5 @@
 use assert_cmd::Command;
+use markplane_core::DATA_VERSION;
 use serde_json::{Value, json};
 use tempfile::TempDir;
 
@@ -2703,4 +2704,99 @@ fn test_resource_templates() {
     assert!(text.contains("epic:"));
     assert!(text.contains("plan:"));
     assert!(text.contains("note:"));
+}
+
+// ── Data version gate ────────────────────────────────────────────────────
+
+/// Rewrite the `version` field of config.yaml to the given version.
+fn set_data_version(tmp: &TempDir, version: u32) {
+    let path = tmp.path().join(".markplane/config.yaml");
+    let content = std::fs::read_to_string(&path).unwrap();
+    let current = format!("version: {DATA_VERSION}");
+    assert!(
+        content.contains(&current),
+        "config.yaml should contain {current}"
+    );
+    std::fs::write(
+        &path,
+        content.replacen(&current, &format!("version: {version}"), 1),
+    )
+    .unwrap();
+}
+
+#[test]
+fn test_data_version_mismatch_tool_call_returns_error() {
+    let tmp = setup_project();
+    set_data_version(&tmp, DATA_VERSION + 1);
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {"name": "markplane_add", "arguments": {"title": "Should not be created"}}
+        }),
+    );
+    assert_tool_error(&response, "tools/call on newer data");
+    let text = response["result"]["content"][0]["text"].as_str().unwrap();
+    assert!(text.contains("Data version mismatch"), "{text}");
+    assert!(text.contains("Upgrade markplane"), "{text}");
+
+    let items: Vec<_> = std::fs::read_dir(tmp.path().join(".markplane/backlog/items"))
+        .unwrap()
+        .collect();
+    assert!(
+        items.is_empty(),
+        "no task should be created on version mismatch"
+    );
+}
+
+#[test]
+fn test_data_version_mismatch_resource_read_returns_error() {
+    let tmp = setup_project();
+    set_data_version(&tmp, DATA_VERSION + 1);
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "resources/read",
+            "params": {"uri": "markplane://summary"}
+        }),
+    );
+    assert_eq!(response["error"]["code"], -32603); // INTERNAL_ERROR
+    let msg = response["error"]["message"].as_str().unwrap();
+    assert!(msg.contains("Data version mismatch"), "{msg}");
+}
+
+#[test]
+fn test_data_version_mismatch_initialize_still_works() {
+    let tmp = setup_project();
+    set_data_version(&tmp, DATA_VERSION + 1);
+
+    let response = send_request(
+        &tmp,
+        &json!({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}),
+    );
+    assert!(response["error"].is_null());
+    assert_eq!(response["result"]["serverInfo"]["name"], "markplane");
+}
+
+#[test]
+fn test_data_version_mismatch_unknown_tool_keeps_method_not_found() {
+    let tmp = setup_project();
+    set_data_version(&tmp, DATA_VERSION + 1);
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {"name": "markplane_bogus", "arguments": {}}
+        }),
+    );
+    assert_eq!(response["error"]["code"], -32601); // METHOD_NOT_FOUND
 }
