@@ -7,6 +7,7 @@ import { CommandPaletteWrapper } from "@/components/layout/command-palette-wrapp
 import { GlobalCreateDialog } from "@/components/layout/global-create-dialog";
 import { ErrorBoundary } from "@/components/domain/error-boundary";
 import { MobileHeader } from "@/components/layout/mobile-header";
+import { DataVersionBanner } from "@/components/layout/data-version-banner";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -40,6 +41,7 @@ export default function RootLayout({
             <AppSidebar />
             <SidebarInset className="min-w-0">
               <MobileHeader />
+              <DataVersionBanner />
               <main className="flex-1">
                 <ErrorBoundary>{children}</ErrorBoundary>
               </main>

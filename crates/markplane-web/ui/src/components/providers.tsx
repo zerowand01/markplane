@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useState } from "react";
 import { useWebSocket } from "@/lib/hooks/use-websocket";
 import { useKeyboardNav } from "@/lib/hooks/use-keyboard-nav";
+import { isDataVersionMismatch } from "@/lib/api";
 
 function WebSocketProvider({ children }: { children: React.ReactNode }) {
   useWebSocket();
@@ -26,7 +27,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
             staleTime: 30_000,
             gcTime: 5 * 60_000,
             refetchOnWindowFocus: false,
-            retry: 1,
+            // A data version mismatch is fixed by upgrading the binary, not by
+            // retrying, so don't hammer the server while the banner is up.
+            retry: (failureCount, error) =>
+              !isDataVersionMismatch(error) && failureCount < 1,
           },
         },
       })

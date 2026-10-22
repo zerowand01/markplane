@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { postAction } from "@/lib/api";
 import { toast } from "sonner";
+import { toastError } from "@/lib/hooks/use-mutations";
 import { RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { PageTransition } from "@/components/domain/page-transition";
@@ -64,7 +65,7 @@ export function DashboardContent() {
       toast.success("Sync complete");
     },
     onError: (err: Error) => {
-      toast.error("Sync failed", { description: err.message });
+      toastError("Sync failed", err);
     },
   });
 
