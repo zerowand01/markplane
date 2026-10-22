@@ -43,6 +43,24 @@ pub enum MarkplaneError {
 
     #[error("Invalid position key: {0}")]
     InvalidPosition(String),
+
+    #[error("{}", data_version_message(*found, *supported))]
+    DataVersion { found: u32, supported: u32 },
+}
+
+fn data_version_message(found: u32, supported: u32) -> String {
+    if found > supported {
+        format!(
+            "Data version mismatch: .markplane/config.yaml is version {found}, but this \
+             markplane binary supports version {supported}. Upgrade markplane to a newer release."
+        )
+    } else {
+        format!(
+            "Data version mismatch: .markplane/config.yaml is version {found}, which is older \
+             than the version {supported} this markplane binary expects. This release cannot \
+             upgrade it automatically."
+        )
+    }
 }
 
 pub type Result<T> = std::result::Result<T, MarkplaneError>;

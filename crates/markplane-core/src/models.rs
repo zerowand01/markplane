@@ -536,8 +536,14 @@ pub struct Note {
 
 // ── Config ─────────────────────────────────────────────────────────────────
 
+/// The `.markplane/` data format version this binary reads and writes.
+/// Stored as `version` in `config.yaml`. Bump it only for a breaking change
+/// to the on-disk format; additive fields with serde defaults do not count.
+pub const DATA_VERSION: u32 = 1;
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
+    /// Data format version. See [`DATA_VERSION`].
     pub version: u32,
     pub project: ProjectInfo,
     pub context: ContextConfig,
@@ -595,7 +601,7 @@ pub struct ContextConfig {
 impl Default for Config {
     fn default() -> Self {
         Config {
-            version: 1,
+            version: DATA_VERSION,
             project: ProjectInfo {
                 name: "My Project".to_string(),
                 description: "Project description".to_string(),

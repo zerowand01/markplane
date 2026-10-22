@@ -10,6 +10,8 @@ markplane --version
 markplane --help
 ```
 
+Every command except `init` first checks that the `version` in `.markplane/config.yaml` matches the data format this binary supports, and exits with an error on mismatch. See [File Format: version](file-format.md#version).
+
 ---
 
 ## add

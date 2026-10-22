@@ -67,6 +67,9 @@ pub fn list_resources() -> Value {
 
 /// Read a resource by URI.
 pub fn read_resource(id: Value, project: &Project, uri: &str) -> JsonRpcResponse {
+    if let Err(e) = project.check_data_version() {
+        return JsonRpcResponse::error(id, INTERNAL_ERROR, e.to_string());
+    }
     let result = match uri {
         "markplane://summary" => read_summary(project),
         "markplane://active-work" => read_active_work(project),

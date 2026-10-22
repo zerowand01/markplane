@@ -16,9 +16,18 @@ pub fn run(project_path: Option<PathBuf>) -> anyhow::Result<()> {
 
     let project = resolve_project(project_path)?;
 
-    // Sync derived files on startup to ensure they're up-to-date
-    if let Err(e) = project.sync_all() {
-        eprintln!("markplane-mcp: sync warning: {}", e);
+    // The server stays up on a data version mismatch so that every tool call
+    // and resource read can return the mismatch message to the AI client,
+    // which is more actionable than a dead server. Skip the startup sync
+    // because derived files must not be regenerated from an unknown format.
+    match project.check_data_version() {
+        Ok(()) => {
+            // Sync derived files on startup to ensure they're up-to-date
+            if let Err(e) = project.sync_all() {
+                eprintln!("markplane-mcp: sync warning: {}", e);
+            }
+        }
+        Err(e) => eprintln!("markplane-mcp: {}", e),
     }
 
     const MAX_LINE_LENGTH: usize = 1_048_576; // 1 MB
@@ -125,7 +134,7 @@ fn resolve_project(path: Option<PathBuf>) -> anyhow::Result<Project> {
             }
             Ok(Project::new(markplane_dir))
         }
-        None => Project::from_current_dir().map_err(|e| e.into()),
+        None => Project::discover().map_err(|e| e.into()),
     }
 }
 

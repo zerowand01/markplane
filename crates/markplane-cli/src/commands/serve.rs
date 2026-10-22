@@ -144,6 +144,10 @@ pub async fn run(port: u16, open: bool, dev: bool) -> anyhow::Result<()> {
         .route("/api/graph", get(get_graph_all))
         .route("/api/graph/{id}", get(get_graph_focused))
         .route("/ws", get(ws_handler))
+        .route_layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            data_version_gate,
+        ))
         .with_state(state.clone());
 
     let cors = if dev {
@@ -494,6 +498,22 @@ fn error_response(status: StatusCode, code: &str, message: &str) -> (StatusCode,
 }
 
 /// Map a `MarkplaneError` to an HTTP error response.
+/// Refuse every API request while `config.yaml` is at a data version this
+/// binary does not support. Checked per request, not just at startup: a
+/// `git pull` can change the version while the server is running, and
+/// `patch_config` would otherwise round-trip an unknown schema through the
+/// current `Config` struct and drop fields.
+async fn data_version_gate(
+    State(state): State<Arc<AppState>>,
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    if let Err(e) = state.project.check_data_version() {
+        return map_core_error(e).into_response();
+    }
+    next.run(request).await
+}
+
 fn map_core_error(e: MarkplaneError) -> (StatusCode, Json<ApiError>) {
     match &e {
         MarkplaneError::NotFound(_) => {
@@ -525,6 +545,11 @@ fn map_core_error(e: MarkplaneError) -> (StatusCode, Json<ApiError>) {
         MarkplaneError::NotInitialized(_) => error_response(
             StatusCode::INTERNAL_SERVER_ERROR,
             "internal_error",
+            &e.to_string(),
+        ),
+        MarkplaneError::DataVersion { .. } => error_response(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "data_version_mismatch",
             &e.to_string(),
         ),
         MarkplaneError::Io(_) => {

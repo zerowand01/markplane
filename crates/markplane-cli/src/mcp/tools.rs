@@ -414,26 +414,35 @@ pub fn list_tools(project: &Project) -> Value {
 
 /// Dispatch a tool call by name and return a JSON-RPC response.
 pub fn call_tool(id: Value, project: &Project, name: &str, args: Value) -> JsonRpcResponse {
-    let result = match name {
-        "markplane_summary" => handle_summary(project),
-        "markplane_query" => handle_query(project, &args),
-        "markplane_show" => handle_show(project, &args),
-        "markplane_add" => handle_add(project, &args),
-        "markplane_update" => handle_update(project, &args),
-        "markplane_move" => handle_move(project, &args),
-        "markplane_sync" => handle_sync(project),
-        "markplane_context" => handle_context(project, &args),
-        "markplane_graph" => handle_graph(project, &args),
-        "markplane_promote" => handle_promote(project, &args),
-        "markplane_plan" => handle_plan(project, &args),
-        "markplane_link" => handle_link(project, &args),
-        "markplane_check" => handle_check(project),
-        "markplane_archive" => handle_archive(project, &args),
-        "markplane_unarchive" => handle_unarchive(project, &args),
+    // Resolve the tool first so an unknown name keeps its protocol-level
+    // METHOD_NOT_FOUND error regardless of the data version.
+    let handler: Box<dyn FnOnce() -> Result<String, String> + '_> = match name {
+        "markplane_summary" => Box::new(|| handle_summary(project)),
+        "markplane_query" => Box::new(|| handle_query(project, &args)),
+        "markplane_show" => Box::new(|| handle_show(project, &args)),
+        "markplane_add" => Box::new(|| handle_add(project, &args)),
+        "markplane_update" => Box::new(|| handle_update(project, &args)),
+        "markplane_move" => Box::new(|| handle_move(project, &args)),
+        "markplane_sync" => Box::new(|| handle_sync(project)),
+        "markplane_context" => Box::new(|| handle_context(project, &args)),
+        "markplane_graph" => Box::new(|| handle_graph(project, &args)),
+        "markplane_promote" => Box::new(|| handle_promote(project, &args)),
+        "markplane_plan" => Box::new(|| handle_plan(project, &args)),
+        "markplane_link" => Box::new(|| handle_link(project, &args)),
+        "markplane_check" => Box::new(|| handle_check(project)),
+        "markplane_archive" => Box::new(|| handle_archive(project, &args)),
+        "markplane_unarchive" => Box::new(|| handle_unarchive(project, &args)),
         _ => {
             return JsonRpcResponse::error(id, METHOD_NOT_FOUND, format!("Unknown tool: {}", name));
         }
     };
+
+    // Checked on every call, not just at startup: a `git pull` during a
+    // long-running session can change the data version under the server.
+    let result = project
+        .check_data_version()
+        .map_err(|e| e.to_string())
+        .and_then(|()| handler());
 
     match result {
         Ok(content) => JsonRpcResponse::success(
