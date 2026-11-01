@@ -1300,6 +1300,63 @@ mod tests {
     }
 
     #[test]
+    fn test_generate_roadmap_index_links_archived_tasks_into_archive() {
+        let (_tmp, project) = setup_project();
+        let epic = project.create_epic("Epic", Priority::Medium, None).unwrap();
+        let task = project
+            .create_task(
+                "Shipped",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                Some(epic.id.clone()),
+                vec![],
+                None,
+            )
+            .unwrap();
+        project.update_status(&task.id, "done").unwrap();
+        project.archive_item(&task.id).unwrap();
+
+        project.generate_roadmap_index().unwrap();
+        let content = fs::read_to_string(project.root().join("roadmap/INDEX.md")).unwrap();
+        assert!(
+            content.contains(&format!("[{}](../backlog/archive/{}.md)", task.id, task.id)),
+            "{content}"
+        );
+        assert!(content.contains("(1/1, 100%)"));
+    }
+
+    #[test]
+    fn test_generate_plans_index_links_archived_implements_into_archive() {
+        use crate::links::{LinkAction, LinkRelation};
+        let (_tmp, project) = setup_project();
+        let task = project
+            .create_task(
+                "Implemented",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap();
+        let plan = project.create_plan("Plan", vec![], None).unwrap();
+        project
+            .link_items(&task.id, &plan.id, LinkRelation::Plan, LinkAction::Add)
+            .unwrap();
+        project.update_status(&task.id, "done").unwrap();
+        project.archive_item(&task.id).unwrap();
+
+        project.generate_plans_index().unwrap();
+        let content = fs::read_to_string(project.root().join("plans/INDEX.md")).unwrap();
+        assert!(
+            content.contains(&format!("[{}](../backlog/archive/{}.md)", task.id, task.id)),
+            "{content}"
+        );
+    }
+
+    #[test]
     fn test_generate_roadmap_index_no_done_section_when_empty() {
         let (_tmp, project) = setup_project();
         project

@@ -51,7 +51,9 @@ export function EntityCombobox({
 }: EntityComboboxProps) {
   const [open, setOpen] = useState(false);
 
-  const selected = options.find((o) => o.id === value);
+  // Render whatever the item actually references, even when the target is
+  // not in `options` (e.g. an archived epic or plan): the chip navigates by
+  // ID and the single-item API resolves archived files.
 
   const commandList = (
     <Command>
@@ -120,8 +122,8 @@ export function EntityCombobox({
   if (linkValue) {
     return (
       <div className="inline-flex items-center gap-1.5">
-        {selected ? (
-          <WikiLinkChip id={selected.id} />
+        {value ? (
+          <WikiLinkChip id={value} />
         ) : (
           <span className="text-sm text-muted-foreground italic">{placeholder}</span>
         )}
@@ -140,7 +142,7 @@ export function EntityCombobox({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger className="inline-flex items-center gap-1 cursor-pointer text-left">
-          {selected ? (
+          {value ? (
             <span
               className="font-mono text-sm px-1.5 py-0.5 rounded"
               style={
@@ -152,7 +154,7 @@ export function EntityCombobox({
                   : undefined
               }
             >
-              {selected.id}
+              {value}
             </span>
           ) : (
             <span className="text-sm text-muted-foreground italic">{placeholder}</span>
