@@ -10,7 +10,7 @@ tags:
 - architecture
 - next-js
 created: 2026-02-25
-updated: 2026-02-25
+updated: 2026-11-01
 ---
 
 # ADR: Client-only rendering for page components via dynamic ssr:false

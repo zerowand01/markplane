@@ -1823,6 +1823,90 @@ fn test_unarchive() {
 }
 
 #[test]
+fn test_archive_preserves_links_and_views_resolve_archived_targets() {
+    // Repro from TASK-tretc: archive used to strip links from both sides.
+    let tmp = setup_project();
+    let add = |title: &str| {
+        let output = cmd()
+            .current_dir(tmp.path())
+            .args(["add", title])
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        extract_id(&output.stdout)
+    };
+    let a = add("Alpha task");
+    let b = add("Beta task");
+    for args in [
+        vec!["link", a.as_str(), b.as_str(), "-r", "related"],
+        vec!["link", b.as_str(), a.as_str(), "-r", "depends-on"],
+        vec!["update", a.as_str(), "--status", "done"],
+    ] {
+        cmd().current_dir(tmp.path()).args(&args).assert().success();
+    }
+    let items = tmp.path().join(".markplane/backlog/items");
+    let archive = tmp.path().join(".markplane/backlog/archive");
+    let a_before = std::fs::read_to_string(items.join(format!("{a}.md"))).unwrap();
+    let b_before = std::fs::read_to_string(items.join(format!("{b}.md"))).unwrap();
+    assert!(b_before.contains(&a), "precondition: B links to A");
+
+    cmd()
+        .current_dir(tmp.path())
+        .args(["archive", &a])
+        .assert()
+        .success();
+
+    // Nothing but the location of A changed
+    assert_eq!(
+        std::fs::read_to_string(archive.join(format!("{a}.md"))).unwrap(),
+        a_before
+    );
+    assert_eq!(
+        std::fs::read_to_string(items.join(format!("{b}.md"))).unwrap(),
+        b_before
+    );
+
+    // Links to the archived item are valid, and B is not blocked by done work
+    cmd()
+        .current_dir(tmp.path())
+        .args(["check"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("No broken references"));
+    cmd()
+        .current_dir(tmp.path())
+        .args(["dashboard"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("blocked by").not());
+    cmd()
+        .current_dir(tmp.path())
+        .args(["sync"])
+        .assert()
+        .success();
+    let index = std::fs::read_to_string(tmp.path().join(".markplane/backlog/INDEX.md")).unwrap();
+    assert!(index.contains("## Blocked (0)"), "{index}");
+    let blocked_ctx =
+        std::fs::read_to_string(tmp.path().join(".markplane/.context/blocked-items.md")).unwrap();
+    assert!(blocked_ctx.contains("No blocked items"), "{blocked_ctx}");
+
+    // Unarchive is a pure inverse
+    cmd()
+        .current_dir(tmp.path())
+        .args(["unarchive", &a])
+        .assert()
+        .success();
+    assert_eq!(
+        std::fs::read_to_string(items.join(format!("{a}.md"))).unwrap(),
+        a_before
+    );
+    assert_eq!(
+        std::fs::read_to_string(items.join(format!("{b}.md"))).unwrap(),
+        b_before
+    );
+}
+
+#[test]
 fn test_ls_archived() {
     let tmp = setup_project();
     let out1 = cmd()

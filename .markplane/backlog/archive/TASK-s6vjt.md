@@ -10,7 +10,8 @@ plan: null
 depends_on: []
 blocks:
 - TASK-xvx5f
-related: []
+related:
+- NOTE-v3uet
 assignee: null
 tags:
 - roadmap
@@ -18,7 +19,7 @@ tags:
 - web-ui
 position: a0Z
 created: 2026-02-22
-updated: 2026-02-24
+updated: 2026-11-01
 ---
 
 # Implement Now/Next/Later epic lifecycle model

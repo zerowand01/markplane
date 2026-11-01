@@ -1,7 +1,7 @@
 ---
 id: TASK-tretc
 title: Archive strips relationship links from archived and linked items
-status: planned
+status: done
 priority: high
 type: bug
 effort: medium
@@ -80,16 +80,16 @@ The web dashboard (`get_dashboard` in `serve.rs`) already computes blocked items
 
 ## Acceptance Criteria
 
-- [ ] `markplane archive <ID>` changes nothing except the file location; linked items are byte-identical before and after
-- [ ] `markplane unarchive <ID>` is a pure inverse; no repair step needed
-- [ ] Archiving a done epic or plan leaves `epic:`, `plan:` and `implements` on its tasks intact
-- [ ] An active task that depends on a done, archived task is not reported as blocked by `dashboard`, backlog INDEX, `.context/summary.md`, MCP `blocked` resource or `/api/dashboard`
-- [ ] An active task that depends on a cancelled, archived task is still reported as blocked
-- [ ] Backlog INDEX and roadmap INDEX links to archived items point at `archive/<ID>.md`
-- [ ] `markplane check` reports no broken references or asymmetric links for links to archived items
-- [ ] `find_inbound_references()` and its tests are removed
-- [ ] `docs/cli-reference.md`, `docs/architecture.md` and the `markplane_archive` MCP description no longer describe link cleanup
-- [ ] `cargo test --workspace` passes and `cargo clippy --workspace` is warning-free
+- [x] `markplane archive <ID>` changes nothing except the file location; linked items are byte-identical before and after
+- [x] `markplane unarchive <ID>` is a pure inverse; no repair step needed
+- [x] Archiving a done epic or plan leaves `epic:`, `plan:` and `implements` on its tasks intact
+- [x] An active task that depends on a done, archived task is not reported as blocked by `dashboard`, backlog INDEX, `.context/summary.md`, MCP `blocked` resource or `/api/dashboard`
+- [x] An active task that depends on a cancelled, archived task is still reported as blocked
+- [x] Backlog INDEX and roadmap INDEX links to archived items point at `archive/<ID>.md`
+- [x] `markplane check` reports no broken references or asymmetric links for links to archived items
+- [x] `find_inbound_references()` and its tests are removed
+- [x] `docs/cli-reference.md`, `docs/architecture.md` and the `markplane_archive` MCP description no longer describe link cleanup
+- [x] `cargo test --workspace` passes and `cargo clippy --workspace` is warning-free
 
 ## References
 

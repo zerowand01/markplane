@@ -1,6 +1,6 @@
 use colored::Colorize;
 use markplane_core::{
-    Priority, Project, QueryFilter, ScanScope, StatusCategory, find_blocked_items,
+    Priority, Project, QueryFilter, ScanScope, StatusCategory, done_task_ids, find_blocked_items,
 };
 
 pub fn run() -> anyhow::Result<()> {
@@ -8,6 +8,11 @@ pub fn run() -> anyhow::Result<()> {
     let config = project.load_config()?;
     let workflow = &config.workflows.task;
     let items = project.list_tasks(&QueryFilter::default())?;
+    // All tasks (active + archived) for dependency resolution and epic progress
+    let all_tasks = project.list_tasks(&QueryFilter {
+        scope: ScanScope::All,
+        ..Default::default()
+    })?;
     let epics = project.list_epics()?;
 
     // Build category sets for filtering
@@ -59,13 +64,9 @@ pub fn run() -> anyhow::Result<()> {
     }
 
     // Blocked items
-    let blocked = find_blocked_items(&items, workflow);
+    let blocked = find_blocked_items(&items, &all_tasks, workflow);
     if !blocked.is_empty() {
-        let done_ids: std::collections::HashSet<&str> = items
-            .iter()
-            .filter(|i| completed_statuses.contains(i.frontmatter.status.as_str()))
-            .map(|i| i.frontmatter.id.as_str())
-            .collect();
+        let done_ids = done_task_ids(&all_tasks, workflow);
         println!("{}", "Blocked".bold().red());
         for item in &blocked {
             let fm = &item.frontmatter;
@@ -91,10 +92,6 @@ pub fn run() -> anyhow::Result<()> {
         .filter(|e| e.frontmatter.status == markplane_core::EpicStatus::Now)
         .collect();
     if !now_epics.is_empty() {
-        let all_tasks = project.list_tasks(&QueryFilter {
-            scope: ScanScope::All,
-            ..Default::default()
-        })?;
         println!("{}", "Now".bold().cyan());
         for epic in &now_epics {
             let epic_items: Vec<_> = all_tasks

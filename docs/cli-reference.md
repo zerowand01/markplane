@@ -78,7 +78,7 @@ When archiving a single item, provide the ID. When using `--all-done`, all done/
 
 Archived items retain their status (no "archived" status) and remain resolvable via `[[ID]]` cross-references and `markplane show`.
 
-When an item is archived, inbound references from active items are automatically cleaned up. For example, if task A blocks task B and you archive A, the `depends_on: [A]` entry is removed from B's frontmatter. This prevents ghost references to archived items. The cleanup is best-effort — if a file is locked, the archive still succeeds. Note that unarchiving does not restore cleaned-up references; re-link them manually if needed.
+Archiving is a pure file move. The archived item and every item that links to it are left byte-for-byte unchanged: `depends_on`, `blocks`, `related`, `epic`, `plan` and `implements` all keep pointing at the archived ID, and no `updated` dates change. Views resolve those links against the archive, so a task whose dependency is done and archived is not reported as blocked, INDEX links point at `archive/<ID>.md`, and `markplane check` treats links to archived items as valid. `unarchive` is the exact inverse.
 
 **Example:**
 

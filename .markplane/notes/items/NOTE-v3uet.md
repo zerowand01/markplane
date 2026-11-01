@@ -9,7 +9,7 @@ tags:
 - roadmap
 - architecture
 created: 2026-02-22
-updated: 2026-02-22
+updated: 2026-11-01
 ---
 
 # Now/Next/Later roadmap pattern: research and architectural decision

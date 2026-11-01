@@ -11,7 +11,6 @@ use tempfile::NamedTempFile;
 
 use crate::error::{MarkplaneError, Result};
 use crate::frontmatter::{parse_frontmatter, write_frontmatter};
-use crate::links::{LinkAction, LinkRelation};
 use crate::manifest;
 use crate::models::*;
 use crate::query::QueryFilter;
@@ -1271,86 +1270,11 @@ impl Project {
         Ok(())
     }
 
-    /// Find all active items that reference the given ID in their frontmatter fields.
-    ///
-    /// Returns a list of `(referencing_id, relation, action)` tuples that can be
-    /// used to remove the inbound references via `link_items()`.
-    pub fn find_inbound_references(
-        &self,
-        target_id: &str,
-    ) -> Result<Vec<(String, LinkRelation, LinkAction)>> {
-        let mut refs = Vec::new();
-
-        // Scan tasks for references to target_id
-        let tasks = self.list_tasks(&QueryFilter::default())?;
-        for doc in &tasks {
-            let fm = &doc.frontmatter;
-            if fm.id == target_id {
-                continue;
-            }
-            if fm.blocks.iter().any(|b| b == target_id) {
-                refs.push((fm.id.clone(), LinkRelation::Blocks, LinkAction::Remove));
-            }
-            if fm.depends_on.iter().any(|d| d == target_id) {
-                refs.push((fm.id.clone(), LinkRelation::DependsOn, LinkAction::Remove));
-            }
-            if fm.epic.as_deref() == Some(target_id) {
-                refs.push((fm.id.clone(), LinkRelation::Epic, LinkAction::Remove));
-            }
-            if fm.plan.as_deref() == Some(target_id) {
-                refs.push((fm.id.clone(), LinkRelation::Plan, LinkAction::Remove));
-            }
-            if fm.related.iter().any(|r| r == target_id) {
-                refs.push((fm.id.clone(), LinkRelation::Related, LinkAction::Remove));
-            }
-        }
-
-        // Scan plans for references to target_id
-        let plans = self.list_plans()?;
-        for doc in &plans {
-            let fm = &doc.frontmatter;
-            if fm.id == target_id {
-                continue;
-            }
-            if fm.implements.iter().any(|i| i == target_id) {
-                refs.push((fm.id.clone(), LinkRelation::Implements, LinkAction::Remove));
-            }
-            if fm.related.iter().any(|r| r == target_id) {
-                refs.push((fm.id.clone(), LinkRelation::Related, LinkAction::Remove));
-            }
-        }
-
-        // Scan epics for references to target_id
-        let epics = self.list_epics()?;
-        for doc in &epics {
-            let fm = &doc.frontmatter;
-            if fm.id == target_id {
-                continue;
-            }
-            if fm.related.iter().any(|r| r == target_id) {
-                refs.push((fm.id.clone(), LinkRelation::Related, LinkAction::Remove));
-            }
-        }
-
-        // Scan notes for references to target_id
-        let notes = self.list_notes()?;
-        for doc in &notes {
-            let fm = &doc.frontmatter;
-            if fm.id == target_id {
-                continue;
-            }
-            if fm.related.iter().any(|r| r == target_id) {
-                refs.push((fm.id.clone(), LinkRelation::Related, LinkAction::Remove));
-            }
-        }
-
-        Ok(refs)
-    }
-
     /// Move an item to the archive/ subdirectory.
     ///
-    /// Also cleans up inbound references from active items so they don't
-    /// point to an archived item.
+    /// Archiving is a pure file move: the archived item and every item that
+    /// links to it are left byte-for-byte unchanged. Relationship fields keep
+    /// pointing at the archived ID, which `item_path()` still resolves.
     pub fn archive_item(&self, id: &str) -> Result<()> {
         let (prefix, _) = parse_id(id)?;
         let source = self.item_path(id)?;
@@ -1363,25 +1287,16 @@ impl Project {
             )));
         }
 
-        // Find inbound references before archiving
-        let inbound_refs = self.find_inbound_references(id)?;
-
-        // Move the file to archive
         let archive_dir = self.item_dir(&prefix).join("archive");
         fs::create_dir_all(&archive_dir)?;
         let archive_path = archive_dir.join(format!("{}.md", id));
         fs::rename(&source, &archive_path)?;
-
-        // Clean up inbound references from active items
-        for (source_id, relation, action) in inbound_refs {
-            // Best-effort: if cleanup fails, the item is still archived
-            let _ = self.link_items(&source_id, id, relation, action);
-        }
-
         Ok(())
     }
 
     /// Move an item from the archive/ subdirectory back to items/.
+    ///
+    /// The exact inverse of `archive_item()`: nothing but the file location changes.
     pub fn unarchive_item(&self, id: &str) -> Result<()> {
         let (prefix, _) = parse_id(id)?;
         let source = self.item_path(id)?;
@@ -1674,18 +1589,42 @@ fn validate_title_length(title: &str) -> Result<()> {
     Ok(())
 }
 
-/// Find tasks that are blocked (have unresolved dependencies).
-/// An item is blocked if it's not done/cancelled and has at least one
-/// dependency that isn't done.
-pub fn find_blocked_items<'a>(
-    items: &'a [MarkplaneDocument<Task>],
+/// IDs of tasks whose status is in the Completed category.
+///
+/// Pass every task (active and archived) so that `depends_on` entries pointing
+/// at archived done work resolve as satisfied.
+pub fn done_task_ids<'a>(
+    tasks: &'a [MarkplaneDocument<Task>],
     workflow: &TaskWorkflow,
-) -> Vec<&'a MarkplaneDocument<Task>> {
+) -> HashSet<&'a str> {
     let completed_statuses: HashSet<&str> = workflow
         .statuses_in(StatusCategory::Completed)
         .iter()
         .map(|s| s.as_str())
         .collect();
+    tasks
+        .iter()
+        .filter(|t| completed_statuses.contains(t.frontmatter.status.as_str()))
+        .map(|t| t.frontmatter.id.as_str())
+        .collect()
+}
+
+/// Find tasks that are blocked (have unresolved dependencies).
+///
+/// `candidates` are the tasks that may be reported as blocked (normally the
+/// active backlog). `all_tasks` is the set that `depends_on` entries are
+/// resolved against and should include archived tasks, so that a dependency
+/// on done, archived work does not block. Resolution is status-aware rather
+/// than "absent means done": a cancelled dependency keeps blocking whether or
+/// not it has been archived, and a dangling ID blocks until `check` flags it.
+///
+/// A candidate is blocked if it is not done/cancelled and has at least one
+/// dependency that is not done.
+pub fn find_blocked_items<'a>(
+    candidates: &'a [MarkplaneDocument<Task>],
+    all_tasks: &[MarkplaneDocument<Task>],
+    workflow: &TaskWorkflow,
+) -> Vec<&'a MarkplaneDocument<Task>> {
     let closed_statuses: HashSet<&str> = workflow
         .statuses_in(StatusCategory::Completed)
         .iter()
@@ -1693,13 +1632,9 @@ pub fn find_blocked_items<'a>(
         .map(|s| s.as_str())
         .collect();
 
-    let done_ids: HashSet<&str> = items
-        .iter()
-        .filter(|i| completed_statuses.contains(i.frontmatter.status.as_str()))
-        .map(|i| i.frontmatter.id.as_str())
-        .collect();
+    let done_ids = done_task_ids(all_tasks, workflow);
 
-    items
+    candidates
         .iter()
         .filter(|i| {
             !closed_statuses.contains(i.frontmatter.status.as_str())
@@ -1715,6 +1650,7 @@ pub fn find_blocked_items<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::links::{LinkAction, LinkRelation};
     use tempfile::TempDir;
 
     fn setup_project() -> (TempDir, Project) {
@@ -2009,6 +1945,116 @@ mod tests {
     }
 
     #[test]
+    fn test_archive_and_unarchive_preserve_links_byte_for_byte() {
+        let (_tmp, project) = setup_project();
+        let a = project
+            .create_task(
+                "Alpha",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap();
+        let b = project
+            .create_task(
+                "Beta",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap();
+        let epic = project.create_epic("Epic", Priority::Medium, None).unwrap();
+        let plan = project.create_plan("Plan", vec![], None).unwrap();
+        let note = project
+            .create_note("Note", "research", vec![], None)
+            .unwrap();
+
+        project
+            .link_items(&a.id, &plan.id, LinkRelation::Plan, LinkAction::Add)
+            .unwrap();
+        project
+            .link_items(&a.id, &b.id, LinkRelation::Related, LinkAction::Add)
+            .unwrap();
+        project
+            .link_items(&b.id, &a.id, LinkRelation::DependsOn, LinkAction::Add)
+            .unwrap();
+        project
+            .link_items(&a.id, &epic.id, LinkRelation::Epic, LinkAction::Add)
+            .unwrap();
+        project
+            .link_items(&note.id, &a.id, LinkRelation::Related, LinkAction::Add)
+            .unwrap();
+        project.update_status(&a.id, "done").unwrap();
+
+        let ids = [&a.id, &b.id, &epic.id, &plan.id, &note.id];
+        let snapshot = |ids: &[&String]| -> Vec<String> {
+            ids.iter()
+                .map(|id| fs::read_to_string(project.item_path(id).unwrap()).unwrap())
+                .collect()
+        };
+        let before = snapshot(&ids);
+
+        project.archive_item(&a.id).unwrap();
+        assert!(project.is_archived(&a.id).unwrap());
+        assert_eq!(snapshot(&ids), before, "archive must not edit any file");
+
+        // The archived task itself keeps every outbound link
+        let archived: MarkplaneDocument<Task> = project.read_item(&a.id).unwrap();
+        assert_eq!(
+            archived.frontmatter.related,
+            vec![b.id.clone(), note.id.clone()]
+        );
+        assert_eq!(archived.frontmatter.blocks, vec![b.id.clone()]);
+        assert_eq!(archived.frontmatter.epic.as_deref(), Some(epic.id.as_str()));
+        assert_eq!(archived.frontmatter.plan.as_deref(), Some(plan.id.as_str()));
+
+        project.unarchive_item(&a.id).unwrap();
+        assert!(!project.is_archived(&a.id).unwrap());
+        assert_eq!(snapshot(&ids), before, "unarchive must be a pure inverse");
+    }
+
+    #[test]
+    fn test_archive_epic_and_plan_keep_task_membership() {
+        let (_tmp, project) = setup_project();
+        let epic = project.create_epic("Epic", Priority::Medium, None).unwrap();
+        let task = project
+            .create_task(
+                "Task",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap();
+        let plan = project.create_plan("Plan", vec![], None).unwrap();
+        project
+            .link_items(&task.id, &plan.id, LinkRelation::Plan, LinkAction::Add)
+            .unwrap();
+        project
+            .link_items(&task.id, &epic.id, LinkRelation::Epic, LinkAction::Add)
+            .unwrap();
+        project.update_status(&epic.id, "done").unwrap();
+        project.update_status(&plan.id, "done").unwrap();
+
+        project.archive_item(&epic.id).unwrap();
+        project.archive_item(&plan.id).unwrap();
+
+        let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
+        assert_eq!(doc.frontmatter.epic.as_deref(), Some(epic.id.as_str()));
+        assert_eq!(doc.frontmatter.plan.as_deref(), Some(plan.id.as_str()));
+        let plan_doc: MarkplaneDocument<Plan> = project.read_item(&plan.id).unwrap();
+        assert_eq!(plan_doc.frontmatter.implements, vec![task.id.clone()]);
+    }
+
+    #[test]
     fn test_archive_nonexistent() {
         let (_tmp, project) = setup_project();
         let result = project.archive_item("TASK-zzzzz");
@@ -2239,7 +2285,7 @@ mod tests {
         let items = project
             .list_tasks(&crate::query::QueryFilter::default())
             .unwrap();
-        let blocked = find_blocked_items(&items, &config.workflows.task);
+        let blocked = find_blocked_items(&items, &items, &config.workflows.task);
         assert!(blocked.is_empty());
     }
 
@@ -2278,7 +2324,7 @@ mod tests {
         let items = project
             .list_tasks(&crate::query::QueryFilter::default())
             .unwrap();
-        let blocked = find_blocked_items(&items, &config.workflows.task);
+        let blocked = find_blocked_items(&items, &items, &config.workflows.task);
         assert_eq!(blocked.len(), 1);
         assert_eq!(blocked[0].frontmatter.id, blocked_task.id);
     }
@@ -2321,8 +2367,143 @@ mod tests {
         let items = project
             .list_tasks(&crate::query::QueryFilter::default())
             .unwrap();
-        let blocked = find_blocked_items(&items, &config.workflows.task);
+        let blocked = find_blocked_items(&items, &items, &config.workflows.task);
         assert!(blocked.is_empty()); // No longer blocked
+    }
+
+    /// Create two tasks where `blocked` depends on `blocker`, set the blocker's
+    /// status, archive it, and return (active tasks, all tasks, config).
+    fn setup_archived_dependency(
+        blocker_status: &str,
+    ) -> (
+        Project,
+        Vec<MarkplaneDocument<Task>>,
+        Vec<MarkplaneDocument<Task>>,
+        Config,
+        TempDir,
+    ) {
+        let (tmp, project) = setup_project();
+        let blocker = project
+            .create_task(
+                "Blocker",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap();
+        let blocked_task = project
+            .create_task(
+                "Blocked",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap();
+        project
+            .link_items(
+                &blocked_task.id,
+                &blocker.id,
+                LinkRelation::DependsOn,
+                LinkAction::Add,
+            )
+            .unwrap();
+        project.update_status(&blocker.id, blocker_status).unwrap();
+        project.archive_item(&blocker.id).unwrap();
+
+        let config = project.load_config().unwrap();
+        let active = project
+            .list_tasks(&crate::query::QueryFilter::default())
+            .unwrap();
+        let all = project
+            .list_tasks(&crate::query::QueryFilter {
+                scope: crate::query::ScanScope::All,
+                ..Default::default()
+            })
+            .unwrap();
+        (project, active, all, config, tmp)
+    }
+
+    #[test]
+    fn test_find_blocked_items_archived_done_dependency_not_blocked() {
+        let (_project, active, all, config, _tmp) = setup_archived_dependency("done");
+        assert_eq!(
+            active.len(),
+            1,
+            "archived blocker is not in the active list"
+        );
+        assert!(
+            !active[0].frontmatter.depends_on.is_empty(),
+            "link preserved"
+        );
+        let blocked = find_blocked_items(&active, &all, &config.workflows.task);
+        assert!(
+            blocked.is_empty(),
+            "done archived dependency must not block"
+        );
+    }
+
+    #[test]
+    fn test_find_blocked_items_archived_cancelled_dependency_still_blocks() {
+        let (_project, active, all, config, _tmp) = setup_archived_dependency("cancelled");
+        let blocked = find_blocked_items(&active, &all, &config.workflows.task);
+        assert_eq!(
+            blocked.len(),
+            1,
+            "cancelled archived dependency must still block"
+        );
+        assert_eq!(blocked[0].frontmatter.title, "Blocked");
+    }
+
+    #[test]
+    fn test_find_blocked_items_archived_tasks_are_not_candidates() {
+        // An archived task that is itself blocked must not be reported when
+        // the caller passes only active tasks as candidates.
+        let (_tmp, project) = setup_project();
+        let dep = project
+            .create_task(
+                "Dep",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap();
+        let stale = project
+            .create_task(
+                "Stale",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap();
+        project
+            .link_items(&stale.id, &dep.id, LinkRelation::DependsOn, LinkAction::Add)
+            .unwrap();
+        project.archive_item(&stale.id).unwrap();
+
+        let config = project.load_config().unwrap();
+        let active = project
+            .list_tasks(&crate::query::QueryFilter::default())
+            .unwrap();
+        let all = project
+            .list_tasks(&crate::query::QueryFilter {
+                scope: crate::query::ScanScope::All,
+                ..Default::default()
+            })
+            .unwrap();
+        let blocked = find_blocked_items(&active, &all, &config.workflows.task);
+        assert!(blocked.is_empty());
     }
 
     #[test]
