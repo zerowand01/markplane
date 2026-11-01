@@ -421,73 +421,47 @@ fn collect_asymmetric_related(
     }
 }
 
+/// Load the frontmatter of every item under `dir` (both `items/` and
+/// `archive/`), keyed by ID.
+fn load_frontmatter_by_id<T: serde::de::DeserializeOwned>(
+    dir: &Path,
+    id_of: impl Fn(&T) -> String,
+) -> Result<HashMap<String, T>> {
+    let mut map = HashMap::new();
+    if !dir.exists() {
+        return Ok(map);
+    }
+    for pattern in [scan_pattern(dir), archive_scan_pattern(dir)] {
+        for path in glob::glob(&pattern)
+            .unwrap_or_else(|_| glob::glob("").unwrap())
+            .flatten()
+        {
+            let content = std::fs::read_to_string(&path)?;
+            if let Ok(doc) = frontmatter::parse_frontmatter::<T>(&content) {
+                map.insert(id_of(&doc.frontmatter), doc.frontmatter);
+            }
+        }
+    }
+    Ok(map)
+}
+
 /// Validate that all reciprocal links are symmetric.
 /// Returns a list of asymmetric links where one side of a reciprocal pair is missing.
 /// Only checks targets that exist (broken references are caught by `validate_references`).
+/// Archived items are included on both sides, since archiving preserves links.
 pub fn validate_reciprocal_links(project: &Project) -> Result<Vec<AsymmetricLink>> {
     let mut asymmetric = Vec::new();
 
-    // Load all items into HashMaps keyed by ID
-    let mut tasks: HashMap<String, Task> = HashMap::new();
-    let mut epics: HashMap<String, Epic> = HashMap::new();
-    let mut plans: HashMap<String, Plan> = HashMap::new();
-    let mut notes: HashMap<String, Note> = HashMap::new();
-
-    let task_dir = project.item_dir(&IdPrefix::Task);
-    if task_dir.exists() {
-        let pattern = scan_pattern(&task_dir);
-        for path in glob::glob(&pattern)
-            .unwrap_or_else(|_| glob::glob("").unwrap())
-            .flatten()
-        {
-            let content = std::fs::read_to_string(&path)?;
-            if let Ok(doc) = frontmatter::parse_frontmatter::<Task>(&content) {
-                tasks.insert(doc.frontmatter.id.clone(), doc.frontmatter);
-            }
-        }
-    }
-
-    let epic_dir = project.item_dir(&IdPrefix::Epic);
-    if epic_dir.exists() {
-        let pattern = scan_pattern(&epic_dir);
-        for path in glob::glob(&pattern)
-            .unwrap_or_else(|_| glob::glob("").unwrap())
-            .flatten()
-        {
-            let content = std::fs::read_to_string(&path)?;
-            if let Ok(doc) = frontmatter::parse_frontmatter::<Epic>(&content) {
-                epics.insert(doc.frontmatter.id.clone(), doc.frontmatter);
-            }
-        }
-    }
-
-    let plan_dir = project.item_dir(&IdPrefix::Plan);
-    if plan_dir.exists() {
-        let pattern = scan_pattern(&plan_dir);
-        for path in glob::glob(&pattern)
-            .unwrap_or_else(|_| glob::glob("").unwrap())
-            .flatten()
-        {
-            let content = std::fs::read_to_string(&path)?;
-            if let Ok(doc) = frontmatter::parse_frontmatter::<Plan>(&content) {
-                plans.insert(doc.frontmatter.id.clone(), doc.frontmatter);
-            }
-        }
-    }
-
-    let note_dir = project.item_dir(&IdPrefix::Note);
-    if note_dir.exists() {
-        let pattern = scan_pattern(&note_dir);
-        for path in glob::glob(&pattern)
-            .unwrap_or_else(|_| glob::glob("").unwrap())
-            .flatten()
-        {
-            let content = std::fs::read_to_string(&path)?;
-            if let Ok(doc) = frontmatter::parse_frontmatter::<Note>(&content) {
-                notes.insert(doc.frontmatter.id.clone(), doc.frontmatter);
-            }
-        }
-    }
+    // Load every item, archived ones included: links are kept across the
+    // archive boundary, so both sides of a pair may live in different dirs.
+    let tasks: HashMap<String, Task> =
+        load_frontmatter_by_id(&project.item_dir(&IdPrefix::Task), |t: &Task| t.id.clone())?;
+    let epics: HashMap<String, Epic> =
+        load_frontmatter_by_id(&project.item_dir(&IdPrefix::Epic), |e: &Epic| e.id.clone())?;
+    let plans: HashMap<String, Plan> =
+        load_frontmatter_by_id(&project.item_dir(&IdPrefix::Plan), |p: &Plan| p.id.clone())?;
+    let notes: HashMap<String, Note> =
+        load_frontmatter_by_id(&project.item_dir(&IdPrefix::Note), |n: &Note| n.id.clone())?;
 
     // Check reciprocal pairs on tasks
     for (id, task) in &tasks {
@@ -1425,10 +1399,8 @@ mod tests {
         );
     }
 
-    // ── archive cleanup ─────────────────────────────────────────────────
-
     #[test]
-    fn test_archive_cleans_inbound_blocks() {
+    fn test_reciprocal_links_checked_across_archive_boundary() {
         use crate::links::{LinkAction, LinkRelation};
         use crate::models::{Effort, Priority};
         use crate::project::Project;
@@ -1437,89 +1409,41 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let root = tmp.path().join(".markplane");
         let project = Project::init(root, "Test", "Test").unwrap();
-
-        let t1 = project
-            .create_task(
-                "Blocker",
-                "feature",
-                Priority::Medium,
-                Effort::Small,
-                None,
-                vec![],
-                None,
-            )
-            .unwrap();
-        let t2 = project
-            .create_task(
-                "Blocked",
-                "feature",
-                Priority::Medium,
-                Effort::Small,
-                None,
-                vec![],
-                None,
-            )
-            .unwrap();
-
+        let mk = |title: &str| {
+            project
+                .create_task(
+                    title,
+                    "feature",
+                    Priority::Medium,
+                    Effort::Small,
+                    None,
+                    vec![],
+                    None,
+                )
+                .unwrap()
+                .id
+        };
+        let blocker = mk("Blocker");
+        let blocked = mk("Blocked");
         project
-            .link_items(&t1.id, &t2.id, LinkRelation::Blocks, LinkAction::Add)
+            .link_items(&blocker, &blocked, LinkRelation::Blocks, LinkAction::Add)
             .unwrap();
+        project.update_status(&blocker, "done").unwrap();
+        project.archive_item(&blocker).unwrap();
 
-        // Archive t1 — should clean up t2's depends_on
-        project.archive_item(&t1.id).unwrap();
+        // Intact pair across the boundary is symmetric
+        assert!(validate_reciprocal_links(&project).unwrap().is_empty());
 
-        let doc2: crate::models::MarkplaneDocument<Task> = project.read_item(&t2.id).unwrap();
-        assert!(
-            !doc2.frontmatter.depends_on.contains(&t1.id),
-            "depends_on should be cleaned after archiving blocker"
-        );
-    }
+        // Hand-edit the active side to drop its depends_on: the archived
+        // side still says `blocks`, and check must see it.
+        let mut doc: crate::models::MarkplaneDocument<Task> = project.read_item(&blocked).unwrap();
+        doc.frontmatter.depends_on.clear();
+        project.write_item(&blocked, &doc).unwrap();
 
-    #[test]
-    fn test_archive_cleans_inbound_related() {
-        use crate::links::{LinkAction, LinkRelation};
-        use crate::models::{Effort, Priority};
-        use crate::project::Project;
-        use tempfile::TempDir;
-
-        let tmp = TempDir::new().unwrap();
-        let root = tmp.path().join(".markplane");
-        let project = Project::init(root, "Test", "Test").unwrap();
-
-        let t1 = project
-            .create_task(
-                "Task A",
-                "feature",
-                Priority::Medium,
-                Effort::Small,
-                None,
-                vec![],
-                None,
-            )
-            .unwrap();
-        let t2 = project
-            .create_task(
-                "Task B",
-                "feature",
-                Priority::Medium,
-                Effort::Small,
-                None,
-                vec![],
-                None,
-            )
-            .unwrap();
-
-        project
-            .link_items(&t1.id, &t2.id, LinkRelation::Related, LinkAction::Add)
-            .unwrap();
-
-        // Archive t1 — should clean up t2's related
-        project.archive_item(&t1.id).unwrap();
-
-        let doc2: crate::models::MarkplaneDocument<Task> = project.read_item(&t2.id).unwrap();
-        assert!(
-            !doc2.frontmatter.related.contains(&t1.id),
-            "related should be cleaned after archiving"
-        );
+        let asymmetric = validate_reciprocal_links(&project).unwrap();
+        assert_eq!(asymmetric.len(), 1, "{asymmetric:?}");
+        assert_eq!(asymmetric[0].source_id, blocker);
+        assert_eq!(asymmetric[0].target_id, blocked);
+        assert_eq!(asymmetric[0].missing_field, "depends_on");
     }
 }

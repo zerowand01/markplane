@@ -382,7 +382,7 @@ pub fn list_tools(project: &Project) -> Value {
             },
             {
                 "name": "markplane_archive",
-                "description": "Archive an item (move from items/ to archive/). Works for any entity type.",
+                "description": "Archive an item (move from items/ to archive/). Works for any entity type. A pure file move: all relationship links on the item and on items that reference it are preserved.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {

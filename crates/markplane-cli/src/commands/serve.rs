@@ -1049,7 +1049,7 @@ async fn get_summary(
     let epics = project.list_epics().map_err(map_core_error)?;
 
     let workflow = &config.workflows.task;
-    let blocked = find_blocked_items(&tasks, workflow);
+    let blocked = find_blocked_items(&tasks, &all_tasks, workflow);
 
     let active_statuses: HashSet<&str> = workflow
         .statuses_in(StatusCategory::Active)

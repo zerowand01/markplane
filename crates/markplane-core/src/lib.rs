@@ -21,7 +21,7 @@ pub use models::{
 };
 pub use project::{
     EpicUpdate, MoveDirective, NoteUpdate, Patch, PlanUpdate, Project, TaskUpdate, UpdateFields,
-    apply_tag_changes, find_blocked_items,
+    apply_tag_changes, done_task_ids, find_blocked_items,
 };
 pub use query::{QueryFilter, ScanScope};
 pub use references::{

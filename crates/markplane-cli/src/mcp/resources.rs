@@ -1,8 +1,7 @@
-use std::collections::HashSet;
 use std::fs;
 
 use markplane_core::manifest;
-use markplane_core::{IdPrefix, Project, QueryFilter, StatusCategory, parse_id};
+use markplane_core::{IdPrefix, Project, QueryFilter, ScanScope, StatusCategory, parse_id};
 use serde_json::{Value, json};
 
 use super::protocol::{INTERNAL_ERROR, INVALID_PARAMS, JsonRpcResponse};
@@ -223,18 +222,16 @@ fn read_blocked(project: &Project) -> Result<String, String> {
     let items = project
         .list_tasks(&QueryFilter::default())
         .map_err(|e| e.to_string())?;
+    // Resolve dependencies against archived tasks too
+    let all_tasks = project
+        .list_tasks(&QueryFilter {
+            scope: ScanScope::All,
+            ..Default::default()
+        })
+        .map_err(|e| e.to_string())?;
 
-    let blocked = markplane_core::find_blocked_items(&items, workflow);
-    let completed_statuses: HashSet<&str> = workflow
-        .statuses_in(StatusCategory::Completed)
-        .iter()
-        .map(|s| s.as_str())
-        .collect();
-    let done_ids: HashSet<&str> = items
-        .iter()
-        .filter(|doc| completed_statuses.contains(doc.frontmatter.status.as_str()))
-        .map(|doc| doc.frontmatter.id.as_str())
-        .collect();
+    let blocked = markplane_core::find_blocked_items(&items, &all_tasks, workflow);
+    let done_ids = markplane_core::done_task_ids(&all_tasks, workflow);
 
     if blocked.is_empty() {
         return Ok("# Blocked Items\n\nNo items with unresolved dependencies.\n".to_string());

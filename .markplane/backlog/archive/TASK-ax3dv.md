@@ -9,13 +9,14 @@ epic: null
 plan: null
 depends_on: []
 blocks: []
-related: []
+related:
+- NOTE-kbtk5
 assignee: null
 tags:
 - web-ui
 position: a0
 created: 2026-02-25
-updated: 2026-02-25
+updated: 2026-11-01
 ---
 
 # Fix hydration mismatch on pages using Suspense with PageTransition

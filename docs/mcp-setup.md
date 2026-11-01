@@ -184,7 +184,7 @@ The server exposes 15 tools via the `tools/list` method.
 
 | Tool | Description | Required Params | Optional Params |
 |------|-------------|-----------------|-----------------|
-| `markplane_archive` | Move an item to the archive. | `id` (string) | *(none)* |
+| `markplane_archive` | Move an item to the archive. A pure file move: links on the item and on items that reference it are preserved. | `id` (string) | *(none)* |
 | `markplane_unarchive` | Restore an archived item back to active items. | `id` (string) | *(none)* |
 
 ### Maintenance
