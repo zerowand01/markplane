@@ -209,6 +209,8 @@ export interface GraphNode {
   status: string;
   priority?: string;
   tags?: string[];
+  /** Archived task included only because an active task depends on it. */
+  archived?: boolean;
 }
 
 export interface GraphEdge {

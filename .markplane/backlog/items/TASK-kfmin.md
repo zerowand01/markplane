@@ -1,7 +1,7 @@
 ---
 id: TASK-kfmin
 title: Web graph omits dependency edges to archived blockers
-status: planned
+status: done
 priority: medium
 type: bug
 effort: small
@@ -52,11 +52,11 @@ The `graph-view.tsx` filter at the `allowedNodes` check already drops edges whos
 
 ## Acceptance Criteria
 
-- [ ] An active task whose `depends_on` points at an archived task shows that edge in `/api/graph` and in the graph page
-- [ ] Archived nodes added this way are distinguishable from active nodes
-- [ ] Archived tasks not referenced by any active item are still excluded
-- [ ] Focused graph (`/api/graph/{id}`) behaves the same way
-- [ ] `cargo test --workspace` and `cargo clippy --workspace` pass; UI typecheck and lint pass
+- [x] An active task whose `depends_on` points at an archived task shows that edge in `/api/graph` and in the graph page
+- [x] Archived nodes added this way are distinguishable from active nodes
+- [x] Archived tasks not referenced by any active item are still excluded
+- [x] Focused graph (`/api/graph/{id}`) behaves the same way
+- [x] `cargo test --workspace` and `cargo clippy --workspace` pass; UI typecheck and lint pass
 
 ## References
 

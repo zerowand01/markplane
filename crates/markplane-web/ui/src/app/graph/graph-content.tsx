@@ -42,6 +42,10 @@ export function GraphContent() {
   const selected = getSelectedFromParams(searchParams);
 
   const { data: graphData, isLoading, error, refetch } = useGraph(focusId);
+  // Archived items reach the graph only through links from active items;
+  // the detail sheet needs to know so it offers Restore instead of Archive.
+  const selectedArchived =
+    graphData?.nodes.find((n) => n.id === selected?.id)?.archived ?? false;
 
   const openItem = useCallback(
     (id: string) => {
@@ -112,22 +116,26 @@ export function GraphContent() {
       taskId={selected?.prefix === "TASK" ? selected.id : null}
       open={selected?.prefix === "TASK"}
       onOpenChange={onSheetOpenChange}
+      archived={selectedArchived}
     />
     <EpicDetailSheet
       epicId={selected?.prefix === "EPIC" ? selected.id : null}
       open={selected?.prefix === "EPIC"}
       onOpenChange={onSheetOpenChange}
       onTaskClick={openItem}
+      archived={selectedArchived}
     />
     <PlanDetailSheet
       planId={selected?.prefix === "PLAN" ? selected.id : null}
       open={selected?.prefix === "PLAN"}
       onOpenChange={onSheetOpenChange}
+      archived={selectedArchived}
     />
     <NoteDetailSheet
       noteId={selected?.prefix === "NOTE" ? selected.id : null}
       open={selected?.prefix === "NOTE"}
       onOpenChange={onSheetOpenChange}
+      archived={selectedArchived}
     />
     </PageTransition>
   );

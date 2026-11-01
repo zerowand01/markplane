@@ -171,7 +171,9 @@ function computeAllowedNodes(
 ): Set<string> {
   const allowed = new Set<string>();
   for (const n of graphData.nodes) {
-    if (!filters.showCompleted && isNodeClosed(n, workflow)) continue;
+    // Archived nodes are only present because an active item links to them
+    // (typically a blocker), so the "hide completed" filter does not apply.
+    if (!filters.showCompleted && isNodeClosed(n, workflow) && !n.archived) continue;
     if (filters.priorities.size > 0 && n.priority && !filters.priorities.has(n.priority)) continue;
     if (filters.tags.size > 0 && (!n.tags || !n.tags.some((t) => filters.tags.has(t)))) continue;
     if (filters.epics.size > 0) {
@@ -206,6 +208,7 @@ function buildNodeData(
     entityColor,
     statusColor: statusToColor(node.status, workflow),
     isDone: isNodeClosed(node, workflow) ? "true" : "",
+    isArchived: node.archived ? "true" : "",
     sourcePosition,
     targetPosition,
   };
@@ -513,6 +516,7 @@ function ItemNode({ data }: { data: Record<string, string | Position> }) {
       style={{
         borderTopColor: data.entityColor as string,
         borderTopWidth: 3,
+        borderStyle: data.isArchived ? "dashed" : undefined,
         opacity: data.isDone ? 0.4 : 1,
       }}
     >
@@ -525,6 +529,9 @@ function ItemNode({ data }: { data: Record<string, string | Position> }) {
           className="w-2 h-2 rounded-full"
           style={{ backgroundColor: data.statusColor as string }}
         />
+        {data.isArchived && (
+          <span className="text-[9px] uppercase tracking-wide text-muted-foreground">archived</span>
+        )}
       </div>
       <p title={data.label as string} className="text-xs font-medium line-clamp-2 leading-tight">
         {data.label as string}
@@ -542,6 +549,7 @@ function EpicGroupNode({ data }: { data: Record<string, string | Position> }) {
     <div
       className="rounded-xl border border-dashed"
       style={{
+        opacity: data.isArchived ? 0.6 : 1,
         borderColor: data.entityColor as string,
         backgroundColor: "color-mix(in oklch, var(--card) 60%, transparent)",
         width: "100%",
