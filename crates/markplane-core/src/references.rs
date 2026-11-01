@@ -1586,9 +1586,23 @@ mod tests {
         ];
         expected.sort();
         assert_eq!(ids, expected);
+        let parent_dir = |p: &str| {
+            Path::new(p)
+                .parent()
+                .and_then(|d| d.file_name())
+                .map(|n| n.to_string_lossy().to_string())
+        };
         for d in &dups {
-            assert!(d.active_file.contains("/items/"), "{d:?}");
-            assert!(d.archived_file.contains("/archive/"), "{d:?}");
+            assert_eq!(
+                parent_dir(&d.active_file).as_deref(),
+                Some("items"),
+                "{d:?}"
+            );
+            assert_eq!(
+                parent_dir(&d.archived_file).as_deref(),
+                Some("archive"),
+                "{d:?}"
+            );
         }
     }
 }
