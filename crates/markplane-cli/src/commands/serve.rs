@@ -20,7 +20,7 @@ use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 
 use markplane_core::{
-    Effort, Epic, EpicStatus, EpicUpdate, LinkAction, LinkRelation, MarkplaneDocument,
+    Effort, Epic, EpicStatus, EpicUpdate, IdPrefix, LinkAction, LinkRelation, MarkplaneDocument,
     MarkplaneError, Note, NoteUpdate, Patch, Plan, PlanUpdate, Priority, Project, QueryFilter,
     ScanScope, StatusCategory, Task, TaskUpdate, find_blocked_items, parse_id,
 };
@@ -2594,6 +2594,10 @@ struct GraphNodeResponse {
     priority: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     tags: Vec<String>,
+    /// True for an archived task included only because an active task
+    /// still depends on it.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    archived: bool,
 }
 
 #[derive(Serialize)]
@@ -2650,14 +2654,23 @@ fn build_graph(project: &Project, focus_id: Option<&str>) -> anyhow::Result<Grap
                 status: fm.status.to_string(),
                 priority: Some(fm.priority.to_string()),
                 tags: fm.tags.clone(),
+                archived: false,
             },
         );
-        // Only emit blocks edges (skip depends_on — blocks already covers the
-        // same relationship from the other side)
+        // Emit the dependency from both sides as a single `blocks` edge
+        // (blocker → blocked) and deduplicate below. Walking depends_on too
+        // is what lets an archived blocker be found and loaded.
         for blk in &fm.blocks {
             edges.push(GraphEdgeResponse {
                 source: fm.id.clone(),
                 target: blk.clone(),
+                relation: "blocks".to_string(),
+            });
+        }
+        for dep in &fm.depends_on {
+            edges.push(GraphEdgeResponse {
+                source: dep.clone(),
+                target: fm.id.clone(),
                 relation: "blocks".to_string(),
             });
         }
@@ -2691,6 +2704,7 @@ fn build_graph(project: &Project, focus_id: Option<&str>) -> anyhow::Result<Grap
                 status: fm.status.to_string(),
                 priority: Some(fm.priority.to_string()),
                 tags: fm.tags.clone(),
+                archived: false,
             },
         );
         for rel in &fm.related {
@@ -2715,6 +2729,7 @@ fn build_graph(project: &Project, focus_id: Option<&str>) -> anyhow::Result<Grap
                 status: fm.status.to_string(),
                 priority: None,
                 tags: vec![],
+                archived: false,
             },
         );
         for imp in &fm.implements {
@@ -2746,6 +2761,7 @@ fn build_graph(project: &Project, focus_id: Option<&str>) -> anyhow::Result<Grap
                 status: fm.status.to_string(),
                 priority: None,
                 tags: vec![],
+                archived: false,
             },
         );
         for rel in &fm.related {
@@ -2757,22 +2773,55 @@ fn build_graph(project: &Project, focus_id: Option<&str>) -> anyhow::Result<Grap
         }
     }
 
+    // Edge endpoints that were not loaded are archived items, since archiving
+    // preserves links (TASK-tretc). Resolve each one by ID (item_path() falls
+    // through to archive/) and include it flagged `archived` so the edge stays
+    // visible. Only referenced archived items are loaded, one file each.
+    // Dangling IDs resolve nowhere, are skipped here, and are reported by
+    // `markplane check`.
+    let mut missing: Vec<String> = edges
+        .iter()
+        .flat_map(|e| [e.source.as_str(), e.target.as_str()])
+        .filter(|id| !nodes_map.contains_key(*id))
+        .map(str::to_string)
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+    missing.sort();
+    for id in missing {
+        let Some((node, epic)) = load_archived_node(project, &id) else {
+            continue;
+        };
+        // Keep an archived task inside its (active) epic group
+        if let Some(epic) = epic
+            && nodes_map.contains_key(&epic)
+        {
+            edges.push(GraphEdgeResponse {
+                source: epic,
+                target: id.clone(),
+                relation: "epic".to_string(),
+            });
+        }
+        nodes_map.insert(id, node);
+    }
+
     // Only keep edges where both source and target exist as nodes
     edges.retain(|e| nodes_map.contains_key(&e.source) && nodes_map.contains_key(&e.target));
 
-    // Deduplicate symmetric related edges (keep source < target)
-    let mut seen_related: HashSet<(String, String)> = HashSet::new();
-    edges.retain(|e| {
-        if e.relation == "related" {
-            let key = if e.source < e.target {
-                (e.source.clone(), e.target.clone())
+    // Deduplicate: symmetric related edges (keep source < target) and blocks
+    // edges emitted from both sides of the same dependency.
+    let mut seen: HashSet<(String, String, String)> = HashSet::new();
+    edges.retain(|e| match e.relation.as_str() {
+        "related" => {
+            let (a, b) = if e.source < e.target {
+                (&e.source, &e.target)
             } else {
-                (e.target.clone(), e.source.clone())
+                (&e.target, &e.source)
             };
-            seen_related.insert(key)
-        } else {
-            true
+            seen.insert((e.relation.clone(), a.clone(), b.clone()))
         }
+        "blocks" => seen.insert((e.relation.clone(), e.source.clone(), e.target.clone())),
+        _ => true,
     });
 
     // If focused on a specific ID, filter to only reachable nodes within 2 hops
@@ -2803,9 +2852,269 @@ fn build_graph(project: &Project, focus_id: Option<&str>) -> anyhow::Result<Grap
     Ok(GraphResponse { nodes, edges })
 }
 
+/// Load an archived item for the graph, flagged `archived`. Returns the node
+/// and, for tasks, the epic ID so the caller can keep the task in its group.
+/// `None` when the ID resolves nowhere or is not actually archived.
+fn load_archived_node(project: &Project, id: &str) -> Option<(GraphNodeResponse, Option<String>)> {
+    let (prefix, _) = parse_id(id).ok()?;
+    if !project.is_archived(id).unwrap_or(false) {
+        return None;
+    }
+    let node = |node_type: &str,
+                title: String,
+                status: String,
+                priority: Option<String>,
+                tags: Vec<String>| {
+        GraphNodeResponse {
+            id: id.to_string(),
+            node_type: node_type.to_string(),
+            title,
+            status,
+            priority,
+            tags,
+            archived: true,
+        }
+    };
+    match prefix {
+        IdPrefix::Task => {
+            let fm = project.read_item::<Task>(id).ok()?.frontmatter;
+            Some((
+                node(
+                    "task",
+                    fm.title,
+                    fm.status.to_string(),
+                    Some(fm.priority.to_string()),
+                    fm.tags,
+                ),
+                fm.epic,
+            ))
+        }
+        IdPrefix::Epic => {
+            let fm = project.read_item::<Epic>(id).ok()?.frontmatter;
+            Some((
+                node(
+                    "epic",
+                    fm.title,
+                    fm.status.to_string(),
+                    Some(fm.priority.to_string()),
+                    fm.tags,
+                ),
+                None,
+            ))
+        }
+        IdPrefix::Plan => {
+            let fm = project.read_item::<Plan>(id).ok()?.frontmatter;
+            Some((
+                node("plan", fm.title, fm.status.to_string(), None, vec![]),
+                None,
+            ))
+        }
+        IdPrefix::Note => {
+            let fm = project.read_item::<Note>(id).ok()?.frontmatter;
+            Some((
+                node("note", fm.title, fm.status.to_string(), None, vec![]),
+                None,
+            ))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use markplane_core::{Effort, LinkAction, LinkRelation, Priority};
+
+    fn graph_project() -> (tempfile::TempDir, Project) {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let project = Project::init(tmp.path().join(".markplane"), "Test", "Test").unwrap();
+        (tmp, project)
+    }
+
+    fn task(project: &Project, title: &str) -> String {
+        project
+            .create_task(
+                title,
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap()
+            .id
+    }
+
+    #[test]
+    fn test_build_graph_includes_archived_blocker_with_edge() {
+        let (_tmp, project) = graph_project();
+        let blocker = task(&project, "Blocker");
+        let blocked = task(&project, "Blocked");
+        project
+            .link_items(&blocked, &blocker, LinkRelation::DependsOn, LinkAction::Add)
+            .unwrap();
+        project.update_status(&blocker, "cancelled").unwrap();
+        project.archive_item(&blocker).unwrap();
+
+        let graph = build_graph(&project, None).unwrap();
+        let node = graph
+            .nodes
+            .iter()
+            .find(|n| n.id == blocker)
+            .expect("archived blocker is a node");
+        assert!(node.archived);
+        assert_eq!(node.status, "cancelled");
+        assert!(
+            !graph
+                .nodes
+                .iter()
+                .find(|n| n.id == blocked)
+                .unwrap()
+                .archived
+        );
+        assert!(
+            graph
+                .edges
+                .iter()
+                .any(|e| e.source == blocker && e.target == blocked && e.relation == "blocks"),
+            "{:?}",
+            graph
+                .edges
+                .iter()
+                .map(|e| format!("{}->{} {}", e.source, e.target, e.relation))
+                .collect::<Vec<_>>()
+        );
+
+        assert_eq!(
+            graph
+                .edges
+                .iter()
+                .filter(|e| e.relation == "blocks")
+                .count(),
+            1,
+            "the dependency is one edge even though both sides emit it"
+        );
+
+        // Focused graph on the blocked task reaches the archived blocker too
+        let focused = build_graph(&project, Some(&blocked)).unwrap();
+        assert!(focused.nodes.iter().any(|n| n.id == blocker && n.archived));
+        assert!(
+            focused
+                .edges
+                .iter()
+                .any(|e| e.source == blocker && e.target == blocked)
+        );
+    }
+
+    #[test]
+    fn test_build_graph_keeps_edges_into_the_archive_in_every_direction() {
+        let (_tmp, project) = graph_project();
+        let epic = project
+            .create_epic("Archived epic", Priority::Medium, None)
+            .unwrap()
+            .id;
+        let active_epic = project
+            .create_epic("Active epic", Priority::Medium, None)
+            .unwrap()
+            .id;
+        let a = task(&project, "Active");
+        let blocked_by_a = task(&project, "Archived, blocked by A");
+        let note = project
+            .create_note("Note", "research", vec![], None)
+            .unwrap()
+            .id;
+
+        // A belongs to an epic that gets archived
+        project
+            .link_items(&a, &epic, LinkRelation::Epic, LinkAction::Add)
+            .unwrap();
+        // A blocks a task that gets archived (with an open status) and that
+        // itself belongs to an active epic
+        project
+            .link_items(&a, &blocked_by_a, LinkRelation::Blocks, LinkAction::Add)
+            .unwrap();
+        project
+            .link_items(
+                &blocked_by_a,
+                &active_epic,
+                LinkRelation::Epic,
+                LinkAction::Add,
+            )
+            .unwrap();
+        // A is related to a note that gets archived
+        project
+            .link_items(&a, &note, LinkRelation::Related, LinkAction::Add)
+            .unwrap();
+
+        project.update_status(&epic, "done").unwrap();
+        project.archive_item(&epic).unwrap();
+        project.archive_item(&blocked_by_a).unwrap(); // still draft
+        project.update_status(&note, "archived").unwrap();
+        project.archive_item(&note).unwrap();
+
+        let graph = build_graph(&project, None).unwrap();
+        let archived_ids: Vec<&str> = graph
+            .nodes
+            .iter()
+            .filter(|n| n.archived)
+            .map(|n| n.id.as_str())
+            .collect();
+        for id in [&epic, &blocked_by_a, &note] {
+            assert!(
+                archived_ids.contains(&id.as_str()),
+                "{id} missing from {archived_ids:?}"
+            );
+        }
+        let has = |s: &str, t: &str, r: &str| {
+            graph
+                .edges
+                .iter()
+                .any(|e| e.source == s && e.target == t && e.relation == r)
+        };
+        assert!(
+            has(&epic, &a, "epic"),
+            "active task stays in its archived epic"
+        );
+        assert!(
+            has(&a, &blocked_by_a, "blocks"),
+            "active→archived blocks edge kept"
+        );
+        assert!(
+            has(&active_epic, &blocked_by_a, "epic"),
+            "archived task stays in its active epic group"
+        );
+        assert!(
+            has(&a, &note, "related") || has(&note, &a, "related"),
+            "related edge to archived note kept"
+        );
+    }
+
+    #[test]
+    fn test_build_graph_skips_dangling_dependency() {
+        let (_tmp, project) = graph_project();
+        let a = task(&project, "Dangling");
+        let mut doc: MarkplaneDocument<Task> = project.read_item(&a).unwrap();
+        doc.frontmatter.depends_on = vec!["TASK-zzzzz".to_string()];
+        doc.frontmatter.blocks = vec!["TASK-yyyyy".to_string()];
+        project.write_item(&a, &doc).unwrap();
+
+        let graph = build_graph(&project, None).unwrap();
+        assert_eq!(graph.nodes.len(), 1);
+        assert!(graph.edges.is_empty());
+    }
+
+    #[test]
+    fn test_build_graph_excludes_unreferenced_archived_tasks() {
+        let (_tmp, project) = graph_project();
+        let old = task(&project, "Old");
+        let _active = task(&project, "Active");
+        project.update_status(&old, "done").unwrap();
+        project.archive_item(&old).unwrap();
+
+        let graph = build_graph(&project, None).unwrap();
+        assert!(!graph.nodes.iter().any(|n| n.id == old));
+        assert!(graph.nodes.iter().all(|n| !n.archived));
+    }
 
     #[test]
     fn test_diff_vec_no_change() {

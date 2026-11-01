@@ -255,8 +255,8 @@ Error:             { "error": { "code": string, "message": string } }
 | POST | `/api/link` | Link/unlink two items: `{from, to, relation, remove?}` |
 | POST | `/api/sync` | Trigger markplane sync |
 | GET | `/api/search?q=...` | Full-text search |
-| GET | `/api/graph` | Full dependency graph |
-| GET | `/api/graph/:id` | Focused graph (2-hop neighborhood) |
+| GET | `/api/graph` | Full dependency graph. Active items, plus any archived item an active item links to (returned with `archived: true`) |
+| GET | `/api/graph/:id` | Focused graph (2-hop neighborhood); archived items are included on the same terms as `/api/graph` |
 | GET | `/api/docs` | List available documentation pages |
 | GET | `/api/docs/:slug` | Get documentation page content |
 | POST | `/api/items/:id/archive` | Archive any item (task, epic, plan, note) |
