@@ -80,11 +80,28 @@ pub fn run(id: Option<String>, all_done: bool, dry_run: bool) -> anyhow::Result<
         println!("\nRun without --dry-run to archive.");
     } else {
         let count = to_archive.len();
+        let mut failed = 0;
         for (id, _) in &to_archive {
-            project.archive_item(id)?;
-            println!("  {} Archived {}", "✓".green(), id);
+            match project.archive_item(id) {
+                Ok(()) => println!("  {} Archived {}", "✓".green(), id),
+                Err(e) => {
+                    failed += 1;
+                    println!("  {} Skipped {}: {}", "✗".red(), id, e);
+                }
+            }
         }
-        println!("\n{} Archived {} item(s).", "✓".green(), count);
+        if failed == 0 {
+            println!("\n{} Archived {} item(s).", "✓".green(), count);
+        } else {
+            println!(
+                "\n{} Archived {} of {} item(s); {} skipped.",
+                "!".yellow(),
+                count - failed,
+                count,
+                failed
+            );
+            anyhow::bail!("{} item(s) could not be archived", failed);
+        }
     }
 
     Ok(())

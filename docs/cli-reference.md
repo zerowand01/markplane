@@ -127,7 +127,7 @@ markplane unarchive TASK-fq2x8
 
 ## check
 
-Validate cross-references, task statuses, reciprocal link integrity, and dependency cycles.
+Validate IDs, cross-references, task statuses, reciprocal link integrity, and dependency cycles.
 
 ```
 markplane check [OPTIONS]
@@ -140,14 +140,16 @@ markplane check [OPTIONS]
 | `--orphans` | `false` | Also show orphan items (items with no incoming references) |
 | `--fix` | `false` | Repair asymmetric reciprocal links |
 
-Performs four validations:
+Performs six validations:
 
-1. **Broken references** — scans all markdown files for `[[ITEM-xxxxx]]` references and verifies each referenced item exists.
-2. **Task statuses** — checks each task's status is recognized by the configured workflow.
-3. **Reciprocal links** — verifies blocks/depends_on, plan/implements, and related links are symmetric on both sides.
-4. **Dependency cycles** — detects circular dependencies in the blocks/depends_on graph (e.g. A blocks B blocks A).
+1. **Duplicate IDs** — reports any item whose file exists in both `items/` and `archive/` of the same directory. This only arises from a bad merge or a manual copy; `archive` and `unarchive` refuse to overwrite the other copy.
+2. **Broken references** — scans all markdown files for `[[ITEM-xxxxx]]` references and verifies each referenced item exists.
+3. **Task statuses** — checks each task's status is recognized by the configured workflow.
+4. **Position keys** — checks each task's `position` is a valid fractional-index key.
+5. **Reciprocal links** — verifies blocks/depends_on, plan/implements, and related links are symmetric on both sides, including links to archived items.
+6. **Dependency cycles** — detects circular dependencies in the blocks/depends_on graph (e.g. A blocks B blocks A).
 
-Exits with a non-zero status if issues are found. Use `--fix` to automatically repair asymmetric reciprocal links (safe — uses idempotent `link_items` logic). Cycles and broken references must be resolved manually.
+Exits with a non-zero status if issues are found. Use `--fix` to automatically repair asymmetric reciprocal links (safe — uses idempotent `link_items` logic) and malformed position keys. Duplicate IDs, cycles and broken references must be resolved manually.
 
 The `--orphans` flag scans both active and archived items as reference sources. An active item referenced only by an archived item is not considered an orphan.
 
@@ -155,14 +157,18 @@ The `--orphans` flag scans both active and archived items as reference sources. 
 
 ```bash
 markplane check
+# ✓ No duplicate IDs found.
 # ✓ No broken references found.
 # ✓ All task statuses are valid.
+# ✓ All task position keys are valid.
 # ✓ All reciprocal links are symmetric.
 # ✓ No dependency cycles found.
 
 markplane check --orphans
+# ✓ No duplicate IDs found.
 # ✓ No broken references found.
 # ✓ All task statuses are valid.
+# ✓ All task position keys are valid.
 # ✓ All reciprocal links are symmetric.
 # ✓ No dependency cycles found.
 # ! 1 orphan item(s) (no incoming references):
@@ -176,6 +182,10 @@ markplane check --fix
 # Cycle detection example:
 # ✗ 1 dependency cycle(s):
 #   TASK-abc12 → TASK-def34 → TASK-abc12
+
+# Duplicate ID example (after a bad merge; paths are absolute):
+# ✗ 1 duplicate ID(s) in both items/ and archive/:
+#   TASK-abc12 exists as /repo/.markplane/backlog/items/TASK-abc12.md and /repo/.markplane/backlog/archive/TASK-abc12.md
 ```
 
 ---

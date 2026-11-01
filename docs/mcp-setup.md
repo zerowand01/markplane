@@ -192,7 +192,7 @@ The server exposes 15 tools via the `tools/list` method.
 | Tool | Description | Required Params | Optional Params |
 |------|-------------|-----------------|-----------------|
 | `markplane_sync` | Regenerate INDEX.md files and .context/ summaries. | *(none)* | *(none)* |
-| `markplane_check` | Validate all cross-references in the project. Reports broken links, invalid statuses, asymmetric reciprocal links, and dependency cycles. | *(none)* | *(none)* |
+| `markplane_check` | Validate all cross-references in the project. Reports duplicate IDs (same item in `items/` and `archive/`), broken links, invalid statuses, malformed position keys, asymmetric reciprocal links, and dependency cycles. | *(none)* | *(none)* |
 
 ## Resource Catalog
 

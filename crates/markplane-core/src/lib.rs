@@ -25,8 +25,8 @@ pub use project::{
 };
 pub use query::{QueryFilter, ScanScope};
 pub use references::{
-    AsymmetricLink, BrokenReference, DependencyCycle, build_reference_graph, detect_cycles,
-    extract_references, find_orphans, validate_positions, validate_reciprocal_links,
-    validate_references, validate_task_statuses,
+    AsymmetricLink, BrokenReference, DependencyCycle, DuplicateId, build_reference_graph,
+    detect_cycles, extract_references, find_duplicate_ids, find_orphans, validate_positions,
+    validate_reciprocal_links, validate_references, validate_task_statuses,
 };
 pub use templates::render_template;

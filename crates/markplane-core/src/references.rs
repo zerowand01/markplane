@@ -445,6 +445,56 @@ fn load_frontmatter_by_id<T: serde::de::DeserializeOwned>(
     Ok(map)
 }
 
+/// An item whose file exists in both `items/` and `archive/` of the same directory.
+///
+/// Fresh IDs never collide (`next_id()` checks both directories), so this
+/// state comes from a merge that kept both sides of a rename-versus-edit
+/// conflict, or from a manual copy. Views disagree about which copy is
+/// current, so it is reported by `markplane check` and never auto-repaired.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DuplicateId {
+    pub id: String,
+    pub active_file: String,
+    pub archived_file: String,
+}
+
+/// Find IDs whose file exists in both `items/` and `archive/`, across all
+/// entity directories. Sorted by ID.
+pub fn find_duplicate_ids(project: &Project) -> Result<Vec<DuplicateId>> {
+    let mut duplicates = Vec::new();
+    for prefix in [
+        IdPrefix::Task,
+        IdPrefix::Epic,
+        IdPrefix::Plan,
+        IdPrefix::Note,
+    ] {
+        let dir = project.item_dir(&prefix);
+        let Ok(entries) = std::fs::read_dir(dir.join("items")) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let name = entry.file_name();
+            let Some(id) = name.to_str().and_then(|n| n.strip_suffix(".md")) else {
+                continue;
+            };
+            // Only real item files count; a stray README.md is not an ID.
+            if !matches!(parse_id(id), Ok((p, _)) if p == prefix) {
+                continue;
+            }
+            let archived = dir.join("archive").join(&name);
+            if archived.is_file() {
+                duplicates.push(DuplicateId {
+                    id: id.to_string(),
+                    active_file: entry.path().to_string_lossy().to_string(),
+                    archived_file: archived.to_string_lossy().to_string(),
+                });
+            }
+        }
+    }
+    duplicates.sort_by(|a, b| a.id.cmp(&b.id));
+    Ok(duplicates)
+}
+
 /// Validate that all reciprocal links are symmetric.
 /// Returns a list of asymmetric links where one side of a reciprocal pair is missing.
 /// Only checks targets that exist (broken references are caught by `validate_references`).
@@ -1445,5 +1495,100 @@ mod tests {
         assert_eq!(asymmetric[0].source_id, blocker);
         assert_eq!(asymmetric[0].target_id, blocked);
         assert_eq!(asymmetric[0].missing_field, "depends_on");
+    }
+
+    // ── duplicate IDs ───────────────────────────────────────────────────
+
+    #[test]
+    fn test_find_duplicate_ids_none() {
+        use crate::models::{Effort, Priority};
+        use crate::project::Project;
+        use tempfile::TempDir;
+
+        let tmp = TempDir::new().unwrap();
+        let project = Project::init(tmp.path().join(".markplane"), "Test", "Test").unwrap();
+        project
+            .create_task(
+                "Active",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap();
+        let archived = project
+            .create_task(
+                "Archived",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap();
+        project.archive_item(&archived.id).unwrap();
+
+        // A stray non-item file present in both directories is not an ID.
+        let dir = project.item_dir(&IdPrefix::Task);
+        std::fs::write(dir.join("items").join("README.md"), "scratch").unwrap();
+        std::fs::write(dir.join("archive").join("README.md"), "scratch").unwrap();
+
+        assert!(find_duplicate_ids(&project).unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_find_duplicate_ids_reports_both_copies_for_every_type() {
+        use crate::models::{Effort, Priority};
+        use crate::project::Project;
+        use tempfile::TempDir;
+
+        let tmp = TempDir::new().unwrap();
+        let project = Project::init(tmp.path().join(".markplane"), "Test", "Test").unwrap();
+        let task = project
+            .create_task(
+                "Task",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap();
+        let epic = project.create_epic("Epic", Priority::Medium, None).unwrap();
+        let plan = project.create_plan("Plan", vec![], None).unwrap();
+        let note = project
+            .create_note("Note", "research", vec![], None)
+            .unwrap();
+
+        // Simulate a bad merge: copy each active file into archive/.
+        for id in [&task.id, &epic.id, &plan.id, &note.id] {
+            let (prefix, _) = parse_id(id).unwrap();
+            let dir = project.item_dir(&prefix);
+            std::fs::create_dir_all(dir.join("archive")).unwrap();
+            std::fs::copy(
+                dir.join("items").join(format!("{id}.md")),
+                dir.join("archive").join(format!("{id}.md")),
+            )
+            .unwrap();
+        }
+
+        let dups = find_duplicate_ids(&project).unwrap();
+        let ids: Vec<&str> = dups.iter().map(|d| d.id.as_str()).collect();
+        let mut expected = vec![
+            task.id.as_str(),
+            epic.id.as_str(),
+            plan.id.as_str(),
+            note.id.as_str(),
+        ];
+        expected.sort();
+        assert_eq!(ids, expected);
+        for d in &dups {
+            assert!(d.active_file.contains("/items/"), "{d:?}");
+            assert!(d.archived_file.contains("/archive/"), "{d:?}");
+        }
     }
 }

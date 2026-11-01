@@ -160,6 +160,9 @@ Position normalization (`--normalize`) is separate from sync because it modifies
 ```
 CLI: markplane check [--orphans] [--fix]
   │
+  ├─ find_duplicate_ids(project)
+  │    └─ Report any ID whose file exists in both items/ and archive/ (never auto-fixed)
+  │
   ├─ validate_references(project)
   │    ├─ For each .md file in backlog/, roadmap/, plans/, notes/:
   │    │    ├─ extract_references(content)  → [[ID]] wiki-links
@@ -229,7 +232,7 @@ Core errors are typed and specific. CLI commands convert them to user-friendly m
 - **Advisory file locking**: All update methods (`update_task()`, `update_epic()`, `update_plan()`, `update_note()`, `update_status()`) hold an `fs2` exclusive advisory lock on the item file for the full read-modify-write cycle, preventing lost updates from concurrent web API requests.
 - **Multi-file link safety**: `link_items()` acquires advisory locks on all involved files in deterministic (lexicographic by ID) order before any reads or writes, preventing deadlocks when concurrent requests modify the same pair of items.
 - **Cycle prevention**: `link_items()` detects dependency cycles before adding `blocks` or `depends_on` relationships. A BFS walk checks whether the new link would create a path from the target back to the source. Existing cycles are detected by `detect_cycles()` via iterative DFS and reported by `markplane check`.
-- **Archive is a pure move**: `archive_item()` and `unarchive_item()` only relocate the file between `items/` and `archive/`. Relationship fields on the item and on items that reference it are untouched. Views resolve links against both directories: `item_path()` checks `archive/`, INDEX links point at `archive/<ID>.md` when the target lives there, and `find_blocked_items()` resolves `depends_on` against all tasks (active and archived) while only reporting active tasks as blocked.
+- **Archive is a pure move**: `archive_item()` and `unarchive_item()` only relocate the file between `items/` and `archive/`, and refuse to run when the destination already exists so a duplicate never overwrites the other copy. Relationship fields on the item and on items that reference it are untouched. Views resolve links against both directories: `item_path()` checks `archive/`, INDEX links point at `archive/<ID>.md` when the target lives there, and `find_blocked_items()` resolves `depends_on` against all tasks (active and archived) while only reporting active tasks as blocked.
 
 ### Web Server (`markplane serve`)
 - **CORS policy**: In production mode, CORS is restricted to `http://localhost:{port}` and `http://127.0.0.1:{port}`. In `--dev` mode, CORS is permissive (required for the Next.js dev server on a different port).
