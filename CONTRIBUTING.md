@@ -191,6 +191,39 @@ several, so both should follow this format:
 
 This is a naming guideline, not enforced by tooling. Do not bump version numbers in PRs — versioning and releases are handled by maintainers.
 
+## Project Management Files
+
+The repo manages itself with Markplane, so `.markplane/` holds the backlog,
+roadmap, plans and notes. These are planning data, not code, and they follow
+their own lane:
+
+- **A task file is committed with the code that changes its status.** Moving a
+  task to `in-progress` or `done`, or ticking its acceptance criteria, belongs
+  in the PR that does the work.
+- **Planning-only changes are committed directly to `master` by a maintainer.**
+  Creating, triaging, reprioritising, linking or archiving items, and writing
+  plans or notes, need no branch and no PR. The `master-protection` ruleset
+  allows repository admins to bypass the PR requirement, and this lane is what
+  that bypass is for. CI runs Rust checks, which say nothing about markdown.
+- **`markplane check` must pass before a planning commit.** It is the CI
+  equivalent for data files: a malformed item breaks `markplane sync` and the
+  MCP server on every clone. Enable the bundled hook once to enforce this for
+  staged `.markplane/` files:
+
+  ```bash
+  git config core.hooksPath .githooks
+  ```
+
+- **Use the `pm` scope** so planning history is filterable and stays out of
+  release notes: `chore(pm): create TASK-xxxxx — <title>`,
+  `chore(pm): triage backlog`, `chore(pm): archive done items`.
+- **Batch, then push.** Commit once at the end of a planning session rather
+  than per command, and push straight away. An unpushed planning commit is
+  invisible to every other clone and to the next agent session.
+
+Contributors without push access can propose work by opening an issue, or by
+including a new task file in the PR that implements it.
+
 ## Issues & Support
 
 Issues and PRs are welcome. Before opening an issue:
