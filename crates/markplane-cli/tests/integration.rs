@@ -1393,6 +1393,116 @@ fn test_check_clean() {
 }
 
 #[test]
+fn test_check_reports_duplicate_ids_and_archive_refuses_to_overwrite() {
+    let tmp = setup_project();
+    let output = cmd()
+        .current_dir(tmp.path())
+        .args(["add", "Dup"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let id = extract_id(&output.stdout);
+
+    // Simulate a bad merge: a second copy of the task in archive/ with a different status
+    let active = tmp.path().join(format!(".markplane/backlog/items/{id}.md"));
+    let archived = tmp
+        .path()
+        .join(format!(".markplane/backlog/archive/{id}.md"));
+    let active_bytes = std::fs::read_to_string(&active).unwrap();
+    let archived_bytes = active_bytes.replace("status: draft", "status: done");
+    std::fs::write(&archived, &archived_bytes).unwrap();
+
+    cmd()
+        .current_dir(tmp.path())
+        .arg("check")
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("1 duplicate ID(s)"))
+        .stdout(predicate::str::contains(&id));
+
+    cmd()
+        .current_dir(tmp.path())
+        .args(["archive", &id])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Duplicate ID"));
+    cmd()
+        .current_dir(tmp.path())
+        .args(["unarchive", &id])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Duplicate ID"));
+
+    // Both copies untouched
+    assert_eq!(std::fs::read_to_string(&active).unwrap(), active_bytes);
+    assert_eq!(std::fs::read_to_string(&archived).unwrap(), archived_bytes);
+
+    // Removing one copy clears the report
+    std::fs::remove_file(&archived).unwrap();
+    cmd()
+        .current_dir(tmp.path())
+        .arg("check")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("No duplicate IDs"));
+}
+
+#[test]
+fn test_archive_all_done_skips_duplicates_and_continues() {
+    let tmp = setup_project();
+    let mut ids = Vec::new();
+    for title in ["First", "Dup", "Third"] {
+        let output = cmd()
+            .current_dir(tmp.path())
+            .args(["add", title])
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        let id = extract_id(&output.stdout);
+        cmd()
+            .current_dir(tmp.path())
+            .args(["status", &id, "done"])
+            .assert()
+            .success();
+        ids.push(id);
+    }
+    let dup = &ids[1];
+    let active = tmp
+        .path()
+        .join(format!(".markplane/backlog/items/{dup}.md"));
+    let archived = tmp
+        .path()
+        .join(format!(".markplane/backlog/archive/{dup}.md"));
+    std::fs::copy(&active, &archived).unwrap();
+
+    cmd()
+        .current_dir(tmp.path())
+        .args(["archive", "--all-done"])
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains(format!("Skipped {dup}")))
+        .stdout(predicate::str::contains(
+            "Archived 2 of 3 item(s); 1 skipped",
+        ));
+
+    // The other two moved; the duplicate stayed put on both sides
+    for id in [&ids[0], &ids[2]] {
+        assert!(
+            tmp.path()
+                .join(format!(".markplane/backlog/archive/{id}.md"))
+                .is_file()
+        );
+        assert!(
+            !tmp.path()
+                .join(format!(".markplane/backlog/items/{id}.md"))
+                .is_file()
+        );
+    }
+    assert!(active.is_file());
+    assert!(archived.is_file());
+}
+
+#[test]
 fn test_check_asymmetric_links() {
     let tmp = setup_project();
     // Create two tasks and link them

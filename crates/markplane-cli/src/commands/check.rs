@@ -1,7 +1,7 @@
 use colored::Colorize;
 use markplane_core::{
-    LinkAction, LinkRelation, Project, detect_cycles, find_orphans, validate_positions,
-    validate_reciprocal_links, validate_references, validate_task_statuses,
+    LinkAction, LinkRelation, Project, detect_cycles, find_duplicate_ids, find_orphans,
+    validate_positions, validate_reciprocal_links, validate_references, validate_task_statuses,
 };
 
 fn field_to_relation(forward_field: &str) -> Option<LinkRelation> {
@@ -17,6 +17,27 @@ fn field_to_relation(forward_field: &str) -> Option<LinkRelation> {
 
 pub fn run(orphans: bool, fix: bool) -> anyhow::Result<()> {
     let project = Project::from_current_dir()?;
+
+    // Check for IDs present in both items/ and archive/
+    let duplicates = find_duplicate_ids(&project)?;
+    if duplicates.is_empty() {
+        println!("{} No duplicate IDs found.", "✓".green());
+    } else {
+        println!(
+            "{} {} duplicate ID(s) in both items/ and archive/:\n",
+            "✗".red(),
+            duplicates.len()
+        );
+        for dup in &duplicates {
+            println!(
+                "  {} exists as {} and {}",
+                dup.id.red(),
+                dup.active_file.dimmed(),
+                dup.archived_file.dimmed()
+            );
+        }
+        println!("\n  Delete or rename one copy; `markplane archive` refuses to overwrite.\n");
+    }
 
     // Check for broken references
     let broken = validate_references(&project)?;
@@ -171,8 +192,8 @@ pub fn run(orphans: bool, fix: bool) -> anyhow::Result<()> {
         }
     }
 
-    // Broken refs, invalid statuses, and cycles are never auto-fixable
-    let unfixable = broken.len() + invalid_statuses.len() + cycles.len();
+    // Duplicate IDs, broken refs, invalid statuses, and cycles are never auto-fixable
+    let unfixable = duplicates.len() + broken.len() + invalid_statuses.len() + cycles.len();
     if unfixable > 0 {
         return Err(anyhow::anyhow!(
             "Found {} issue(s)",

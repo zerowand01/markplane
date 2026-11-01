@@ -373,7 +373,7 @@ pub fn list_tools(project: &Project) -> Value {
             },
             {
                 "name": "markplane_check",
-                "description": "Validate all cross-references in the project. Reports broken links, invalid statuses, and asymmetric reciprocal links.",
+                "description": "Validate the project. Reports duplicate IDs (same item in items/ and archive/), broken links, invalid statuses, malformed position keys, asymmetric reciprocal links, and dependency cycles.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {},
@@ -1090,6 +1090,7 @@ fn handle_link(project: &Project, args: &Value) -> Result<String, String> {
 }
 
 fn handle_check(project: &Project) -> Result<String, String> {
+    let duplicates = markplane_core::find_duplicate_ids(project).map_err(|e| e.to_string())?;
     let broken_refs = validate_references(project).map_err(|e| e.to_string())?;
     let broken_statuses =
         markplane_core::validate_task_statuses(project).map_err(|e| e.to_string())?;
@@ -1099,16 +1100,32 @@ fn handle_check(project: &Project) -> Result<String, String> {
     let malformed_positions =
         markplane_core::validate_positions(project).map_err(|e| e.to_string())?;
 
-    if broken_refs.is_empty()
+    if duplicates.is_empty()
+        && broken_refs.is_empty()
         && broken_statuses.is_empty()
         && asymmetric.is_empty()
         && cycles.is_empty()
         && malformed_positions.is_empty()
     {
-        return Ok("All cross-references, task statuses, position keys, reciprocal links, and dependency graphs are valid.".to_string());
+        return Ok("All IDs, cross-references, task statuses, position keys, reciprocal links, and dependency graphs are valid.".to_string());
     }
 
     let mut output = String::new();
+    if !duplicates.is_empty() {
+        output.push_str(&format!(
+            "{} duplicate ID(s) found in both items/ and archive/:\n\n",
+            duplicates.len()
+        ));
+        for dup in &duplicates {
+            output.push_str(&format!(
+                "- {} exists as {} and {}\n",
+                dup.id, dup.active_file, dup.archived_file
+            ));
+        }
+        output.push_str(
+            "\nDelete or rename one copy by hand; markplane_archive refuses to overwrite.\n\n",
+        );
+    }
     if !broken_refs.is_empty() {
         output.push_str(&format!(
             "{} broken reference(s) found:\n\n",

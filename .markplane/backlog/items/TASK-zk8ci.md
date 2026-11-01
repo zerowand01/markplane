@@ -1,7 +1,7 @@
 ---
 id: TASK-zk8ci
 title: Detect duplicate IDs across items/ and archive/ and refuse to overwrite on archive
-status: planned
+status: done
 priority: medium
 type: bug
 effort: small
@@ -56,12 +56,12 @@ Two small, independent fixes:
 
 ## Acceptance Criteria
 
-- [ ] `markplane check` reports an ID whose file exists in both `items/` and `archive/` of the same directory, for all four entity types, and exits non-zero
-- [ ] `markplane archive <ID>` fails with a clear error when `archive/<ID>.md` already exists and leaves both files untouched
-- [ ] `markplane unarchive <ID>` fails the same way when `items/<ID>.md` already exists
-- [ ] Unit tests for the check and for both guards
-- [ ] `docs/cli-reference.md` check section lists the new validation
-- [ ] `cargo test --workspace` and `cargo clippy --workspace` pass
+- [x] `markplane check` reports an ID whose file exists in both `items/` and `archive/` of the same directory, for all four entity types, and exits non-zero
+- [x] `markplane archive <ID>` fails with a clear error when `archive/<ID>.md` already exists and leaves both files untouched
+- [x] `markplane unarchive <ID>` fails the same way when `items/<ID>.md` already exists
+- [x] Unit tests for the check and for both guards
+- [x] `docs/cli-reference.md` check section lists the new validation
+- [x] `cargo test --workspace` and `cargo clippy --workspace` pass
 
 ## References
 

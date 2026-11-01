@@ -298,11 +298,9 @@ impl Project {
     /// Generate a unique random ID for a given prefix.
     /// Retries up to 100 times to avoid collisions with existing files.
     pub fn next_id(&self, prefix: &IdPrefix) -> Result<String> {
-        let dir = self.item_dir(prefix);
         for _ in 0..100 {
             let id = generate_random_id(prefix);
-            let items_path = dir.join("items").join(format!("{}.md", id));
-            let archive_path = dir.join("archive").join(format!("{}.md", id));
+            let (items_path, archive_path) = self.item_paths(prefix, &id);
             if !items_path.exists() && !archive_path.exists() {
                 return Ok(id);
             }
@@ -312,18 +310,26 @@ impl Project {
         ))
     }
 
+    /// The two places an item's file can live: `(items/<ID>.md, archive/<ID>.md)`.
+    /// Neither path is checked for existence.
+    fn item_paths(&self, prefix: &IdPrefix, id: &str) -> (PathBuf, PathBuf) {
+        let dir = self.item_dir(prefix);
+        let file = format!("{}.md", id);
+        (
+            dir.join("items").join(&file),
+            dir.join("archive").join(&file),
+        )
+    }
+
     /// Resolve an item ID to its file path.
     /// Checks items/ subdirectory first, then archive/.
     pub fn item_path(&self, id: &str) -> Result<PathBuf> {
         let (prefix, _) = parse_id(id)?;
-        let dir = self.item_dir(&prefix);
+        let (items_path, archive_path) = self.item_paths(&prefix, id);
 
-        let items_path = dir.join("items").join(format!("{}.md", id));
         if items_path.is_file() {
             return Ok(items_path);
         }
-
-        let archive_path = dir.join("archive").join(format!("{}.md", id));
         if archive_path.is_file() {
             return Ok(archive_path);
         }
@@ -331,7 +337,7 @@ impl Project {
         Err(MarkplaneError::NotFound(format!(
             "Item {} not found in {} or its archive",
             id,
-            dir.display()
+            self.item_dir(&prefix).display()
         )))
     }
 
@@ -1277,19 +1283,34 @@ impl Project {
     /// pointing at the archived ID, which `item_path()` still resolves.
     pub fn archive_item(&self, id: &str) -> Result<()> {
         let (prefix, _) = parse_id(id)?;
-        let source = self.item_path(id)?;
+        let (source, archive_path) = self.item_paths(&prefix, id);
 
-        // Don't archive if already in archive
-        if path_is_archived(&source) {
+        if !source.is_file() {
+            // Don't archive if already in archive
+            if archive_path.is_file() {
+                return Err(MarkplaneError::NotFound(format!(
+                    "Item {} is already archived",
+                    id
+                )));
+            }
             return Err(MarkplaneError::NotFound(format!(
-                "Item {} is already archived",
-                id
+                "Item {} not found in {} or its archive",
+                id,
+                self.item_dir(&prefix).display()
             )));
         }
 
-        let archive_dir = self.item_dir(&prefix).join("archive");
-        fs::create_dir_all(&archive_dir)?;
-        let archive_path = archive_dir.join(format!("{}.md", id));
+        // Never overwrite an existing archived copy: that is data loss.
+        if archive_path.is_file() {
+            return Err(MarkplaneError::DuplicateId(format!(
+                "{} exists in both {} and {}; resolve the duplicate before archiving",
+                id,
+                source.display(),
+                archive_path.display()
+            )));
+        }
+
+        fs::create_dir_all(archive_path.parent().expect("archive path has a parent"))?;
         fs::rename(&source, &archive_path)?;
         Ok(())
     }
@@ -1299,19 +1320,34 @@ impl Project {
     /// The exact inverse of `archive_item()`: nothing but the file location changes.
     pub fn unarchive_item(&self, id: &str) -> Result<()> {
         let (prefix, _) = parse_id(id)?;
-        let source = self.item_path(id)?;
+        let (items_path, source) = self.item_paths(&prefix, id);
 
-        // Only unarchive if currently in archive
-        if !path_is_archived(&source) {
-            return Err(MarkplaneError::Config(format!(
-                "Item {} is not archived",
-                id
+        // Never overwrite an existing active copy: that is data loss.
+        if source.is_file() && items_path.is_file() {
+            return Err(MarkplaneError::DuplicateId(format!(
+                "{} exists in both {} and {}; resolve the duplicate before unarchiving",
+                id,
+                items_path.display(),
+                source.display()
             )));
         }
 
-        let items_dir = self.item_dir(&prefix).join("items");
-        fs::create_dir_all(&items_dir)?;
-        let items_path = items_dir.join(format!("{}.md", id));
+        if !source.is_file() {
+            // Only unarchive if currently in archive
+            if items_path.is_file() {
+                return Err(MarkplaneError::Config(format!(
+                    "Item {} is not archived",
+                    id
+                )));
+            }
+            return Err(MarkplaneError::NotFound(format!(
+                "Item {} not found in {} or its archive",
+                id,
+                self.item_dir(&prefix).display()
+            )));
+        }
+
+        fs::create_dir_all(items_path.parent().expect("items path has a parent"))?;
         fs::rename(&source, &items_path)?;
         Ok(())
     }
@@ -1942,6 +1978,66 @@ mod tests {
         // Reading should still work
         let doc: MarkplaneDocument<Task> = project.read_item(&task.id).unwrap();
         assert_eq!(doc.frontmatter.title, "To archive");
+    }
+
+    /// Create a task and copy its file into archive/ to simulate a bad merge.
+    /// Returns (tmp, project, id, active path, archive path, active bytes, archive bytes).
+    fn setup_duplicate_task() -> (TempDir, Project, String, PathBuf, PathBuf, String, String) {
+        let (tmp, project) = setup_project();
+        let task = project
+            .create_task(
+                "Dup",
+                "feature",
+                Priority::Medium,
+                Effort::Small,
+                None,
+                vec![],
+                None,
+            )
+            .unwrap();
+        let dir = project.item_dir(&IdPrefix::Task);
+        let active = dir.join("items").join(format!("{}.md", task.id));
+        let archived = dir.join("archive").join(format!("{}.md", task.id));
+        fs::create_dir_all(dir.join("archive")).unwrap();
+        let active_bytes = fs::read_to_string(&active).unwrap();
+        let archived_bytes = active_bytes.replace("status: draft", "status: done");
+        assert_ne!(active_bytes, archived_bytes);
+        fs::write(&archived, &archived_bytes).unwrap();
+        (
+            tmp,
+            project,
+            task.id,
+            active,
+            archived,
+            active_bytes,
+            archived_bytes,
+        )
+    }
+
+    #[test]
+    fn test_archive_refuses_to_overwrite_existing_archived_copy() {
+        let (_tmp, project, id, active, archived, active_bytes, archived_bytes) =
+            setup_duplicate_task();
+
+        let err = project.archive_item(&id).unwrap_err();
+        assert!(matches!(err, MarkplaneError::DuplicateId(_)), "{err}");
+        assert!(err.to_string().contains(&id));
+
+        // Both files untouched
+        assert_eq!(fs::read_to_string(&active).unwrap(), active_bytes);
+        assert_eq!(fs::read_to_string(&archived).unwrap(), archived_bytes);
+    }
+
+    #[test]
+    fn test_unarchive_refuses_to_overwrite_existing_active_copy() {
+        let (_tmp, project, id, active, archived, active_bytes, archived_bytes) =
+            setup_duplicate_task();
+
+        let err = project.unarchive_item(&id).unwrap_err();
+        assert!(matches!(err, MarkplaneError::DuplicateId(_)), "{err}");
+
+        assert_eq!(fs::read_to_string(&active).unwrap(), active_bytes);
+        assert_eq!(fs::read_to_string(&archived).unwrap(), archived_bytes);
     }
 
     #[test]

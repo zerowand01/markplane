@@ -959,8 +959,67 @@ fn test_tool_check_clean() {
     assert!(response["error"].is_null());
     let text = response["result"]["content"][0]["text"].as_str().unwrap();
     assert!(text.contains(
-        "All cross-references, task statuses, position keys, reciprocal links, and dependency graphs are valid"
+        "All IDs, cross-references, task statuses, position keys, reciprocal links, and dependency graphs are valid"
     ));
+}
+
+#[test]
+fn test_tool_check_reports_duplicate_ids_and_archive_refuses() {
+    let tmp = setup_project();
+    let resp = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "markplane_add",
+                "arguments": { "title": "Dup" }
+            }
+        }),
+    );
+    let id = extract_id_from_response(&resp);
+
+    // Simulate a bad merge: second copy in archive/
+    let active = tmp
+        .path()
+        .join(format!(".markplane/backlog/items/{}.md", id));
+    let archived = tmp
+        .path()
+        .join(format!(".markplane/backlog/archive/{}.md", id));
+    let active_bytes = std::fs::read_to_string(&active).unwrap();
+    std::fs::write(
+        &archived,
+        active_bytes.replace("status: draft", "status: done"),
+    )
+    .unwrap();
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": { "name": "markplane_check", "arguments": {} }
+        }),
+    );
+    let text = response["result"]["content"][0]["text"].as_str().unwrap();
+    assert!(text.contains("1 duplicate ID(s)"), "{text}");
+    assert!(text.contains(&id), "{text}");
+
+    let response = send_request(
+        &tmp,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": { "name": "markplane_archive", "arguments": { "id": id } }
+        }),
+    );
+    assert_eq!(response["result"]["isError"], json!(true), "{response}");
+    let text = response["result"]["content"][0]["text"].as_str().unwrap();
+    assert!(text.contains("Duplicate ID"), "{text}");
+    assert_eq!(std::fs::read_to_string(&active).unwrap(), active_bytes);
 }
 
 #[test]
