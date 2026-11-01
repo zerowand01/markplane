@@ -64,3 +64,5 @@ This project uses Markplane for project management. Key files:
 - `.markplane/backlog/INDEX.md` - All work items
 - `.markplane/plans/INDEX.md` - Implementation plans
 When working on a task, read the relevant task item and its linked plan first.
+
+Planning-only changes to `.markplane/` (creating, triaging, archiving items) are committed directly to `master` with a `chore(pm):` subject after `markplane check` passes. Status changes travel in the PR that does the work. See [CONTRIBUTING.md](CONTRIBUTING.md#project-management-files).

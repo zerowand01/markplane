@@ -1,0 +1,19 @@
+#!/bin/sh
+# Validate .markplane/ data files before they are committed.
+# Enable once per clone:  git config core.hooksPath .githooks
+# See CONTRIBUTING.md, "Project Management Files".
+
+if ! git diff --cached --name-only --diff-filter=ACMR | grep -q '^\.markplane/'; then
+  exit 0
+fi
+
+if ! command -v markplane >/dev/null 2>&1; then
+  echo "pre-commit: .markplane/ files staged but 'markplane' is not on PATH; skipping check" >&2
+  exit 0
+fi
+
+if ! markplane check; then
+  echo "" >&2
+  echo "pre-commit: 'markplane check' failed. Fix the items above or commit with --no-verify." >&2
+  exit 1
+fi
